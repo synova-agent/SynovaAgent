@@ -1395,6 +1395,71 @@ documents:
     status: active
     owner: P2
     note: "#1075（P2-1）：scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配（断言不变，探针回基线）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。0323/#1108、0324/#1115 已占；本号按 A 随卡派生。"
+  # ---- P4 2026-10-29：#1124 冻结哨兵豁免登记（DOC-0325）----
+  - id: DOC-0325
+    type: decision
+    path: gate-exemptions/2026-10-29-1124-freeze-watch.md
+    status: active
+    owner: P4
+    note: "#1124：新增 .gitea/workflows/trunk-freeze-watch.yml（每日 schedule 比对 local-main 锚点 b8edf9860，不等即红）；无写操作、无 token；含豁免自覆盖与 DOCS-REGISTRY 自登记。"
+
+
+  # ---- P4 2026-10-28：#1114 Step 0 · run_by 全量建账豁免登记（DOC-1114；末号 0323 + 1）----
+  - id: DOC-1114
+    type: decision
+    path: gate-exemptions/2026-10-28-1114-runby.md
+    status: active
+    owner: P4
+    note: "#1114（门禁配额制 Step 0）：docs/authority/GATE-INVENTORY.yaml 纯追加 run_by 段（116 件）＋ run_by_candidates 段（70 件，M-15 可见）；scripts/control-tower/check-gate-inventory.sh 扩 ⑥–⑨ 判据（覆盖双向/五值/quota 布尔/M-15 两向/现实一致性）；tests/control-tower/check-gate-inventory.test.sh 扩 ①–⑲；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1114 Step 0 · run_by 全量建账豁免登记（DOC-1114；末号 0323 + 1）----
+
+
+  # ---- #1134 2026-10-29：D331 对账基走 resolver（A 类语义变更）豁免登记（DOC-1134）----
+  - id: DOC-1134
+    type: decision
+    path: gate-exemptions/2026-10-29-1134-d331-resolver-base.md
+    status: active
+    owner: P4
+    note: "#1134（A 类，创始人 2026-10-29 裁定）：pre-push 的 D331 对账基改走 resolve-ci-base.sh（禁 trunk 字面）＋ check-bypass-log.sh 缺失改 fail-closed ＋ 判定体抽 d331-bypass-gate.sh 并可单测；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
+  # ---- P4 2026-10-28：#1112 W6 接线豁免登记（DOC-1112；0323 为最大已用号，先读末号 +1）----
+  - id: DOC-1112
+    type: decision
+    path: gate-exemptions/2026-10-28-1112-w6-wiring.md
+    status: active
+    owner: P4
+    note: "#1112（W6 接线）：scripts/control-tower/check-gate-inventory.sh ＋ scripts/control-tower/check-ci-empty-green.sh（判据出口一律经 gate-assert 的 ga_run 归一，126/127/128/137 与白名单外码 ⇒ 2）＋ tests/control-tower/**（两件配对测试补 ⑬⑭⑮）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；零判据语义改动；WIRING gate.assertLib 由 declared-only 改 wired（consumer=check-gate-inventory.sh:98）。写集内含 WIRING-REGISTRY.yaml（该路径不在 protected-files.txt 保护面，故无需豁免行）。"
+
+  # ---- P4 2026-10-28：#1118（#1115 后续）legacy 别名安全阀豁免登记（DOC-1118；R1 口径：id = DOC-<Issue#>）----
+  - id: DOC-1118
+    type: decision
+    path: gate-exemptions/2026-10-28-1118-resolver-valve.md
+    status: active
+    owner: P4
+    note: "#1118（#1115 后续，P0 收口）：resolve-ci-base.sh 拆 main 与 local-main 两臂并加 ④b 一致性阀（相等放行／祖先容忍加告警／分叉或领先 exit 2），配对测试修用例 3/4/5 并补 9 至 14b（含两条改坏即红）；豁免自覆盖＋DOCS-REGISTRY 自登记。canonical 保持 gitea/main，不动 workflow 与 #1115 其它写集。"
+
+
+
+  # ---- P4 2026-10-29：#1125 写集门禁删除项语义豁免登记（DOC-1125，按派单指定号落号）----
+  - id: DOC-1125
+    type: decision
+    path: gate-exemptions/2026-10-29-1125-dev-doc-writeset.md
+    status: active
+    owner: P4
+    note: "#1125：scripts/workflow/check-dev-doc-write-set.sh（变更集三处补 D ＋ 带状态判：声明删除 ⇔ D、声明修改仍须 A/C/M/R、git 不可用 exit 2）与 tests/control-tower/check-dev-doc-write-set.test.sh（真 git 夹具含改坏即红）受保护路径豁免；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
+
+  # ---- P4 2026-10-28：#1126 WIRING-REGISTRY 裸标量修复豁免登记（DOC-1126，按已裁 R1：id=DOC-<Issue#>）----
+  - id: DOC-1126
+    type: decision
+    path: gate-exemptions/2026-10-28-1126-wiring-yaml.md
+    status: active
+    owner: P4
+    note: "#1126（WIRING 登记表恢复可用）：tool.reportMirrorPushes 的 defined_at 加双引号（裸 path:line 含 ':' 被严格子集解析器 fail-closed 判非法 ⇒ 整器 E_YAML rc=2）＋ 补 R3 必填 owner: CTO（依据 DOC-0295 同属 #1034）；防回退并入既有配对测试（真件钉死两断言 ＋ bare-scalar/missing-owner 两条改坏反例）＋ 实测常量同步；受保护路径豁免三条，含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
   # ---- P4 2026-10-28：#1122 门禁配额制 Step 1 总闸最小可跑版豁免登记（DOC-1122；R1 口径 id = DOC-<Issue#>，不再用 DOC-0xxx 递增号）----
   - id: DOC-1122
     type: decision
