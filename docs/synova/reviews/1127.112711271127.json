@@ -1,0 +1,128 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1127,
+  "patch_fingerprint": "sha256:fae08e422dedca4d126a685d5d31751da9ecfa1520496f0cf189e52f152bb3b7",
+  "author": "Synova-Win（实现会话：分支 ct/1124-freeze-watch / PR #1127，Gitea 账号 win-push id=3）",
+  "reviewer": "零上下文独立复核员 rev-1127c（fresh-session；未参与实现，仅读 PR 补丁与现场命令）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-10-29T04:58:37+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ scripts/control-tower/check-merge-conditions.sh（--diff-fingerprint ＋ 四条件全跑）；独立复算用 git→sha256sum 与 python hashlib 两路",
+  "head_reviewed": "7851d9d68bc7b22006411252c27ed4f9d6d3b59c",
+  "base_reviewed": "ce59c0a3dacaa60b2e2e69e401a397d490d383a5",
+  "merge_base": "ce59c0a3dacaa60b2e2e69e401a397d490d383a5",
+  "filename_note": "入库名 1127.112711271127.json（docs/synova/reviews/）。该 12-hex 段＝PR 号重复（占位名），非本回执 fp12（本回执 fp12=fae08e422ded）。claim .claude/claims/1124.yaml:7 与豁免件 gate-exemptions/2026-10-29-1124-freeze-watch.md:1 均预列此名，且门禁 check-gate-protection.sh 从豁免件首行读到的复核件指针即此名（实跑 11 通过/0 失败）。规范名 docs/synova/reviews/<pr>.<fp12>.json＝1127.fae08e422ded.json 在当前 head 树 MISSING，R1 靠 check-merge-conditions.sh:470-477 的回退正则 ^docs/synova/reviews/1127\\.[0-9a-f]{12}\\.json$ 命中占位名（已现场验证 rpath_used=docs/synova/reviews/1127.112711271127.json）。本回执实体按派单要求写在 D:\\tmp\\rev-1127c\\review-1127.json（未提交、未改分支、未 push）。",
+  "review_scope": "PR #1127（head 7851d9d68 / base main@ce59c0a3d）；覆盖派单列出的 4 项必核 ＋ 复核纪律；不对卡 #1124 的设计价值下结论；PR 审查 ≠ K3 审计。前两次复核（9a810fad7/base 94ed76b2d）因 base 前进（main 94ed76b2d→ce59c0a3d，回执明写 head_reviewed=9a810fad7）而作废，本回执为第三次。",
+  "environment": "Windows / Git Bash；worktree D:\\tmp\\rev-1127c（git worktree add --detach 7851d9d68）；Gitea @ MacBook-Pro-2.local:3000；python3 3.13；git 2.54.0.windows.1",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "范围：三点 diff 恰 5 路径＝4 件主体（workflow／豁免件／DOCS-REGISTRY／claim）＋回执（reviews 路径），零删除零改名零二进制",
+      "result": "pass",
+      "cmd": "git -C D:\\tmp\\rev-1127c merge-base gitea/main 7851d9d68; git -C D:\\tmp\\rev-1127c diff --name-status ce59c0a3d...7851d9d68; git -C D:\\tmp\\rev-1127c diff --numstat ce59c0a3d 7851d9d68; git diff --summary -M",
+      "evidence": "merge-base=ce59c0a3dacaa60b2e2e69e401a397d490d383a5（= 远端 refs/heads/main 现值 = PR API base.sha）。name-status 恰 5 行：A .claude/claims/1124.yaml(11) / A .gitea/workflows/trunk-freeze-watch.yml(24) / M docs/authority/DOCS-REGISTRY.yaml(7) / A docs/synova/reviews/1127.112711271127.json(123) / A gate-exemptions/2026-10-29-1124-freeze-watch.md(4)；deletions=0；summary 只有 4 条 create mode，无 rename/copy/binary。非 reviews 件合计 46 insertions，与 PR API changed_files=5 additions=169 deletions=0 一致。"
+    },
+    {
+      "id": "C2",
+      "title": "workflow 关键内容：EXPECT 锚点逐字、::error title=FREEZE-BROKEN、exit 1、on.schedule 齐；YAML 可解析；无 token／无写操作",
+      "result": "pass",
+      "cmd": "read .gitea/workflows/trunk-freeze-watch.yml；python3 -c 'yaml.safe_load(...)'；grep -Ein 'token|secrets\\.|password|api[_-]?key|git push|git commit|checkout|curl -[Xx]|gh api'",
+      "evidence": "L16 EXPECT=\"b8edf9860990a7ef6962aa12a1bae473e753f6d0\"（逐字）；L21 echo \"::error title=FREEZE-BROKEN::local-main moved: $GOT (expected $EXPECT)\"；L22 exit 1；L4-L6 on.schedule cron \"0 2 * * *\"；L7 workflow_dispatch。SAFE_LOAD_OK，keys=[name, on, jobs]，triggers=[schedule, workflow_dispatch]，job watch runs-on=macos timeout-minutes=5 steps=1。token/secret/password/push/commit/checkout 模式命中 NONE（全文 913 bytes / 24 行）。"
+    },
+    {
+      "id": "C3",
+      "title": "回执名引用：claim 与豁免件均为 1127.112711271127.json，旧名在 claim／豁免件零残留；DOC-0325 唯一",
+      "result": "pass",
+      "cmd": "Select-String -Path .claude/claims/1124.yaml,gate-exemptions/2026-10-29-1124-freeze-watch.md -Pattern '1127\\.112711271127\\.json|1124\\.112411241124'; grep -c 'id: DOC-0325' docs/authority/DOCS-REGISTRY.yaml",
+      "evidence": "正向 2 处命中：.claude/claims/1124.yaml:7 '  - docs/synova/reviews/1127.112711271127.json'（在 writeset 内；该文件首行 L1 是注释 '— #1124 冻结哨兵（scheduled workflow）'，不含文件名，故「首行」一词对 claim 不成立）；gate-exemptions/2026-10-29-1124-freeze-watch.md:1 '# review: docs/synova/reviews/1127.112711271127.json'（确为首行）。旧名 1124.112411241124 在两件中 NONE；全树仅 1 处命中＝回执 JSON 第 27 行叙述性文字（非路径引用）。DOCS-REGISTRY 中 id: DOC-0325 恰 1 次（L1399），path 指向豁免件。"
+    },
+    {
+      "id": "C4",
+      "title": "PR 正文（API 真值）仅 Closes #1124，无 Refs／无 #1107／无其它 issue 引用",
+      "result": "pass",
+      "cmd": "GET {SYNO_GITEA_API}/repos/synova-agent/SynovaAgent/pulls/1127 → head.sha/base.sha/body；regex '#\\d+' 与 ^(closes|fixes|resolves|refs)\\s+#",
+      "evidence": "number=1127 state=open merged=False mergeable=True draft=False head.sha=7851d9d68bc7b22006411252c27ed4f9d6d3b59c head.ref=ct/1124-freeze-watch base.sha=ce59c0a3dacaa60b2e2e69e401a397d490d383a5 base.ref=main changed_files=5 additions=169 deletions=0。body 内 '#\\d+' 全部命中={#1124}（唯一 1 个）；contains_Refs=False；关闭语句行=Closes #1124。"
+    },
+    {
+      "id": "C5",
+      "title": "CI 终态：head 两 run 均 completed/success，step 16/16 绿，pending=0，combined status success",
+      "result": "pass",
+      "cmd": "GET /api/v1/repos/.../actions/runs/2465,/2466（含 /jobs step 级）；GET /commits/7851d9d68.../status；GET /actions/tasks?limit=100 按 head_sha 过滤",
+      "evidence": "run 2465 event=push status=completed conclusion=success head_sha=7851d9d68；job 2536 completed/success，steps=16 success=16 failure=0 skipped=0。run 2466 event=pull_request status=completed conclusion=success；job 2537 completed/success，steps=16（逐条 status=completed conclusion=success，含 ① 12 组门禁、①d 门禁本体自检、③ 增量测试、④ 门禁复现器自检 等）。combined status state=success total_count=2（local-gates gates push 'Successful in 1m18s'、pull_request 'Successful in 1m20s'），无 pending/in_progress 项。actions/tasks 按 head_sha 过滤恰 2 个 run，无第三个未完结 run。"
+    },
+    {
+      "id": "C6",
+      "title": "补丁指纹：规范工具取值 ＋ 独立复算（sha256sum／python hashlib）三值逐字节相同",
+      "result": "pass",
+      "cmd": "GITEA_TOKEN=<remote 解析> SYNO_GITEA_API=http://MacBook-Pro-2.local:3000/api/v1 bash scripts/control-tower/check-merge-conditions.sh --pr 1127 --diff-fingerprint ；独立：TIP=$(git ls-remote gitea refs/heads/main|awk '{print $1}'); MB=$(git merge-base $TIP HEAD); git diff --no-color -M --full-index --binary $MB HEAD -- . ':(exclude)docs/synova/reviews/**' > fp.diff; sha256sum fp.diff; python3 hashlib",
+      "evidence": "规范工具输出 fae08e422dedca4d126a685d5d31751da9ecfa1520496f0cf189e52f152bb3b7 exit=0。独立复算：TIP=ce59c0a3d…、MB=ce59c0a3d…、HEAD=7851d9d68…、diff_bytes=3802、diff_heads=4、sha256sum=fae08e422ded…152bb3b7、python_sha=fae08e422ded…152bb3b7 ⇒ 三值全同。对照组（去掉 exclude）＝c46f5956054ce0e4c2fd6ff03846d55720549f1820f5d364b4eb366527559d97，与 fae08e42… 不同 ⇒ 排除规则确实生效、回执入库不改变在册指纹。"
+    },
+    {
+      "id": "C7",
+      "title": "R1 路径可判定：规范名缺、回退正则命中占位名（现场按脚本原文逻辑复现）",
+      "result": "pass",
+      "cmd": "git cat-file -e 7851d9d68:docs/synova/reviews/1127.fae08e422ded.json；git ls-tree -r --name-only 7851d9d68 -- docs/synova/reviews | grep -E '^docs/synova/reviews/1127\\.[0-9a-f]{12}\\.json$' | tail -n 1",
+      "evidence": "reviews 目录 50 条；规范名 1127.fae08e422ded.json=MISSING；回退正则命中 rpath_used=[docs/synova/reviews/1127.112711271127.json]（match_rc=0；'112711271127' 12 位全在 [0-9a-f]）。该行与 scripts/control-tower/check-merge-conditions.sh:470-471 原文一致，R1 因而不会报「缺回执」。"
+    },
+    {
+      "id": "C8",
+      "title": "判别力（改坏必红）：真实 run 块绿路 exit 0／EXPECT 改错值 exit 1 且出 FREEZE-BROKEN；锚点真值现场核",
+      "result": "pass",
+      "cmd": "awk 从 yml 抽出 run 块 → 绿路（仅把 127.0.0.1 换成可达主机）；红路（再把 EXPECT 改为 deadbeef…）；另 GET /repos/synova-agent/SynovaAgent/branches/local-main 与匿名 git ls-remote",
+      "evidence": "绿路：expected==actual==b8edf9860…，打印 'freeze OK: local-main 仍在锚点'，GREEN_EXIT=0。红路：打印 '::error title=FREEZE-BROKEN::local-main moved: b8edf9860… (expected deadbeef…)'，RED_EXIT=1。锚点真值三路一致：API branch local-main=b8edf9860990a7ef6962aa12a1bae473e753f6d0；匿名 git ls-remote（无凭证）同值；与 EXPECT 逐字相同。另：匿名 ls-remote 成功（ANON_EXIT=0）⇒ 该私有库在本实例允许匿名读，且 local-gates.yml:29 同用未认证 http://127.0.0.1:3000 克隆且 CI 绿，故哨兵取不到 ref 的风险已被现场证据否证。"
+    },
+    {
+      "id": "C9",
+      "title": "豁免与登记链：check-gate-protection 11 通过/0 失败；doc-registry-gate 通过；R7 时序 ok",
+      "result": "pass",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base ce59c0a3d；bash scripts/doc-system/doc-registry-gate.sh；git log --diff-filter=A -1 -- docs/synova/reviews/1127.112711271127.json + git diff --name-only <csha> HEAD | grep -v '^docs/synova/reviews/'",
+      "evidence": "gate-protection：清单 22 条／pin 一致／diff 5 条／新增豁免 1 件／豁免件首行复核指针指向 1127.112711271127.json／受保护路径变更 3 条均合规豁免 ⇒ '11 通过, 0 失败' exit=0。doc-registry-gate：3 个文档全已登记／180 条 DOC id 重号 0／144 条 active／path 失配 0 ⇒ exit=0。R7：回执引入提交 csha=7851d9d68（'回执重落为最后一个提交'），csha..HEAD 非 reviews 改动数=0。claim done verify 实跑：grep -c FREEZE-BROKEN=2、grep -c b8edf9860…=1（均 >0 非空壳）。"
+    },
+    {
+      "id": "C10",
+      "title": "四条件全跑（①CI ②写集 ③复核 ④串行）：唯一红灯是 ③，且定因为回执指纹过期",
+      "result": "pass",
+      "cmd": "TMPDIR=D:/tmp GITEA_TOKEN=… SYNO_GITEA_API=… bash scripts/control-tower/check-merge-conditions.sh --pr 1127 ；另以 python 对比在树回执 fp 与当前 fp，并复算历史 fp（MB 94ed76b2d → head 9a810fad7）",
+      "evidence": "① ok(state=success total_count=2)；② ok（比对 27 对，0 处文件重叠，21 处共享追加不计，均为 docs/authority/DOCS-REGISTRY.yaml 纯追加）；③ no (fp=fae08e422ded) 唯一失败行 '✗ R3 指纹不匹配（回执已被改码作废）'；④ ok（S1=ok S2=ok 就绪集=空）⇒ 'MERGE-COND: no ①=ok ②=ok(shared:21) ③=no ④=ok' exit=1。定因：在树回执 patch_fingerprint=sha256:7b9f70e7d36a…（head_reviewed=9a810fad7 / base_reviewed=94ed76b2d，均早于本次 base 前进），而当前 fp=sha256:fae08e422ded…；用旧参数（MB 94ed76b2d → 9a810fad7，同排除口径）独立复算得 7b9f70e7d36a… 与回执声明逐字相同 ⇒ 旧回执当年真实、仅因 base 前进而作废，非伪造。"
+    },
+    {
+      "id": "C11",
+      "title": "门禁语义：不改任何「哪条检查阻断合并」的规则；不触 scripts/audit/** 与控制塔脚本",
+      "result": "pass",
+      "cmd": "git diff --name-only ce59c0a3d...7851d9d68 | grep -E '^(scripts/audit|scripts/control-tower|scripts/workflow|scripts/doc-system)/' || echo NONE",
+      "evidence": "NONE。5 路径全在 .gitea/workflows、gate-exemptions、docs/authority、.claude/claims、docs/synova/reviews。新增 workflow 触发只有 schedule＋workflow_dispatch（不挂 push/pull_request）⇒ 不进 CI 门禁链，不改变阻断规则；受保护路径改动 3 条均经豁免件合规（见 C9）。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "docs/synova/reviews/1127.112711271127.json:4,11,12（在树回执）；scripts/control-tower/check-merge-conditions.sh:507-508",
+      "what": "本 PR 当前 head 7851d9d68 的 ③ 已过独立复核 = no：在树回执的 patch_fingerprint 是 sha256:7b9f70e7d36a…（对应 head 9a810fad7 / base 94ed76b2d），而当前 fp 为 sha256:fae08e422ded…，R3 判为「回执已被改码作废」。原因非内容缺陷，而是 base 从 94ed76b2d 前进到 ce59c0a3d 后 DOCS-REGISTRY 的 hunk 上下文变化 ⇒ 补丁字节变 ⇒ 指纹变。⇒ 可直接合性的唯一缺口就是回执需按当前 fp 重落；本回执（fp=fae08e42…）即是该输入。重落须是 reviews-only 提交（只动 docs/synova/reviews/**），指纹不会变（见 C6），R7 亦成立（csha..HEAD 非 reviews 改动=0）。"
+    },
+    {
+      "severity": "warn",
+      "where": "docs/synova/reviews/1127.112711271127.json（文件名）; gate-exemptions/2026-10-29-1124-freeze-watch.md:1; .claude/claims/1124.yaml:7; scripts/control-tower/check-merge-conditions.sh:463-477",
+      "what": "入库名 1127.112711271127.json 的 12-hex 段是 PR 号重复（占位名），不是本回执 fp12=fae08e422ded，故不走 R1 的规范路径而依赖 470-477 行回退正则（恰因 112711271127 是合法 12 位 hex 才命中）。已现场验证回退命中，功能上不阻断；但若日后有人把文件名改成非 12-hex 形态，判定会静默退化为「R1 缺回执」。本次按派单要求保留该入库名，不改名、不改 claim／豁免件（改名会连带要求豁免件首行与 claim 同步，属另一个 PR 的动作）。"
+    },
+    {
+      "severity": "info",
+      "where": ".gitea/workflows/trunk-freeze-watch.yml:16",
+      "what": "EXPECT 硬编码 b8edf9860990a7ef6962aa12a1bae473e753f6d0（现场 API／匿名 ls-remote 双路逐字一致）。解冻或推进 local-main 后哨兵会持续红，必须由专门 PR 改常量——这是冻结期哨兵的设计使然，记为已知约束，非缺陷。"
+    },
+    {
+      "severity": "info",
+      "where": ".gitea/workflows/trunk-freeze-watch.yml:17-22",
+      "what": "run 块在 set -euo pipefail 下用命令替换取 ref：网络不可达时 git 自身 exit 128 会先中止脚本，日志里「锚点漂移」与「取不到」不可区分（红灯语义仍成立，但缺 ::error title=FREEZE-UNREACHABLE 这类分流注解）。本次现场已验证匿名读可达（ANON_EXIT=0）且 local-gates.yml:29 同用未认证 URL 克隆成功，故非当前缺陷；属后续可改进项。"
+    },
+    {
+      "severity": "info",
+      "where": "scripts/control-tower/check-merge-conditions.sh:95,372-384（本 PR 未改动该脚本）",
+      "what": "该工具在 Windows/Git Bash 下 ② 默认降级（E_OPENPRS_EMPTY，exit 2）：WORK=$(mktemp -d \"${TMPDIR:-/tmp}/syno-mc.XXXXXX\") 产出 POSIX 路径 /tmp/…，Windows python3 打不开。本次以 TMPDIR=D:/tmp 重跑即得完整四条件（② ok、④ ok），故属存量跨平台问题、与本 PR 无关；复现他人结论时需带此环境变量，否则会误读成「PR 有问题」。"
+    },
+    {
+      "severity": "info",
+      "where": "四条件 ④（本次实跑输出）；② 共享追加清单",
+      "what": "② 判定为 0 处文件重叠、21 处共享追加（全部是 docs/authority/DOCS-REGISTRY.yaml 与 #1138/#1137/#1132/#1130/#1129/#1128/#1120/#1116/#994/#987/#981/#970/#943/#835/#801/#633/#632/#631/#630/#629/#628 的纯追加，deletions=0），按规则不计重叠但须串行合；④ 就绪集为空 ⇒ 当前可合的只有本 PR。合并前请按串行纪律复核后到者需 rebase。另 R9 告警（回执引入提交作者邮箱与 PR 代码提交相同＝本机 git 身份不可信）只告警不阻断。"
+    }
+  ]
+}

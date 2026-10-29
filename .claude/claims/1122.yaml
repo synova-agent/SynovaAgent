@@ -1,0 +1,23 @@
+# .claude/claims/1122.yaml — 门禁配额制 Step 1 · 总闸最小可跑版（G2 遥测 / G6 归一 / G10 同形字）
+# #CRITERIA: D ｜ 架构层: 不属五层业务（治理脚本）
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
+# .claude/task-briefs/2026-10-28-1122-verify-governance.md（同批）。
+# 接线状态: **未接线**（本批写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）
+#   ⇒ WIRING=declared-only（consumer 空是实测，不是遗漏）。接线属后续卡。
+writeset:
+  - scripts/control-tower/verify-governance.sh
+  - tests/control-tower/verify-governance.test.sh
+  - gate-exemptions/2026-10-28-1122-verify-governance.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - .claude/task-briefs/2026-10-28-1122-verify-governance.md
+  - .claude/claims/1122.yaml
+  - memory/notes/proposed/2026-10-28-1122-verify-governance.md
+done:
+  - verify: bash tests/control-tower/verify-governance.test.sh
+  - verify: bash -n scripts/control-tower/verify-governance.sh
+  - verify: bash scripts/control-tower/gate-assert.sh --selfcheck
+  - verify: python3 scripts/control-tower/check-unicode-confusable.py --selfcheck
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "#1122 Step 1（规格 §4 一键验收 G2/G6/G10 最小可跑版）：新建 scripts/control-tower/verify-governance.sh（逐项 PASS/FAIL/SKIP ＋ 末行 GOVERNANCE: x/y PASS；全 PASS 0／有 FAIL 或 SKIP 1／判不了 2）＋ tests/control-tower/verify-governance.test.sh（T0 至 T16，55 断言）。G2 = classification.required_ci:true 的每个 entrypoint 近 N 天 ≥1 条 ran 记录，日志缺失/空 ⇒ SKIP 且计未运行（绝不 PASS）；G6 = 复用 gate-assert.sh 的 ga_run（零第二套归一），默认注入 exit 0、沙箱注入 exit 128 必须归判据故障(2) 并计 FAIL；G10 = check-unicode-confusable.py 两夹具（西里尔标识符 VIOLATION／注释全角标点 PASS，两态都对才 PASS）。只读不写仓库；未接线（WIRING=declared-only）。"
