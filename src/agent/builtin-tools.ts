@@ -56,6 +56,8 @@ export function createKnowledgeSearchTool(getFilter: () => RoleKnowledgeFilter |
     },
     operationType: 'read',
     sideEffects: 'none',
+    // #1165 E1（D473 声明面）：L4 检索正常 <1s，15s 留大库/慢盘余量（待实测校准）
+    timeoutMs: 15000,
     handler: async (params) => {
       // ① 权限面：没有过滤面 ⇒ 无知识检索权限（不回落全库）
       const filter = getFilter();
@@ -143,6 +145,8 @@ export function registerBuiltinTools(
         orgId: { type: 'string', description: '组织 ID，默认使用当前诊断组织' },
       },
     },
+    // #1165 E1（D473 声明面）：包装值须 > 内部 fetch 30s 上界，否则先杀外层、掩盖真实网络结果（待实测校准）
+    timeoutMs: 35000,
     handler: async (params) => {
       const orgId = (params.orgId as string) || getOrgId();
       log.info({ orgId }, 'query_ontology 工具调用');
@@ -181,6 +185,8 @@ export function registerBuiltinTools(
       type: 'object',
       properties: {},
     },
+    // #1165 E1（D473 声明面）：纯内存取 Phase，无 I/O；秒级都算异常，3s 只留调度毛刺（待实测校准）
+    timeoutMs: 3000,
     handler: async () => {
       const phase = getPhase();
       const labels = ['组织访谈', '数据采集', '假设生成', '根因分析', '报告生成', '交付'];
@@ -205,6 +211,8 @@ export function registerBuiltinTools(
       },
       required: ['findingId'],
     },
+    // #1165 E1（D473 声明面）：getMessages 是全量事件投影，长会话可能慢；15s 留一个数量级余量（待实测校准）
+    timeoutMs: 15000,
     handler: async (params) => {
       const findingId = params.findingId as string;
       // 搜索会话历史中匹配的消息
@@ -248,6 +256,8 @@ export function registerBuiltinTools(
         limit: { type: 'number', description: '返回数量，默认 5' },
       },
     },
+    // #1165 E1（D473 声明面）：单表 limit 查询，10s 已宽松（待实测校准）
+    timeoutMs: 10000,
     handler: async (params) => {
       const limit = (params.limit as number) || 5;
       const sessions = store.listSessions(limit);
@@ -278,6 +288,8 @@ export function registerBuiltinTools(
     },
     operationType: 'read',
     sideEffects: 'none',
+    // #1165 E1（D473 声明面）：同 query_ontology——内部 fetch 30s，包装值必须更大（待实测校准）
+    timeoutMs: 35000,
     handler: async (params) => {
       try {
         const orgId = String(params.orgId || getOrgId());
@@ -321,6 +333,8 @@ export function registerBuiltinTools(
     },
     operationType: 'write',
     sideEffects: 'mutating',
+    // #1165 E1（D473 声明面）：内存注册＋动态 import，无网络/无写盘；5s 防动态 import 卡死（待实测校准）
+    timeoutMs: 5000,
     handler: async (params, ctx?: ToolHandlerContext) => {
       // #915 R4（本文件进入变更集后由增量闸强制）：副作用（scheduler.schedule）**前**自校取消信号
       ctx?.signal?.throwIfAborted();
@@ -353,6 +367,8 @@ export function registerBuiltinTools(
     parameters: { type: 'object', properties: {} },
     operationType: 'read',
     sideEffects: 'none',
+    // #1165 E1（D473 声明面）：内存列表＋动态 import；与 3s 纯内存类区分（待实测校准）
+    timeoutMs: 5000,
     handler: async () => {
       try {
         const { getGlobalScheduler } = await import('../cron/scheduler');
@@ -386,6 +402,8 @@ export function registerBuiltinTools(
     },
     operationType: 'write',
     sideEffects: 'mutating',
+    // #1165 E1（D473 声明面）：本地多文件写盘＋安全审计（无网络）；30s 内正常完成（待实测校准）
+    timeoutMs: 30000,
     handler: async (params, ctx?: ToolHandlerContext) => {
       // #915 R4：副作用（installer.install 写盘）**前**自校取消信号
       ctx?.signal?.throwIfAborted();
