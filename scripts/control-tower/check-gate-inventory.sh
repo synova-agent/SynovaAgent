@@ -52,7 +52,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ④ required_ci 与真值一致：true ⇔ 三条强制腿里有引用；false ⇔ 一处都没有（防自相矛盾）
 #   ⑤ P0 棘轮：P0 计数 < SYNO_P0_FLOOR ⇒ 红（**降级需裁定号改这行，禁静默下调**）
 #   ⑥ run_by 覆盖双向对齐：枚举面每件一行（少 = 缺账，多 = 幽灵）；entrypoint 不重复
-#   ⑦ 取值校验：run_by ∈ {pre-commit,gitea-ci,github-ci,npm,无}；quota ∈ {true,false}
+#   ⑦ 取值校验：run_by ∈ {pre-commit,pre-push,gitea-ci,github-ci,npm,无}；quota ∈ {true,false}
 #      （非法值逐条点名；`yes`/`1`/空 一律红）
 #   ⑧ M-15：run_by="无" ⇒ 必须出现在 run_by_candidates（且反向：候选里的件必须真的是 无）
 #   ⑨ run_by 现实一致性：run_by=<leg> 但该 leg 源文本（去注释）零命中 ⇒ 红（"名义在跑"即红）
@@ -235,7 +235,7 @@ def take_section(name):
             cur[m.group(1)] = m.group(2).strip().strip('"')
     return rows
 
-RUN_BY_VALS = ("pre-commit", "gitea-ci", "github-ci", "npm", "无")
+RUN_BY_VALS = ("pre-commit", "pre-push", "gitea-ci", "github-ci", "npm", "无")
 SUBDOMAINS = ("ci", "workflow", "doc-system", "golden-scenarios")
 GATE_KW = ("check", "verify", "gate", "hook")
 
