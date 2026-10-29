@@ -24,6 +24,8 @@
  *      即使另有 enabled 能力声明同一 tool，也**不得**进 allowlist（disabled 优先）；日志点名能力 id。
  *   J6 未绑定零变化（回归）：fresh engine `setRolePack(null)` ⇒ `setAllowedTools(null)`，既有工具全可见可调；
  *      对照：**已绑定但复核失败**（`rolePack=null` 而 `boundRolePackId` 保留）⇒ `[]` fail-closed（D12）。
+ *   J5 撤销（engine 面）：已绑定并已放行后**删除审批记录** ⇒ 再次 `refreshRolePackPermissions()` ⇒
+ *      `listTools()=[]`、执行返 `TOOL_PERMISSION_DENIED`、日志点名 `E_ROLE_PACK_NOT_APPROVED`。
  *   D8 回滚：`SYNOVA_ROLE_PACK_TOOLS=off` ⇒ `setAllowedTools(null)` ＋ warn（显式降级）。
  *   J1 恢复路径：`fromState` 从快照 `rolePackId` 恢复绑定，refresh 后按快照岗位生效；无 `rolePackId` 的快照零变化。
  *
@@ -790,6 +792,43 @@ describe('J6 未绑定零变化 — setRolePack(null) 恢复既有行为；已�
       expect(
         logCalls.some((call) => call.level === 'warn' && call.meta?.['reason'] === 'persona-unverified'),
       ).toBe(true);
+    } finally {
+      close();
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// J5 撤销 — 删除审批记录 ⇒ refresh 后 allowlist=[] fail-closed（J5 的 engine 面）
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('J5 撤销 — 已绑定岗位删审批记录 ⇒ refresh ⇒ [] fail-closed', () => {
+  it('J5-E1 先放行；removeApprovalRecord() 后 refreshRolePackPermissions() ⇒ listTools()=[]、执行返 TOOL_PERMISSION_DENIED、日志含 E_ROLE_PACK_NOT_APPROVED', async () => {
+    writeRole();
+    writeApprovalRecord();
+    const engine = newEngine(rolePersona());
+    const registry = engine.getToolRegistry();
+    const { store, close } = realSessionStore();
+    try {
+      registerBuiltinTools(registry, store, 'p24a-J5', () => 0, () => 'default');
+      registry.register(probeTool(PROBE_ALLOWED).tool);
+      engine.refreshRolePackPermissions();
+      // 撤销前：放行工具可见（证明下面 [] 不是"从来就没放行"）
+      expect(listedNames(registry)).toEqual([PROBE_ALLOWED, 'show_diagnosis_progress'].sort());
+
+      // 撤销动作 = 删审批记录（<tmp>/.synova/approvals/<ROLE_ID>.json）⇒ 审批门失守
+      removeApprovalRecord();
+      logCalls.length = 0;
+      engine.refreshRolePackPermissions();
+
+      // fail-closed：白名单空（空名单 ⇒ listTools=[]），LLM 面亦为空
+      expect(listedNames(registry)).toEqual([]);
+      expect(openAINames(registry)).toEqual([]);
+      const denied = await registry.execute('show_diagnosis_progress', {});
+      expect(errorName(denied)).toBe('ToolPermissionError');
+      expect(errorCode(denied)).toBe('TOOL_PERMISSION_DENIED');
+      // 留痕点名 NOT_APPROVED（权限模块 reject ＋ engine 编译失败均为同码 typed meta）
+      expect(countLogs('warn', 'E_ROLE_PACK_NOT_APPROVED')).toBeGreaterThanOrEqual(1);
     } finally {
       close();
     }
