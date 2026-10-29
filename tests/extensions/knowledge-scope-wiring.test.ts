@@ -17,6 +17,18 @@
  *
  *   没有任何一处断言是"读源码"/"断言常量"。
  *
+ * 🆕 #1075 P2-1（审批门）加的两条落点（**本件是唯一能同时测生产消费面的件**）:
+ *   · **J9a**（单测）：未审批岗位（`pending`/`unverified`）⇒ `resolveRoleKnowledgeScope()` 必须
+ *     `degraded:true` ＋ `problems` 含 `ROLE_PACK_APPROVAL_*`（**不得**落到 I-C4 的 `declared:false,degraded:false`）。
+ *   · **J9b**（**真 HTTP**）：`express()` ＋ `listen(0)` ＋ 真 `jwtAuthMiddleware`（验签 → `runWithContext`）＋
+ *     真 `getCurrentFilterClause('KnowledgeChunk')` ＋ 真 `KnowledgeStore.search()` ⇒ 未审批包的条件集含
+ *     `{pkb_domain IN []}` 且检索 **0 行**（"空集"而非"无限制"）；对照组：approved 的非出厂包能看见 3 行
+ *     （防"恒空"假绿）。
+ *   🔴 夹具口径：出厂三包只信 `FACTORY_APPROVALS` 代码锚（记录不得覆盖）⇒ 凡需"改内容后仍批准 / 待批 /
+ *     不符"的用例，一律用 `addVariantRole()` 造**非出厂**岗位（finance 实物拷贝 ＋ 身份改名），
+ *     审批记录写在临时根的 `.synova/approvals`（**禁写真仓**）。既有"改内容"用例（d-refresh / deny 重叠）
+ *     已按此改造 —— 内容一变，出厂锚即失效（fail-closed），这正是 P2-1 要钉的语义。
+ *
  * 退出/降级面（三态，逐条有用例）:
  *   · **正常**：文件在且内容可用 ⇒ 条件集 = sensitivity(第 0 位) ＋ scope IN ＋ N 条 deny NOT_EQ
  *   · **降级（fail-closed）**：文件在但 `scopes[]` 为空 ⇒ 条件集退化为 `{pkb_domain IN []}`
@@ -45,16 +57,26 @@
  *   KL-5 `tests/middleware` 与 `tests/security` 里既有判据用 `@synova/engine-auth` 的
  *        编译期基线（`KNOWLEDGE_SCOPES` = yaml 背书集 `{finance, people, market}`）；
  *        本件只**新增**断言，不改它们的语义。
+ *   KL-6 **审批记录由测试替身写入**（#1075 P2-1）：生产写入器/撤销/审计 append 属 P3；本件只在
+ *        `mkdtemp` 临时根写记录（生产 loader 只读）。`ROLE_PACK_APPROVAL_*` 的完整矩阵由
+ *        `tests/init/preset-loader.test.ts` 与 `tests/init/role-pack-approval.test.ts` 覆盖，
+ *        本件只钉"未审批 ⇒ 消费面看不到任何知识"这一落点。
+ *   KL-7 **真 HTTP harness 不挂 rbac/审计路由**：只挂 `jwtAuthMiddleware` ＋ 一个消费
+ *        `getCurrentFilterClause()`/`KnowledgeStore.search()` 的最小路由 ⇒ 判据对象是
+ *        "条件集与命中行"，不是完整 `POST /api/knowledge/search` 的审计/限流副作用（后者由
+ *        `tests/security/knowledge-audit-attribution.test.ts` 承担）。
  *
  * 铁律 48：每条用例都有真断言（expect ＋ 匹配器，无空壳）；覆盖正常 / 降级 / 反例三路径。
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import type { Server } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { dirname, join } from 'path';
-import type { Request, Response } from 'express';
+import { dirname, join, resolve } from 'path';
+import express, { type Request, type Response } from 'express';
 import Database from 'better-sqlite3';
 import { dump as dumpYaml, load as loadYaml } from 'js-yaml';
 import {
@@ -69,6 +91,7 @@ import {
 } from '../../src/middleware/auth';
 import { getCurrentFilterClause } from '../../src/services/request-context';
 import { clearPresetCache, loadRolePacks, resolveRoleKnowledgeScope } from '../../src/init/preset-loader';
+import { ROLE_PACK_PIECES, computeRolePackContentHash } from '../../src/init/role-pack-schema';
 import { KnowledgeStore, type FilterClause } from '../../src/l4/knowledge-store';
 
 // ════════════════════════════════════════════════════════════════
@@ -283,6 +306,210 @@ function searchIds(seeded: Seeded, filter: FilterClause): string[] {
 }
 
 // ════════════════════════════════════════════════════════════════
+// 1bis. #1075 P2-1 审批门夹具（记录侧批准 ＋ 非出厂岗位 ＋ 真 HTTP harness）
+// ════════════════════════════════════════════════════════════════
+
+/** 审批租户字段（缺省 = `config.orgId` = `SYNOVA_ORG_ID || 'default'`；夹具不设 env ⇒ 'default'） */
+const APPROVAL_ORG_ID = 'default';
+const APPROVAL_APPROVED_AT = '2026-10-28T00:00:00.000Z';
+const APPROVAL_APPROVER_ID = 'u_wire_1075';
+const APPROVAL_APPROVER_ROLE = 'super-admin';
+
+/**
+ * 审批根 = **生产同规则**：`resolve(<presetsRoot>,'../..')/.synova/approvals`。
+ * 既有夹具是仓库形状（`<fixture>/extensions/presets`）⇒ 落到 `<fixture>/.synova/approvals`（临时根内，**不写真仓**）。
+ */
+function approvalsRootOf(presetsRoot: string): string {
+  return resolve(presetsRoot, '..', '..', '.synova', 'approvals');
+}
+
+/** 岗位目录六件的生产指纹（夹具侧：算"记录应对应的 hash"，不是断言期望值） */
+function contentHashOf(roleDir: string): string {
+  const pieces = ROLE_PACK_PIECES.map((name) => ({ name, bytes: readFileSync(join(roleDir, name)) }));
+  return computeRolePackContentHash(pieces);
+}
+
+/**
+ * 写一条审批记录（P3 写入器的**测试替身**；被测对象是生产链的消费行为）。
+ * `contentHash` 缺省按**当前内容**算；显式传入用于造"记录与内容不符"的 unverified 夹具。
+ */
+function mintApprovalRecord(
+  presetsRoot: string,
+  roleId: string,
+  opts: { readonly contentHash?: string; readonly scope?: 'content' | 'content+permissions'; readonly orgId?: string } = {},
+): string {
+  const contentHash = opts.contentHash ?? contentHashOf(join(presetsRoot, 'roles', roleId));
+  const scope = opts.scope ?? 'content+permissions';
+  const orgId = opts.orgId ?? APPROVAL_ORG_ID;
+  const material = [
+    orgId,
+    roleId,
+    contentHash,
+    scope,
+    APPROVAL_APPROVED_AT,
+    APPROVAL_APPROVER_ID,
+    APPROVAL_APPROVER_ROLE,
+  ].join('|');
+  const approvalId = `apv1:${createHash('sha256').update(material, 'utf8').digest('hex').slice(0, 16)}`;
+  const dir = approvalsRootOf(presetsRoot);
+  mkdirSync(dir, { recursive: true });
+  const recordPath = join(dir, `${roleId}.json`);
+  writeFileSync(
+    recordPath,
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        roleId,
+        orgId,
+        approvalId,
+        contentHash,
+        approverId: APPROVAL_APPROVER_ID,
+        approverRole: APPROVAL_APPROVER_ROLE,
+        approvedAt: APPROVAL_APPROVED_AT,
+        scope,
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
+  return recordPath;
+}
+
+/**
+ * 在临时根里造一个**非出厂**岗位（finance 实物拷贝 ＋ 身份改名），可选改写与批准。
+ *
+ * 🔴 为什么必须非出厂：出厂 roleId 只信 `FACTORY_APPROVALS` 代码锚（记录不得覆盖）⇒ 测试无法改写出厂
+ *   批准态；凡需"改内容后仍批准 / 待批 / 不符"的用例一律用本 helper（JWT 的 `role` 字段驱动消费面）。
+ */
+function addVariantRole(
+  presetsRoot: string,
+  roleId: string,
+  opts: { readonly mutate?: (roleDir: string) => void; readonly approval?: 'none' | 'approve' } = {},
+): void {
+  const rolesRoot = join(presetsRoot, 'roles');
+  const dir = join(rolesRoot, roleId);
+  cpSync(join(rolesRoot, 'finance'), dir, { recursive: true });
+  // 身份绑定：`manifest.roleId` 必须 = 目录名（否则 loader 判 ROLE_PACK_ROLE_ID_MISMATCH）；
+  // 内容侧 `context-manifest.yaml` 的 source 带**完整角色路径**（`roles/finance/...`）⇒ 同步改名，
+  // 否则会被投影成 file ref ⇒ REF_UNDECLARED/ORPHAN（refs 三方对账不过 ⇒ 校验失败 ⇒ N4 unverified）。
+  const manifestPath = join(dir, 'manifest.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+  manifest['roleId'] = roleId;
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  for (const piece of [
+    'context-manifest.yaml',
+    'knowledge-scope.yaml',
+    'capabilities.yaml',
+    'acceptance-criteria.yaml',
+    'output-template.ref',
+  ]) {
+    const abs = join(dir, piece);
+    const rewritten = readFileSync(abs, 'utf8')
+      .replace(/roles\/finance\//g, `roles/${roleId}/`)
+      .replace(/^roleId: finance$/gm, `roleId: ${roleId}`);
+    writeFileSync(abs, rewritten, 'utf8');
+  }
+  opts.mutate?.(dir);
+  // 记录必须在全部改写**之后**铸造（hash 对最终内容）
+  if ((opts.approval ?? 'approve') === 'approve') mintApprovalRecord(presetsRoot, roleId);
+}
+
+/** 真 HTTP 检索回包（断言面 = 条件集 ＋ 命中行） */
+interface HttpSearchReply {
+  readonly status: number;
+  readonly conditions: ReadonlyArray<{ readonly field: string; readonly operator: string; readonly value: unknown }>;
+  readonly ids: readonly string[];
+}
+
+interface KnowledgeHttpHarness {
+  readonly base: string;
+  readonly close: () => Promise<void>;
+}
+
+/** 收窄 HTTP 回包的条件集（结构不符 ⇒ 返回空，由调用方断言 status/ids 暴露问题） */
+function readConditions(body: unknown): HttpSearchReply['conditions'] {
+  if (typeof body !== 'object' || body === null) return [];
+  const raw = (body as { conditions?: unknown }).conditions;
+  if (!Array.isArray(raw)) return [];
+  const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) continue;
+    const field = (item as { field?: unknown }).field;
+    const operator = (item as { operator?: unknown }).operator;
+    if (typeof field !== 'string' || typeof operator !== 'string') continue;
+    conditions.push({ field, operator, value: (item as { value?: unknown }).value });
+  }
+  return conditions;
+}
+
+/** 收窄 HTTP 回包的命中行 id */
+function readIds(body: unknown): readonly string[] {
+  if (typeof body !== 'object' || body === null) return [];
+  const raw = (body as { ids?: unknown }).ids;
+  return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string') : [];
+}
+
+/**
+ * 起一个**真 HTTP** 服务（#1075 P2-1 / J9b）：`express()` ＋ `listen(0)` ＋ 真 `jwtAuthMiddleware`
+ * （验签 → `runWithContext`）＋ 路由内调**生产同一个** `getCurrentFilterClause('KnowledgeChunk')`，
+ * 再喂**真** `KnowledgeStore.search()`（`matchFilter`）。
+ *
+ * 🔴 不复制 `src/routes/knowledge.ts` 的判定逻辑、不注入替身 provider：断言对象是
+ *   "HTTP 回包里的条件集与命中行" ⇒ "空集（0 行）"可被真请求观测（不是进程内替身）。
+ * 🔴 不用 `createServer()`（仓内实测 vitest worker 内会 abort）；裸 express ＋ `listen(0)`。
+ */
+async function startKnowledgeHttpHarness(seeded: Seeded): Promise<KnowledgeHttpHarness> {
+  const app = express();
+  app.use(express.json());
+  app.use(jwtAuthMiddleware);
+  app.post('/api/knowledge/search', (req: Request, res: Response) => {
+    const body: unknown = req.body;
+    const query =
+      typeof body === 'object' && body !== null ? String((body as { query?: unknown }).query ?? '') : '';
+    void getCurrentFilterClause('KnowledgeChunk')
+      .then((clause: FilterClause) => {
+        const { results } = seeded.store.search(query, clause, 50);
+        res.json({ ok: true, conditions: clause.conditions, ids: results.map((result) => result.id) });
+      })
+      .catch((err: unknown) => {
+        res.status(500).json({
+          ok: false,
+          code: 'FILTER_CLAUSE_FAILED',
+          message: err instanceof Error ? err.message : String(err),
+        });
+      });
+  });
+  const server: Server = app.listen(0);
+  await new Promise<void>((resolveListen, rejectListen) => {
+    server.once('listening', () => { resolveListen(); });
+    server.once('error', (err: Error) => { rejectListen(err); });
+  });
+  const address = server.address();
+  if (typeof address !== 'object' || address === null) {
+    server.close();
+    throw new Error('HTTP harness listen(0) 未返回地址对象（判据不可观测 ⇒ fail-loud）');
+  }
+  return {
+    base: `http://127.0.0.1:${String(address.port)}`,
+    close: () => new Promise<void>((resolveClose) => { server.close(() => { resolveClose(); }); }),
+  };
+}
+
+/** 发一次真 HTTP 检索（真 JWT；测试侧零路由逻辑复制） */
+async function httpSearch(harness: KnowledgeHttpHarness, role: string): Promise<HttpSearchReply> {
+  const token = signJwtToken({ sub: `u-${role}`, role, orgId: 'org-wire' });
+  expect(token, 'JWT_SECRET 未就位 ⇒ 真 HTTP 判据无法起跑').toBeTruthy();
+  const res = await fetch(`${harness.base}/api/knowledge/search`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${String(token)}` },
+    body: JSON.stringify({ query: QUERY, limit: 50 }),
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, conditions: readConditions(body), ids: readIds(body) };
+}
+
+// ════════════════════════════════════════════════════════════════
 // 2. T1 —— 装载期**解析内容**（不再是"只判存在且非空"）
 // ════════════════════════════════════════════════════════════════
 
@@ -388,15 +615,19 @@ describe('#731 / T2 — 权限命名空间由内容文件派生（d-perm）', ()
     });
   });
 
-  it('d-refresh: 同一路径改内容（mtime/size 变）⇒ 下一次解析即生效（禁进程级常量）', async () => {
+  it('d-refresh: 同一路径改内容（mtime/size 变）⇒ 下一次解析即重算；审批随内容失效（不经 clearPresetCache）', async () => {
     const root = makeVariantRoot();
     await withPresetsRoot(root, () => {
       const before = resolveRoleKnowledgeScope('finance');
-      expect(before.scopeIds).not.toContain('finance.probe-extra');
+      expect(before.degraded, before.problems.join('; ')).toBe(false);
+      expect(before.scopeIds.length).toBeGreaterThan(0);
       rewriteScopes(join(root, 'roles'), 'finance', [...before.scopeIds, 'finance.probe-extra']);
+      // 🔴 #1075 P2-1：内容一变 ⇒ 出厂代码锚不再命中 ⇒ 下一次调用即 fail-closed。
+      //    若把解析结果做成进程级常量（或缓存键漏了内容指纹），这里会继续返回旧 scopeIds ⇒ 本断言红。
       const after = resolveRoleKnowledgeScope('finance');
-      expect(after.scopeIds).toContain('finance.probe-extra');
-      expect(after.scopeIds.length).toBe(before.scopeIds.length + 1);
+      expect(after.degraded).toBe(true);
+      expect(after.problems.join(' ')).toContain('ROLE_PACK_APPROVAL_UNVERIFIED');
+      expect(after.scopeIds).toEqual([]);
     });
   });
 });
@@ -592,11 +823,15 @@ describe('#731 / ④ V6 deny 两段式：结构有 NOT_EQ，语义上 deny 是�
     // 现物三件里 deny 与 scopes **无重叠** ⇒ 不构造就只能是恒真式（dev doc §2.5 d-deny）
     expect(declaredScopes(unitRoot, 'finance')).not.toContain(denyId);
 
-    const root = makeVariantRoot((rolesRoot) => {
-      rewriteScopes(rolesRoot, 'finance', [...declaredScopes(unitRoot, 'finance'), String(denyId)]);
-    });
+    // 🔴 #1075 P2-1：出厂锚不可改写（记录不得覆盖）⇒ 用**非出厂**岗位（finance 实物拷贝）构造重叠，
+    //   并按最终内容写一条匹配记录（审批门放行）—— 否则改内容后会被判 unverified，条件集恒为空。
+    const root = makeVariantRoot();
+    addVariantRole(root, 'opsdeny', { approval: 'none' });
+    const allowedScopes = [...declaredScopes(root, 'opsdeny'), String(denyId)];
+    rewriteScopes(join(root, 'roles'), 'opsdeny', allowedScopes);
+    mintApprovalRecord(root, 'opsdeny');
     await withPresetsRoot(root, async () => {
-      const filter = await captureFilter('finance');
+      const filter = await captureFilter('opsdeny');
       const allowed = valuesOf(filter, 'pkb_domain', 'IN')[0] as string[];
       const excluded = valuesOf(filter, 'pkb_domain', 'NOT_EQ').map((v) => String(v));
       expect(allowed, '构造没生效：deny id 未进 scope IN').toContain(denyId);
@@ -890,6 +1125,96 @@ describe('#1074 登记计数解耦：每次关闭判定 +1，与日志 memo 无�
     } finally {
       if (prev === undefined) delete process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM;
       else process.env.SYNOVA_KNOWLEDGE_SCOPE_DIM = prev;
+    }
+  });
+});
+
+// ════════════════════════════════════════════════════════════════
+// 9. #1075 P2-1 / J9 —— 未审批 ⇒ 看不到任何知识（单元 ＋ 真 HTTP）
+// ════════════════════════════════════════════════════════════════
+
+describe('#1075 P2-1 / J9: 未审批岗位 ⇒ 看不到任何知识（fail-closed，空集而非无限制）', () => {
+  it('J9a（单测）: pending ⇒ resolveRoleKnowledgeScope degraded:true ＋ problems 含 ROLE_PACK_APPROVAL_PENDING', async () => {
+    const root = makeVariantRoot();
+    addVariantRole(root, 'ops-pending', { approval: 'none' }); // 无记录 ⇒ pending
+    await withPresetsRoot(root, () => {
+      const decl = resolveRoleKnowledgeScope('ops-pending');
+      // 🔴 必须 degraded:true（不是 I-C4 的 declared:false,degraded:false —— 那等于"不限制"）
+      expect(decl.degraded).toBe(true);
+      expect(decl.declared).toBe(false);
+      expect(decl.scopeIds).toEqual([]);
+      expect(decl.problems.join(' ')).toContain('ROLE_PACK_APPROVAL_PENDING');
+      // 对照：I-C4 的"角色目录不存在"仍是 degraded:false（两个分支必须可分辨）
+      const absent = resolveRoleKnowledgeScope('admin');
+      expect(absent.degraded).toBe(false);
+      expect(absent.declared).toBe(false);
+    });
+  });
+
+  it('J9b（真 HTTP）: pending 包 ⇒ 条件集含 {pkb_domain IN []} 且知识检索返回 0 行', async () => {
+    const root = makeVariantRoot();
+    addVariantRole(root, 'ops-pending', { approval: 'none' });
+    const scopes = declaredScopes(root, 'ops-pending');
+    expect(scopes.length, '夹具岗位应有 3 个 scope（否则"0 行"可能因空库而假绿）').toBe(ROLES_UNITS);
+    const seeded = seedStore(scopes, 'wire:shared-fact');
+    const harness = await startKnowledgeHttpHarness(seeded);
+    try {
+      await withPresetsRoot(root, async () => {
+        const reply = await httpSearch(harness, 'ops-pending');
+        expect(reply.status).toBe(200);
+        // (a) 结构面：拒绝型条件 `IN []`（不是"少一维"、更不是"不过滤"）
+        expect(valuesOf({ conditions: reply.conditions }, 'pkb_domain', 'IN')).toEqual([[]]);
+        // (b) 行为面：真过滤引擎下一行都检索不到
+        expect(reply.ids).toEqual([]);
+      });
+    } finally {
+      await harness.close();
+      seeded.close();
+    }
+  });
+
+  it('J9b 对照（真 HTTP）: approved 的非出厂包 ⇒ 条件集 = 声明 scopes 且检索到 3 行（防"恒空"假绿）', async () => {
+    const root = makeVariantRoot();
+    addVariantRole(root, 'ops-approved'); // 默认 approval='approve' ⇒ 记录按最终内容铸造
+    const scopes = declaredScopes(root, 'ops-approved');
+    expect(scopes.length).toBe(ROLES_UNITS);
+    const seeded = seedStore(scopes, 'wire:shared-fact');
+    const harness = await startKnowledgeHttpHarness(seeded);
+    try {
+      await withPresetsRoot(root, async () => {
+        const reply = await httpSearch(harness, 'ops-approved');
+        expect(reply.status).toBe(200);
+        expect(valuesOf({ conditions: reply.conditions }, 'pkb_domain', 'IN')).toEqual([scopes]);
+        expect(reply.ids.length).toBe(ROLES_UNITS); // 同一 harness/同一库 ⇒ 批准态确实能看见
+      });
+    } finally {
+      await harness.close();
+      seeded.close();
+    }
+  });
+
+  it('J9b（真 HTTP）: unverified（记录 contentHash 不符）⇒ 条件集 IN [] ＋ 0 行 ＋ problems 含 UNVERIFIED', async () => {
+    const root = makeVariantRoot();
+    addVariantRole(root, 'ops-unverified', { approval: 'none' });
+    mintApprovalRecord(root, 'ops-unverified', { contentHash: '0'.repeat(64) });
+    const scopes = declaredScopes(root, 'ops-unverified');
+    const seeded = seedStore(scopes, 'wire:shared-fact');
+    const harness = await startKnowledgeHttpHarness(seeded);
+    try {
+      await withPresetsRoot(root, async () => {
+        const reply = await httpSearch(harness, 'ops-unverified');
+        expect(reply.status).toBe(200);
+        expect(valuesOf({ conditions: reply.conditions }, 'pkb_domain', 'IN')).toEqual([[]]);
+        expect(reply.ids).toEqual([]);
+        // 诊断面：单元解析同时点名装载期码与判定侧 typed code
+        const decl = resolveRoleKnowledgeScope('ops-unverified');
+        expect(decl.degraded).toBe(true);
+        expect(decl.problems.join(' ')).toContain('ROLE_PACK_APPROVAL_UNVERIFIED');
+        expect(decl.problems.join(' ')).toContain('E_APPROVAL_CONTENT_CHANGED');
+      });
+    } finally {
+      await harness.close();
+      seeded.close();
     }
   });
 });

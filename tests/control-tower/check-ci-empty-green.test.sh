@@ -11,6 +11,8 @@
 #      ⇒ 断言从 rc=1 变 rc=0 = 该判据确有判别力（改坏后原断言失效）
 #   ④ 接线（WIRE CHECK）：`.gitea/workflows/local-gates.yml` 真调用本器且写 `$GITHUB_OUTPUT`
 #   ⑤ 型 D 防误伤：全程只写 `mktemp -d` 沙箱，不改真工作流/真脚本（跑前跑后哈希一致）
+#   ⑥ 判不了归 2（#1112 W6 接线）：判据出口码一律经 `gate-assert.sh` 的 `ga_run` 归一 ——
+#      判据自身异常（judge_file 返回 128）⇒ 2 而非原样穿透；归一库缺失 ⇒ 2；归一里 128→0 改坏 ⇒ 断言失效
 #
 # 断言风格对齐 `tests/control-tower/declare-write-set.test.sh`（ok/no 计数 ＋ 末行结果行）。
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -18,6 +20,7 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 S="$REPO/scripts/control-tower/check-ci-empty-green.sh"
 WF="$REPO/.gitea/workflows/local-gates.yml"
+GA="$REPO/scripts/control-tower/gate-assert.sh"
 
 PASS=0; FAIL=0
 FAILED_DIGEST=""
@@ -38,6 +41,7 @@ echo "=== check-ci-empty-green 配对测试 ==="
 # ── ① 存在 / 可执行 / 语法 ──────────────────────────────────────────────────
 if [ -f "$S" ]; then ok "脚本存在"; else no "脚本不存在: $S"; fi
 if bash -n "$S" >/dev/null 2>&1; then ok "语法可过（bash -n）"; else no "语法错（bash -n）"; fi
+if [ -f "$GA" ]; then ok "归一库存在（gate-assert.sh）"; else no "归一库不存在: $GA"; fi
 
 # ── ⑤ 防误伤基线：真脚本 + 真工作流哈希（跑前）────────────────────────────
 hash_of() {
@@ -107,6 +111,9 @@ case "$OUT" in *"selfcheck: PASS 9/9"*) ok "--selfcheck 自报 9/9（场景未�
 # ── ⑪ 改坏即红（纪律③）：把 `test_count>0` 改成 `-ge 0` ⇒ 空绿夹具不再红 ──
 #   判据只有一处（`if [ "$tc" -gt 0 ]; then`）⇒ 单点改坏即可验「该行真的在承重」。
 #   期望：改坏版 rc 从 1 变 0（原断言失效）。若改坏后**仍** rc=1 ⇒ 该行没承重（或改坏没生效）。
+#   🔴 #1112 接线后被测件依赖同目录 gate-assert.sh（归一入口）⇒ 变异体必须与归一库同目录，
+#      否则「判不了(2)」会掩盖「判据被改坏」这一个变量（本用例只许变一个变量）。
+cp "$GA" "$TMP/gate-assert.sh"
 MUT="$TMP/mut.sh"
 sed 's/\$tc" -gt 0/\$tc" -ge 0/' "$S" > "$MUT"
 if cmp -s "$S" "$MUT"; then
@@ -132,6 +139,37 @@ if [ "${N_SUM:-0}" -ge 1 ]; then ok "接线：汇总步写 \$GITHUB_STEP_SUMMARY
 #   可执行行出现 always() ⇒ ① 先红时后续步仍跑，与既有链语义不一致。
 N_ALWAYS="$(grep -v '^[[:space:]]*#' "$WF" 2>/dev/null | grep -c 'always()' || true)"  # swallow-ok: 同上（WF 不可读 ⇒ 计数 0，而"接线"三条断言已会判红）
 if [ "${N_ALWAYS:-0}" -eq 0 ]; then ok "工作流可执行行未引入 always()（① 先红后续不执行，语义未变）"; else no "工作流可执行行出现 always()（改用条件语义，禁改链语义）"; fi
+
+# ── ⑬ 判不了归 2（#1112 W6 接线）：判据自身异常（exit 128）⇒ 2，禁原样穿透 ──
+#   夹具变异体只改「judge_file 的失败出口」一处（`return 1` ⇒ `return 128`）：判据语义未变，
+#   变的是**返回码**。旧版（未接线）会把 128 原样当本器退出码 ⇒ 一个非三态码冒充结论。
+echo "── ⑬ 判不了归 2：判据自身异常（judge_file 返回 128）⇒ rc=2 ──"
+MUT128="$TMP/mut128.sh"
+sed 's/^    return 1$/    return 128/' "$S" > "$MUT128"
+if grep -q 'return 128' "$MUT128"; then ok "⑬ 变异点已注入（judge_file 失败出口 ⇒ return 128）"; else no "⑬ 变异点未命中（sed 未命中唯一 return 1）"; fi
+OUT="$(bash "$MUT128" --summary "$TMP/empty.env" 2>"$TMP/err.txt")"; RC=$?
+if [ "$RC" -eq 2 ]; then ok "⑬ 判据自身异常(128) ⇒ rc=2（经 ga_run 归一）"; else no "⑬ 期望 2 实得 ${RC}（128 原样穿透 ⇒ 非三态退出码）"; fi
+case "$(cat "$TMP/err.txt")" in *"判据故障: 128"*) ok "⑬ stderr 点名「判据故障: 128」" ;; *) no "⑬ stderr 未点名「判据故障: 128」" ;; esac
+
+# ── ⑭ 归一库缺失 ⇒ 2（fail-closed，禁把「判不了」当通过）──────────────────
+echo "── ⑭ 归一库缺失 ⇒ rc=2 ──"
+NOLIB="$TMP/nolib"; mkdir -p "$NOLIB"; cp "$S" "$NOLIB/check-ci-empty-green.sh"
+OUT="$(bash "$NOLIB/check-ci-empty-green.sh" --summary "$TMP/ok.env" 2>"$TMP/err.txt")"; RC=$?
+if [ "$RC" -eq 2 ]; then ok "⑭ 缺 gate-assert.sh ⇒ rc=2（fail-closed）"; else no "⑭ 期望 2 实得 ${RC}"; fi
+case "$OUT" in *"UNJUDGED reason=no-assert-lib"*) ok "⑭ 汇总口径 UNJUDGED（不冒充 PASS）" ;; *) no "⑭ 汇总口径未标 UNJUDGED（$OUT）" ;; esac
+
+# ── ⑮ 改坏即红（纪律③）：归一里 128 分支改成 0（/tmp 副本）⇒ ⑬ 同一断言失效 ──
+echo "── ⑮ 改坏即红：归一 128→0 ⇒ ⑬ 的 rc=2 断言失效 ──"
+MUTLIB="$TMP/mutlib"; mkdir -p "$MUTLIB"
+cp "$MUT128" "$MUTLIB/check-ci-empty-green.sh"
+sed 's/^    128).*/    128) printf 0 ;;/' "$GA" > "$MUTLIB/gate-assert.sh"
+if grep -q '128) printf 0' "$MUTLIB/gate-assert.sh"; then ok "⑮ 变异点已注入（归一 128 ⇒ 0）"; else no "⑮ 变异点未命中 128 分支"; fi
+MUT_OUT="$(bash "$MUTLIB/check-ci-empty-green.sh" --summary "$TMP/empty.env" 2>&1)"; MUT_RC=$?
+if [ "$MUT_RC" -eq 0 ]; then
+  ok "⑮ 归一改坏后 128 被当通过（rc 2→0 ⇒ ⑬ 必红；证明归一入口承重）"
+else
+  no "⑮ 期望变异体 rc=0 实得 ${MUT_RC} ⇒ ⑬ 对该变异无判别力"
+fi
 
 # ── ⑤ 防误伤：真脚本/真工作流跑前跑后哈希一致（型 D）─────────────────────
 H_S_AFTER="$(hash_of "$S")"

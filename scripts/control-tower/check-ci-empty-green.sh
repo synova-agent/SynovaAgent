@@ -31,8 +31,11 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #            1 = 真红（test_count=0 且未声明跳过 ／ 跳过但无未运行原因 ／ 原因过短 ／ 未知 status）
 #            2 = **判不了**（记录文件缺失·不可读 ／ 0 条记录 ／ 记录缺 test_count ／ 非整数 ／ 参数错）
 #                🔴 信号量==0 ⇒ 2（禁把「看不见」当「没问题」）
-#   @degraded exit 2 时 stderr 一行 `degraded: <原因>`（铁律 11：不静默降级）
-#   @error   code ∈ {E_USAGE, E_NO_INPUT, E_EMPTY, E_BAD_RECORD}（均 ⇒ exit 2；见 degraded 行）
+#            🔴 归一入口（#1112 / W6 接线）：`judge_file`／`judge_env`／`selfcheck` 的返回码一律经
+#            `gate-assert.sh` 的 `ga_run` 归一（`ga_normalize_code` 唯一真源）⇒ 0/1/2 之外
+#            （128／137／126／白名单外码）一律归 2 并打 `判据故障: <code>`，绝不原样穿透成本器退出码。
+#   @degraded exit 2 时 stderr 一行 `degraded: <原因>`（铁律 11：不静默降级）；归一库缺失同样按 2 降级
+#   @error   code ∈ {E_USAGE, E_NO_INPUT, E_EMPTY, E_BAD_RECORD, E_INTERNAL}（均 ⇒ exit 2；见 degraded 行）
 #
 # 判据（①②③④⑤ 即全部逻辑，无隐含分支）:
 #   ① 关键 step 真跑过测试（`test_count>0` 且 `status=ran`）⇒ 计入**通过**
@@ -77,7 +80,7 @@ while [ $# -gt 0 ]; do
       MODE="selfcheck"; shift ;;
     -h|--help)
       # 头注释即用法文档（单源：改契约只改头部，不留第二份会漂移的用法文本）
-      sed -n '8,60p' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
+      sed -n '8,62p' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
       exit 0 ;;
     *)
       printf 'degraded: E_USAGE — 未知参数: %s（见 --help）\n' "$1" >&2
@@ -234,6 +237,25 @@ selfcheck() {  # 内置夹具（判别力自检）：0=全部符合预期 ／ 2=
   return 0
 }
 
-if [ "$MODE" = "selfcheck" ]; then selfcheck; exit $?; fi
-if [ "$MODE" = "env" ]; then judge_env; exit $?; fi
-judge_file "$INPUT"; exit $?
+# ── 🔴 判不了归 2：归一入口（#1112 / W6 接线）────────────────────────────────────
+# 本器有三个判据出口（file／env／selfcheck），它们的原始返回码**一律**交给 `ga_run` 归一：
+# 0 透传／1 透传／2 透传，128／137／126／白名单外码 ⇒ 2 并打 `判据故障: <code>`
+# （禁原样穿透成本器退出码 —— 否则「判据自身异常」会冒充一个三态结论）。
+# 归一真源 = 邻件 gate-assert.sh（禁在本器抄第二份「码 → 三态」表）；库缺失 ⇒ 判不了 ⇒ 2（fail-closed）。
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"  # swallow-ok: 取不到时下一行按「库缺失」degraded exit 2
+GA_LIB="${LIB_DIR:+$LIB_DIR/gate-assert.sh}"
+if [ -z "$GA_LIB" ] || [ ! -f "$GA_LIB" ]; then
+  printf 'degraded: E_INTERNAL — 判据归一库缺失（判不了 ⇒ 2）: %s\n' "${GA_LIB:-<脚本目录不可解析>}" >&2
+  echo "CI-EMPTY-GREEN: UNJUDGED reason=no-assert-lib"
+  exit 2
+fi
+# shellcheck source=scripts/control-tower/gate-assert.sh
+if ! . "$GA_LIB"; then
+  printf 'degraded: E_INTERNAL — 判据归一库不可载入（判不了 ⇒ 2）: %s\n' "$GA_LIB" >&2
+  echo "CI-EMPTY-GREEN: UNJUDGED reason=no-assert-lib"
+  exit 2
+fi
+
+if [ "$MODE" = "selfcheck" ]; then ga_run "ci-empty-green:--selfcheck" -- selfcheck; exit $?; fi
+if [ "$MODE" = "env" ]; then ga_run "ci-empty-green:--env" -- judge_env; exit $?; fi
+ga_run "ci-empty-green:--summary" -- judge_file "$INPUT"; exit $?
