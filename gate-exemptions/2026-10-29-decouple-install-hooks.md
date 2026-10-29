@@ -8,3 +8,4 @@
 - scripts/project/pr-queue-scan.py — 噪声清单同时登记新路径 — #1146
 - scripts/check-fde-terms.sh — 术语白名单补 .synova/logs 运行时产物 — #1146
 - gate-exemptions/2026-10-29-decouple-install-hooks.md — 本豁免件自覆盖（三段式声明自身） — #1146
+- docs/authority/DOCS-REGISTRY.yaml — 新增本批豁免登记 DOC-1146（append-only 追加一行） — #1146
