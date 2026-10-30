@@ -1520,3 +1520,10 @@ documents:
     status: active
     owner: P4
     note: "#1158/U2：① 删除指向已改名文件（brief-parseable.test.sh）的陈旧隔离条目（台账判据 b 须删条目）；② FACE-TOTAL 197→204（scan=209，余量 5；主树新增夹具未上调下界 ⇒ 撞 SLACK-CAP=10，显式上调留痕）；含自覆盖行与 DOCS-REGISTRY 自登记行；不改判据语义。"
+  # ---- P4 2026-10-30：M6 四卡判据件豁免登记（DOC-1158-02；R1 口径 id=DOC-<Issue#>-NN）----
+  - id: DOC-1158-02
+    type: decision
+    path: gate-exemptions/2026-10-30-1158-m6-four-cards.md
+    status: active
+    owner: P4
+    note: "#1158（M6）：8 件判据件全部落在受保护面（scripts/control-tower/**、tests/control-tower/**）⇒ 逐条豁免，含自覆盖与 DOCS-REGISTRY 自登记；判据行为未变（C1 46→47＋指标级测量值／C2 真移走→新进程 45／C3 两次独立进程 sha 同＋改坏必红／C4 判据件存在性前置自检）。"
