@@ -1520,3 +1520,12 @@ documents:
     status: active
     owner: P4
     note: "#1158/U2：① 删除指向已改名文件（brief-parseable.test.sh）的陈旧隔离条目（台账判据 b 须删条目）；② FACE-TOTAL 197→204（scan=209，余量 5；主树新增夹具未上调下界 ⇒ 撞 SLACK-CAP=10，显式上调留痕）；含自覆盖行与 DOCS-REGISTRY 自登记行；不改判据语义。"
+
+
+
+  - id: DOC-1141
+    type: decision
+    path: gate-exemptions/2026-10-30-1141-quality-baseline-constants.md
+    status: active
+    owner: P4
+    note: "#1141：quality-baseline 测试断言改为与独立来源交叉核对（rows 对 grep '^  - capability:' 计数、orphans 分母对 classification 条目数），不再写死字面量；仅改测试文件，判据逻辑零改动；含自覆盖行与 DOCS 自登记行。"
