@@ -1,0 +1,19 @@
+issue: 1175
+branch: docs/b0-ledger-pointer
+base: main
+
+writeset:
+  - agents/P4-门禁/AGENTS.md
+  - gate-exemptions/2026-10-30-b0-ledger-pointer.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-30-1175-b0-ledger-pointer.md
+  - .claude/claims/1175.yaml
+  - memory/notes/proposed/2026-10-30-1175-b0-ledger-pointer.md
+
+done:
+  - verify: "git diff --numstat gitea/main -- agents/P4-门禁/AGENTS.md"
+    expect: "1\t0\tagents/P4-门禁/AGENTS.md"
+  - verify: "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root . 2>&1 | tail -1"
+    expect: "0 失败"
+
+note: "域守则加一行台账真源指针；纯追加登记 DOC-1175；不改既有条款。"

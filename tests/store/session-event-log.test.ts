@@ -16,6 +16,8 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   SessionStore,
   MessageRow,
@@ -149,15 +151,24 @@ describe('D500 session event log — appendEvent + deriveMessages', () => {
     expect(store.getEvents(sessionId).length).toBeGreaterThan(0);
   });
 
-  it('降级信号非粘滞: appendEvent 失败后成功写入 → lastDegraded 重置为 false（复核修复）', () => {
-    // 模拟 appendEvent 失败（drop 表 → INSERT 失败 → lastDegraded=true）
-    const db = (store as unknown as { db: Database.Database }).db;
+  // 🔴 R-E1 C5（spec §9.2）: 本用例按**新语义改写**（原断言"成功即重置 false"正是院方 P1-2 要治的洞）。
+  //    新语义 = per-turn 闩锁：失败置闩并**保持**；**只有一次成功的 `role='user'` 写入**（新轮起点）
+  //    才清闩；`assistant`/`system` 成功**不清**。原用例的"user 恢复写入 ⇒ false"在新语义下仍成立
+  //    （user = 轮边界），但"任意成功写入即重置"不再成立 ⇒ 追加 assistant 成功不清闩的断言。
+  it('C5 per-turn 闩锁: 失败置闩并保持；assistant 成功不清，下一轮 user 成功才清（spec §9.2 改写）', () => {
+    const db = new Database(':memory:');
+    const localStore = new SessionStore(db);
+    const localSession = localStore.createSession('org-c5').id;
+
+    localStore.addMessage(localSession, 'user', '轮起点');
+    expect(localStore.lastDegraded).toBe(false);
+
+    // 模拟 appendEvent 失败（drop 表 → appendEvent degraded → 事务态整笔回滚）
     db.exec('DROP TABLE session_events');
-    store.addMessage(sessionId, 'user', 'fail-write');
-    expect(store.lastDegraded).toBe(true);
-    // 重建表 → 后续成功写入应重置 lastDegraded（不粘滞）
-    // #964：重建夹具须与当前 schema 同形（含 format_version 列）——本用例意图是"成功写重置降级信号"，
-    //   旧 schema 兼容由 #964「旧库（无列）打开」用例覆盖。
+    localStore.addMessage(localSession, 'assistant', 'fail-write');
+    expect(localStore.lastDegraded).toBe(true);
+
+    // 重建表（#964：夹具须与当前 schema 同形，含 format_version 列）
     db.exec(`CREATE TABLE IF NOT EXISTS session_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
@@ -169,9 +180,16 @@ describe('D500 session event log — appendEvent + deriveMessages', () => {
       UNIQUE(session_id, seq)
     );`);
     db.exec('CREATE INDEX IF NOT EXISTS idx_session_events_sess ON session_events(session_id, seq);');
-    store.addMessage(sessionId, 'user', 'recover-write');
-    expect(store.lastDegraded).toBe(false);
-    expect(store.getEvents(sessionId).length).toBeGreaterThan(0);
+
+    // 🔴 C5 核心：同轮 assistant 成功**不得**抹掉降级（旧语义在此会变 false）
+    localStore.addMessage(localSession, 'assistant', 'recover-assistant');
+    expect(localStore.lastDegraded).toBe(true);
+    expect(localStore.getEvents(localSession).length).toBeGreaterThan(0);
+
+    // 新轮起点（成功 user 写入）才清闩
+    localStore.addMessage(localSession, 'user', 'next-turn');
+    expect(localStore.lastDegraded).toBe(false);
+    db.close();
   });
 
   it('appendEvent 显式 eventType 支持（tool_result 等，扩展性）', () => {
@@ -484,6 +502,137 @@ describe('#964 行格式版本 format_version', () => {
       code = err instanceof SessionEventError ? err.code : 'NOT_TYPED';
     }
     expect(code).toBe('UNKNOWN_EVENT_TYPE');
+    db.close();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// R-E1 ②（#1165）: 读侧 seq 连续性 —— 缺口只报不猜，返回值语义不变
+//
+// 判据（设计稿 §2.2 读侧契约；**改坏必红**承重点）:
+//   缺口 ⇒ `log.error({code:'SESSION_SEQ_GAP', degraded:true})` + `lastDegraded=true`，
+//   **返回值不变**（仍返回全部可投影消息）；无缺口/空流 ⇒ **不置位**（边界，防假绿）。
+//   🔴 改坏必红点：删掉 `deriveMessages` 里的 `ev.seq !== i + 1` 判断 ⇒ 缺口用例的
+//      `lastDegraded=true` 断言红（且源码接线断言红）。
+// ═══════════════════════════════════════════════════════════════════
+describe('R-E1 ② 读侧 seq 连续性（deriveMessages 缺口信号）', () => {
+  it('缺口: 删 seq2 ⇒ 值语义不变（仍返回 2 条）+ lastDegraded=true + 稳定码接线在位', () => {
+    const db = new Database(':memory:');
+    const store = new SessionStore(db);
+    const sessionId = store.createSession('org-gap').id;
+    store.addMessage(sessionId, 'user', 'e1'); // seq=1
+    store.addMessage(sessionId, 'assistant', 'e2'); // seq=2
+    store.addMessage(sessionId, 'user', 'e3'); // seq=3
+    expect(store.deriveMessages(sessionId)).toHaveLength(3);
+    expect(store.lastDegraded).toBe(false); // 无缺口不置位（先证不是恒 true 的假绿）
+
+    // 人为删一条（模拟物理缺口/直连 SQL 损坏）
+    db.prepare('DELETE FROM session_events WHERE session_id=? AND seq=?').run(sessionId, 2);
+
+    const derived = store.deriveMessages(sessionId);
+    // 返回值语义不变：仍返回全部**可投影**消息（2 条），不因缺口截断或抛错
+    expect(derived.map((m) => m.content)).toEqual(['e1', 'e3']);
+    expect(store.lastDegraded).toBe(true);
+
+    // 接线断言：稳定码必须在源码保留（pino 直写 fd2，进程内无法 spy 日志；
+    //   运行时唯一可观测面是 lastDegraded ⇒ 用源码接线断言兜"只剩置位、日志被删"的退化）
+    const source = readFileSync(fileURLToPath(new URL('../../src/store/session-store.ts', import.meta.url)), 'utf-8');
+    expect(source).toContain("code: 'SESSION_SEQ_GAP'");
+    expect(source).toContain('SESSION_SEQ_GAP');
+    db.close();
+  });
+
+  it('无缺口 / 空事件流 ⇒ 不置位（边界两态）', () => {
+    const db = new Database(':memory:');
+    const store = new SessionStore(db);
+    const sessionId = store.createSession('org-nogap').id;
+    // 空事件流：[] 且不置位
+    expect(store.deriveMessages(sessionId)).toEqual([]);
+    expect(store.lastDegraded).toBe(false);
+    // 连续事件：1..4 连续 ⇒ 不置位
+    store.addMessage(sessionId, 'user', 'a');
+    store.appendEvent(sessionId, 'system', { note: 'log-only 不投影' });
+    store.addMessage(sessionId, 'assistant', 'b');
+    store.addMessage(sessionId, 'user', 'c');
+    expect(store.deriveMessages(sessionId)).toHaveLength(3);
+    expect(store.lastDegraded).toBe(false);
+    db.close();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// R-E1 ③ / C6（spec §9.2）: `tool_result` log-only 投影 parity
+//
+// 缺陷原状: `session-store.ts:644` 注释写"log-only 跳过"，但代码**并未跳过** `tool_result`
+//   （恒投影成 assistant + `payload.content ?? ''`）⇒ 写入无 content 的工具结果会让 replay
+//   每条多出一个**空 assistant 消息**，parity 必破（设计稿 §2.3）。
+// 修法: ① 改正注释 ② 无 `content` 的 `tool_result` **投影跳过** ③ 本 parity 用例。
+//   🔴 改坏必红点：删掉"无 content 跳过" ⇒ 第一条用例的 `toEqual(before)` 红（多出空 assistant）。
+//   🔴 旧行为不变：带 `content` 的历史 `tool_result` 仍投影为 assistant（第二条用例）。
+// ═══════════════════════════════════════════════════════════════════
+describe('R-E1 C6 tool_result log-only（parity）', () => {
+  it('无 content 的 tool_result 进日志但**不**进模型消息（写前/写后 deriveMessages 完全相等）', () => {
+    const db = new Database(':memory:');
+    const store = new SessionStore(db);
+    const sessionId = store.createSession('org-c6').id;
+    store.addMessage(sessionId, 'user', '问题');
+
+    const before = store.deriveMessages(sessionId);
+    expect(before).toHaveLength(1);
+
+    // 写入侧契约（E1，log-only）：payload **不含 content**
+    const res = store.appendEvent(sessionId, 'tool_result', {
+      toolCallId: 'tc1',
+      name: 'query_ontology',
+      ok: true,
+      durationMs: 3,
+      resultBytes: 12,
+      resultPreview: '{"ok":true}',
+    });
+    expect(res.ok).toBe(true);
+
+    // 事件确实进了日志（不是"没写"）
+    const toolEvents = store.getEvents(sessionId).filter((e) => e.eventType === 'tool_result');
+    expect(toolEvents).toHaveLength(1);
+    expect(toolEvents[0].payloadJson).not.toContain('"content"');
+
+    // 🔴 parity：写前/写后逐条相等（模型可见消息零增量）
+    expect(store.deriveMessages(sessionId)).toEqual(before);
+    expect(store.getMessages(sessionId)).toEqual(before);
+    db.close();
+  });
+
+  it('失败工具结果（ok:false + code）同样 log-only ⇒ parity 不变', () => {
+    const db = new Database(':memory:');
+    const store = new SessionStore(db);
+    const sessionId = store.createSession('org-c6-fail').id;
+    store.addMessage(sessionId, 'assistant', '调用前文本');
+    const before = store.deriveMessages(sessionId);
+
+    const res = store.appendEvent(sessionId, 'tool_result', {
+      toolCallId: 'tc2',
+      name: 'read_document',
+      ok: false,
+      code: 'TOOL_TIMEOUT',
+      durationMs: 35001,
+      resultPreview: 'timeout',
+    });
+    expect(res.ok).toBe(true);
+    expect(store.deriveMessages(sessionId)).toEqual(before);
+    db.close();
+  });
+
+  it('旧行为不变：带 content 的 tool_result 仍投影为 assistant（兼容既有数据）', () => {
+    const db = new Database(':memory:');
+    const store = new SessionStore(db);
+    const sessionId = store.createSession('org-c6-legacy').id;
+    store.addMessage(sessionId, 'user', '问');
+    const res = store.appendEvent(sessionId, 'tool_result', { role: 'tool', content: 'tool-out' });
+    expect(res.ok).toBe(true);
+
+    const derived = store.deriveMessages(sessionId);
+    expect(derived).toHaveLength(2); // 旧行仍投影（不因新规则被吞）
+    expect(derived[1]).toMatchObject({ role: 'assistant', content: 'tool-out' });
     db.close();
   });
 });
