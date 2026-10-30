@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Synova · 审批会话</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🛂</text></svg>">
+<style>
+:root{
+  --bg:#0f0f14;--panel:#1a1a24;--border:#2a2a3a;--text:#e0e0e0;--dim:#888;
+  --ok:#3ecf8e;--warn:#e8b14b;--err:#f2637a;--accent:#6f9dff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 64px}
+header.top{display:flex;align-items:center;gap:10px;padding:10px 0 18px;border-bottom:1px solid var(--border);margin-bottom:18px}
+header.top h1{font-size:17px;margin:0;font-weight:600}
+header.top .spacer{flex:1}
+.btn{appearance:none;border:1px solid var(--accent);background:transparent;color:var(--text);
+  padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer}
+.btn:hover{background:rgba(111,157,255,.12)}
+.btn-outline{border-color:var(--border)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+#notice-slot{margin:0 0 14px}
+.notice{padding:9px 12px;border-radius:6px;border:1px solid var(--border);margin:0 0 8px;font-size:13px;white-space:pre-wrap;word-break:break-word}
+.notice.info{border-color:var(--accent);color:var(--accent)}
+.notice.ok{border-color:var(--ok);color:var(--ok)}
+.notice.warn{border-color:var(--warn);color:var(--warn)}
+.notice.error{border-color:var(--err);color:var(--err)}
+.gate{border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--panel);margin:0 0 16px}
+.gate h2{font-size:14px;margin:0 0 8px}
+.gate p{color:var(--dim);font-size:12.5px;margin:0 0 10px}
+.gate label{display:block;font-size:12px;color:var(--dim);margin:0 0 4px}
+.gate input{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);
+  background:#0b0b10;color:var(--text);font-size:13px}
+.gate .row{margin-top:10px;display:flex;gap:8px;align-items:center}
+#not-logged-in{border:1px solid var(--warn);color:var(--warn);border-radius:8px;
+  padding:12px 14px;margin:0 0 16px;font-size:13px;white-space:pre-wrap}
+#not-logged-in[hidden]{display:none}
+#frame-order-slot{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:0 0 16px;
+  font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);white-space:pre-wrap;word-break:break-word}
+#frame-order-slot.bad{border-color:var(--err);color:var(--err)}
+#frame-order-slot.good{border-color:var(--ok);color:var(--ok)}
+#approval-card-slot{margin:0 0 16px}
+#approval-card-slot:empty{display:none}
+.approval-card{border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--panel)}
+.approval-card-header h2{margin:0 0 12px;font-size:15px}
+.approval-card-fields{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0 0 14px}
+.approval-card-fields dt{color:var(--dim);font-size:12.5px;margin:0}
+.approval-card-fields dd{margin:0;font-size:13px;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.approval-card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.session-form{display:flex;gap:8px;align-items:center;margin:0 0 16px;flex-wrap:wrap}
+.session-form label{font-size:12px;color:var(--dim)}
+.session-form input{flex:1;min-width:220px;padding:7px 10px;border-radius:6px;border:1px solid var(--border);
+  background:#0b0b10;color:var(--text);font-size:13px}
+footer.hint{color:var(--dim);font-size:12px;border-top:1px solid var(--border);padding-top:12px;margin-top:24px}
+</style>
+</head>
+<body>
+<!--
+  app/approval-session.html — 审批会话页（真消费 `approval_card` 帧；#1182 · #1075 P3 前端消费者）
+
+  架构位置: **浏览器端静态页**（`app/`，由 `src/server.ts:463` 的 `express.static('/app')` 托管；
+    无服务端渲染、无插值、无岗位数据）。本页 **只做消费者** —— `src/**` 零改动。
+
+  设计哲学（一句）: **先验帧序、再渲卡** —— 后端审批会话的协议是**恰好三条帧**（open→approval_card→end），
+    本页把"帧序"当成与卡同等重要的契约：顺序一歪立刻显式报错（期望 vs 实得），绝不"看到卡就画"。
+
+  契约（铁律 47）:
+    @input  — URL query `approvalRoleId`（首选；页面输入框可改）；Bearer 唯一来源
+              `sessionStorage['synova.token']`（经 `/app/js/approval-card.js` 的 `readToken()`）；
+              **不从 URL 取 token，不回读 cookie/localStorage**。
+    @output — 有 token ⇒ `POST /api/conversations`，body `{"approvalRoleId":"<roleId>"}`，
+              header `Authorization: Bearer <token>` ＋ `Content-Type: application/json`；
+              按行解析 SSE `data: {json}`（`event:` 行忽略，`: ping` 心跳注释忽略）。
+              见到 `approval_card` ⇒ `SynovaApprovalCard.renderApprovalCard(#approval-card-slot, frame, …)`。
+              页面锚点：`#notice-slot`（提示）｜`#approval-card-slot`（卡）｜`#frame-order-slot`（帧序）｜
+              `[data-testid="token-gate"]`（token 粘贴位）｜`[data-testid="not-logged-in"]`（未登录块）。
+    @degraded — **前端无 stderr**（不伪造 `SYNO_GATE_DEGRADED_LOG`）⇒ 一切降级**页面可见**：
+              · 流前失败（401/403/400/404 JSON）⇒ `SynovaApprovalCard.describeError()` 出的 code＋message 进提示区；
+              · 帧序乱/缺帧/未知相位/多余帧 ⇒ `#frame-order-slot` 标红并写明「帧序错误：期望 X，实得 Y」；
+              · 无 `approval_card` 帧 ⇒ **不渲染任何卡**（容器保持为空）＋提示「本次会话无审批卡」；
+              · 审批动作失败 ⇒ `describeError` 原文进提示区（成功才刷新会话）。
+              **不静默**是硬约束：本页每条降级路径都有可见出口。
+    @authority — 谁能调：任何能打开本页并持有有效 Bearer 的浏览器用户；**权限判定唯一真源 = 服务端**
+              （`POST /api/conversations` 的 401/403 与 `POST /api/role-packs/:id/approval` 的 401/403）。
+              本页**不做本地放行**，也不缓存审批态（每次刷新都重新拉）。
+    @not-here — 不重写聊天（不改 `app/chat.html`／`app/js/chat-sse.js`）｜不做登录 UI（token 手工粘贴，
+              §10-L9）｜不做说明书页（归 `app/role-packs.html`）｜不做粒度选择（归说明书页）｜
+              不建会话/不落库/不跑 LLM（后端审批分支同样不建会话）｜不做 SPA/框架/构建链｜
+              不 console.log 凭据｜token 永不进 URL。
+
+  typed error（本页自有码，前缀 `E_APPROVAL_SESSION_*`；DSH 代码标准 B1）:
+    ⚠️ **前缀族名撞名说明**：后端 `src/routes/conversations.ts` 已有 `E_APPROVAL_SESSION_CONFLICT`（流前失败码）。
+    本页**不定义**该码，只在流前失败时**原样透传**（见本节末条）；下表 9 个码均为**本页自有**，后端从不产生。
+    失败路径统一经 `{code, message, phase}` 对象后再渲染，页面可见文案＝`<code>：<人读说明>`
+    （`phase` = 根因阶段：`pre-stream|stream|frame|card|action`；`phase` 只进日志面/诊断，不改变人读文案）。
+    | code | 触发 | 呈现位置 |
+    |---|---|---|
+    | `E_APPROVAL_SESSION_FRAME_ORDER` | 帧序乱／缺帧／多余帧／`open.mode≠approval`／响应非流（无帧可校） | `#frame-order-slot`（标红，仍含「帧序错误／期望／实得」）＋ `#notice-slot` |
+    | `E_APPROVAL_SESSION_SSE_PARSE` | `data:` 行 JSON 解析失败 | 同「帧序错误」（计入实测序列，不丢帧） |
+    | `E_APPROVAL_SESSION_HTTP` | HTTP 非 2xx 且响应体**无可读 code** | `#notice-slot`（＋帧序区标红） |
+    | `E_APPROVAL_SESSION_NETWORK` | fetch 抛错／超时（无 HTTP 响应） | `#notice-slot`（＋帧序区标红） |
+    | `E_APPROVAL_SESSION_NO_CARD` | 流结束仍无 `approval_card` 帧 ⇒ **不渲卡**（容器保持空） | `#notice-slot`（warn） |
+    | `E_APPROVAL_SESSION_TOKEN_MISSING` | 无 token（**本地拦截 ⇒ 零请求**） | `#notice-slot` ＋ 未登录块 |
+    | `E_APPROVAL_SESSION_NO_ROLE` | 无 `approvalRoleId`（本地拦截 ⇒ 零请求） | `#notice-slot`（warn） |
+    | `E_APPROVAL_SESSION_DEP_MISSING` | 依赖缺失：`approval-card.js`／`fetch`／卡容器 | `#notice-slot` |
+    | `E_APPROVAL_SESSION_CARD_RENDER` | 卡渲染抛错且异常**不带 code** | `#notice-slot` ＋ 卡容器 |
+    🔴 后端已给的 code（`UNAUTHORIZED`／`E_ROLE_PACK_FORBIDDEN`／`E_APPROVAL_*` 等）**原样透传**，不包成自有码。
+  已知限制（Known Limitations；禁写"暂无"）:
+    · **L1 · 无自动化 UI 测试**：本批无 jsdom/无构建链；判据靠 /tmp 用 node `vm` 载入「内联脚本 ＋
+      `approval-card.js`」＋ stub DOM/fetch 驱动帧，真实浏览器 E2E 不在本批（规格 §4）。
+    · **L2 · 帧序校验按"恰好三条"判**：多一帧也算错（多余帧标红）。若后端未来加帧（如心跳帧以
+      `data:` 形式出现），需同步放行 —— 当前 `: ping` 心跳是注释帧（本页忽略），不占帧位。
+    · **L3 · 流总时长受 15s 上限约束**（`STREAM_TIMEOUT_MS`）：审批会话恒三帧、立即结束；若未来
+      卡帧变长需调该常量（超时 ⇒ 显式提示"请求失败（网络/超时）"，不静默挂起）。
+    · **L4 · 粒度不在此页选择**：批准时若卡上 `scope` 非空则原样透传（保粒度），为空则交给服务端
+      默认（`parseScope(undefined)` ⇒ `content`，见 `src/routes/role-approvals.ts:180`）。
+    · **L5 · 无 CSP／无 SRI**：页面为内联脚本，需 `script-src 'unsafe-inline'`；本批不引入 CSP（§1.3）。
+    · **L6 · 审批成功后靠"重开会话"刷新**：不本地改卡（单一真源 = 服务端读路径）；重开即重新拉三帧。
+    · **L7 · 无法自动化的部分**：真浏览器里 `AbortSignal.timeout` 的**实际中断时机**、`window.location.assign`
+      跳转、密码输入框的浏览器级"保存密码"行为 —— 这三处只能人工核，不入 vm 断言。
+-->
+<div class="wrap">
+  <header class="top">
+    <h1>审批会话 · 审批卡</h1>
+    <span class="spacer"></span>
+    <button id="session-reload" class="btn btn-outline" type="button">重新拉取</button>
+    <button id="switch-token-btn" class="btn btn-outline" type="button">更换 token</button>
+  </header>
+
+  <div id="notice-slot"></div>
+
+  <div id="not-logged-in" data-testid="not-logged-in">未登录：未找到访问 token（sessionStorage 键 synova.token）。请在下方粘贴 token 后点「保存并加载」；未登录状态下本页不发任何数据请求。</div>
+
+  <section class="gate" data-testid="token-gate">
+    <h2>需要访问 token</h2>
+    <p>本页只消费审批会话的 SSE 帧，不内嵌任何岗位数据。token 只保存在本标签页的 sessionStorage（键 <code>synova.token</code>），不写入 URL、cookie 或 localStorage。</p>
+    <label for="token-input">访问 token</label>
+    <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴 token 后回车">
+    <div class="row">
+      <button id="token-save" class="btn" type="button">保存并加载</button>
+    </div>
+  </section>
+
+  <div class="session-form">
+    <label for="role-id-input">approvalRoleId</label>
+    <input id="role-id-input" type="text" spellcheck="false" placeholder="岗位 id（如 finance）——也可由 URL ?approvalRoleId= 带入">
+    <button id="role-id-run" class="btn" type="button">用该岗位打开审批会话</button>
+  </div>
+
+  <div id="frame-order-slot">帧序 0/3：等待 open（mode=approval）…</div>
+
+  <div id="approval-card-slot"></div>
+
+  <footer class="hint">
+    帧序契约：<code>open(mode=approval) → approval_card → end</code>（恰好三条）。乱序/缺帧/多余帧一律显式报错。
+    卡字段来自服务端读路径（单一真源），本页不重算审批态。
+  </footer>
+</div>
+
+<script src="/app/js/approval-card.js"></script>
+<script>
+/**
+ * 内联脚本（本页唯一逻辑；写集不含新 `.js` ⇒ 逻辑必须内联，见 task-3 写集）。
+ *
+ * 设计哲学: **先验帧序、再渲卡**（详见文件头契约块）。
+ * Source map（本节内）:
+ *   | 符号 | 角色 |
+ *   |---|---|
+ *   | `byId`/`byTestId` | 取 DOM 节点（缺失返回 null，全部调用点判空 ⇒ vm stub 可用） |
+ *   | `setNotice`/`setFrameOrder` | 两个可见出口（提示区／帧序区）|
+ *   | `setNotLoggedIn` | 未登录块显隐（文案由 JS 写 ⇒ 可被断言） |
+ *   | `queryRoleId` | roleId 唯一来源＝URL query（不读 token） |
+ *   | `loadSession` | 唯一会话入口（**无 token ⇒ 直接返回，零请求**） |
+ *   | `consumeStream`/`consumeLine`/`parseFrame` | SSE 消费（参照 `app/js/chat-sse.js` 的 pump 写法，**不改该文件**） |
+ *   | `handleFrame`/`failOrder`/`finishStream` | 帧序状态机（期望 open→approval_card→end） |
+ *   | `renderCard` | 卡渲染（委托 `SynovaApprovalCard.renderApprovalCard`） |
+ *   | `doAction` | 审批动作（`buildApprovalRequest` ⇒ fetch ⇒ 失败 describeError／成功重开会话） |
+ *   | `doDetail` | 说明书页跳转（路径已由卡片库白名单校验） |
+ *   | `makeTimeoutSignal` | 15s 超时/可取消（R4.3；**函数体内**取 AbortSignal） |
+ * 已知限制: 见文件头 L1–L7（不重复）。
+ */
+(function () {
+  'use strict';
+
+  /** 帧序契约（后端 `handleApprovalSession` 固定三条；`src/routes/conversations.ts`）。 */
+  var EXPECTED_SEQUENCE = ['open', 'approval_card', 'end'];
+  /** 帧序人读文案（错误提示里"期望"一侧）。 */
+  var EXPECTED_TEXT = 'open(mode=approval)→approval_card→end';
+  /** 流总时长上限（R4.3 可取消；审批会话恒三帧、立即结束 —— 见已知限制 L3）。 */
+  var STREAM_TIMEOUT_MS = 15000;
+  /** 未登录文案（单一出处）。 */
+  var NOT_LOGGED_IN_TEXT =
+    '未登录：未找到访问 token（sessionStorage 键 synova.token）。请在上方粘贴 token 后点「保存并加载」；未登录状态下本页不发任何数据请求。';
+
+  /**
+   * 本页自有 typed error 码（DSH 代码标准 B1：失败必须带 `code`；命名空间与后端严格区分）。
+   * 码表见文件头「typed error」节（改码须同批改该表与 `/tmp` 断言）。
+   */
+  var CODES = {
+    FRAME_ORDER: 'E_APPROVAL_SESSION_FRAME_ORDER',
+    SSE_PARSE: 'E_APPROVAL_SESSION_SSE_PARSE',
+    HTTP: 'E_APPROVAL_SESSION_HTTP',
+    NETWORK: 'E_APPROVAL_SESSION_NETWORK',
+    NO_CARD: 'E_APPROVAL_SESSION_NO_CARD',
+    TOKEN_MISSING: 'E_APPROVAL_SESSION_TOKEN_MISSING',
+    NO_ROLE: 'E_APPROVAL_SESSION_NO_ROLE',
+    DEP_MISSING: 'E_APPROVAL_SESSION_DEP_MISSING',
+    CARD_RENDER: 'E_APPROVAL_SESSION_CARD_RENDER'
+  };
+
+  /**
+   * 构造带 code 的错误对象（失败路径**唯一**数据形态；不得只传裸文案）。
+   * @param {string|undefined} code - `CODES.*` 之一；缺省/非法 ⇒ `CODES.HTTP`（兜底码，仍带 code）
+   * @param {string} message - 人读说明
+   * @param {string} phase - 根因阶段 `pre-stream|stream|frame|card|action`
+   * @returns {{code: string, message: string, phase: string}} typed error
+   */
+  function typedError(code, message, phase) {
+    var known = typeof code === 'string' ? code : '';
+    if (known === '') { known = CODES.HTTP; }
+    return { code: known, message: String(message), phase: typeof phase === 'string' ? phase : 'stream' };
+  }
+
+  /**
+   * 呈现 typed error：提示区文案 ＝ `<code>：<人读说明>`（禁用裸文案，B1）。
+   * @param {{code: string, message: string, phase: string}} err - typed error
+   * @param {string} [kind] - `info|ok|warn|error`（缺省 `error`）
+   * @returns {void}
+   */
+  function showTypedError(err, kind) {
+    setNotice(kind === undefined ? 'error' : kind, err.code + '：' + err.message);
+  }
+
+  /**
+   * 后端响应体里的 code（**原样透传**）；无则用本页 `CODES.HTTP`。
+   * @param {Object|null} body - 已解析响应体
+   * @returns {string} 透传码或 `E_APPROVAL_SESSION_HTTP`
+   */
+  function backendOrHttpCode(body) {
+    if (body !== null && typeof body === 'object' && typeof body.code === 'string' && body.code !== '') {
+      return body.code;
+    }
+    return CODES.HTTP;
+  }
+
+  // ── DOM 取值（全部判空 ⇒ node vm stub 无节点也不炸）──────────────────────
+
+  /**
+   * 按 id 取节点。
+   * @param {string} id - 元素 id
+   * @returns {Element|null} 节点或 null
+   */
+  function byId(id) {
+    if (typeof document === 'undefined' || document === null) { return null; }
+    if (typeof document.getElementById !== 'function') { return null; }
+    return document.getElementById(id);
+  }
+
+  /**
+   * 按 data-testid 取节点。
+   * @param {string} name - testid 值
+   * @returns {Element|null} 节点或 null
+   */
+  function byTestId(name) {
+    if (typeof document === 'undefined' || document === null) { return null; }
+    if (typeof document.querySelector !== 'function') { return null; }
+    try {
+      return document.querySelector('[data-testid="' + name + '"]');
+    } catch (err) {
+      return null;
+    }
+  }
+
+  var els = {
+    notice: byId('notice-slot'),
+    card: byId('approval-card-slot'),
+    frameOrder: byId('frame-order-slot'),
+    notLoggedIn: byTestId('not-logged-in'),
+    gate: byTestId('token-gate'),
+    tokenInput: byId('token-input'),
+    tokenSave: byId('token-save'),
+    roleInput: byId('role-id-input'),
+    roleRun: byId('role-id-run'),
+    reload: byId('session-reload'),
+    switchToken: byId('switch-token-btn')
+  };
+
+  // ── 可见出口 ─────────────────────────────────────────────────────────────
+
+  /**
+   * 写提示区（**唯一提示出口**；文本一律 `textContent`，禁 innerHTML 拼数据）。
+   * @param {string} kind - `info|ok|warn|error`
+   * @param {string} text - 文案
+   * @returns {void}
+   */
+  function setNotice(kind, text) {
+    if (els.notice === null || els.notice === undefined) { return; }
+    els.notice.innerHTML = '';
+    if (typeof document === 'undefined' || document === null || typeof document.createElement !== 'function') {
+      els.notice.textContent = '[' + kind + '] ' + text;
+      return;
+    }
+    var node = document.createElement('div');
+    node.className = 'notice ' + kind;
+    node.textContent = text;
+    els.notice.appendChild(node);
+  }
+
+  /**
+   * 写帧序区（`bad` ＝ 帧序错误；`good` ＝ 3/3 通过）。
+   * @param {string} text - 文案
+   * @param {string|null} kind - `'bad'|'good'|null`
+   * @returns {void}
+   */
+  function setFrameOrder(text, kind) {
+    if (els.frameOrder === null || els.frameOrder === undefined) { return; }
+    els.frameOrder.textContent = text;
+    var cls = 'frame-order-slot';
+    if (kind === 'bad') { cls += ' bad'; }
+    if (kind === 'good') { cls += ' good'; }
+    try {
+      els.frameOrder.className = cls;
+    } catch (err) {
+      // 极简 stub 无 className 时可忽略（文本已写）
+    }
+  }
+
+  /**
+   * 未登录块显隐（文案由 JS 写 ⇒ 可在 vm 断言里看到）。
+   * @param {boolean} visible - 是否显示
+   * @param {string} text - 文案（隐藏时传空串）
+   * @returns {void}
+   */
+  function setNotLoggedIn(visible, text) {
+    if (els.notLoggedIn === null || els.notLoggedIn === undefined) { return; }
+    els.notLoggedIn.textContent = text;
+    try {
+      els.notLoggedIn.hidden = !visible;
+    } catch (err) {
+      // stub 容器无 hidden 时可忽略（文本已写）
+    }
+  }
+
+  /**
+   * 清空卡容器（**无卡时容器必须空** —— 判据 6）。
+   * @returns {void}
+   */
+  function clearCardSlot() {
+    if (els.card === null || els.card === undefined) { return; }
+    els.card.innerHTML = '';
+    els.card.textContent = '';
+  }
+
+  // ── 依赖库 ───────────────────────────────────────────────────────────────
+
+  /**
+   * 取共享卡片库（`/app/js/approval-card.js`）。
+   * @returns {Object|null} `window.SynovaApprovalCard` 或 null
+   */
+  function cardLib() {
+    if (typeof window === 'undefined' || window === null) { return null; }
+    var lib = window.SynovaApprovalCard;
+    if (lib === null || lib === undefined || typeof lib !== 'object') { return null; }
+    return lib;
+  }
+
+  // ── roleId 与 token ──────────────────────────────────────────────────────
+
+  /**
+   * 从 URL query 取 `approvalRoleId`（**只读 roleId，绝不从 URL 取 token**）。
+   * @returns {string} roleId（缺失/异常 ⇒ 空串）
+   */
+  function queryRoleId() {
+    try {
+      if (typeof window === 'undefined' || window === null) { return ''; }
+      var location = window.location;
+      if (location === null || location === undefined) { return ''; }
+      var search = typeof location.search === 'string' ? location.search : '';
+      if (search === '') { return ''; }
+      var matched = /(?:^|[?&])approvalRoleId=([^&]*)/.exec(search);
+      if (matched === null) { return ''; }
+      return decodeURIComponent(matched[1].replace(/\+/g, ' '));
+    } catch (err) {
+      return '';
+    }
+  }
+
+  /**
+   * 解析当前应用的 roleId（输入框优先，其次 URL query）。
+   * @returns {string} roleId（空 ⇒ 不请求）
+   */
+  function currentRoleId() {
+    if (els.roleInput !== null && els.roleInput !== undefined &&
+        typeof els.roleInput.value === 'string' && els.roleInput.value.trim() !== '') {
+      return els.roleInput.value.trim();
+    }
+    return queryRoleId();
+  }
+
+  /**
+   * 15s 超时/可取消信号（R4.3；🔴 `AbortSignal` 只在函数体内取，加载期不求值）。
+   * @returns {AbortSignal|undefined} signal 或 undefined
+   */
+  function makeTimeoutSignal() {
+    if (typeof AbortSignal !== 'undefined' && AbortSignal !== null &&
+        typeof AbortSignal.timeout === 'function') {
+      try {
+        return AbortSignal.timeout(STREAM_TIMEOUT_MS);
+      } catch (err) {
+        // 落到 AbortController 分支
+      }
+    }
+    if (typeof AbortController !== 'undefined' && AbortController !== null) {
+      try {
+        var controller = new AbortController();
+        if (typeof setTimeout === 'function') {
+          setTimeout(function () { controller.abort(); }, STREAM_TIMEOUT_MS);
+        }
+        return controller.signal;
+      } catch (err2) {
+        return undefined;
+      }
+    }
+    return undefined;
+  }
+
+  // ── 帧序状态机 ───────────────────────────────────────────────────────────
+
+  var state = {
+    seqIndex: 0,
+    observed: [],
+    cardSeen: false,
+    orderError: null,
+    /** 首个失败的 typed code（帧序区收口时沿用 ⇒ SSE 解析失败不被泛化成 FRAME_ORDER）。 */
+    orderCode: null
+  };
+
+  /**
+   * 重置帧序状态（每次拉会话前）。
+   * @returns {void}
+   */
+  function resetState() {
+    state.seqIndex = 0;
+    state.observed = [];
+    state.cardSeen = false;
+    state.orderError = null;
+    state.orderCode = null;
+  }
+
+  /**
+   * 判帧序错误并**显式呈现**（不静默）。文案恒含「帧序错误／期望／实得」三片段（既有断言在验）。
+   * @param {string} detail - 具体差异（期望 vs 实得）
+   * @param {string} [code] - `CODES.FRAME_ORDER`（缺省）或 `CODES.SSE_PARSE`
+   * @returns {void}
+   */
+  function failOrder(detail, code) {
+    state.orderError = detail;
+    var observedText = observedTextOf();
+    var typed = typedError(typeof code === 'string' && code !== '' ? code : CODES.FRAME_ORDER, detail, 'frame');
+    state.orderCode = typed.code;
+    setFrameOrder(typed.code + '：帧序错误：' + detail + '\n期望：' + EXPECTED_TEXT + '\n实得：' + observedText, 'bad');
+    setNotice('error', typed.code + '：帧序错误：' + detail + '（期望 ' + EXPECTED_TEXT + '；实得 ' + observedText + '）');
+  }
+
+  /**
+   * 实得帧序列人读文本。
+   * @returns {string} 如 `open→end`
+   */
+  function observedTextOf() {
+    return state.observed.length > 0 ? state.observed.join('→') : '（无帧）';
+  }
+
+  /**
+   * 单帧进状态机（**帧序是契约**：expected 不符即报错并停判）。
+   * @param {Object} frame - SSE 帧对象
+   * @returns {void}
+   */
+  function handleFrame(frame) {
+    var type = frame !== null && typeof frame === 'object' && typeof frame.type === 'string'
+      ? frame.type
+      : '(无 type)';
+    state.observed.push(type);
+    if (state.orderError !== null) { return; }
+
+    if (state.seqIndex >= EXPECTED_SEQUENCE.length) {
+      failOrder('多余帧：期望流在 end 后结束，实得第 ' + String(state.seqIndex + 1) + ' 帧 ' + type);
+      return;
+    }
+
+    var expected = EXPECTED_SEQUENCE[state.seqIndex];
+    if (type !== expected) {
+      failOrder('第 ' + String(state.seqIndex + 1) + ' 帧期望 ' + expected + '，实得 ' + type);
+      return;
+    }
+
+    if (expected === 'open') {
+      var mode = frame.mode;
+      if (mode !== 'approval') {
+        failOrder('第 1 帧 open.mode 期望 "approval"，实得 ' +
+          (mode === undefined ? '（无该字段）' : JSON.stringify(mode)));
+        return;
+      }
+    }
+
+    state.seqIndex += 1;
+    if (type === 'approval_card') {
+      state.cardSeen = true;
+      renderCard(frame);
+    }
+    setFrameOrder('帧序 ' + String(state.seqIndex) + '/3：' + type + ' ✓（' + EXPECTED_TEXT + '）', null);
+  }
+
+  /**
+   * 流结束收口：缺帧/多余帧/无卡（全部显式）。
+   * @returns {void}
+   */
+  function finishStream() {
+    if (state.orderError === null && state.seqIndex < EXPECTED_SEQUENCE.length) {
+      var missing = EXPECTED_SEQUENCE.slice(state.seqIndex);
+      state.orderError = '缺帧：期望还有 ' + missing.join('→') + '（流已结束）';
+    }
+
+    if (state.orderError !== null) {
+      setFrameOrder((state.orderCode !== null ? state.orderCode : CODES.FRAME_ORDER) + '：帧序错误：' + state.orderError + '\n期望：' + EXPECTED_TEXT + '\n实得：' + observedTextOf(), 'bad');
+    } else {
+      setFrameOrder('帧序 OK：' + EXPECTED_TEXT + '（3/3）', 'good');
+    }
+
+    if (!state.cardSeen) {
+      // 判据 6：无 approval_card ⇒ 不渲染任何卡（容器内不得出现 roleId/status）
+      clearCardSlot();
+      setNotice('warn', CODES.NO_CARD + '：本次会话无审批卡 —— 未收到 approval_card 帧（卡容器保持为空；帧序错误见上方帧序区）');
+      return;
+    }
+    if (state.orderError === null) {
+      setNotice('ok', '审批卡已渲染（帧序 3/3 通过）。');
+    }
+  }
+
+  // ── 卡渲染与动作 ─────────────────────────────────────────────────────────
+
+  /**
+   * 渲染审批卡（委托共享库；库缺失/渲染失败**显式报错**，不静默留白）。
+   * @param {Object} frame - `approval_card` 帧
+   * @returns {void}
+   */
+  function renderCard(frame) {
+    var container = els.card;
+    if (container === null || container === undefined) {
+      setNotice('error', CODES.DEP_MISSING + '：页面缺少卡容器 #approval-card-slot —— 无法渲染审批卡');
+      return;
+    }
+    var lib = cardLib();
+    if (lib === null) {
+      container.textContent = '审批卡库未加载（/app/js/approval-card.js 缺失或加载失败）—— 无法渲染卡。';
+      setNotice('error', CODES.DEP_MISSING + '：审批卡库未加载 —— 无法渲染审批卡（fail loud，不静默留白）');
+      return;
+    }
+    try {
+      lib.renderApprovalCard(container, frame, { onAction: doAction, onDetail: doDetail });
+    } catch (err) {
+      var code = err !== null && err !== undefined && typeof err.code === 'string' ? err.code : '';
+      container.textContent = '审批卡渲染失败：' + (code !== '' ? code + ' ' : '') +
+        String(err !== null && err !== undefined && err.message ? err.message : err);
+      setNotice('error', (code !== '' ? code : CODES.CARD_RENDER) + '：审批卡渲染失败（fail loud）');
+    }
+  }
+
+  /**
+   * 审批动作（approve/revoke）：构造请求 ⇒ 发 ⇒ 失败可读／成功重开会话刷新。
+   * @param {string} action - `approve|revoke`
+   * @param {Object} frame - 卡帧（取 roleId/scope/contentHash）
+   * @returns {void}
+   */
+  function doAction(action, frame) {
+    var lib = cardLib();
+    if (lib === null) {
+      setNotice('error', CODES.DEP_MISSING + '：审批卡库未加载 —— 无法构造审批请求');
+      return;
+    }
+    var token = lib.readToken();
+    if (token === '') {
+      setNotLoggedIn(true, NOT_LOGGED_IN_TEXT);
+      setNotice('error', CODES.TOKEN_MISSING + '：未登录：找不到 token，审批动作未发出（零请求）');
+      return;
+    }
+
+    var safeFrame = frame !== null && typeof frame === 'object' ? frame : {};
+    var roleId = typeof safeFrame.roleId === 'string' ? safeFrame.roleId : '';
+    var options = { token: token };
+    if (action === 'approve') {
+      // 粒度原样透传（本页不做粒度选择，见已知限制 L4）；指纹用于 409 竞态守卫。
+      if (typeof safeFrame.scope === 'string' && safeFrame.scope !== '') { options.scope = safeFrame.scope; }
+      if (typeof safeFrame.contentHash === 'string' && safeFrame.contentHash !== '') {
+        options.expectedContentHash = safeFrame.contentHash;
+      }
+    }
+
+    var built = lib.buildApprovalRequest(roleId, action, options);
+    if (built !== null && built !== undefined && built.error !== undefined) {
+      /* 构造失败码由卡片库给（如 E_APPROVAL_TOKEN_MISSING／E_APPROVAL_ACTION_UNKNOWN）⇒ **原样透传** */
+      var builtCode = typeof built.code === 'string' && built.code !== '' ? built.code : CODES.HTTP;
+      showTypedError(typedError(builtCode, '审批请求未发出：' + built.error, 'action'));
+      return;
+    }
+    if (typeof fetch !== 'function') {
+      setNotice('error', CODES.DEP_MISSING + '：当前环境没有 fetch —— 审批请求无法发送');
+      return;
+    }
+
+    setNotice('info', '正在提交审批动作：' + action + ' …');
+    fetch(built.url, built.init).then(function (res) {
+      return readBodyText(res).then(function (raw) {
+        var body = parseJsonOrNull(raw);
+        if (res.ok === false) {
+          showTypedError(typedError(backendOrHttpCode(body), '审批失败：' + lib.describeError(res.status, body), 'action'));
+          return;
+        }
+        setNotice('ok', '审批已提交（' + action + '）—— 重新拉取审批会话以刷新卡');
+        loadSession(roleId);
+      });
+    }).catch(function (err) {
+      setNotice('error', CODES.NETWORK + '：审批请求失败（网络/超时）：' + errorText(err));
+    });
+  }
+
+  /**
+   * 说明书跳转（路径已由卡片库白名单校验/回落）。
+   * @param {string} detailPath - `/role-packs/<id>`
+   * @returns {void}
+   */
+  function doDetail(detailPath) {
+    if (typeof window !== 'undefined' && window !== null && window.location !== null &&
+        window.location !== undefined && typeof window.location.assign === 'function') {
+      window.location.assign(detailPath);
+      return;
+    }
+    setNotice('warn', '当前环境无法跳转说明书页 —— 目标路径：' + detailPath);
+  }
+
+  // ── SSE 消费（参照 app/js/chat-sse.js 的 pump 写法；不改该文件）──────────
+
+  /**
+   * 消费 SSE 响应流。
+   * @param {Object} res - fetch Response
+   * @returns {void}
+   */
+  function consumeStream(res) {
+    var body = res !== null && res !== undefined ? res.body : null;
+    var reader = body !== null && body !== undefined && typeof body.getReader === 'function'
+      ? body.getReader()
+      : null;
+    if (reader === null) {
+      setNotice('error', CODES.FRAME_ORDER + '：响应没有可读流（ReadableStream）—— 无法解析 SSE 帧');
+      setFrameOrder(CODES.FRAME_ORDER + '：帧序错误：响应不是流（无 ReadableStream）；期望 ' + EXPECTED_TEXT + '；实得：（无帧）', 'bad');
+      return;
+    }
+
+    var decoder = new TextDecoder();
+    var buffer = '';
+
+    function pump() {
+      reader.read().then(function (result) {
+        if (result.done === true) {
+          flushBuffer();
+          finishStream();
+          return;
+        }
+        buffer += decoder.decode(result.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (var i = 0; i < lines.length; i += 1) {
+          consumeLine(lines[i]);
+        }
+        pump();
+      }).catch(function (err) {
+        setNotice('error', CODES.NETWORK + '：SSE 流读取失败：' + errorText(err));
+        finishStream();
+      });
+    }
+
+    function flushBuffer() {
+      if (buffer !== '') {
+        consumeLine(buffer);
+        buffer = '';
+      }
+    }
+
+    pump();
+  }
+
+  /**
+   * 单行 SSE 解析（`data: ` ⇒ JSON；`:` 注释＝心跳；`event:` 忽略）。
+   * @param {string} rawLine - 原始行（可能带 `\r`）
+   * @returns {void}
+   */
+  function consumeLine(rawLine) {
+    var line = String(rawLine).replace(/\r$/, '');
+    if (line === '') { return; }
+    if (line.charAt(0) === ':') { return; }
+    if (line.indexOf('data: ') === 0) {
+      parseFrame(line.slice(6));
+      return;
+    }
+    if (line.indexOf('data:') === 0) {
+      parseFrame(line.slice(5).replace(/^ /, ''));
+    }
+  }
+
+  /**
+   * 帧 JSON 解析（失败**显式提示**并计入帧序错误，不丢帧不静默）。
+   * @param {string} json - `data:` 后的原文
+   * @returns {void}
+   */
+  function parseFrame(json) {
+    var frame = null;
+    try {
+      frame = JSON.parse(json);
+    } catch (err) {
+      failOrder('帧 JSON 解析失败（' + errorText(err) + '）原文前 120 字符：' + json.slice(0, 120), CODES.SSE_PARSE);
+      return;
+    }
+    handleFrame(frame);
+  }
+
+  // ── 会话入口 ─────────────────────────────────────────────────────────────
+
+  /**
+   * 拉取审批会话（**唯一会话入口**；🔴 无 token ⇒ 立即返回，零请求）。
+   * @param {string} roleId - 岗位 id
+   * @returns {void}
+   */
+  function loadSession(roleId) {
+    var lib = cardLib();
+    var token = lib !== null ? lib.readToken() : '';
+    if (token === '') {
+      setNotLoggedIn(true, NOT_LOGGED_IN_TEXT);
+      clearCardSlot();
+      setFrameOrder('（未开始：无 token ⇒ 零请求）', null);
+      showTypedError(typedError(CODES.TOKEN_MISSING, '未登录：未找到访问 token；未发任何请求（零请求）', 'pre-stream'), 'warn');
+      return;
+    }
+    setNotLoggedIn(false, '');
+    if (roleId === '') {
+      clearCardSlot();
+      showTypedError(typedError(CODES.NO_ROLE, '缺少 approvalRoleId —— 请在 URL 加 ?approvalRoleId=<岗位id>，或在上方输入后点按钮；未发请求。', 'pre-stream'), 'warn');
+      setFrameOrder('（未开始：缺 approvalRoleId ⇒ 零请求）', null);
+      return;
+    }
+    if (typeof fetch !== 'function') {
+      setNotice('error', CODES.DEP_MISSING + '：当前环境没有 fetch —— 无法请求审批会话');
+      return;
+    }
+
+    resetState();
+    clearCardSlot();
+    setFrameOrder('帧序 0/3：等待 open（mode=approval）…', null);
+    setNotice('info', '正在请求审批会话：POST /api/conversations {approvalRoleId:"' + roleId + '"} …');
+
+    var init = {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify({ approvalRoleId: roleId }),
+      signal: makeTimeoutSignal()
+    };
+
+    fetch('/api/conversations', init).then(function (res) {
+      if (res.ok === false) {
+        return readBodyText(res).then(function (raw) {
+          var body = parseJsonOrNull(raw);
+          var text = lib !== null ? lib.describeError(res.status, body) : 'HTTP ' + String(res.status);
+          /* 后端码（UNAUTHORIZED／E_ROLE_PACK_FORBIDDEN／E_APPROVAL_SESSION_CONFLICT …）**原样透传** */
+          showTypedError(typedError(backendOrHttpCode(body), '审批会话建立失败（流前失败，无帧可校）：' + text, 'pre-stream'));
+          setFrameOrder(CODES.FRAME_ORDER + '：帧序错误：流前失败（HTTP ' + String(res.status) + '）—— 无帧；期望 ' + EXPECTED_TEXT + '；实得：（无帧）', 'bad');
+        });
+      }
+      consumeStream(res);
+      return undefined;
+    }).catch(function (err) {
+      setNotice('error', CODES.NETWORK + '：审批会话请求失败（网络/超时）：' + errorText(err));
+      setFrameOrder(CODES.FRAME_ORDER + '：帧序错误：请求失败（无帧）；期望 ' + EXPECTED_TEXT + '；实得：（无帧）', 'bad');
+    });
+  }
+
+  // ── 小工具 ───────────────────────────────────────────────────────────────
+
+  /**
+   * 读响应文本（stub 无 `text()` 时降级空串，不抛）。
+   * @param {Object} res - fetch Response
+   * @returns {Promise<string>} 响应文本
+   */
+  function readBodyText(res) {
+    if (res === null || res === undefined || typeof res.text !== 'function') {
+      return Promise.resolve('');
+    }
+    return res.text().then(function (raw) {
+      return typeof raw === 'string' ? raw : '';
+    }).catch(function () {
+      return '';
+    });
+  }
+
+  /**
+   * 宽松 JSON 解析（非 JSON ⇒ null）。
+   * @param {string} raw - 原文
+   * @returns {Object|null} 解析结果
+   */
+  function parseJsonOrNull(raw) {
+    if (typeof raw !== 'string' || raw === '') { return null; }
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /**
+   * 异常 → 文本（不吞堆栈信息以外的内容，也不用 console）。
+   * @param {*} err - 任意抛出物
+   * @returns {string} 文本
+   */
+  function errorText(err) {
+    if (err === null || err === undefined) { return '未知错误'; }
+    if (typeof err === 'string') { return err; }
+    return typeof err.message === 'string' ? err.message : String(err);
+  }
+
+  // ── 装配（脚本在 body 末尾 ⇒ 节点已存在；不依赖 DOMContentLoaded ⇒ vm 可直接驱动）──
+
+  /**
+   * 保存 token（唯一写入点；读仍只走 `SynovaApprovalCard.readToken`）。
+   * @param {string} value - token
+   * @returns {boolean} 是否保存成功
+   */
+  function saveToken(value) {
+    try {
+      if (value) {
+        sessionStorage.setItem('synova.token', value);
+      } else {
+        sessionStorage.removeItem('synova.token');
+      }
+      return true;
+    } catch (err) {
+      setNotice('warn', '浏览器禁用了 sessionStorage，token 未能保存（' + errorText(err) + '）。本次可用，刷新后需重新粘贴。');
+      return false;
+    }
+  }
+
+  if (els.tokenSave !== null && els.tokenSave !== undefined && typeof els.tokenSave.addEventListener === 'function') {
+    els.tokenSave.addEventListener('click', function () {
+      var value = els.tokenInput !== null && els.tokenInput !== undefined && typeof els.tokenInput.value === 'string'
+        ? els.tokenInput.value.trim()
+        : '';
+      saveToken(value);
+      loadSession(currentRoleId());
+    });
+  }
+
+  if (els.tokenInput !== null && els.tokenInput !== undefined && typeof els.tokenInput.addEventListener === 'function') {
+    els.tokenInput.addEventListener('keydown', function (event) {
+      if (event !== null && event !== undefined && (event.key === 'Enter' || event.keyCode === 13)) {
+        var value = typeof els.tokenInput.value === 'string' ? els.tokenInput.value.trim() : '';
+        saveToken(value);
+        loadSession(currentRoleId());
+      }
+    });
+  }
+
+  if (els.roleRun !== null && els.roleRun !== undefined && typeof els.roleRun.addEventListener === 'function') {
+    els.roleRun.addEventListener('click', function () { loadSession(currentRoleId()); });
+  }
+
+  if (els.reload !== null && els.reload !== undefined && typeof els.reload.addEventListener === 'function') {
+    els.reload.addEventListener('click', function () { loadSession(currentRoleId()); });
+  }
+
+  if (els.switchToken !== null && els.switchToken !== undefined && typeof els.switchToken.addEventListener === 'function') {
+    els.switchToken.addEventListener('click', function () {
+      setNotLoggedIn(true, NOT_LOGGED_IN_TEXT);
+      if (els.gate !== null && els.gate !== undefined) {
+        try { els.gate.hidden = false; } catch (err) { /* stub 可忽略 */ }
+      }
+    });
+  }
+
+  // 首屏：roleId 从 URL 带入输入框；有 token 才拉会话（无 token ⇒ 零请求）。
+  var initialRoleId = queryRoleId();
+  if (initialRoleId !== '' && els.roleInput !== null && els.roleInput !== undefined) {
+    els.roleInput.value = initialRoleId;
+  }
+  if (initialRoleId === '') {
+    setNotLoggedIn(true, NOT_LOGGED_IN_TEXT);
+    showTypedError(typedError(CODES.NO_ROLE, 'URL 未带 ?approvalRoleId=<岗位id> —— 请在上方输入岗位 id 后点「用该岗位打开审批会话」；未发请求。', 'pre-stream'), 'warn');
+  } else {
+    loadSession(initialRoleId);
+  }
+}());
+</script>
+</body>
+</html>
