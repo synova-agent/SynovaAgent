@@ -1,0 +1,130 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1159,
+  "patch_fingerprint": "sha256:f4f7f4b193dcd07783f037800673fcff427abf8bf1620a346bb8af9879c14595",
+  "author": "squad-1075（本 PR 代码提交身份 squad-1075 <squad-1075@synova.local>；PR #1159）",
+  "reviewer": "review-1159（DSH 队外子会话，fresh 零上下文，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "①-变更集形态：15 件＝12 规格声明＋2 测试件（CTO 8714 批准）＋1 middleware-order（CTO 8792 追认）",
+      "cmd": "git diff --name-only gitea/main...HEAD | cat -n; git diff --name-status gitea/main...HEAD; git diff --shortstat gitea/main...HEAD",
+      "result": "pass",
+      "evidence": "15 件（6 新建 A＋9 修改 M）；`15 files changed, 3952 insertions(+), 7 deletions(-)`。逐件＝claims/1075.yaml、WIRING-REGISTRY.yaml、src/agent/approval-card.ts、src/init/preset-loader.ts、src/init/role-pack-approval-write.ts、src/routes/{conversations,role-approvals,role-packs-page}.ts、src/server.ts、tests/agent/approval-card.test.ts、tests/contract/triviality-manifest.yaml、tests/init/role-pack-approval-write.test.ts、tests/routes/{middleware-order,role-approvals,role-packs-page}.test.ts。与 CTO 8792『15 件』一致。"
+    },
+    {
+      "id": "①-无 B（P2-4b-B / #1161）产品件混入",
+      "cmd": "git diff --name-only eb3b91755^1 eb3b91755 | sort > /tmp/b-files.txt; git diff --name-only gitea/main...HEAD | sort > /tmp/pr-files.txt; comm -12 /tmp/b-files.txt /tmp/pr-files.txt",
+      "result": "pass",
+      "evidence": "B 变更集 15 件；与本 PR 交集仅 3 件共享登记（.claude/claims/1075.yaml、docs/authority/WIRING-REGISTRY.yaml、tests/contract/triviality-manifest.yaml）⇒ rebase 并集；剔除这 3 件后交集计数 = 0（B 的 builtin-tools/tools/conversation-engine/role-pack-knowledge-filter/knowledge-store 及其测试件全部不在本 PR）。"
+    },
+    {
+      "id": "①-只读面零改（auth／audit-store／audit-service／knowledge-ask／role-pack-*／scripts／.gitea）",
+      "cmd": "git diff --name-only gitea/main...HEAD -- src/middleware/auth.ts src/l4/audit-store.ts src/services/audit-service.ts src/routes/knowledge-ask.ts src/init/role-pack-approval.ts src/init/role-pack-schema.ts src/init/role-pack-persona.ts src/init/role-pack-permissions.ts scripts/ .gitea/ .github/ src/l4/ src/output/",
+      "result": "pass",
+      "evidence": "空输出、exit 0（零行）。另：`grep -nE \"from '\\.\\./l4|audit-store\" src/routes/role-approvals.ts` 零命中（审计只经 AuditService）；架构门禁 exit 0。preset-loader.ts 的 +14 行仅新增 `resolveApprovalsRoot`（见 findings[0]）。"
+    },
+    {
+      "id": "②-新测试件 87 passed（28+31+9+7+12）",
+      "cmd": "node node_modules/.bin/vitest run tests/init/role-pack-approval-write.test.ts tests/routes/role-approvals.test.ts tests/agent/approval-card.test.ts tests/routes/role-packs-page.test.ts tests/routes/middleware-order.test.ts",
+      "result": "pass",
+      "evidence": "`Test Files 5 passed (5)` / `Tests 87 passed (87)`；逐件：approval-card 9、role-packs-page 7、role-pack-approval-write 28、role-approvals 31、middleware-order 12。与 CTO 8792『5 测试件 87 passed』一致。夹具为真 express（app.listen(0)＋fetch）＋真 JWT（DEV_MODE=false＋JWT_SECRET）＋真 better-sqlite3 :memory:（AuditService.init）＋mkdtemp 临时内容根，非 mock（仅 vi.mock('@synova/logger') 一处）。"
+    },
+    {
+      "id": "②-contract 92 ＋ tsc 0 ＋ check-architecture 0 ＋ J10 回归 77",
+      "cmd": "vitest run tests/contract；tsc --noEmit；bash scripts/check-architecture.sh；vitest run tests/init/role-pack-approval.test.ts tests/init/preset-loader.test.ts tests/routes/conversations-role.test.ts",
+      "result": "pass",
+      "evidence": "contract：`11 passed (11)` / `Tests 92 passed (92)`；TSC_EXIT=0（输出 0 行）；ARCH_EXIT=0（『架构检查: 全部通过 ✅』）；J10 回归：3 files / 77 tests passed。"
+    },
+    {
+      "id": "③-整改 10 项逐条（空catch／APPROVAL_CARD_*／|| ''／AbortSignal.timeout／页面先于JWT／WIRING 35／triviality 17／contract 92／冻结集 6／时钟直取 0）",
+      "cmd": "node 逐文件括号配平扫 catch；grep -rn 'APPROVAL_CARD_' src/；grep -rn \"|| ''\" <4 新件>；grep -n AbortSignal.timeout src/routes/role-packs-page.ts；awk 'NR>=482&&NR<=492' src/server.ts；grep -c '^\\s*- capability:' docs/authority/WIRING-REGISTRY.yaml；python3 数 triviality entries；grep -n EXEMPT_REGISTRATIONS tests/routes/middleware-order.test.ts；git diff gitea/main...HEAD | grep -c '^+.*new Date()'",
+      "result": "pass",
+      "evidence": "①空 catch：7 个 src 件 catches 计 66 处、empty=0（测试件 5 件 empty=0）②`APPROVAL_CARD_*` 为模块内 const（:100/:106），export 面只有 type×5＋buildApprovalCardFrame，`grep -n export` 无常量 ③`|| ''`：4 新件 0 命中（存量见 findings[1]）；`|| 'default'` 0 命中 ④AbortSignal.timeout：role-packs-page.ts:186 `signal: AbortSignal.timeout(15000)` ⑤server.ts 486 `app.use(rolePacksPageRoutes)` < 487 `app.use(jwtAuthMiddleware)` < 541 `app.use(roleApprovalsRoutes)` ⑥WIRING capability=35 ⑦triviality entries=17 ⑧contract=92 ⑨冻结集 EXEMPT_REGISTRATIONS 恰 6 项（setupGuideGoneRouter/llmConfigRoutes/uploadV2GoneRouter/rolePacksPageRoutes/authRoutes//api/status/budget），P4-1『恰好等于冻结豁免集 6 项』+P4-2『计数恒为 6』均绿 ⑩新增代码 `new Date()` 计数 0；写模块唯一时钟取 `new Date(systemClock.now())`（src/init/role-pack-approval-write.ts:291，走全仓唯一注入点 src/services/clock.ts:73）。"
+    },
+    {
+      "id": "④-J1 身份与 org（401／403／403＋org 单源）",
+      "cmd": "awk 'NR>=205&&NR<=262' src/routes/role-approvals.ts；vitest run tests/routes/role-approvals.test.ts -t 'J1'",
+      "result": "pass",
+      "evidence": "ensureAuthorized(:214) 三短路：auth 缺失→401 UNAUTHORIZED(:218)；`auth.orgId !== loadConfig().orgId`→403 E_APPROVAL_ORG_MISMATCH(:223-241，记录 orgId 单源＝loadConfig)；role ∉ {admin,manager,ga}→403 E_APPROVAL_ROLE_FORBIDDEN(:243-254)。J1-1..J1-5 全绿（401/staff 403/liaison 403/三角色 200/跨 org 403）。"
+    },
+    {
+      "id": "④-J2 批准落库＋审计＋即时生效（含 unchanged 幂等）",
+      "cmd": "vitest run tests/routes/role-approvals.test.ts -t 'J2'；awk 'NR>=413&&NR<=520' tests/routes/role-approvals.test.ts",
+      "result": "pass",
+      "evidence": "J2-1 断言：200/ok/result=approved/unchanged=false/auditAction=role_pack.approved；记录 8 字段齐＋approvalId 由测试侧独立复算（:439，写错即红）＋磁盘记录同值；审计 `AuditService.query(ORG,{action})` 恰 1 条且 targetType='role_pack'、targetId=ROLE、actorId 正确；`usable` 即时含。J2-2 同 hash 同 scope 再批 ⇒ 200{unchanged:true} 且审计不新增（D9）。J2-3 permissionsPending:true 三面一致。3/3 绿。"
+    },
+    {
+      "id": "④-J3/J4/J5 码表与撤销语义（409／403／400／404／422／503／413）",
+      "cmd": "grep -n 'status(4\\d\\d)' src/routes/role-approvals.ts；awk 'NR>=120&&NR<=130' src/routes/role-approvals.ts；vitest run tests/routes/role-approvals.test.ts -t 'J3|J4|J5'",
+      "result": "pass",
+      "evidence": "码表 :120-128：ROLE_ID_INVALID 400／FACTORY_LOCKED 403／ROLE_NOT_FOUND 404／CONTENT_CHANGED 409／SCOPE_INVALID 422／WRITE_DISABLED 503／NOT_FOUND 404／ORG_MISMATCH 403／IO 500；路由层另 E_APPROVAL_ACTION_INVALID 400(:492)、E_APPROVAL_BODY_TOO_LARGE 413(:508，BODY_MAX_BYTES=16*1024 @:105)。J3-1..J3-8、J4-1(revoke 200/记录删/usable 即时不含/审计 1 条)、J4-2(再撤 404 E_APPROVAL_NOT_FOUND，非 200 幂等，:126 映射)、J5-1(scope_changed 审计＋permissionsPending 翻转) 全绿。"
+    },
+    {
+      "id": "④-J6 审计链＋详情 API 按 targetType＋targetId 过滤",
+      "cmd": "awk 'NR>=278&&NR<=299' src/routes/role-approvals.ts；awk 'NR>=190&&NR<=199' src/routes/role-approvals.ts；vitest run tests/routes/role-approvals.test.ts -t 'J6'",
+      "result": "pass",
+      "evidence": "role-approvals.ts:283 `if (entry.targetType !== AUDIT_TARGET_TYPE || entry.targetId !== roleId) continue;` —— 三 action × 每action 50 条先收窄再合并倒序截 50(:297-298)，即 CTO 8714『须修』项已落地。链：verifyChainOf(:192-199) 未初始化返回 null 并 log.warn(degraded)，不伪造 valid。J6-1(链 valid＋六件齐＋历史)、J6-2(篡改记录 hash⇒下轮 unverified，链仍 valid)、J6-3(预置他人 roleId＋无关 action 各一条，结果恰 1 条且序列化串不含 'other-role'／'workspace.updated') 全绿。"
+    },
+    {
+      "id": "④-J7 审批会话卡（open→approval_card→end；不建会话/不跑 LLM）",
+      "cmd": "awk 'NR>=527&&NR<=557' src/routes/conversations.ts；awk 'NR>=560&&NR<=571' src/routes/conversations.ts；vitest run tests/routes/role-approvals.test.ts -t 'J7'",
+      "result": "pass",
+      "evidence": "第一分支位于 conversations.ts:567（早于 message 必填校验 :573；判 `!== undefined` 以让畸形 approvalRoleId 拿 400 而非退化成普通消息）；帧序 :540-542 open(sessionId:null,mode:'approval')→approval_card→end，无 agent_message、不建会话/不落库。J7-1..J7-6 全绿（未批出卡／已批 status=approved／互斥 400 E_APPROVAL_SESSION_CONFLICT／无 Bearer 401／staff 403／包不存在 404 且流前 JSON）。"
+    },
+    {
+      "id": "④-J8 说明书页壳先于 auth＋零数据内联＋token 仅 sessionStorage",
+      "cmd": "awk 'NR>=480&&NR<=492' src/server.ts；awk 'NR>=917&&NR<=937' tests/routes/role-approvals.test.ts",
+      "result": "pass",
+      "evidence": "server.ts:486 页面壳挂载 < 487 jwtAuthMiddleware < 541 审批 API；J8-1 对 /role-packs 与 /role-packs/<ROLE> 都断言 200＋content-type text/html＋含 id=\"role-packs-app\" 与 data-testid=\"token-gate\"＋含 sessionStorage.getItem('synova.token')＋**不含夹具 ROLE**；J8-2 无 token 数据 API 401；J8-3 断言挂载顺序；role-packs-page.ts 出站 fetch 带 credentials:'omit' 与 15s AbortSignal（:186）。"
+    },
+    {
+      "id": "⑤-改坏抽验 2/2（/tmp 拷贝树，非本树）",
+      "cmd": "cp -a /tmp/w-1159c /tmp/mut-1159a；删 role-pack-approval-write.ts:506-511 指纹比对 ⇒ vitest run（approvals+write）；git checkout 还原；删 conversations.ts:541 `adapter.sendFrame({ ...cardFrame })` ⇒ vitest run approvals；git checkout 还原",
+      "result": "pass",
+      "evidence": "改坏A（删指纹比对）⇒ exit 1，2 failed/57 passed：`FAIL ... J3-1 指纹不符 ⇒ 409 且零写入零审计` + `AssertionError: expected 200 to be 409`；写模块同型 J3 也红。还原后全绿。改坏B（删卡帧发送）⇒ exit 1，2 failed/29 passed：`expected [ 'open', 'end' ] to deeply equal [ 'open', 'approval_card', 'end' ]`（J7-1:846／J7-2:874）。两次还原后 `Tests 31 passed (31)`／整组 87 passed（另见 checks[3]）。判别力成立。"
+    },
+    {
+      "id": "⑥-CI 权威（真值，非本地自验）",
+      "cmd": "curl -s -H 'Authorization: token <redacted>' http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/2b5d1989e/status",
+      "result": "pass",
+      "evidence": "state=success total_count=2 pending=0：`success local-gates / gates (push) 2m35s` ＋ `success local-gates / gates (pull_request) 2m0s`（head 2b5d1989ec74af49737425e4129b830ddeb5fd95，与 git ls-remote gitea refs/heads/ct/1075-p3 一致）。"
+    },
+    {
+      "id": "⑦-补丁指纹（③-2.0 唯一指纹，照重放风险）",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1159 --base main --diff-fingerprint",
+      "result": "pass",
+      "evidence": "f4f7f4b193dcd07783f037800673fcff427abf8bf1620a346bb8af9879c14595（fp12=f4f7f4b193dc），与 CTO 现场 `f4f7f4b193dc…` 一致；base=main=eb3b917551ce49b19d65f8d8556194846517cde1、head=2b5d1989e、PR mergeable=true、state=open、未 merged。回执文件名按该 fp12 签发 ⇒ 之后任何代码改动即作废。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "只读面清单 vs src/init/preset-loader.ts",
+      "what": "任务口径把 preset-loader 列入『只读面零改』，而实际 diff 有 +14 行：新增且仅新增 `export function resolveApprovalsRoot(contentRoot)`（规格 §2.4 明列为修改项『仅导出』）。已核：`approvalsRootFor`/`loadRolePacks` 判定与调用点零改动（diff 只含一个新增函数块，无删除行）。判为合规，记录以免下一轮据『只读面零改』误判越界。"
+    },
+    {
+      "severity": "info",
+      "where": "`|| ''` 零命中口径（src/routes/conversations.ts:399）",
+      "what": "新增 4 件（approval-card／role-pack-approval-write／role-approvals／role-packs-page）`|| ''` 命中 0；仓库内仍存的 conversations.ts:399 `content: result.content || ''` 在 base（gitea/main 同处 line 378）已存在，本 PR diff 内新增 0 处 ⇒ 『零命中』按新增代码成立，不是本批引入。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/contract/triviality-manifest.yaml（+4 条 vs 规格预估 2–3）",
+      "what": "实际 +4 条 triage（role-pack-approval-write／role-approvals／role-packs-page／approval-card），总数 17 条。理由已在 .claude/claims/1075.yaml 注记：3 个新增 ≥100 逻辑行模块 ＋ approval-card 同批登记使 legacy 回 baseline。CTO 8714 已判『可接受』，建议 PR 正文补一句同款说明。"
+    },
+    {
+      "severity": "info",
+      "where": "docs/authority/WIRING-REGISTRY.yaml 行数与新增条数",
+      "what": "capability 行 35（口径＝`grep -c '^\\s+- capability:'`）。本 PR 纯追加 5 条：规格 2 条（permission.rolePackApprovalWrite／audit.rolePackApprovalChain）＋整改 R1 3 条（agent.approvalCardFrame／api.rolePacksApproval／ui.rolePacksGuidePage）。B（#1161）的既有行未被删除（union 保留），无重复行。"
+    },
+    {
+      "severity": "info",
+      "where": "R9 面（回执提交身份）",
+      "what": "本回执提交用 review-1159 <review-1159@synova.local>（与代码提交 squad-1075 分离）。但本机 git 身份整体不可信（同机任意会话可改写），『作者冒用 reviewer 名』抓不到 —— 与 check-merge-conditions.sh 已知限制 1 一致，非本 PR 缺陷。checker 的 R9 若仍打印身份告警属预期（非阻断）。"
+    }
+  ],
+  "issued_at": "2026-10-30T03:14:34+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}

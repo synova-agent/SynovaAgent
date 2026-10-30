@@ -17,8 +17,10 @@
  *   · `setRolePack(persona|null)` —— **每轮刷新**入口（生产唯一调用方 = 路由缓存命中路径）；幂等；
  *     内部同时把运行期 `engineCtx.messages` 重新对齐到本引擎的消息数组（`fromState()` 恢复后二者会分叉，
  *     见该方法注释 —— 不对齐则 LLM 调用看不到重建的 system 层）。
- *   · `serialize()` 仅在**绑定岗位**时写入 `rolePackId`（人设文本**不落库**，每轮从磁盘重解析）；
- *     无包时**不写该键** —— 保 J3 基线形态（`'rolePackId' in state === false`）。
+ *   · `serialize()` 写入 `rolePackId` 的判据 = **绑定意图**真源 `boundRolePackId`（人设文本**不落库**，
+ *     每轮从磁盘重解析）；未绑定会话**不写该键** —— 保 J3 基线形态（`'rolePackId' in state === false`）。
+ *     降级轮（复核失败/撤岗后 `rolePack === null` 但已绑定）**照样写**绑定意图 —— 「已绑定 ≠ 已生效」：
+ *     是否真正注入仍由每轮 `loadRolePackPersona()` 复核决定（#1169 修降级轮落库丢绑定；规格 §2.1-e／§10）。
  *   · `fromState(…, { rolePack })` —— 显式传 `persona`／`null` 才重建 system 层（`null` = 撤岗，
  *     必须把快照里的旧人设段刷掉）；不传（`undefined`）⇒ 既有恢复行为逐字不变（兼容旧调用方）。
  *
@@ -38,8 +40,9 @@
  *     **已绑定但本轮人设复核失败/撤岗**（`rolePack === null` 且 `boundRolePackId !== null`）⇒
  *     `setAllowedTools([])`（fail-closed，不因降级而全放行）。
  *   · 回滚开关 `SYNOVA_ROLE_PACK_TOOLS=off` ⇒ `setAllowedTools(null)` ＋ warn（D8，显式降级）。
- *   · @not-here 不判审批 scope／capabilities 内容／限额（归权限编译模块）；不改 `serialize()` 的
- *     `rolePackId` 写法（L8 已知限制：降级轮落库丢绑定）。
+ *   · @not-here 不判审批 scope／capabilities 内容／限额（归权限编译模块）；P2-4a 不改 `serialize()` 的
+ *     `rolePackId` 写法 —— 该写法由 **#1169** 修正（规格 §2.1-e／§10：只持久化**绑定意图**，是否生效
+ *     仍由每轮复核决定；降级轮落库不再丢绑定）。
  */
 import type { LLMProvider, LLMMessage, HealthCheckResult } from '../providers/types';
 // D363: 运行时 failover 接线 — chain 包装 + 环境变量派生备用 provider
@@ -86,6 +89,11 @@ import { buildRoleLayer, type RolePackPersona } from '../init/role-pack-persona'
 // #1075 P2-4a: 岗位包工具权限编译（审批门＋六件快照＋capabilities 解析 → 白名单/禁用/未落地）。
 // 只**消费**已编译结果；磁盘读取/审批/限额归该模块，白名单执行判定归 ToolRegistry。
 import { loadRolePackPermissions } from '../init/role-pack-permissions';
+// #1075 P2-4b-B: 角色会话知识过滤编译器（scope/deny ＋ 认证面同源敏感度 → L4 FilterClause）。
+// 只**消费**已编译过滤面；YAML/scope/审批解析归 preset-loader，检索执行归 L4。
+import { buildRoleKnowledgeFilter, buildRejectedKnowledgeFilter, type RoleKnowledgeFilter } from '../init/role-pack-knowledge-filter';
+// #1075 P2-4b-B: 知识检索**系统工具**（不注册进 ToolRegistry；经 setSystemToolProvider 注入）
+import { createKnowledgeSearchTool } from './builtin-tools';
 
 const log = createLogger('agent/conversation-engine');
 
@@ -460,6 +468,17 @@ export class ConversationEngine {
    */
   private pendingRolePackId: string | null = null;
 
+  /**
+   * #1075 P2-4b-B: 角色会话知识过滤面（**运行期状态**；`null` = 本会话无系统知识工具）。
+   *
+   * 三态（规格 §2.2-D4/D7）:
+   *   · 未绑定岗位（`boundRolePackId === null`）⇒ `null`（无 provider ⇒ 工具不存在，零变化）；
+   *   · 已绑定且人设可用 ⇒ `buildRoleKnowledgeFilter(...)` 的编译结果（ok:false ⇒ 拒绝型）；
+   *   · 已绑定但 persona=null（复核失败/撤岗）⇒ **拒绝型**（`pkb_domain IN []`：工具仍在，0 结果）。
+   * 回滚开关 `SYNOVA_ROLE_KNOWLEDGE=off` ⇒ `null` ＋ provider 卸载（与 `SYNOVA_ROLE_PACK_TOOLS` 互相独立）。
+   */
+  private roleKnowledgeFilter: RoleKnowledgeFilter | null = null;
+
   // P1-01: 子组件提取
   private toolLoop: ToolLoopExecutor;
   private diagnosisLauncher: DiagnosisLauncher;
@@ -686,6 +705,9 @@ export class ConversationEngine {
    * @error  永不抛（`loadRolePackPermissions` 同步不抛；本方法只做状态下发）
    */
   refreshRolePackPermissions(): void {
+    // #1075 P2-4b-B: 系统知识工具 provider 与白名单**独立**（D9）—— 先注入，
+    //   🔴 不得被下面的"注册表空 ⇒ 暂缓编译白名单"早退连带阻断（provider 不看注册表）。
+    this.applyRoleKnowledgeProvider();
     // 注册表空（工具尚未注册）⇒ 不编译白名单：缺 knownTools 会把声明全判"未落地" ⇒ 误全拒。
     if (this.boundRolePackId !== null && this.toolRegistry.allToolNames().length === 0) {
       log.warn(
@@ -709,6 +731,8 @@ export class ConversationEngine {
    */
   private ensurePermissionsApplied(): void {
     if (this.pendingRolePackId === null) return;
+    // #1075 P2-4b-B: 系统知识工具 provider 与白名单独立（D9）—— 与注册表状态无关，先注入。
+    this.applyRoleKnowledgeProvider();
     if (this.toolRegistry.allToolNames().length === 0) {
       log.warn(
         { roleId: this.pendingRolePackId, reason: 'tool-registry-empty', degraded: true },
@@ -718,6 +742,66 @@ export class ConversationEngine {
     }
     this.applyRolePackPermissions();
     this.pendingRolePackId = null;
+  }
+
+  /**
+   * #1075 P2-4b-B: 构建/下发角色会话知识过滤面与**系统工具 provider**（私有；幂等）。
+   *
+   * 与 `applyRolePackPermissions()` **互相独立**（规格 §2.2-D9）:
+   *   · 白名单（`SYNOVA_ROLE_PACK_TOOLS`）只管"岗位声明面内的工具"；
+   *   · 本方法（`SYNOVA_ROLE_KNOWLEDGE`）只管系统知识工具 —— 不读 allowlist，也不被 allowlist 为空阻断
+   *     （D4b：权限待批时系统知识工具仍可用，敏感度由认证面漏斗天然收窄）。
+   *
+   * @input  无（读 `boundRolePackId`／`rolePack`／`orgId`／环境开关）
+   * @output 无；副作用 = `this.roleKnowledgeFilter` ＋ `setSystemToolProvider(...)`（含清 OpenAI 工具缓存）
+   * @degraded 编译失败 ⇒ 拒绝型过滤面（`pkb_domain IN []`，工具可见但 0 结果，不静默）；
+   *           回滚开关 off ⇒ provider 卸载（与白名单开关互不替代）
+   * @error  永不抛（编译器不抛；本方法只做状态下发）
+   */
+  private applyRoleKnowledgeProvider(): void {
+    // D8 回滚开关：只关角色知识工具（白名单不受影响，反之亦然）
+    if (process.env['SYNOVA_ROLE_KNOWLEDGE'] === 'off') {
+      this.roleKnowledgeFilter = null;
+      this.toolRegistry.setSystemToolProvider(null);
+      log.warn(
+        { roleId: this.boundRolePackId, switch: 'SYNOVA_ROLE_KNOWLEDGE=off', degraded: true },
+        '角色会话知识工具已回滚关闭（D8）— 卸载系统工具 provider',
+      );
+      return;
+    }
+
+    // D4: **从未绑定岗位** ⇒ 无系统知识工具（无岗位会话零变化）
+    if (this.boundRolePackId === null) {
+      this.roleKnowledgeFilter = null;
+      this.toolRegistry.setSystemToolProvider(null);
+      return;
+    }
+
+    // D7: 已绑定但本轮人设复核失败/撤岗 ⇒ 拒绝型（工具仍在、0 结果），不回落全库
+    if (this.rolePack === null) {
+      this.roleKnowledgeFilter = buildRejectedKnowledgeFilter('persona-unverified');
+      this.toolRegistry.setSystemToolProvider(() => [createKnowledgeSearchTool(() => this.roleKnowledgeFilter)]);
+      log.warn(
+        { roleId: this.boundRolePackId, reason: 'persona-unverified', degraded: true },
+        '岗位已绑定但人设复核失败 — 角色知识过滤面为拒绝型（工具可见、0 结果，D7）',
+      );
+      return;
+    }
+
+    const roleId = this.rolePack.roleId;
+    const built = buildRoleKnowledgeFilter(roleId, this.orgId);
+    this.roleKnowledgeFilter = built.ok ? built.filter : buildRejectedKnowledgeFilter(`${built.code}: ${built.reason}`);
+    this.toolRegistry.setSystemToolProvider(() => [createKnowledgeSearchTool(() => this.roleKnowledgeFilter)]);
+    log.info(
+      {
+        roleId,
+        orgId: this.orgId,
+        scopes: this.roleKnowledgeFilter.scopes,
+        sensitivity: this.roleKnowledgeFilter.sensitivity,
+        degraded: this.roleKnowledgeFilter.degraded,
+      },
+      '角色会话知识工具已注入（系统工具：不进 allowlist／allToolNames，D1）',
+    );
   }
 
   /**
@@ -1130,9 +1214,16 @@ export class ConversationEngine {
    * Serialize current engine state for storage/restore.
    * LLMProvider is NOT serialized — caller must provide provider on restore.
    *
-   * #1075 P2-2: 仅当本引擎持有岗位人设时写入 `rolePackId`（只存归属，人设文本不落库）。
-   * 无包会话**不写该键** —— `'rolePackId' in state === false` 是 J3/J7a 的基线判据。
-   * @output `EngineState`（`rolePackId` 为可选键，写入与否由是否绑定岗位决定）
+   * #1075 P2-2 / #1169（规格 §2.1-e／§10）：写入 `rolePackId` 的判据 = **绑定意图**真源
+   * `boundRolePackId`，**不是**运行期 `rolePack`。两者语义必须分清：
+   *   · **已绑定** = 本会话归属某岗位包 ⇒ 落库（跨重启/缓存逐出可恢复归属，J7a/J7c/R-J4）；
+   *   · **已生效** = 本轮人设复核通过并注入 ⇒ **不由本方法表达**，仍由每轮 `loadRolePackPersona()`
+   *     决定。降级轮（`rolePack === null` 但 `boundRolePackId !== null`）只落归属，不落"已生效"。
+   * 人设文本不落库（每轮从磁盘重解析）。
+   * 未绑定会话**不写该键** —— `'rolePackId' in state === false` 是 J3/J7a 的基线判据（零变化）。
+   *
+   * @output `EngineState`（`rolePackId` 为可选键；`boundRolePackId !== null` 时写入）
+   * @authority 绑定真源 = 本实例 `boundRolePackId`（唯一"是否已绑定"真源，见 P2-4a 段注释）
    */
   serialize(): EngineState {
     const state: EngineState = {
@@ -1141,7 +1232,9 @@ export class ConversationEngine {
       messages: [...this.messages],
       startedAt: new Date().toISOString(),
     };
-    if (this.rolePack !== null) state.rolePackId = this.rolePack.roleId;
+    // #1169：真源 = 绑定意图。`rolePack` 只表达"本轮是否生效"，撤岗/复核失败时为 null ⇒
+    //        旧写法（rolePack !== null）会把已绑定会话的归属丢掉，重启后复核不可达。
+    if (this.boundRolePackId !== null) state.rolePackId = this.boundRolePackId;
     return state;
   }
 
@@ -1182,7 +1275,8 @@ export class ConversationEngine {
     });
     engine.phase = state.phase;
     engine.messages = [...state.messages];
-    // #1075 P2-4a: 先从快照恢复绑定真源（`state.rolePackId` 只在 serialize 时绑定岗位才写入）
+    // #1075 P2-4a / #1169: 先从快照恢复绑定真源（`state.rolePackId` = serialize 落下的**绑定意图**，
+    //   降级轮也在 ⇒ 归属不丢；是否生效仍由本轮 wiring.rolePack 与每轮复核决定）
     engine.boundRolePackId = state.rolePackId ?? null;
     engine.pendingRolePackId = engine.boundRolePackId;
     // 删除人设段 / 注入人设都由 setRolePack 统一完成（它还会把 engineCtx.messages 对齐到新数组）。

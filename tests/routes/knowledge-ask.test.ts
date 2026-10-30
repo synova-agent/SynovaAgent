@@ -10,6 +10,9 @@
  *     桥接静默退回匿名分支（那样 J1 会假绿）。
  *   · 内容根一律 `mkdtemp` 临时根（**禁写仓内 `extensions/presets`**）；env 用完 `finally` 还原。
  *   · J3/J4 断言**字面值**，不写 `=== allowedSensitivitiesByGrants(同参)`（同义反复无牙）。
+ *   · 🔴 handler 取不到 **必须红**：每个 handler 用例**先断言再调用**（取 handler 后先
+ *     assert 其类型为 function，再 `await` 调用）；禁"取不到就 return"的静默早退
+ *     （那会让用例**什么都没断言**地假绿，K3 P1-⑤）。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Router } from 'express';
@@ -108,19 +111,21 @@ describe('knowledge-ask route', () => {
   it('模块导出Router', () => { expect(router).toBeDefined(); });
 
   it('GET ?q= 空 → 400', async () => {
-    if (!getHandler) return;
+    const h = getHandler;
+    expect(h).toBeTypeOf('function');
     let status = 0; let body: any = null;
     const res = { status: (s: number) => { status = s; return { json: (b: any) => { body = b; } }; } };
-    await getHandler({ query: { q: '' } }, res);
+    await h({ query: { q: '' } }, res);
     expect(status).toBe(400);
     expect(body.error).toContain('too short');
   });
 
   it('GET ?q=任意问题 → 200 + ok (PKB回退模板)', async () => {
-    if (!getHandler) return;
+    const h = getHandler;
+    expect(h).toBeTypeOf('function');
     let body: any = null;
     const res = { json: (b: any) => { body = b; } };
-    await getHandler({ query: { q: '现金流' } }, res);
+    await h({ query: { q: '现金流' } }, res);
     expect(body.ok).toBe(true);
     expect(body.answer.length).toBeGreaterThan(20);
     // PKB为空时回退到模板——confidence为low是正确的
@@ -128,20 +133,22 @@ describe('knowledge-ask route', () => {
   });
 
   it('GET ?q=离职 → 200 + 不含硬编码内容', async () => {
-    if (!getHandler) return;
+    const h = getHandler;
+    expect(h).toBeTypeOf('function');
     let body: any = null;
     const res = { json: (b: any) => { body = b; } };
-    await getHandler({ query: { q: '离职' } }, res);
+    await h({ query: { q: '离职' } }, res);
     expect(body.ok).toBe(true);
     // PKB检索——不再返回硬编码关键词匹配
     expect(body.confidence).toBe('low');
   });
 
   it('GET ?q=未知问题 → 200 + confidence=low', async () => {
-    if (!getHandler) return;
+    const h = getHandler;
+    expect(h).toBeTypeOf('function');
     let body: any = null;
     const res = { json: (b: any) => { body = b; } };
-    await getHandler({ query: { q: 'xyz123' } }, res);
+    await h({ query: { q: 'xyz123' } }, res);
     expect(body.ok).toBe(true);
     expect(body.confidence).toBe('low');
   });
@@ -204,12 +211,13 @@ describe('knowledge-ask route', () => {
     });
 
     it('J2-b 匿名 handler 响应 additive authApplied === false（既有 4 条 handler 用例零改动）', async () => {
-      if (!getHandler) return;
+      const h = getHandler;
+      expect(h).toBeTypeOf('function');
       const restoreSwitch = clearBridgeSwitch();
       try {
         let body: Record<string, unknown> | null = null;
         const res = { json: (b: Record<string, unknown>) => { body = b; } };
-        await getHandler({ query: { q: '现金流' } }, res);
+        await h({ query: { q: '现金流' } }, res);
         expect(body).not.toBeNull();
         expect(body?.ok).toBe(true);
         expect(body?.authApplied).toBe(false);

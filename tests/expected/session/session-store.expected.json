@@ -1,0 +1,35 @@
+{
+  "schema": "synova-expected/v1",
+  "module": "src/store/session-store.ts",
+  "issue": "#1165",
+  "surface": "protocol",
+  "frozen_at": "2026-10-30",
+  "note": "R-E1 会话账本协议冻结面：addMessage 结果形状 / 事务原子性 / seq 连续 / tool_result log-only / cap 拒绝三态。任何一项行为变化都必须改本资产（tests/store/session-store-expected.test.ts 逐项断言）。",
+  "cases": {
+    "addMessageSuccess": {
+      "result": { "ok": true, "seq": 1 },
+      "agentMessagesRows": 1,
+      "sessionEventsRows": 1
+    },
+    "addMessageAppendDegraded": {
+      "result": { "ok": false, "degraded": true },
+      "agentMessagesRows": 0,
+      "sessionEventsRows": 0,
+      "lastDegraded": true
+    },
+    "appendEventSeqContiguity": {
+      "seqs": [1, 2, 3]
+    },
+    "toolResultLogOnly": {
+      "eventRows": 1,
+      "derivedMessagesDelta": 0
+    },
+    "capReject": {
+      "code": "SESSION_EVENT_LIMIT",
+      "phase": "validate",
+      "retryable": false,
+      "countBefore": 3,
+      "countAfter": 3
+    }
+  }
+}

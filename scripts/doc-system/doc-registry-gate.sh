@@ -20,6 +20,9 @@
 #          并 exit 1；`status: active` 但**无 path 字段**同样红（否则删掉 path 行即可绕过）；
 #          path 含通配（如 `WORKLOG-*.md`）按**字面路径**判 —— 通配不是"存在的文件"，不能算活
 #          任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
+#          **编号 R1/R2（#1123 批1）**：新登记 DOC 条目 id 必须 `DOC-<Issue#>` 或 `DOC-<Issue#>-NN`；
+#            来源须可派生（front-matter `任务: "#N"` 或文件名含 `-<N>-`），两处皆无 ⇒ 逐条点名 exit 1；
+#            存量 `DOC-0xxx` 按基线冻结（跳过，不因形态不合红）；非 DOC- 前缀 id（夹具）不参与
 #   降级:  DOCS-REGISTRY.yaml 缺失 → ⚠️ 警告 exit 0（台账未建立不阻断）
 #          base 全链不可解析 / merge-base 为空 → ⚠️ **显式降级**：源③跳过但**打印留痕**
 #          （沿用 pre-push 门禁 0-1 与 check-pr-budget.sh 对「fetch 失败」的既有语义：
@@ -57,7 +60,7 @@ REG=$(cat "$REGISTRY")
 # ── 唯一性（#942）：`- id: DOC-<n>` 重号即红、逐条点名（不是告警）──
 # F1（fail-closed）：正则容**可选引号**（DOC-0255 / "DOC-0255" / 'DOC-0255'）；
 #   解析到 0 条 ⇒ 打印「不可见」并 exit 2 —— 禁把"看不见"当"没问题"（#942 F1）。
-DOC_ID_RE="^[[:space:]]*-[[:space:]]*id:[[:space:]]*[\"']?DOC-[0-9]+[\"']?"
+DOC_ID_RE="^[[:space:]]*-[[:space:]]*id:[[:space:]]*[\"']?DOC-[0-9]+(-[0-9]{2})?[\"']?"
 TOTAL_DOC_IDS=$(grep -cE "$DOC_ID_RE" "$REGISTRY")
 TOTAL_DOC_IDS=${TOTAL_DOC_IDS:-0}
 if [ "$TOTAL_DOC_IDS" -eq 0 ]; then
@@ -65,14 +68,14 @@ if [ "$TOTAL_DOC_IDS" -eq 0 ]; then
   echo "  ❌ 登记门禁阻断（唯一性检查不可执行 ⇒ fail-closed exit 2；禁把不可见当没问题）"
   exit 2
 fi
-DUP_IDS=$(grep -oE "$DOC_ID_RE" "$REGISTRY" | sed -E 's/.*(DOC-[0-9]+).*/\1/' | sort | uniq -d)
+DUP_IDS=$(grep -oE "$DOC_ID_RE" "$REGISTRY" | sed -E 's/.*(DOC-[0-9]+(-[0-9]{2})?).*/\1/' | sort | uniq -d)
 DUPFAIL=0
 if [ -n "$DUP_IDS" ]; then
   while IFS= read -r _dup; do
     [ -z "$_dup" ] && continue
     # F2（计数失真）：去「严格行尾」锚，改「右边界=非数字后随任意内容」——
     #   既容行尾注释/引号，又不让 DOC-025 误配 DOC-0256（与检出正则同口径）。
-    _n=$(grep -cE "^[[:space:]]*-[[:space:]]*id:[[:space:]]*[\"']?${_dup}([^0-9].*)?$" "$REGISTRY")
+    _n=$(grep -cE "^[[:space:]]*-[[:space:]]*id:[[:space:]]*[\"']?${_dup}[\"']?([[:space:]]+#.*)?$" "$REGISTRY")
     echo "  ❌ 重号: ${_dup}（出现 ${_n} 次）"
     DUPFAIL=$((DUPFAIL+1))
   done <<< "$DUP_IDS"
@@ -196,14 +199,69 @@ else
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
 fi
 
+# ── 编号 R1/R2（#1123 批1）：新登记 DOC 条目的形态 + Issue 来源 ──
+# R1 形态: `DOC-<Issue#>` 或 `DOC-<Issue#>-NN`（一卡多件，-NN 两位）
+# R2 来源: front-matter `任务: "#N"` 或文件名含 `-<N>-`；两处皆无 ⇒ 红并点名
+# R4 存量冻结: 基线（gitea/TRUNK → TRUNK → origin/main）已存在的 id 一律跳过；
+#   夹具模式（无基线）下 `DOC-0xxx` legacy 形态同样跳过 —— 不因形态不合误伤存量
+ID_CHECKED=0; ID_SKIPPED=0; ID_FAIL=0
+BASE_IDS=""
+for _ref in "gitea/${TRUNK:-main}" origin/main; do   # 只用远端真源：夹具仓只有本地 main，应走降级而非误判
+  if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify -q "$_ref" >/dev/null 2>&1; then
+    BASE_IDS="$(git -c safe.directory="$ROOT" -C "$ROOT" show "$_ref:docs/authority/DOCS-REGISTRY.yaml" 2>/dev/null | grep -E '^[[:space:]]*-[[:space:]]*id:' | grep -oE 'DOC-[0-9]+' | sort -u)" # swallow-ok:
+    [ -n "$BASE_IDS" ] && break
+  fi
+done
+if [ -z "$BASE_IDS" ] && [ "${SYNO_DOCID_CHECK:-0}" != "1" ]; then
+  echo "  ⚠️ 降级: 无基线且未置 SYNO_DOCID_CHECK=1 → R1/R2 编号检查跳过（夹具/裸仓模式；显式留痕，不静默）"
+else
+while IFS=$'\t' read -r _did _dpath; do
+  [ -z "$_did" ] && continue
+  [ -z "$_dpath" ] && _dpath="<NO-PATH>"
+  case "$_did" in DOC-*) : ;; *) continue ;; esac
+  if [ -n "$BASE_IDS" ] && printf '%s\n' "$BASE_IDS" | grep -qxF "$_did"; then ID_SKIPPED=$((ID_SKIPPED+1)); continue; fi
+  if [ -z "$BASE_IDS" ] && [[ "$_did" =~ ^DOC-0[0-9]{3}$ ]]; then ID_SKIPPED=$((ID_SKIPPED+1)); continue; fi
+  ID_CHECKED=$((ID_CHECKED+1))
+  if ! [[ "$_did" =~ ^DOC-[1-9][0-9]*(-[0-9]{2})?$ ]]; then
+    echo "  ❌ [R1] 新登记 id 形态不合规: ${_did} （应为 DOC-<Issue#> 或 DOC-<Issue#>-NN）"
+    ID_FAIL=$((ID_FAIL+1)); continue
+  fi
+  _src=""
+  if [ "$_dpath" != "<NO-PATH>" ] && [ -f "$ROOT/$_dpath" ]; then
+    _src="$(head -12 "$ROOT/$_dpath" 2>/dev/null | grep -oE '任务:[[:space:]]*"?[#N]*[0-9]+' | grep -oE '[0-9]+' | head -1)" # swallow-ok:
+  fi
+  if [ -z "$_src" ] && [ "$_dpath" != "<NO-PATH>" ]; then
+    _src="$(printf '%s' "${_dpath##*/}" | grep -oE '(^|[-_])[0-9]{2,}([-_]|\.|$)' | grep -oE '[0-9]{2,}' | head -1)" # swallow-ok:
+  fi
+  if [ -z "$_src" ]; then
+    echo "  ❌ [R2] 无法派生 Issue 来源: ${_did} （path=${_dpath}；front-matter 任务:\"#N\" 与文件名 -N- 均无）"
+    ID_FAIL=$((ID_FAIL+1)); continue
+  fi
+  echo "  ✅ [R1/R2] ${_did} ← #${_src}"
+done < <(awk '
+  function clean(s) { gsub("\047", "", s); gsub("\"", "", s); sub(/[[:space:]]+#.*$/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+  function emit() { if (id != "") printf "%s\t%s\n", id, (p == "" ? "<NO-PATH>" : p) }
+  {
+    line = $0
+    if (line ~ /^[[:space:]]*-[[:space:]]*id:/) { emit(); id = line; sub(/^[[:space:]]*-[[:space:]]*id:[[:space:]]*/, "", id); p = "" }
+    else if (id != "" && line ~ /^[[:space:]]+path:/) { p = line; sub(/^[[:space:]]+path:[[:space:]]*/, "", p) }
+    id = clean(id); p = clean(p)
+  }
+  END { emit() }
+' "$REGISTRY")
+
+fi
+
 echo "── 唯一性: ${TOTAL_DOC_IDS} 条 DOC id，重号 ${DUPFAIL} 个 ──"
 echo "── 存活: ${ALIVE_TOTAL} 条 status=active，path 失配 ${ALIVE_FAIL} 个（status 字段 ${STATUS_FIELDS} 条）──"
+echo "── 编号: 新条目 ${ID_CHECKED}（跳过存量 ${ID_SKIPPED}），不合规 ${ID_FAIL} ──"
 echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
-if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ]; then
+if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ] && [ "$ID_FAIL" -eq 0 ]; then
   echo "  ✅ 登记门禁通过"; exit 0
 else
   [ "$FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（未登记 ${FAIL} 个）"
   [ "$DUPFAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（DOC id 重号 ${DUPFAIL} 个；唯一性不是风格问题，不许只告警）"
   [ "$ALIVE_FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（active 条目 path 失配 ${ALIVE_FAIL} 个；台账不许指向不存在的文件）"
+  [ "$ID_FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（R1/R2 编号形态/Issue 来源不合规 ${ID_FAIL} 个；新条目必须 DOC-<Issue#> 且可派生来源）"
   exit 1
 fi

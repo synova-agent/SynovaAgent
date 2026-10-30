@@ -1482,6 +1482,66 @@ documents:
     owner: P4
     note: "#1147（T2.5）：scripts/control-tower/gen-gate-meta.sh（gate_meta 六字段机械产出，--emit/--check，三态 exit 0/1/2，orphan 且 quota 组合违规，legacy_sections 登记 6 段）＋ check-gate-inventory.sh 加 R10 同源校验 ＋ tests/control-tower/gen-gate-meta.test.sh（12 夹具）受保护路径豁免；GATE-INVENTORY 纯追加 gate_meta 段（117 行，删除数 0）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
 
+  # ---- P2 2026-10-30：#1075 P2-4b-B 棘轮基线同 PR 收缩豁免登记（DOC-1149＝随卡 #1149；DOC-1075 已被 P2-1 占用，门禁只认纯数字号，故用 B 卡 Issue 号）----
+  - id: DOC-1149
+    type: decision
+    path: gate-exemptions/2026-10-30-1075-p2-4b-b.md
+    status: active
+    owner: P2
+    note: "#1075（P2-4b-B 角色会话内知识权限）：scripts/control-tower/tool-signal-baseline.txt 受保护路径豁免 —— #915 Q-5 R4（副作用工具必须可取消）迫使 builtin-tools.ts 的 schedule_task/install_skill 补 ctx＋throwIfAborted；R5 双向棘轮要求同 PR 删对应登记行（纯删 2 行，无判定/阈值/退出码变更）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
+
+  # ---- P2 2026-10-30：#1173 CI ③ 分类器修正的受保护路径豁免登记 ----
+  - id: DOC-1150
+    type: decision
+    path: gate-exemptions/2026-10-30-1173-ci-e2e.md
+    status: active
+    owner: P2
+    note: "#1173（E2E 批）：.gitea/workflows/local-gates.yml 受保护路径豁免 —— ③ 步把 tests/e2e/** 从 N_VITEST 剔除、单算 N_E2E、新增「合法跳过（E2E 面）」分支（根因：vitest.config.ts:29-36 在 CI 下 exclude tests/e2e/**）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
+  # ---- #1177 2026-10-30：ci-emptygreen-sim E2E 守卫豁免登记 ----
+  - id: DOC-1177
+    type: decision
+    path: gate-exemptions/2026-10-30-1177-sim-guard.md
+    status: active
+    owner: P2
+    note: "#1177：为 #1174 A 类 E2E 分类器补复现器守卫（辛/壬），受保护路径 ci-emptygreen-sim.sh 豁免；只加场景/计数，不改工作流与退出码。"
+
+  - id: DOC-1146
+    path: gate-exemptions/2026-10-29-1146-retire-batch1.md
+    note: "批1 零风险退役 8 项（B 类 5 项＋observer 产品件＋C 类 2 项）；台账标 retired、观察期 30 天、不删文件；含 GATE-INVENTORY retired 段与配套测试。"
+
+
+  - id: DOC-1175
+    path: gate-exemptions/2026-10-30-b0-ledger-pointer.md
+    note: "#1175 域守则补台账真源指针：agents/P4-门禁/AGENTS.md 加一行指向 synova-handbook main 的门禁总台账（§十＝体系总图）；不改既有条款。"
+  # ---- P4 2026-10-30：sealed 隔离台账陈旧条目修复豁免登记（DOC-1158；R1 口径 id=DOC-<Issue#>）----
+  - id: DOC-1158
+    type: decision
+    path: gate-exemptions/2026-10-30-gate-sealed-stale.md
+    status: active
+    owner: P4
+    note: "#1158/U2：① 删除指向已改名文件（brief-parseable.test.sh）的陈旧隔离条目（台账判据 b 须删条目）；② FACE-TOTAL 197→204（scan=209，余量 5；主树新增夹具未上调下界 ⇒ 撞 SLACK-CAP=10，显式上调留痕）；含自覆盖行与 DOCS-REGISTRY 自登记行；不改判据语义。"
+
+
+
+  - id: DOC-1141
+    type: decision
+    path: gate-exemptions/2026-10-30-1141-quality-baseline-constants.md
+    status: active
+    owner: P4
+    note: "#1141：quality-baseline 测试断言改为与独立来源交叉核对（rows 对 grep '^  - capability:' 计数、orphans 分母对 classification 条目数），不再写死字面量；仅改测试文件，判据逻辑零改动；含自覆盖行与 DOCS 自登记行。"
+
+
+
+
+  # ---- P4 2026-10-29：#1123 批1 DOC 编号形态/来源判据豁免登记（R1 口径：一卡多件用 DOC-<Issue#>-NN）----
+  - id: DOC-1123-01
+    type: decision
+    path: gate-exemptions/2026-10-29-1123b1-docid.md
+    status: active
+    owner: P4
+    note: "#1123 批1：doc-registry-gate 新增 R1 形态（新条目 id 必须 DOC-<Issue#> 或 DOC-<Issue#>-NN）与 R2 来源（front-matter 任务:\"#N\" 或文件名 -N-，两处皆无即红）；唯一性正则扩为 DOC-[0-9]+(-[0-9]{2})? 仍在 #942 唯一性硬判据保护下；存量 DOC-0xxx 按基线冻结跳过；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
   # ---- P4 2026-10-29：#1146 门禁日志解耦豁免登记（DOC-1170；R1 口径）----
   - id: DOC-1170
     type: decision
