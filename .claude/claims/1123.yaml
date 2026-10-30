@@ -6,7 +6,7 @@ writeset:
   - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-10-29-1123b1-docid.md
   - .claude/task-briefs/2026-10-29-1123b1-docid.md
-  - .claude/claims/1123b1.yaml
+  - .claude/claims/1123.yaml
   - memory/notes/proposed/2026-10-29-1123b1-docid.md
 
 done:
