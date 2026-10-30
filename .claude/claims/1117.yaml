@@ -14,7 +14,6 @@ writeset:
   - scripts/control-tower/check-mirror-freshness.sh
   - scripts/control-tower/mirror-sync-push.sh
   - scripts/control-tower/check-dual-repo-sync.sh
-  - scripts/control-tower/ci-emptygreen-sim.sh
   - scripts/control-tower/auto-merge.sh
   - scripts/control-tower/ledger-sync.sh
   - scripts/control-tower/check-gate-protection.sh

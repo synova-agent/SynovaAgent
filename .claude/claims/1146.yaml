@@ -1,0 +1,13 @@
+writeset:
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - tests/control-tower/gate-retirement-batch1.test.sh
+  - gate-exemptions/2026-10-29-1146-retire-batch1.md
+  - .claude/task-briefs/2026-10-29-1146-retire-batch1.md
+  - .claude/claims/1146.yaml
+  - memory/notes/proposed/2026-10-29-1146-retire-batch1.md
+done:
+  - verify: bash tests/control-tower/gate-retirement-batch1.test.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "#1146 批1 零风险退役 8 项（B 类 5＋observer 1＋C 类 2）；台账标 retired、观察期 30 天至 2026-11-28、不删文件；replacement=none 均带 evidence。"

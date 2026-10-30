@@ -1,0 +1,101 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1174,
+  "author": "squad-1165（L2 实施会话，5 个提交作者）",
+  "reviewer": "review-1171（队外独立复核，fresh 零上下文；未参与实现，唯一写入 docs/synova/reviews/**）",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-30T13:18:00+08:00",
+  "verdict": "PASS",
+  "head_reviewed": "0aaf2383ee3b1f7ba9f2e5f7ce961804185080c9",
+  "base_reviewed": "d16a23fed4d930ca51eab25dcd7fd352660f4b00",
+  "patch_fingerprint": "sha256:985a6f1cb132b9eaa67030726789e32794b9dc318dd39235c6301285db9dc4ab",
+  "tool": "check-merge-conditions.sh（fp 定义）＋ vitest 实测 ＋ /tmp 副本跑真实抽出的 CI step 正文 ＋ 隔离树改坏 ＋ check-gate-protection.sh",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "变更集恰 5 件；src/ 零改；无越界",
+      "result": "pass",
+      "cmd": "git diff --name-status d16a23fed..HEAD ；git diff --name-only d16a23fed..HEAD -- src/ | wc -l",
+      "evidence": "5 行：M .claude/claims/1075.yaml / M .gitea/workflows/local-gates.yml / M docs/authority/DOCS-REGISTRY.yaml / A gate-exemptions/2026-10-30-1173-ci-e2e.md / A tests/e2e/role-pack-lifecycle.e2e.test.ts（+790 −3）。`src/` 变更计数 **0** —— 与红线「src/** 零改动」一致；vitest.config.ts 亦零改动（改分类器而非改 exclude）。"
+    },
+    {
+      "id": "C2",
+      "title": "workflow 语义：N_VITEST 扣除 e2e ＋ e2e 单算 N_E2E",
+      "result": "pass",
+      "cmd": "git diff d16a23fed..HEAD -- .gitea/workflows/local-gates.yml ；sed -n '20,45p' vitest.config.ts",
+      "evidence": "新增 `N_VITEST_ALL`（全部 ts 测试）、`N_E2E`（`^tests/e2e/.*\\.(test|spec)\\.(ts|tsx)$`）、`N_VITEST=$((N_VITEST_ALL-N_E2E))` 并夹 0。根因证据属实：`vitest.config.ts:29-36` 为 `exclude: process.env.CI ? [… 'tests/e2e/**' …] : []`（第 33 行），故 CI 下该目录不进收集面。新增分支只置 `_EG_SKIP_REASON` 并 `exit 0`（沿用既有 skip 路径），未改 `DELETED_VITEST` 红分支、未改 `_EG_TC`/`test_count` 写入点、未改其它 step。"
+    },
+    {
+      "id": "C3",
+      "title": "🔴 分支顺序硬约束：E2E 跳过分支在「裁 421 src 改动却零测试」之后（防吞真红）—— 实跑实证",
+      "result": "pass",
+      "cmd": "sed -n '232,263p' .gitea/workflows/local-gates.yml（读判定链）＋ 把 ci-emptygreen-sim.sh 复制到 /tmp、用其 run_case 追加 2 例、SYNO_EG_WF 指向真工作流跑真实抽出的 step 正文",
+      "evidence": "静态链序：`变更集空` → `N_CODE=0 纯文档` → `DELETED_VITEST 红` → **`N_VITEST=0 ∧ N_SRC_TS>0 ⇒ exit 1`（裁421，:242-247）** → **`N_E2E>0 ⇒ 合法跳过（:248-255）`** → `N_VITEST=0 不可测面` → `else exit 1` ⇒ E2E 分支确在裁 421 之后。动态实证（我追加的两例，跑**真实**抽出的 step 正文）：**场景辛**（`src/a.ts` ＋ `tests/e2e/x.e2e.test.ts`）⇒ **rc=1 期望 1 ✅**（真红未被吞）；**场景壬**（仅 `tests/e2e/x.e2e.test.ts`）⇒ **rc=0 且输出「合法跳过（E2E 面）」✅**。另核进入条件：整条 skip 链只在 `VITEST_RC -eq 0` **且** 输出含 `No test files found` 时进入 ⇒ 真失败（rc≠0）走另一支 `::error` + exit 1，E2E 分支够不着。"
+    },
+    {
+      "id": "C4",
+      "title": "跳过 ≠ 通过（只是「CI 覆盖不到」）",
+      "result": "pass",
+      "cmd": "sed -n '265,292p' .gitea/workflows/local-gates.yml",
+      "evidence": "新分支置 `_EG_SKIP_REASON=\"E2E 面：…\"` ⇒ 登记处 `_EG_STATUS=ran; if [ -n \"${_EG_SKIP_REASON:-}\" ]; then _EG_STATUS=skipped; fi` ⇒ 写 `status=skipped`。注释明示汇总步把 skipped 标成**不计入通过**，且「未声明跳过却 test_count=0 ⇒ 汇总步判红」。E2E 分支 echo 原文亦写「该面由独立复核按命令执行」，未宣称通过。"
+    },
+    {
+      "id": "C5",
+      "title": "E2E 6 passed（DEV_MODE=true 真跑）；E-J1–E-J8 覆盖",
+      "result": "pass",
+      "cmd": "DEV_MODE=true node node_modules/.bin/vitest run tests/e2e/role-pack-lifecycle.e2e.test.ts",
+      "evidence": "Test Files 1 passed / **Tests 6 passed (6)**，exit 0（151ms）。用例覆盖 E-J1 生成未批不可用 / E-J2 审批 200＋usable＋审计 approved=1＋verifyChain valid / E-J3 会话生效（listTools 含 search_knowledge、只返 scope∧normal∧team、出站 system 含「## 岗位设定：ops-e2e」）/ E-J4 撤销降级（不注入、知识 0 条、审计 revoked=1）/ E-J5 恢复再注入（approved 累计 2）/ 第 6 例为隔离回归（真实仓库零新文件 = E-J8 锚点）。E-J6（无 mock）核验：文件内唯一 mock 为 `@synova/logger` 静音，不改被测行为。"
+    },
+    {
+      "id": "C6",
+      "title": "两处改坏验红（org 守卫、access_level），红原文成立",
+      "result": "pass",
+      "cmd": "独立 worktree /tmp/w-1174-mut（同 HEAD 0aaf2383e）＋ python 定点替换 ＋ DEV_MODE=true vitest run e2e ＋ git checkout -- 还原",
+      "evidence": "① **org 守卫**（`src/routes/role-approvals.ts:223` 的 `if (auth.orgId !== orgId)` 改为 `if (false && …)`）⇒ exit 1，4 failed，原文 `AssertionError: E-J2-0 跨 org 读 ⇒ 403: expected 200 to be 403`（E-J2-0 独立断言有牙）。② **access_level**（`src/init/role-pack-knowledge-filter.ts` 删 `accessLevelCondition`）⇒ exit 1，2 failed，原文 `AssertionError: E-J3 只允许 1 条可见: expected 2 to be 1`（private 条目泄漏 ⇒ 证明该维承重）。还原后 `git diff 0aaf2383e` = 0 件，6 passed exit 0。"
+    },
+    {
+      "id": "C7",
+      "title": "裸 express 替代 createServer 的理由成立",
+      "result": "pass",
+      "cmd": "sed -n '195,210p' src/server.ts ；sed -n '15,25p' tests/security/knowledge-audit-attribution.test.ts ；grep -nE 'createServer|express\\(\\)|initEngineContext|app.listen' tests/e2e/role-pack-lifecycle.e2e.test.ts",
+      "evidence": "理由①成立：`src/server.ts:204` 为 `process.exit(1);`（Bootstrap 失败即终止，位于所述 199-205 区间）⇒ vitest worker 内调 createServer 会被 abort。理由②成立：`tests/security/knowledge-audit-attribution.test.ts:19` 原文「⚠️ **禁用 `createServer()`**（本仓实测：vitest worker 内调它会 abort，exit 134）」——仓内既有同结论先例。本件实态：`createServer` 命中 0；用 `express()`（:390）＋ `app.listen(0)`（:395）＋ 真 `jwtAuthMiddleware`（:393）＋ `initEngineContext()`（:340），挂载序镜像生产。换的是取 HTTP 的手段，E-J1–E-J8 判据未动。"
+    },
+    {
+      "id": "C8",
+      "title": "CI 双绿 pending=0；fp 现算与 CTO 现场一致",
+      "result": "pass",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/0aaf2383e/status ；check-merge-conditions.sh --pr 1174 --base main --diff-fingerprint",
+      "evidence": "CI state=success total_count=2：local-gates/gates(push)=success ＋ local-gates/gates(pull_request)=success ⇒ pending=0。fp 现算 = 985a6f1cb132b9eaa67030726789e32794b9dc318dd39235c6301285db9dc4ab，前 12 位 985a6f1cb132 与 CTO 现场值一致。checker 基线（回执前）：①=ok ②=ok(shared:17) ③=no(缺回执) ④=ok。"
+    },
+    {
+      "id": "C9",
+      "title": "豁免与 DOCS 登记合规；claims 纯追加",
+      "result": "pass",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main ；git diff -- .claude/claims/1075.yaml ；对比 base/head writeset 条目数",
+      "evidence": "gate-protection：**11 通过, 0 失败**，exit 0 —— 清单 22 条、pin 一致、豁免件带 `# review: #1174` 复核行、3 条受保护路径（workflow / DOCS-REGISTRY / 豁免件自身）逐条合规豁免。DOCS-REGISTRY 纯追加 DOC-1150（含自登记行），不改既有条目。claims 纯追加：writeset 68 → 71，**仅 +3 条新路径**（e2e 测试件 / workflow / 豁免件），既有条目零删改；另追加 4 段依据注释、3 行 verify、note 尾段。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "scripts/control-tower/ci-emptygreen-sim.sh（判别力复现器）",
+      "what": "🔴 本 PR 是 **A 类门禁语义改动**（改了「哪条检查阻断合并」），但复现器**零覆盖新分支**：`ci-emptygreen-sim.sh` 的 8 场景（甲/乙/丙/丙2/己/庚/丁/戊）无一涉及 `tests/e2e/**` 或 `N_E2E`（grep `e2e|N_E2E` 命中 0），且该脚本**不在本 PR 的 5 件 diff 内**。故豁免件与 claims 所称「判别力自检 8 场景全 PASS」虽为**真**，但那 8 例是既有场景、**不检验新增的 E2E 分支**，尤其不检验代码注释自称为「位置硬约束（不得移动）」的**分支顺序**。我用 /tmp 副本（`SYNO_EG_WF` 指向真工作流，跑真实抽出的 step 正文）补两例实测：辛（src 改动＋只加 e2e ⇒ rc=1）通过、壬（仅 e2e ⇒ rc=0 合法跳过）通过 ⇒ **该性质当前确实成立**，属 YAGNI 之外的真实缺口：**有性质无守卫**，后人把 E2E 分支上移不会被任何门禁测出。建议下批把这两例正式入仓（本 PR 内无需返工）。"
+    },
+    {
+      "severity": "info",
+      "where": "ci-emptygreen-sim.sh 末行汇总",
+      "what": "末行 `CI-EMPTYGREEN-SIM: OK（8 场景全 PASS）` 中「8」是**硬编码字符串**，不随实际用例数变化 —— 我在 /tmp 副本加 2 例后跑出 10 例全部 PASS，末行仍打印「8 场景全 PASS」。不影响判定，但会让后续加例者误读覆盖面（与上一条同源）。"
+    },
+    {
+      "severity": "info",
+      "where": "条件② 共享追加（不属③判域）",
+      "what": "checker 报 `docs/authority/DOCS-REGISTRY.yaml → PR#1174,#628,#629,#630`（17 处共享追加，纯追加不计重叠）⇒ 需按串行合处理。属 ④/CTO 串行裁定，本回执不判。"
+    },
+    {
+      "severity": "info",
+      "where": "本回执的我方局限",
+      "what": "只读复核 ＋ /tmp 副本/隔离树改坏，未改产品代码与门禁文件；未做真跨进程重启 E2E、未覆盖 UI 与历史数据回填（规格 §4 已列另批）。我在 /tmp 的 sim 副本新增用例属于**我的验证手段**，未入仓、不代表已具备回归守卫（见首条 warn）。"
+    }
+  ],
+  "reviewer_note": "四条件③独立复核：PASS。核心结论：(a) 分类器缺陷根因属实（vitest.config.ts:33 在 CI 下 exclude tests/e2e/**），修法为 e2e 从 N_VITEST 剔除、单算 N_E2E、新增合法跳过分支，未动真红分支与其他 step；(b) 我**不是**只读注释认定顺序正确 —— 而是把真实 step 正文抽出来跑危险用例，证实「src 改动＋只加 e2e」仍 rc=1（真红不被吞）、「仅 e2e」rc=0 且记 skipped（不计入通过）；(c) E2E 6 passed（DEV_MODE=true），两处改坏（org 守卫 / access_level）均验红且红原文与声明一致，还原复绿；(d) 裸 express 的两条理由均在源码对应行逐字成立；(e) CI 双绿 pending=0、fp 985a6f1cb132 与 CTO 现场一致、gate-protection 11/0、claims 纯追加 68→71。唯一 warn：A 类门禁改动**无新增回归守卫**（复现器 8 例不覆盖新分支），我已在 /tmp 补测确认性质成立，建议下批入仓。本回执不代替 K3 终审。"
+}
