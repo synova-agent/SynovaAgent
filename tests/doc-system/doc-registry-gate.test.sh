@@ -191,7 +191,7 @@ git -C "$FORK" commit -q -m "docs(D998): local-main 自身新增（已登记）"
 git -C "$FORK" update-ref refs/remotes/gitea/main "$(git -C "$FORK" rev-parse HEAD)" 2>/dev/null # swallow-ok:
 git -C "$FORK" checkout -q -b feature 2>/dev/null # swallow-ok:
 printf '  - id: DOC-9003\n    type: prd\n    path: docs/feat-new.md\n    status: active\n' >> "$FORK/docs/authority/DOCS-REGISTRY.yaml"
-: > "$FORK/docs/feat-new.md"
+printf '%s\n' '---' '任务: "#9003"' '---' > "$FORK/docs/feat-new.md"   # R1/R2: 夹具新件须可派生 Issue 来源
 git -C "$FORK" add -A 2>/dev/null # swallow-ok:
 git -C "$FORK" commit -q -m "docs(D998): 本支新增（已登记）" 2>/dev/null # swallow-ok:
 
@@ -413,5 +413,85 @@ cp "$KF/reg.k5.bak" "$KF/docs/authority/DOCS-REGISTRY.yaml"
 rm -f "$MUT" "$KF/reg.k5.bak"
 
 echo ""
+
+# ═══ R1/R2（#1123 批1）：DOC 编号形态 + Issue 来源 ═══
+export SYNO_DOCID_CHECK=1   # 本段夹具需要 R1/R2 生效（真实仓由基线驱动，无需此变量）
+# 每个用例独立 fixture，避免状态耦合；非 DOC- 前缀 id 不参与 R1/R2
+mkfix() { # $1=目录
+  mkdir -p "$1/docs/authority" "$1/gate-exemptions"
+}
+wreg() { printf '%s\n' "$2" > "$1/docs/authority/DOCS-REGISTRY.yaml"; }
+
+# H 形态合规 + 来源可达（文件名 -1234-）⇒ 0
+H=$(mktemp -d); mkfix "$H"; : > "$H/gate-exemptions/2026-10-29-1234-demo.md"
+wreg "$H" 'documents:
+  - id: DOC-1234
+    path: gate-exemptions/2026-10-29-1234-demo.md
+    status: active'
+DOC_TRUTH_ROOT="$H" bash "$SCRIPT" >/dev/null 2>&1; t "H 形态合规+来源可达" 0 $?
+
+# I 形态不合规（DOC-1234-1，两位后缀要求）⇒ 1 且点名 R1
+I=$(mktemp -d); mkfix "$I"; : > "$I/gate-exemptions/2026-10-29-1234-demo.md"
+wreg "$I" 'documents:
+  - id: DOC-1234-1
+    path: gate-exemptions/2026-10-29-1234-demo.md
+    status: active'
+OUTI=$(DOC_TRUTH_ROOT="$I" bash "$SCRIPT" 2>&1); RCI=$?
+t "I 形态不合规→红" 1 $RCI
+echo "$OUTI" | grep -q '\[R1\]'; t "I2 点名 R1" 0 $?
+
+# J 无来源（id 合规但文件名无 -N-、无 front-matter）⇒ 1 且点名 R2
+J=$(mktemp -d); mkfix "$J"; : > "$J/gate-exemptions/plain-demo.md"
+wreg "$J" 'documents:
+  - id: DOC-2001
+    path: gate-exemptions/plain-demo.md
+    status: active'
+OUTJ=$(DOC_TRUTH_ROOT="$J" bash "$SCRIPT" 2>&1); RCJ=$?
+t "J 无来源→红" 1 $RCJ
+echo "$OUTJ" | grep -q '\[R2\]'; t "J2 点名 R2" 0 $?
+
+# K 同卡两件 DOC-3333-01 / -02（文件名各含 -3333-）⇒ 0
+K=$(mktemp -d); mkfix "$K"
+: > "$K/gate-exemptions/2026-10-29-3333-a.md"; : > "$K/gate-exemptions/2026-10-29-3333-b.md"
+wreg "$K" 'documents:
+  - id: DOC-3333-01
+    path: gate-exemptions/2026-10-29-3333-a.md
+    status: active
+  - id: DOC-3333-02
+    path: gate-exemptions/2026-10-29-3333-b.md
+    status: active'
+DOC_TRUTH_ROOT="$K" bash "$SCRIPT" >/dev/null 2>&1; t "K 同卡两件 -01/-02" 0 $?
+
+# L 存量 DOC-0xxx 冻结（形态不合规也不红）⇒ 0
+L=$(mktemp -d); mkfix "$L"; : > "$L/gate-exemptions/legacy.md"
+wreg "$L" 'documents:
+  - id: DOC-0123
+    path: gate-exemptions/legacy.md
+    status: archived'
+DOC_TRUTH_ROOT="$L" bash "$SCRIPT" >/dev/null 2>&1; t "L 存量 DOC-0xxx 不误伤" 0 $?
+
+# M 改坏即红：变异体把后缀 `(-[0-9]{2})?` 放宽为 `(-[0-9]+)?` ⇒ 用例 I 的 fixture 变 0（证明形态检查承重）
+MUT=$(mktemp -d); cp "$SCRIPT" "$MUT/gate-mut.sh"
+sed -i 's/(-\[0-9\]{2})?/(-\[0-9\]+)?/' "$MUT/gate-mut.sh"
+M=$(mktemp -d); mkfix "$M"; : > "$M/gate-exemptions/2026-10-29-1234-demo.md"
+wreg "$M" 'documents:
+  - id: DOC-1234-1
+    path: gate-exemptions/2026-10-29-1234-demo.md
+    status: active'
+DOC_TRUTH_ROOT="$M" bash "$MUT/gate-mut.sh" >/dev/null 2>&1; RCM=$?
+if [ "$RCM" -eq 0 ]; then t "M 变异体放行→证明形态检查承重" 0 0; else t "M 改坏即红(变异体仍红)" 0 1; fi
+
+# N 来源走 front-matter `任务: "#N"`（文件名无号）⇒ 0
+N=$(mktemp -d); mkfix "$N"
+printf '%s\n' '---' '任务: "#4400"' '---' '# demo' > "$N/gate-exemptions/demo-frontmatter.md"
+wreg "$N" 'documents:
+  - id: DOC-4400
+    path: gate-exemptions/demo-frontmatter.md
+    status: active'
+DOC_TRUTH_ROOT="$N" bash "$SCRIPT" >/dev/null 2>&1; t "N front-matter 任务来源" 0 $?
+
+unset SYNO_DOCID_CHECK
+rm -rf "$H" "$I" "$J" "$K" "$L" "$M" "$N" "$MUT" 2>/dev/null # swallow-ok:
+
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
