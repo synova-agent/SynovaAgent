@@ -3,14 +3,15 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上不改判定（本件输出为 UTF-8 字面量，非本地化文本）
 # ═══════════════════════════════════════════════════════════════════════════════
-# verify-governance.sh — 门禁治理一键验收「总闸最小可跑版」：G2 遥测 ／ G6 退出码归一 ／ G10 同形字（#1122）
+# verify-governance.sh — 门禁治理一键验收「总闸」：G2 遥测 ／ G6 退出码归一 ／ G10 同形字 ／ G11 配额双闸（#1122 · #1147 余项 B2）
 #
 # 设计哲学（一句）: **判不了就说判不了，绝不显示 PASS** —— 每道判据只有三种结论
 #   PASS ／ FAIL ／ SKIP；「看不见」（遥测日志缺失、清单缺失、子判据自身坏）一律 SKIP
 #   或 exit 2，禁把"没跑/没数据/看不懂"洗成绿。
 #
-# 背景（#1122 / 规格 §4「一键验收（机器判据）」· Step 1 最小可跑版）:
-#   规格 §4 列 G1–G10 十项；本批**只做三项**（G2/G6/G10），其余留后续卡 ——
+# 背景（#1122 / 规格 §4「一键验收（机器判据）」· Step 1 ＋ #1147 余项 B2）:
+#   规格 §4 列 G1–G10 十项；#1122 只做三项（G2/G6/G10），其余留后续卡；#1147 余项 B2 补 G11（配额双闸）——
+#   G11 是**旁路项**（只在总闸内判，不进 pre-commit 主路径）。
 #   不做"数表全绿"式空转（长青块分型：回归锁＋缺口面板，见 scripts/control-tower/AGENTS.md 红线）。
 #
 # 契约（铁律 47）:
@@ -23,21 +24,26 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #             <root>/docs/authority/GATE-INVENTORY.yaml   的 `classification:` 段（required 集合真源）
 #             <root>/scripts/control-tower/gate-assert.sh （G6 归一的**唯一真源**，本件不自造第二套归还一）
 #             <root>/scripts/control-tower/check-unicode-confusable.py（G10 扫描器）
+#             <root>/scripts/control-tower/gen-gate-meta.sh（G11 配额的**唯一真源**；缺失 ⇒
+#               G11 DEGRADED（E_GEN_MISSING）＋ 整体 exit 2 —— 在 G11 项内报，不做全局提前退出）
 #           遥测行格式（唯一写入器 `gate-telemetry.sh`）:
 #             {"time":"<ISO-8601>","gate":"<检查点名>","result":"hit|miss|warn|degraded",...}
-#   @output stdout 逐项 `<G2|G6|G10> <名称>: PASS|FAIL|SKIP`，逐项后跟证据行；
-#           **末行恒为** `GOVERNANCE: x/y PASS`（x = PASS 计数，y = 判据总数 3；SKIP/FAIL 不计入 x）。
+#   @output stdout 逐项 `<G2|G6|G10|G11> <名称>: PASS|FAIL|SKIP`，逐项后跟证据行；
+#           G11 的证据行 = 生成器 `--quota` 的 `QUOTA:` / `QUOTA-SRC:` / `QUOTA-OVER:` 原样转印（缩进）；
+#           **末行恒为** `GOVERNANCE: x/4 PASS`（x = PASS 计数；总数恒为 4；SKIP/FAIL/判不了 不计入 x）。
 #           stderr = 降级行 `degraded: <code> — <原因>`（只在 exit 2 前出现）
-#   @exit   0 = 三项全 PASS
+#   @exit   0 = 四项全 PASS
 #           1 = **非全 PASS**（有 FAIL 或 SKIP；含"遥测未运行"这种真实缺口）
 #           2 = **判不了／自身失败**（参数错／python 不可用／清单缺失或空／required 集合为空／
-#               子判据脚本缺失／子判据自身返回"判不了"）—— 🔴 2 绝不等于通过
+#               子判据脚本缺失（含 G11 生成器缺失 E_GEN_MISSING）／子判据自身返回"判不了"）
+#               —— 🔴 2 绝不等于通过
 #   @degraded 任何 exit 2 一律先打 stderr `degraded: <code> — <原因>`（铁律 11/32，不静默降级）；
+#           G11 的 E_GEN_MISSING / E_QUOTA_SCOPE 等在 G11 项内以 `判不了:` 行点名，并计入「判不了」⇒ 整体 exit 2；
 #           不写任何降级日志文件（本件**只读仓库**，不新增运行期落盘）
 #   @error  code ∈ {E_USAGE, E_NO_PYTHON, E_INV_MISSING, E_INV_SECTION, E_INV_EMPTY, E_NO_REQUIRED,
-#                   E_GA_MISSING, E_UNI_MISSING, E_G10_UNJUDGED, E_INTERNAL}
+#                   E_GA_MISSING, E_UNI_MISSING, E_GEN_MISSING, E_G10_UNJUDGED, E_INTERNAL}
 #
-# 三道判据（判据语义以本段为准；改判据须引卡号）:
+# 四道判据（判据语义以本段为准；改判据须引卡号）:
 #   G2  遥测 ran=true（规格 §4 G2）
 #       对 `classification:` 段里 `required_ci: true` 的**每个** `entrypoint`，判近 N 天是否
 #       ≥1 条"真跑过"的记录。gate 名取 entrypoint 的确定性别名集：完整路径 ／ 文件名（含扩展名）／
@@ -56,6 +62,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #         夹具甲 = 标识符内混西里尔 `а`（U+0430）冒充 ASCII a ⇒ 必须 rc=1 且汇总 VIOLATION
 #         夹具乙 = 注释内全角标点（U+FF08/U+FF0C 等）        ⇒ 必须 rc=0 且汇总 PASS
 #       **两态都对**才 PASS；任一态错 ⇒ FAIL；扫描器自身 rc=2（判不了）⇒ 本件 exit 2。
+#   G11 配额双闸（#1147 余项 B2；**旁路项：只在总闸内判，不进 pre-commit 主路径**）
+#       调 `<root>/scripts/control-tower/gen-gate-meta.sh --quota --root <root> --inv <root>/docs/authority/GATE-INVENTORY.yaml`:
+#         rc=0 ⇒ PASS（三桶均未超）；rc=1 ⇒ **FAIL**（原样转印 `QUOTA:` / `QUOTA-OVER:` 证据行，禁改写数字）；
+#         rc=2 或其它 ⇒ **DEGRADED**（判不了 ⇒ 整体 exit 2）；生成器缺失 ⇒ E_GEN_MISSING DEGRADED。
+#       三桶口径 = 生成物 `gate_meta:` 段：non_doc≤30 ∧ total≤45 ∧ bypass≤8（bypass 不占 total）。
+#       🔴 本项**不改写任何数字、不做第二套计数**：三桶与超编点名全部来自生成器的原始输出。
 #
 # 只读承诺: 不写仓库任何文件、不 git add/commit、不写日志；唯一落盘 = `mktemp -d` 下的临时夹具
 #   （EXIT trap 清理）。
@@ -81,17 +93,23 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #      见 scripts/pre-commit-check.sh 的 `_SANDBOX`）；否则一律按 `exit 0` 注入 ⇒
 #      "改一个环境变量就跳过 G6"不成立。若真的只改本件不跑测试，G6 仍恒绿 ——
 #      这正是"改坏即红"必须靠配对测试承重的原因（T4/T5/T6 三个用例）。
+#   8. **G11 只报生成物数字**：`--quota` 读 `gate_meta:` 段（artifact 快照），不重算 run_by；
+#      手改 artifact 的对账防伪由 `gen-gate-meta.sh --check`（B3 同源比对）与
+#      `check-gate-inventory.sh` 的 R10 承担，**不是本件**。G11 不进 pre-commit 主路径（旁路项）。
+#   9. **G11 的 bypass 桶当前无标记源**：生成器只统计 artifact 已标 `quota_scope: bypass` 的行，
+#      现网为 0 ⇒ bypass=0 只能读成"artifact 未标旁路"，**禁读成"没有旁路"**（前向能力）。
 #
 # 结构（Source map）:
 #   段                职责
 #   ────────────────  ───────────────────────────────────────────────────────────
 #   ① 头部契约        本段（@usage/@input/@output/@exit/@degraded/@error/已知限制）
 #   ② 参数与注入缝    --telemetry/--days/--root/--help；非法 ⇒ exit 2
-#   ③ 解释器与必读件  PYBIN 三级探测；三件必读件缺失 ⇒ exit 2（判不了）
+#   ③ 解释器与必读件  PYBIN 三级探测；三件全局必读件缺失 ⇒ exit 2（判不了）；G11 生成器在 G11 项内判
 #   ④ G2 遥测         python 单进程解析 inventory ＋ JSONL（别名匹配 ＋ 窗口过滤 ＋ 坏行计数）
 #   ⑤ G6 归一          source gate-assert.sh ＋ `ga_run` 注入判据（默认 exit 0；沙箱可注入 128）
 #   ⑥ G10 同形字      两个临时 git 仓夹具 ＋ 扫描器两态判定
-#   ⑦ 汇总与退出口    末行 `GOVERNANCE: x/y PASS` ＋ 三态退出码
+#   ⑦ G11 配额双闸    gen-gate-meta.sh --quota 三态 → PASS/FAIL/DEGRADED（证据行原样转印，缺生成器 ⇒ SKIP）
+#   ⑧ 汇总与退出口    末行 `GOVERNANCE: x/4 PASS` ＋ 三态退出码
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -110,8 +128,8 @@ _gov_usage() {
   --root <dir>        仓库根（默认 git rev-parse --show-toplevel；显式注入缝供配对测试）
   --help              打印本契约
 
-输出: 逐项 <G2|G6|G10> <名称>: PASS|FAIL|SKIP ＋ 末行 `GOVERNANCE: x/y PASS`
-退出码: 0 = 三项全 PASS ｜ 1 = 非全 PASS（有 FAIL 或 SKIP）｜ 2 = 判不了（禁当通过）
+输出: 逐项 <G2|G6|G10|G11> <名称>: PASS|FAIL|SKIP ＋ 末行 `GOVERNANCE: x/4 PASS`
+退出码: 0 = 四项全 PASS ｜ 1 = 非全 PASS（有 FAIL 或 SKIP）｜ 2 = 判不了（禁当通过）
 USAGE
 }
 
@@ -144,7 +162,7 @@ fi
 # 降级出口：stderr 一行 ＋ exit 2（本件不写仓库，故不落降级日志文件）
 _gov_degrade() { # $1=code $2=原因
   printf 'degraded: %s — %s\n' "$1" "$2" >&2
-  printf 'GOVERNANCE: 0/3 PASS\n'
+  printf 'GOVERNANCE: 0/4 PASS\n'
   printf '判不了: %s — %s\n' "$1" "$2"
   exit 2
 }
@@ -184,10 +202,13 @@ done
 GOV_INV="$GOV_ROOT/docs/authority/GATE-INVENTORY.yaml"
 GOV_GA="$GOV_ROOT/scripts/control-tower/gate-assert.sh"
 GOV_UNI="$GOV_ROOT/scripts/control-tower/check-unicode-confusable.py"
+GOV_GEN="$GOV_ROOT/scripts/control-tower/gen-gate-meta.sh"
 
 [ -f "$GOV_INV" ] || _gov_degrade "E_INV_MISSING" "清单不存在: ${GOV_INV}（required 集合不可解析 ⇒ 判不了）"
 [ -f "$GOV_GA" ] || _gov_degrade "E_GA_MISSING" "gate-assert.sh 不存在: ${GOV_GA}（G6 无归一真源 ⇒ 判不了）"
 [ -f "$GOV_UNI" ] || _gov_degrade "E_UNI_MISSING" "check-unicode-confusable.py 不存在: ${GOV_UNI}（G10 无扫描器 ⇒ 判不了）"
+# G11 生成器**不在**这里全局退出：缺失要在 G11 项内报 DEGRADED（E_GEN_MISSING），
+# 但整体仍必须 exit 2 —— 判不了禁当通过（见 _gov_g11 与末段汇总）。
 
 GOV_PASS=0
 GOV_FAIL=0
@@ -478,21 +499,58 @@ _gov_g10() {
   return 0
 }
 
-# ── ⑦ 执行与汇总 ─────────────────────────────────────────────────────────────
-printf '门禁治理一键验收（G2/G6/G10 · 规格 §4 · #1122）\n'
+# ── ⑦ G11 配额双闸（#1147 余项 B2；旁路项：只在总闸内判，不进 pre-commit 主路径）──
+# 判据结果**不做二次映射**：PASS/FAIL 直接取生成器 rc=0/1；rc=2 或其它 ⇒ DEGRADED（整体 exit 2）。
+# 证据行（QUOTA / QUOTA-SRC / QUOTA-OVER）**原样转印**，禁在 bash 侧重算或改写数字。
+# 生成器缺失 ⇒ G11=SKIP（E_GEN_MISSING）＋ 计入「判不了」⇒ 整体 exit 2（判不了禁当通过）。
+_gov_g11() { # $1=生成器路径 $2=root $3=inventory
+  local gen="$1" root="$2" inv="$3" out="" rc=0 line
+  if [ ! -f "$gen" ]; then
+    GOV_G11_STATE="DEGRADED"
+    printf 'G11 配额双闸: SKIP\n'
+    printf '    判不了: E_GEN_MISSING 生成器不存在: %s（G11 无配额判据真源 ⇒ 判不了）\n' "$gen"
+    return 0
+  fi
+  out="$(bash "$gen" --quota --root "$root" --inv "$inv" 2>&1)"
+  rc=$?
+  out="${out//$'\r'/}"   # 防御侧：子进程可能吐 CRLF（D313/D732 同类平台坑）
+  case "$rc" in
+    0) GOV_G11_STATE="PASS"; printf 'G11 配额双闸: PASS\n' ;;
+    1) GOV_G11_STATE="FAIL"; printf 'G11 配额双闸: FAIL\n' ;;
+    *) GOV_G11_STATE="DEGRADED"
+       printf 'G11 配额双闸: SKIP\n'
+       printf '    判不了: gen-gate-meta.sh --quota rc=%s（判不了 ≠ 通过）\n' "$rc" ;;
+  esac
+  # 证据行原样转印（缩进 4 空格；只认生成器契约里的行前缀，不臆造）
+  while IFS= read -r line; do
+    case "$line" in
+      QUOTA:*|QUOTA-SRC:*|QUOTA-OVER:*|GATE-META:*)
+        printf '    %s\n' "$line" ;;
+      degraded:*|判不了:*)
+        printf '    %s\n' "$line" ;;
+      *) : ;;
+    esac
+  done <<< "$out"
+  return 0
+}
+
+# ── ⑧ 执行与汇总 ─────────────────────────────────────────────────────────────
+printf '门禁治理一键验收（G2/G6/G10/G11 · 规格 §4 · #1122 / #1147 余项 B2）\n'
 printf 'root: %s\n' "$GOV_ROOT"
 printf '遥测: %s（窗口 %s 天）\n' "$GOV_TEL" "$GOV_DAYS"
 printf '\n'
 
-GOV_G2_STATE=""; GOV_G6_STATE=""; GOV_G10_STATE=""
+GOV_G2_STATE=""; GOV_G6_STATE=""; GOV_G10_STATE=""; GOV_G11_STATE=""
 _gov_g2 "$GOV_INV" "$GOV_TEL" "$GOV_DAYS"
 printf '\n'
 _gov_g6 "$GOV_GA"
 printf '\n'
 _gov_g10
 printf '\n'
+_gov_g11 "$GOV_GEN" "$GOV_ROOT" "$GOV_INV"
+printf '\n'
 
-for _state in "$GOV_G2_STATE" "$GOV_G6_STATE" "$GOV_G10_STATE"; do
+for _state in "$GOV_G2_STATE" "$GOV_G6_STATE" "$GOV_G10_STATE" "$GOV_G11_STATE"; do
   case "$_state" in
     PASS)     GOV_PASS=$((GOV_PASS + 1)) ;;
     FAIL)     GOV_FAIL=$((GOV_FAIL + 1)) ;;

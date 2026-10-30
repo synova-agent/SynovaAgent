@@ -1,14 +1,36 @@
 #!/usr/bin/env bash
-# gen-gate-meta.sh — 门禁元数据生成器（T2.5 · #1147）
+# D313 M5 / D732 UTF-8 强制: Windows 控制台/子进程统一 UTF-8（跨平台硬要求，禁删）
+export PYTHONIOENCODING=utf-8
+export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上不改判定（本件输出为 UTF-8 字面量，非本地化文本）
+# gen-gate-meta.sh — 门禁元数据生成器（T2.5 · #1147；B2 配额双闸扩展 · #1147 余项）
 #
-# @input  — --emit（默认）/ --check；--root <repo>；--inv <GATE-INVENTORY.yaml>；--json
-#           数据源（全部机械读取，禁手填）：classification: 段、run_by: 段、
+# 设计哲学（一句）: **判不了就说判不了，绝不把「看不见」洗成通过** —— 三态 0/1/2 里 2 永不等于 0。
+#
+# @input  — --emit（默认）/ --check / --quota；--root <repo>；--inv <GATE-INVENTORY.yaml>；--json
+#           --emit/--check 数据源（全部机械读取，禁手填）：classification: 段、run_by: 段、
 #           四条腿源（scripts/pre-commit-check.sh、scripts/pre-push-check.sh、scripts/commit-msg-check.sh、
 #           .gitea/workflows/*.yml）＋ 被守护件自身的文件头 @nature 标记
-# @output — stdout：`gate_meta:` 段（--emit）或校验结论（--check）；--json 追加一行机器可读摘要
-# @exit   — 0 一致/产出成功 ｜ 1 违规（缺段/缺行/不一致/六字段非法/orphan∧quota）｜ 2 判不了
-#           （清单不可读、run_by 段缺失、python 缺失、段重复、腿源缺失到无法 join）
-# @degraded — E_NO_PYTHON / E_INV_MISSING / E_SECTION_MISSING / E_INTERNAL / E_LEG_SRC
+#           --quota 只读 --inv 的 `gate_meta:` 段（生成物）：不重算 run_by、不读腿源、不写任何文件
+# @output — stdout：`gate_meta:` 段（--emit）或校验结论（--check）；
+#           --quota 首行恒为 `QUOTA: non_doc=<n>/30（超编 <k>） total=<t>/45 bypass=<b>/8`，
+#           次行 `QUOTA-SRC: quota_true=<q> doc=<d> non_doc=<n> bypass=<b> rows=<r>`；
+#           超编时按桶逐条 `QUOTA-OVER: <bucket> <entrypoint> class=<class>`（artifact 顺序；
+#           bucket ∈ {non-doc,total,bypass}，桶顺序 non-doc → total → bypass）
+#           --json 追加一行机器可读摘要（--quota 含三桶、rows 与全部超编条目）
+# @exit   — 0 一致/产出成功/配额未超 ｜ 1 违规（缺段/缺行/不一致/六字段非法/orphan∧quota）
+#           或配额超编（non_doc>30 ∨ total>45 ∨ bypass>8）｜ 2 判不了
+#           （清单不可读、run_by 段缺失、python 缺失、段重复、腿源缺失到无法 join、
+#             gate_meta 段缺失或段内 0 行、quota/quota_scope 缺失或非法、
+#             --emit 产出为空/形状不符（首行非 gate_meta:、rows<1、六字段行数≠rows*6）、
+#             mktemp 或临时输出读写失败、python 意外退出码、rc=0 但输出为空）
+# @degraded — E_NO_PYTHON / E_INV_MISSING / E_SECTION_MISSING / E_INTERNAL / E_LEG_SRC /
+#              E_GATE_META_MISSING / E_NO_ROWS / E_QUOTA_SCOPE / E_EMIT_TMP / E_EMIT_EMPTY / E_EMIT_SHAPE
+#
+# 已知限制（做不到什么 —— 禁读成"已检测"）:
+#   1. **--quota 的数字来自 artifact 的 `gate_meta:` 段**（生成物快照），不是本命令重算 run_by；
+#      手改 artifact 的对账防伪由 --check 的 B3 与 check-gate-inventory.sh 的 R10 承担，非本命令。
+#   2. **当前生成器无 bypass 标记源**：quota_scope ∈ {doc,non-doc} 由生成逻辑写出，
+#      bypass 桶为前向能力（--quota 只统计 artifact 已标 bypass 的行；现网为 0）。
 #
 # 🔴 三态铁律：2 绝不等于通过（信号量==0 ⇒ exit 2）。
 # 🔴 单一真源：run_by 的"实际腿"由 join 机械判定；台账 run_by 段只提供 quota（并受同源校验约束）。
@@ -23,6 +45,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --emit) MODE="emit" ;;
     --check) MODE="check" ;;
+    --quota) MODE="quota" ;;
     --json) JSON="1" ;;
     --root) shift; ROOT="${1:-}" ;;
     --root=*) ROOT="${1#--root=}" ;;
@@ -53,7 +76,15 @@ GA_LIB="${LIB_DIR:+$LIB_DIR/gate-assert.sh}"
 # shellcheck source=scripts/control-tower/gate-assert.sh
 . "$GA_LIB" || degraded E_INTERNAL "归一库不可载入: $GA_LIB"
 
-OUT="$("$PYBIN" - "$INV" "$ROOT" "$MODE" "$JSON" <<'PYEOF'
+# ── stdout 捕获 ───────────────────────────────────────────────────────────────
+# --emit 走 mktemp 临时文件（假绿入口①：mktemp 失败 / 产出形状不符 ⇒ exit 2）；
+# --check/--quota 走命令行替换、不落盘（A.1：--quota 只读 artifact、不写任何文件）。
+EMIT_TMP=""
+cleanup_tmp() { if [ -n "${EMIT_TMP:-}" ]; then rm -f "${EMIT_TMP:-}"; fi; }
+trap cleanup_tmp EXIT
+
+run_py() {
+  "$PYBIN" - "$INV" "$ROOT" "$MODE" "$JSON" <<'PYEOF'
 import glob, json, os, re, subprocess, sys
 
 inv_path, root, mode, json_mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
@@ -97,6 +128,60 @@ def rows_of(name, key):
         if m and cur is not None:
             cur[m.group(1)] = m.group(2).strip().strip('"')
     return out
+
+# ── --quota：只读 artifact 的 gate_meta: 段，统计配额三桶（B2 配额双闸）───────────
+QUOTA_LIMITS = {"non_doc": 30, "total": 45, "bypass": 8}
+GM_FIELDS = ("class", "run_by", "orphan", "quota", "quota_scope", "nature")
+
+def quota_mode():
+    """quota 模式：不读 run_by/腿源，只解析 artifact 的六字段行；超编 ⇒ exit 1，判不了 ⇒ exit 2。"""
+    gm = rows_of("gate_meta", "entrypoint")
+    if gm is None:
+        die("E_GATE_META_MISSING")
+    if not gm:
+        die("E_NO_ROWS")
+    for r in gm:
+        if not r.get("entrypoint"):
+            die("E_INTERNAL")
+        for f in GM_FIELDS:
+            if f not in r:
+                die("E_QUOTA_SCOPE" if f in ("quota", "quota_scope") else "E_INTERNAL")
+        if r["quota"] not in ("true", "false"):
+            die("E_QUOTA_SCOPE")
+        if r["quota_scope"] not in ("doc", "non-doc", "bypass"):
+            die("E_QUOTA_SCOPE")
+    q_true = [r for r in gm if r["quota"] == "true"]
+    non_doc = [r for r in q_true if r["quota_scope"] == "non-doc"]
+    doc = [r for r in q_true if r["quota_scope"] == "doc"]
+    byp = [r for r in q_true if r["quota_scope"] == "bypass"]
+    total_rows = [r for r in q_true if r["quota_scope"] in ("doc", "non-doc")]  # artifact 顺序
+    total = len(total_rows)
+    over = max(0, len(non_doc) - QUOTA_LIMITS["non_doc"])
+    print("QUOTA: non_doc=%d/30（超编 %d） total=%d/45 bypass=%d/8"
+          % (len(non_doc), over, total, len(byp)))
+    print("QUOTA-SRC: quota_true=%d doc=%d non_doc=%d bypass=%d rows=%d"
+          % (len(q_true), len(doc), len(non_doc), len(byp), len(gm)))
+    broken = []
+    if len(non_doc) > QUOTA_LIMITS["non_doc"]:
+        broken.append(("non-doc", non_doc))
+    if total > QUOTA_LIMITS["total"]:
+        broken.append(("total", total_rows))
+    if len(byp) > QUOTA_LIMITS["bypass"]:
+        broken.append(("bypass", byp))
+    for bucket, rows in broken:
+        for r in rows:
+            print("QUOTA-OVER: %s %s class=%s" % (bucket, r["entrypoint"], r.get("class", "")))
+    if json_mode:
+        print(json.dumps({
+            "non_doc": len(non_doc), "doc": len(doc), "total": total, "bypass": len(byp),
+            "quota_true": len(q_true), "rows": len(gm),
+            "over": [{"bucket": b, "entrypoint": r["entrypoint"], "class": r.get("class", "")}
+                     for b, rows in broken for r in rows],
+        }, ensure_ascii=False))
+    sys.exit(1 if broken else 0)
+
+if mode == "quota":
+    quota_mode()
 
 cls_rows = rows_of("classification", "id")
 if cls_rows is None:
@@ -266,12 +351,40 @@ if json_mode:
                       "quota_true": sum(1 for r in rows if r["quota"]), "mode": "check"}, ensure_ascii=False))
 sys.exit(0)
 PYEOF
-)"
-RC=$?
-printf '%s\n' "$OUT"
+}
+if [ "$MODE" = "emit" ]; then
+  EMIT_TMP="$(mktemp "${TMPDIR:-/tmp}/synova-gen-gate-meta.XXXXXX")" || EMIT_TMP=""  # swallow-ok: 失败由下一行显式 degraded E_EMIT_TMP
+  [ -n "$EMIT_TMP" ] || degraded E_EMIT_TMP "写临时文件失败: mktemp 在 ${TMPDIR:-/tmp} 不可用（判不了 ⇒ 2）"
+  run_py >"$EMIT_TMP"; RC=$?
+  OUT="$(cat "$EMIT_TMP")" || degraded E_EMIT_TMP "写临时文件失败: 临时输出不可读（判不了 ⇒ 2）"
+else
+  OUT="$(run_py)"; RC=$?
+fi
 if [ "$RC" -eq 2 ]; then
+  printf '%s\n' "$OUT"
   CODE="$(printf '%s' "$OUT" | grep -oE 'E_[A-Z_]+' | head -1)"
   echo "degraded: ${CODE:-E_INTERNAL} — 判不了 ≠ 通过" >&2
   exit 2
 fi
+if [ "$RC" -ne 0 ] && [ "$RC" -ne 1 ]; then
+  printf '%s\n' "$OUT"
+  echo "degraded: E_INTERNAL — 判不了 ≠ 通过（python 意外退出码 rc=$RC）" >&2
+  exit 2
+fi
+if [ -z "$OUT" ]; then
+  if [ "$MODE" = "emit" ]; then
+    degraded E_EMIT_EMPTY "--emit 产出为空（rc=$RC；空产出禁当成功）"
+  fi
+  degraded E_INTERNAL "python rc=$RC 但输出为空（判不了 ⇒ 2）"
+fi
+# --emit 产出形状（假绿入口①：空 / 首行非 gate_meta: / rows<1 / 六字段行数≠rows*6）
+if [ "$MODE" = "emit" ] && [ "$RC" -eq 0 ]; then
+  FIRST="$(printf '%s\n' "$OUT" | head -1 | tr -d '\r')"
+  [ "$FIRST" = "gate_meta:" ] || degraded E_EMIT_SHAPE "--emit 首行非 gate_meta:（首行: ${FIRST:-<空>}）"
+  ROWS="$(printf '%s\n' "$OUT" | awk '/^    - entrypoint:/{c++} END{print c+0}')"
+  SIX="$(printf '%s\n' "$OUT" | awk '/^      (class|run_by|orphan|quota|quota_scope|nature):/{c++} END{print c+0}')"
+  [ "$ROWS" -ge 1 ] || degraded E_EMIT_SHAPE "--emit rows=0（无配额行可落盘）"
+  [ "$SIX" -eq $((ROWS * 6)) ] || degraded E_EMIT_SHAPE "--emit 六字段行数 ${SIX} ≠ rows*6=$((ROWS * 6))（产出形状不符）"
+fi
+printf '%s\n' "$OUT"
 exit "$RC"
