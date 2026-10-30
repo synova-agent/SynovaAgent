@@ -2,6 +2,7 @@ issue: 1146
 branch: chore/decouple-install-hooks-logs
 base: main
 writeset:
+  - docs/authority/DOCS-REGISTRY.yaml
   - scripts/install-hooks.sh
   - scripts/hooks/post-commit.sh
   - scripts/pre-commit-check.sh
