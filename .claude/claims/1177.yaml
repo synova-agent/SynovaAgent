@@ -3,6 +3,8 @@ writeset:
   - scripts/control-tower/ci-emptygreen-sim.sh
   - .claude/claims/1117.yaml
   - .claude/claims/1177.yaml
+  - gate-exemptions/2026-10-30-1177-sim-guard.md
+  - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: bash scripts/control-tower/ci-emptygreen-sim.sh
 note: "#1177：为 #1174 A 类 E2E 分类器补复现器守卫（辛：src+e2e 仍红；壬：仅 e2e 合法跳过）。#1117 已关闭，陈旧 claim 释放该路径。"

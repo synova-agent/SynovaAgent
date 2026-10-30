@@ -1497,3 +1497,10 @@ documents:
     status: active
     owner: P2
     note: "#1173（E2E 批）：.gitea/workflows/local-gates.yml 受保护路径豁免 —— ③ 步把 tests/e2e/** 从 N_VITEST 剔除、单算 N_E2E、新增「合法跳过（E2E 面）」分支（根因：vitest.config.ts:29-36 在 CI 下 exclude tests/e2e/**）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
+  # ---- #1177 2026-10-30：ci-emptygreen-sim E2E 守卫豁免登记 ----
+  - id: DOC-1177
+    type: decision
+    path: gate-exemptions/2026-10-30-1177-sim-guard.md
+    status: active
+    owner: P2
+    note: "#1177：为 #1174 A 类 E2E 分类器补复现器守卫（辛/壬），受保护路径 ci-emptygreen-sim.sh 豁免；只加场景/计数，不改工作流与退出码。"
