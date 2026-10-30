@@ -1,0 +1,14 @@
+# .claude/claims/1200.yaml — #1200 R-S0-1 边界·授权与会话身份（R 运行时线 · Phase A 骨架 S0-1）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+# 判据源：.handbook/派单件/2026-10-31-规格-1200-S0-入口身份与边界.md §2.4（2 改 2 新建＝4 件）。
+writeset:
+  - .claude/claims/1200.yaml
+  - src/routes/data-lifecycle.ts
+  - src/routes/audit.ts
+  - tests/security/boundary-identity.test.ts
+done:
+  - verify: npx vitest run tests/security/boundary-identity.test.ts # U-1..U-5 真 HTTP 两态全绿
+  - verify: npx tsc --noEmit --pretty false # 类型零错（rc=0）
+  - verify: bash scripts/check-architecture.sh # 分层门禁 rc=0
+  - verify: python3 scripts/control-tower/claim_store.py --check 1200 --root . # claim 结构合规
+note: "#1200：role/tenantId/orgId 一律取验签身份（身份是唯一的授权与租户来源）；删 tenantId 必填⇒400 两分支、删 audit 'default' 回落；新增 403 IDENTITY_MISMATCH/role_declared 与 CROSS_ORG_DENIED/org_mismatch。已知限制（裁 A）：导出面不闭合（边全量／无主节点保守包含／图恒 default）→ 跟进卡 #1203；本件合入后不得宣称「导出面边界已闭合」。"
