@@ -10,9 +10,10 @@
  *   ⑥ 自声明面：TARGETS 非空且全部真存在；KNOWN_CASES 两档；EXILE_VICTIM_ID 派生
  *   ⑦ 三态映射：EXIT_BY_VERDICT（PASS→0 / FAIL→1 / NOT_IMPLEMENTED→2 / ERROR→2）
  *   ⑧ 🔴 spawn 三态-0：`--case main` ⇒ rc 0 ＋ 7 条关键行 ＋ victim 六文件摘要复原 ＋ extensions/ 干净
- *   ⑨ 🔴 spawn 三态-1：`--case no-exile` ⇒ rc 1 ＋ `[CHILD] sentinels=46` ＋ `[EXPECTED-RED]`（负控）
+ *   ⑨ 🔴 spawn 三态-0：`--case no-exile` ⇒ **rc 0** ＋ `[CHILD] sentinels=46` ＋ `[EXPECTED-RED]` ＋ `RESULT=PASS`（反例成立，spec v2.5 §4 C2）
  *   ⑩ 🔴 spawn 三态-2：未知 case ⇒ rc 2 ＋ `RESULT=ERROR` ＋ stderr `degraded:`（fail-closed）
  *   ⑪ 🔴 子协议 E2 回归：直接跑 `--child-count` ⇒ stdout **非空行数=1**、可 JSON 解析、stderr 静音（合并=1 行）
+ *   ⑫ 🔴 纯函数 `classifyNoExile`：child=46 ⇒ EXPECTED-RED / ≠46 ⇒ ENV-ANOMALY（判别分支覆盖，不靠 spawn 造异常态）
  *
  * 🔴 安全网（本测试会**真实移动** `extensions/sentinels/cash-runway`）：`afterAll` 扫隔离区，
  *    若发现 victim 停在隔离区而仓库路径缺失 ⇒ 移回并点名（防测试进程被强杀把树留在半拔状态）。
@@ -32,6 +33,7 @@ import {
   LOCK_REL,
   TARGETS,
   acquireLock,
+  classifyNoExile,
   countNonEmptyLines,
   dirDigest,
   exileRootFor,
@@ -221,6 +223,19 @@ describe('probe-content-exile · 纯函数面（C2 / #707）', () => {
     expect(EXIT_BY_VERDICT.NOT_IMPLEMENTED).toBe(2);
     expect(EXIT_BY_VERDICT.ERROR).toBe(2);
   });
+
+  it('⑫ 判别分支（spec v2.5 §4 C2）：classifyNoExile —— 46 ⇒ EXPECTED-RED；≠46 ⇒ ENV-ANOMALY', () => {
+    // 反例成立分支（=基线）
+    expect(classifyNoExile(46)).toBe('EXPECTED-RED');
+    expect(classifyNoExile(46, 46)).toBe('EXPECTED-RED');
+    // 环境态异常分支（残留/并发）：45（被移走）/ 47（多出内容项）/ 0（装配失败）
+    expect(classifyNoExile(45)).toBe('ENV-ANOMALY');
+    expect(classifyNoExile(47)).toBe('ENV-ANOMALY');
+    expect(classifyNoExile(0)).toBe('ENV-ANOMALY');
+    // 基线可注入（非默认基线时以传入值为准）
+    expect(classifyNoExile(46, 45)).toBe('ENV-ANOMALY');
+    expect(classifyNoExile(45, 45)).toBe('EXPECTED-RED');
+  });
 });
 
 describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
@@ -251,16 +266,16 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
   );
 
   it(
-    '⑨ 负控 case：--case no-exile ⇒ rc 1 ＋ [CHILD] 46 ＋ [EXPECTED-RED]（不真移走无 −1）',
+    '⑨ 反例 case（spec v2.5 §4 C2）：--case no-exile ⇒ rc 0 ＋ [CHILD] 46 ＋ [EXPECTED-RED] ＋ RESULT=PASS',
     async () => {
       const before = dirDigest(VICTIM_DIR);
       const run = runProbe(['--case', 'no-exile']);
-      expect(run.rc).toBe(1);
-      expect(lastResult(run.stdout)).toBe('RESULT=FAIL');
+      expect(run.rc).toBe(0);
+      expect(lastResult(run.stdout)).toBe('RESULT=PASS');
       expect(run.stdout).toContain('[BASELINE] sentinels=46 ids=46');
       expect(run.stdout).toContain('[CHILD] sentinels=46');
-      expect(run.stdout).toContain('[EXPECTED-RED]');
-      expect(run.stdout).not.toContain('RESULT=PASS');
+      expect(run.stdout).toContain('[EXPECTED-RED] sentinels=46');
+      expect(run.stdout).not.toContain('RESULT=FAIL'); // 反例成立 ≠ 判红（T10 口径）
       // 反例不得动内容面（持锁断言）
       await withRepoLock(() => {
         expect(dirDigest(VICTIM_DIR).sha256).toBe(before.sha256);

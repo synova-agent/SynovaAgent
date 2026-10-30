@@ -7,9 +7,11 @@
  * 设计哲学: 拔掉一个内容项不是改一行代码，而是把目录从扫描根**真拿走**再看系统还活不活 ——
  *   本件只认「新进程的装配结果」，不认任何自己造的假对象；拿不出 −1 或恢复不回去，一律 exit 2/1，绝不冒充绿。
  *
- * 判据来源（唯一）: `.handbook/派单件/2026-10-30-规格-1158-M6-三条不可妥协.md` §4 C2（v2.3 @ b68fb8d）
+ * 判据来源（唯一）: `.handbook/派单件/2026-10-30-规格-1158-M6-三条不可妥协.md` §4 C2（**v2.5 @ 0b9eedd**）
  *   正常   `--case main`     : [BASELINE]46 → [EXILE] → [CHILD]45 → [OTHERS]{cash-runway} → [IN-PROCESS-RELOAD]46 → [RESTORE] → RESULT=PASS
- *   反例   `--case no-exile` : 不真移走 ⇒ [CHILD] sentinels=46 ⇒ 期望红未出现 ⇒ **RESULT=FAIL / exit 1**（判据无牙齿，规格指定）
+ *   反例   `--case no-exile` : 不真移走 ⇒ [CHILD] sentinels=46 ⇒ `[EXPECTED-RED]` ⇒ **RESULT=PASS / exit 0**（反例成立：证明 −1 由"真移走"驱动，
+ *                              **与 C1 `no-reload` 同语义**）；🔴 判别分支：`[CHILD]` ≠ 46（残留/并发等环境态异常）⇒ `degraded:` 点名实际计数 ＋
+ *                              **RESULT=ERROR / exit 2**（先判"能不能判"，再谈"反例成不成立" —— 禁无条件 FAIL）。
  *
  * 契约（铁律 47；统一探针契约的唯一实现在 ./probe-ladder.ts，本件**不另造**）:
  *   @input    — `--case <main|no-exile>`｜`--all`（**仅主用例**）｜`--child-count`（**子协议**，父进程内部调用）
@@ -17,14 +19,17 @@
  *   @output   — 父进程 stdout 逐行 `[TAG] …` ＋ 末行由 `out.finish()` 签发 `RESULT=<verdict>`；
  *               子进程（`--child-count`）stdout **只一行 JSON**：
  *               `{"sentinels":N,"ids":[…],"typeCounts":{…},"errors":K,"degraded":bool}`
- *   @exit     — 0=PASS｜1=FAIL｜2=无法判定/降级（fail-closed：2 绝不等于通过）
+ *   @exit     — 0=PASS｜1=FAIL｜2=无法判定/降级（fail-closed：2 绝不等于通过）。
+ *               逐 case：`main` 断言不成立 ⇒ 1；`no-exile` 反例成立（child=46）⇒ **0**，child≠46（无法判定）⇒ **2**。
  *   @degraded — stderr 一行 `degraded: <原因>` ＋ 追加 JSON 到 `SYNO_GATE_DEGRADED_LOG`
- *               （字段 time/component/code/phase/retryable；D2 约定）＋ exit 2
+ *               （字段 time/component/code/phase/retryable；D2 约定）＋ exit 2。
+ *               含 `no-exile` 的**环境态异常**：`degraded: child=<实际计数>，环境态异常（残留/并发）——无法判定反例`。
  *   @authority — 谁能跑：控制塔维护者 / 独立复核者。运行期**真实移走** `extensions/sentinels/cash-runway`
  *               ⇒ 必须持 `.synova-out/m6-1158/.lock`（**v2.4 有界等待**：默认 180s、`SYNO_M6_LOCK_WAIT_MS`
  *               可调；**超时才** LOCK_BUSY ＋ exit 2 —— 既不全速失败，也不无限等）。
  *   @encoding  — 全文件 UTF-8（D732）；落盘/输出一律显式 `utf8`。
- *   @判别力    — 自检（D4）：反例 `no-exile` 证明「−1」只在**真移走**时出现（不移走 ⇒ 无 −1 ⇒ exit 1）。
+ *   @判别力    — 自检（D4）：反例 `no-exile` 证明「−1」只在**真移走**时出现（不移走 ⇒ child=46 ⇒ `[EXPECTED-RED]` / exit 0）；
+ *               判别分支（child≠46）⇒ degraded / exit 2 —— 反例**不能**"谎判红"，也不能在环境异常时假装成立。
  *
  * 结构（File → Role）:
  *   ├ 常量 TARGETS / KNOWN_CASES / BASELINE_SENTINEL_COUNT / CONTENT_TYPE_COUNT / VICTIM_* — 自声明面
@@ -49,8 +54,9 @@
  *   ① **进程内「重扫不卸」**（裁 167-U2）：`content-reload` 不调用 `registry.unregister` ⇒ 同一进程里 reload
  *      之后 registry 计数**不随目录消失而下降**（本件把它作为断言输出 `[IN-PROCESS-RELOAD] registry=46`，
  *      **不判红**）。因此「拔了照跑」只在**新进程**成立 —— 这也正是本件为什么必须起子进程。
- *   ② 反例 `no-exile` **不复现**「−1」，故按规格 §4 C2 判 `RESULT=FAIL / exit 1`（= 判据在本路径无牙齿），
- *      它是**负控**，不是能力回归。
+ *   ② 反例 `no-exile` 按 spec **v2.5 §4 C2**：`child=46` ⇒ `[EXPECTED-RED]` ＋ `RESULT=PASS / exit 0`（反例成立，与 C1 `no-reload` 同语义）；
+ *      `child≠46`（残留/并发等环境态异常）⇒ `degraded: child=<实际计数>，环境态异常（残留/并发）——无法判定反例` ＋ `RESULT=ERROR / exit 2`。
+ *      本件**不再**对 no-exile 无条件打 FAIL —— 否则「−1 造假」与「反例成立」不可区分（这正是 T10 要修的口径）。
  *   ③ 运行期真实移动 `extensions/sentinels/cash-runway` ⇒ **靠锁串行**（**v2.4 有界等待**：默认 180s、
  *      `SYNO_M6_LOCK_WAIT_MS` 可调；**超时才** LOCK_BUSY ＋ exit 2）；锁 stale 回收靠同机 pid 存活探测。
  *      若进程被强杀且目录停在隔离区，下一次运行会 `degraded: 隔离区残留` ＋ exit 2 点名（**不自动搬回**，
@@ -276,6 +282,24 @@ export function parseChildPayload(stdout: string): ChildPayload {
 /** 子进程 stdout 的非空行数（判「只一行 JSON」用） */
 export function countNonEmptyLines(stdout: string): number {
   return stdout.split('\n').filter((l) => l.trim() !== '').length;
+}
+
+/** `no-exile` 反例的判别结果（spec v2.5 §4 C2 的两个分支） */
+export type NoExileVerdict = 'EXPECTED-RED' | 'ENV-ANOMALY';
+
+/**
+ * `no-exile` 反例判别 —— **唯一判定式**（spec v2.5 §4 C2；T10 抽出，供纯函数单测覆盖两分支）。
+ *
+ * @input  childSentinels 子协议 payload 的哨兵计数；baseline 默认 46（as_of b8edf9860）
+ * @output `EXPECTED-RED`（=46 ⇒ 反例成立 ⇒ `[EXPECTED-RED]` ＋ exit 0）｜
+ *         `ENV-ANOMALY`（≠46 ⇒ 环境态异常（残留/并发）⇒ degraded ＋ exit 2）
+ * @degrade 纯函数，无异常路径：**不判红**、不抛（判断"能不能判"与"反例成不成立"是两件事）
+ */
+export function classifyNoExile(
+  childSentinels: number,
+  baseline: number = BASELINE_SENTINEL_COUNT,
+): NoExileVerdict {
+  return childSentinels === baseline ? 'EXPECTED-RED' : 'ENV-ANOMALY';
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -721,7 +745,7 @@ async function runMainCase(root: string, out: ProbeOutput): Promise<void> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 七、场景 no-exile（反例：不真移走 ⇒ 无 −1 ⇒ 规格指定 exit 1）
+// 七、场景 no-exile（反例：不真移走 ⇒ child=46 ⇒ [EXPECTED-RED] exit 0；≠46 ⇒ degraded exit 2）
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function runNoExileCase(root: string, out: ProbeOutput): Promise<void> {
@@ -732,27 +756,28 @@ async function runNoExileCase(root: string, out: ProbeOutput): Promise<void> {
   const baseline = await bootstrapSentinels();
   out.note(`[BASELINE] sentinels=${baseline.total} ids=${baseline.ids.length}`);
 
-  let bodyError: ProbeError | undefined;
-  try {
-    const child = runChildCountProcess(root);
-    const types = Object.keys(child.payload.typeCounts).length;
+  const child: ChildRun = runChildCountProcess(root); // 解析失败/子进程非 0 ⇒ 抛（degraded ＋ exit 2，既有语义）
+  const p = child.payload;
+  const types = Object.keys(p.typeCounts).length;
+  out.note(`[CHILD] sentinels=${p.sentinels} types=${types} errors=${p.errors} degraded=${String(p.degraded)}`);
+
+  if (classifyNoExile(p.sentinels) === 'EXPECTED-RED') {
     out.note(
-      `[CHILD] sentinels=${child.payload.sentinels} types=${types} ` +
-        `errors=${child.payload.errors} degraded=${String(child.payload.degraded)}`,
+      `[EXPECTED-RED] sentinels=${p.sentinels}（未真移走 ⇒ −1 未出现）` +
+        ' —— spec v2.5 §4 C2：反例成立 ⇒ RESULT=PASS / exit 0（与 C1 no-reload 同语义）',
     );
-    out.note(
-      `[EXPECTED-RED] sentinels=${child.payload.sentinels}（未真移走 ⇒ −1 未出现）` +
-        ' —— 规格 §4 C2 指定本反例 RESULT=FAIL / exit 1（判据无牙齿）',
-    );
-    out.fail(
-      `[EXPECTED-RED] 未移走时 child=${child.payload.sentinels}（无 −1）⇒ 本 case 不能证明「拔得掉」` +
-        ' ⇒ 规格 §4 C2 判 FAIL/exit 1（负控：非能力回归）',
+    out.pass(
+      '反例成立：不真移走 ⇒ child 仍为基线 ⇒ 「−1」确由「真移走」驱动（判据有牙齿；与 C1 no-reload 同语义）',
       'L2',
     );
-  } catch (err: unknown) {
-    bodyError = toProbeError(err, 'CASE_FAILED', `case:${CASE_NO_EXILE}`, true);
+  } else {
+    // 环境态异常（残留/并发等）⇒ **无法判定**反例 ⇒ degraded ＋ RESULT=ERROR ＋ exit 2（**不判红**）
+    throw new ProbeError(
+      'NO_EXILE_ENV_ANOMALY',
+      `case:${CASE_NO_EXILE}`,
+      `child=${p.sentinels}，环境态异常（残留/并发）——无法判定反例`,
+    );
   }
-  if (bodyError !== undefined) throw bodyError;
 
   const changes = gitExtensionsChanges(root);
   if (changes === undefined) {
