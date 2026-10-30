@@ -146,15 +146,17 @@ function roleSeedBody(): Record<string, unknown> {
             id: 'finance.statements-ref',
             label: '财务报表口径',
             source: `${ROLE_REL_DIR}/knowledge-scope.yaml#finance.statements`,
+            why: '测试夹具：说明为何需要该上下文',
             required: true,
           },
           {
             id: 'finance.budget-ref',
             label: '预算口径',
             source: `${ROLE_REL_DIR}/knowledge-scope.yaml#finance.budget`,
+            why: '测试夹具：说明为何需要该上下文',
             required: true,
           },
-          { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan' },
+          { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan', why: '测试夹具：说明为何需要该上下文' },
         ],
         systemAddendum: '你在为岗位 mount-probe 提供支持。\n结论必须标明口径来源；缺数据先追问。',
         outputTemplate: {
