@@ -43,7 +43,7 @@ is_allowed() {
     ./task-state/*|./memory/*) return 0 ;;             # 台账与四态 Note 历史记录
     ./WORKLOG-*|./CHANGELOG.md|./LOOP*) return 0 ;;    # 工作日志/变更史
     ./evidence/*) return 0 ;;                          # 验收证据快照（带日期，不可改）
-    ./.claude/task-briefs/*|./.claude/reference-map.md|./.claude/loop-state.json|./.claude/pre-commit-failures.log|./.claude/bypass.log) return 0 ;; # 历史派单 brief 与运行时产物
+    ./.claude/task-briefs/*|./.claude/reference-map.md|./.claude/loop-state.json|./.claude/pre-commit-failures.log|./.claude/bypass.log|./.synova/logs/*) return 0 ;; # 历史派单 brief 与运行时产物
     ./scripts/workflow/check-dataflow-alignment.sh|./scripts/control-tower/founder-truth.py|./scripts/check-fde-terms.sh) return 0 ;; # 含 ^FDE$ 兼容词（旧 brief 关键词对账）
     ./mvp-server.cjs) return 0 ;;                      # Stage 0 删除候选，不投资
     ./tests/electron/capability.test.ts) return 0 ;;   # 守卫自引用: not.toMatch(/FDE/)
