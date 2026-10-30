@@ -12,22 +12,51 @@
 #     `scripts/control-tower/check-gate-integrity.sh` B 段全部向本脚本取数 ⇒ 零副本。
 #   · 执行集 = 发现面扫描集 − 隔离台账（`gate-integrity-baseline.txt` 的 REGISTRY-BASELINE 段）。
 #     新增测试**零登记即自动纳入执行集**；要把它排除，必须显式写进隔离台账（留痕 + 棘轮）。
+#   · W0 扩面（#1210）: 发现面 ＋ `.test.ts` 纳入**发现**（含 `.integration.test.ts` /
+#     `.e2e.test.ts`，glob 自然覆盖）；`.ts` **不进 `--list`（CI bash 执行集）** ——
+#     CI 执行器按扩展名分派（*.py → python，其余 → bash），.ts 混入必红；`.ts` 的
+#     runner = vitest，由 `--list-ts` 单列（待 W6 接线）。
 #
 # 契约（铁律 47）
-#   用法: sealed-tests.sh <--scan|--quarantine|--list|--face-total> [--root <仓库根>]
+#   用法: sealed-tests.sh <--scan|--quarantine|--list|--list-ts|--face-total|--slack|--slack-cap>
+#             [--root <仓库根>]
 #   输入:
 #     --root <dir>        仓库根（默认 = 本脚本上两级）
 #     环境 SYNO_GATE_BASELINE  隔离台账路径（默认 <root>/scripts/control-tower/gate-integrity-baseline.txt）
-#   输出（stdout，每行一条相对路径 / 或一个整数）:
-#     --scan        发现面内**全部**密封面测试（未减隔离台账）
+#     环境 SYNO_VITEST_BIN      vitest 可执行文件（默认 <root>/node_modules/.bin/vitest）
+#   输出（stdout，每行一条相对路径 / 一个整数 / 一条逐面统计行）:
+#     --scan        发现面内**全部**密封面测试（三扩展名 .sh/.py/.ts；未减隔离台账）
 #     --quarantine  隔离台账条目（REGISTRY-BASELINE 段的数据行）
-#     --list        执行集 = --scan − --quarantine（ci.yml 两个 job 消费这个）
-#     --face-total  台账登记的发现面总数**下界**（缺省 0）
+#     --list        执行集 =（--scan 中 .sh/.py）− --quarantine（ci.yml 两腿消费；**不含 .ts**）
+#     --list-ts     --scan 中的 `.ts` 项（stderr 声明 runner=vitest；缺 runner ⇒ exit 2）
+#     --face-total  逐面一行 `face=<dir> count=<n> runner=<bash|python|vitest|mixed|none>`
+#                   （计数**含** .ts；某面 count=0 ⇒ exit 1；面目录不存在 ⇒ exit 2）
+#     --slack       余量 = 执行集口径扫描数 − FACE-TOTAL 下界（单整数，向后兼容）
+#     --slack-cap   余量上限（单整数）
 #   退出码（三态，控制塔模式 1）:
 #     0 = 正常
-#     1 = 违规（发现面扫描为空 / 隔离条目指向不存在的文件 / 发现面实况低于台账下界 = 疑似删测试）
-#     2 = 降级（仓库根不可读 / 台账不可读）—— fail-closed，**绝不返回空清单当"没测试要跑"**
-#   降级可见性: 违规/降级一律向 stderr 打 `SEALED-TESTS: <原因>`，调用方据此判红/全量。
+#     1 = 违规（发现面扫描为空 / 隔离条目指向不存在的文件 / 执行集实况低于台账下界 = 疑似删测试 /
+#         某发现面 count=0 = 恒 0 发现）
+#     2 = 降级（仓库根不可读 / 台账不可读 / 面目录不存在 / 发现 0 个 .ts / 无 vitest runner /
+#         未指定模式）—— fail-closed，**绝不返回空清单当"没测试要跑"**
+#   降级可见性: 违规/降级一律向 stderr 打 `SEALED-TESTS: <原因>`；降级另打
+#     `degraded: <CODE> — <原因>` 并追加 JSON 到 SYNO_GATE_DEGRADED_LOG（D2 同形）。
+#
+# 棘轮口径（#1210 明示，勿读成"棘轮已覆盖 .ts"）:
+#   `# FACE-TOTAL=` 下界与 `--slack` 仍按**执行集口径（.sh/.py）**计数 —— 台账 204 的语义是
+#   「CI 真正会跑的密封面测试数」；`.ts` 尚无 CI runner ⇒ 计入会把余量从 8 抬到 35 并撞
+#   SLACK-CAP=10（假红），且台账不在本卡写集内。`.ts` 的可见性由 `--face-total` 逐面行与
+#   `--list` 的 stderr 提示承担。`scan_face_at` 同此口径（base 对比必须与棘轮同尺度）。
+#
+# 已知限制（做不到什么 —— 禁读成"已检测"）:
+#   1. **.ts 尚无 CI 执行**：`--list-ts` 只**列出**并声明 runner=vitest；本仓工作树无 node_modules
+#      时恒 exit 2。真正跑 vitest 的接线（W6/后续卡）不在本件。
+#   2. **FACE-TOTAL 不覆盖 .ts**（见上「棘轮口径」）：.ts 被删不会被棘轮判红，只在
+#      `--face-total` 的 count 变化里可见；vitest 进 CI 后须同批上调台账再改口径。
+#   3. **`--face-total` 输出形状已变（#1210）**：不再是单个整数。消费方若把它当整数用
+#      （如 `check-gate-integrity.sh` 展示行的 `floor_n`）会出现多行文本 —— 只影响显示，
+#      不影响该器退出码；整数下界仍可由 `--slack`（= 执行集扫描数 − floor）反推。
+#   4. **面目录缺失即 exit 2**：`SEALED_FACES` 三项都必须实存（删目录 = 配置错误，不是"没有测试"）。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
@@ -36,35 +65,84 @@ ROOT="$(cd "$SELF_DIR/../.." && pwd)"
 MODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --scan|--quarantine|--list|--face-total|--slack|--slack-cap) MODE="${1#--}" ;;
+    --scan|--quarantine|--list|--list-ts|--face-total|--slack|--slack-cap) MODE="${1#--}" ;;
     --root) shift; [ $# -gt 0 ] || { echo "SEALED-TESTS: --root 缺参数" >&2; exit 2; }; ROOT="$1" ;;
     -h|--help)
-      sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      # 头注释即用法文档（单源：改契约只改头部，不留第二份会漂移的用法文本）。
+      # 动态取界（原 `sed -n '2,30p'` 写死行号：头部一加行就截掉契约末尾 ⇒ 文档失真）。
+      awk 'NR > 2 { if ($0 ~ /^# ═/) exit; print }' "${BASH_SOURCE[0]}" | sed -e 's/^# \{0,1\}//'
       exit 0 ;;
     *) echo "SEALED-TESTS: 未知参数: $1" >&2; exit 2 ;;
   esac
   shift
 done
-[ -n "$MODE" ] || { echo "SEALED-TESTS: 必须指定 --scan/--quarantine/--list/--face-total" >&2; exit 2; }
+[ -n "$MODE" ] || { echo "SEALED-TESTS: 必须指定 --scan/--quarantine/--list/--list-ts/--face-total" >&2; exit 2; }
 
 BASELINE="${SYNO_GATE_BASELINE:-$ROOT/scripts/control-tower/gate-integrity-baseline.txt}"
+DEG_LOG="${SYNO_GATE_DEGRADED_LOG:-$ROOT/.codex/control-tower/logs/degraded-events.log}"
 
 # ── 发现面（唯一声明处；改面 = 只改这里）────────────────────────────────────
-#   面 = 「本仓已决定在 CI 密封面执行」的目录；面内新增测试零登记自动纳入。
-SEALED_FACES="tests/control-tower tests/doc-system"
+#   面 = 「本仓已决定在密封面执行」的目录；面内新增测试零登记自动纳入。
+#   W0（#1210）扩为三面：tests/security 是 .ts-only 面（用于「删 .ts 支持 ⇒ 该面归零」两态）。
+SEALED_FACES="tests/control-tower tests/doc-system tests/security"
+
+# 降级出口（D2：stderr 一行 ＋ JSON 追加 ＋ exit 2；禁静默 0）
+degrade() { # $1=code $2=phase $3=原因
+  printf 'degraded: %s — %s\n' "$1" "$3" >&2
+  mkdir -p "$(dirname "$DEG_LOG")" 2>/dev/null || true
+  printf '{"time":"%s","component":"sealed-tests","code":"%s","phase":"%s","retryable":false}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> "$DEG_LOG" 2>/dev/null || true
+  exit 2
+}
 
 [ -d "$ROOT/tests" ] || { echo "SEALED-TESTS: 仓库根无 tests/ 目录: $ROOT" >&2; exit 2; }
 [ -f "$BASELINE" ] || { echo "SEALED-TESTS: 隔离台账不可读: $BASELINE" >&2; exit 2; }
 
-scan_face() {   # 发现面内全部密封面测试（相对路径，排序去重）
-  local d f
-  for d in $SEALED_FACES; do
-    [ -d "$ROOT/$d" ] || continue
-    for f in "$ROOT/$d"/*.test.sh "$ROOT/$d"/*.test.py; do
+scan_face_one() {   # $1=<面目录，相对仓库根> → 该面全部密封面测试（相对路径）
+  local d="$1" f pat
+  [ -d "$ROOT/$d" ] || return 0
+  # 🔴 扩展名唯一声明处（W0/#1210）: 新增扩展名只改这一行；两态夹具通过替换本行
+  #    模拟「删 .test.ts 支持」⇒ tests/security 面归零 ⇒ --face-total exit 1。
+  #    `.integration.test.ts` / `.e2e.test.ts` 由 `*.test.ts` glob 自然覆盖。
+  SEALED_EXTS="*.test.sh *.test.py *.test.ts"
+  for pat in $SEALED_EXTS; do
+    for f in "$ROOT/$d"/$pat; do
       [ -f "$f" ] || continue
       printf '%s\n' "${f#"$ROOT"/}"
     done
+  done
+}
+
+scan_face() {   # 发现面内全部密封面测试（含 .test.ts；相对路径，排序去重）
+  local d
+  for d in $SEALED_FACES; do
+    scan_face_one "$d"
   done | sort -u
+}
+
+face_counts() {  # $1=<面目录> → "sh py ts" 三扩展名计数（由 scan_face_one 单源派生）
+  local d="$1" f sh_n=0 py_n=0 ts_n=0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case "$f" in
+      *.test.ts) ts_n=$((ts_n+1)) ;;
+      *.test.py) py_n=$((py_n+1)) ;;
+      *.test.sh) sh_n=$((sh_n+1)) ;;
+    esac
+  done <<< "$(scan_face_one "$d")"
+  printf '%s %s %s' "$sh_n" "$py_n" "$ts_n"
+}
+
+face_runner() {  # $1=sh $2=py $3=ts → bash|python|vitest|mixed|none（该面需要哪些 runner）
+  local kinds=0
+  [ "$1" -gt 0 ] && kinds=$((kinds+1))
+  [ "$2" -gt 0 ] && kinds=$((kinds+1))
+  [ "$3" -gt 0 ] && kinds=$((kinds+1))
+  if [ "$kinds" -eq 0 ]; then printf 'none'
+  elif [ "$kinds" -gt 1 ]; then printf 'mixed'
+  elif [ "$1" -gt 0 ]; then printf 'bash'
+  elif [ "$2" -gt 0 ]; then printf 'python'
+  else printf 'vitest'; fi
 }
 
 quarantine() {  # 隔离台账 = REGISTRY-BASELINE 段的数据行（跳过注释/空行）
@@ -105,11 +183,14 @@ _days_since() {   # $1=<YYYY-MM-DD> → 距今天数（BSD `date -j -f` / GNU `d
 scan_face_at() {   # $1=<git ref>；在**同一树尺度**下数发现面内测试（不 checkout ⇒ 与工作树测量同口径）
   #   #1227/D1227（卡 #1300）: 「越线者付账」判据要求 scan(base) 与 scan(PR) **同一次运行内测量**——
   #   跨运行比较会假红（实测: CI 面 152 vs 本地 150）。此处纯 tree 计数 ⇒ 与 scan_face 同尺度。
+  #   🔴 #1210 口径明示: 只计**执行集口径（.sh/.py）**，与 `--slack`/`# FACE-TOTAL=` 同尺度；
+  #     若把 .ts 计入而棘轮仍按 .sh/.py（台账不在本卡写集，无法同步上调），base 侧会被放大
+  #     ⇒ 越线判定被永久洗成「纯继承」（假绿）。故**不**扩 .ts（见头部「棘轮口径」）。
   local ref="$1"
   [ -n "$ref" ] || return 1
   git -C "$ROOT" rev-parse -q --verify "${ref}^{commit}" >/dev/null 2>&1 || return 1
   git -C "$ROOT" ls-tree -r --name-only "$ref" 2>/dev/null \
-    | grep -E '^tests/(control-tower|doc-system)/.*\.test\.(sh|py)$' | wc -l | tr -d ' \r'
+    | grep -E '^tests/(control-tower|doc-system|security)/.*\.test\.(sh|py)$' | wc -l | tr -d ' \r'
 }
 
 inherited_since() {   # 台账单行载体 `# INHERITED-OVER-CAP-SINCE=<YYYY-MM-DD>`（缺省空 = 未登记继承态）
@@ -147,24 +228,67 @@ quarantine_total() {  # 隔离条目数上界（`# QUARANTINE-TOTAL=<n>`，缺�
 
 VIOL=0
 SCAN="$(scan_face)"
-SCAN_N=$(printf '%s\n' "$SCAN" | grep -c . || true)
+ALL_N=$(printf '%s\n' "$SCAN" | grep -c . || true)                      # 发现面口径（含 .ts）
+SCAN_EXEC="$(printf '%s\n' "$SCAN" | grep -E '\.test\.(sh|py)$' | grep . || true)"
+SCAN_N=$(printf '%s\n' "$SCAN_EXEC" | grep -c . || true)                # 执行集口径（.sh/.py；棘轮/--slack 用）
+TS_N=$(printf '%s\n' "$SCAN" | grep -cE '\.test\.ts$' || true)           # 发现到但 CI 未接线的 .ts 数
 QUAR="$(quarantine)"
 QUAR_N=$(printf '%s\n' "$QUAR" | grep -c . || true)
 
 case "$MODE" in
   scan) printf '%s\n' "$SCAN" | grep . || true ;;
   quarantine) printf '%s\n' "$QUAR" | grep . || true ;;
-  face-total) FT="$(face_total)"; [ -n "$FT" ] || FT=0; printf '%s\n' "$FT" ;;
+  face-total)
+    # W0（#1210）: 逐面一行，计数**含 .ts**；某面 0 ⇒ exit 1（禁恒 0 发现）；面目录缺失 ⇒ exit 2
+    FACE_MISSING=0; FACE_ZERO=0
+    for _d in $SEALED_FACES; do
+      if [ ! -d "$ROOT/$_d" ]; then
+        echo "SEALED-TESTS: 发现面目录不存在: $_d —— 信号量==0，判不了（exit 2）" >&2
+        FACE_MISSING=1
+        continue
+      fi
+      read -r _sh _py _ts <<< "$(face_counts "$_d")"
+      _n=$((_sh + _py + _ts))
+      printf 'face=%s count=%s runner=%s\n' "$_d" "$_n" "$(face_runner "$_sh" "$_py" "$_ts")"
+      if [ "$_n" -eq 0 ]; then
+        echo "SEALED-TESTS: 发现面 $_d 计数为 0 —— 禁恒 0 发现（exit 1；先核面声明与 glob 扩展名）" >&2
+        FACE_ZERO=1
+      fi
+    done
+    [ "$FACE_MISSING" -eq 0 ] || exit 2
+    [ "$FACE_ZERO" -eq 0 ] || exit 1
+    ;;
   slack) FT="$(face_total)"; [ -n "$FT" ] || FT=0; printf '%s\n' "$((SCAN_N - FT))" ;;
   slack-cap) SC="$(slack_cap)"; [ -n "$SC" ] || SC=0; printf '%s\n' "$SC" ;;
+  list-ts)
+    # W0（#1210）: .ts 项单列（runner=vitest）；缺 runner 或 0 发现 ⇒ exit 2（判不了 ≠ 通过）
+    printf 'runner=vitest\n' >&2
+    TS_LIST="$(printf '%s\n' "$SCAN" | grep -E '\.test\.ts$' | grep . || true)"
+    TS_LIST_N=$(printf '%s\n' "$TS_LIST" | grep -c . || true)
+    if [ "$TS_LIST_N" -eq 0 ]; then
+      degrade E_NO_TS runner "--list-ts 发现 0 个 .test.ts（面=$SEALED_FACES）—— 禁静默 0 发现（exit 2）"
+    fi
+    RUNNER="${SYNO_VITEST_BIN:-$ROOT/node_modules/.bin/vitest}"
+    if [ ! -x "$RUNNER" ]; then
+      degrade E_NO_RUNNER runner "runner 不可执行: $RUNNER（判不了 ≠ 通过；可用 SYNO_VITEST_BIN 指定 vitest）"
+    fi
+    printf '%s\n' "$TS_LIST"
+    ;;
   list)
-    LIST="$(comm -23 <(printf '%s\n' "$SCAN" | grep . | sort -u) <(printf '%s\n' "$QUAR" | grep . | sort -u))"
+    LIST="$(comm -23 <(printf '%s\n' "$SCAN_EXEC" | grep . | sort -u) <(printf '%s\n' "$QUAR" | grep . | sort -u))"
     LIST_N=$(printf '%s\n' "$LIST" | grep -c . || true)
     FLOOR="$(face_total)"
     # 发现面为空 ⇒ 违规（配置错误：面声明失效会让"全绿"变成"什么都没跑"）
-    if [ "$SCAN_N" -eq 0 ]; then
+    if [ "$ALL_N" -eq 0 ]; then
       echo "SEALED-TESTS: 发现面扫描为空（面=$SEALED_FACES root=$ROOT）—— fail-closed，绝不当作「无测试」处理" >&2
       VIOL=1
+    elif [ "$SCAN_N" -eq 0 ]; then
+      # 发现到 .ts 但无 .sh/.py ⇒ bash 执行集为空：可见但不判违规（合法 ts-only 面），禁静默
+      echo "SEALED-TESTS: 执行集口径为 0（发现面只有 .ts，共 ${TS_N} 个）—— CI bash 执行集为空；runner=vitest 待接线" >&2
+    fi
+    # .ts 存在时给可见提示（不进 bash 执行集；不静默，也不改 workflow 行为）
+    if [ "$TS_N" -gt 0 ]; then
+      echo "SEALED-TESTS: 发现 ${TS_N} 个 .test.ts 未进 bash 执行集（runner=vitest 待接线；用 --list-ts 查看）" >&2
     fi
     # 发现面实况 < 台账下界 ⇒ 疑似删测试（必须同批显式下调 FACE-TOTAL）
     if [ -n "$FLOOR" ] && [ "$SCAN_N" -lt "$FLOOR" ]; then

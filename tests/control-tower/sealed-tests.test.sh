@@ -40,7 +40,47 @@ if comm -13 <(bash "$SUT" --scan | sort -u) <(bash "$SUT" --list | sort -u) | gr
 else
   ok "正常: 执行集 ⊆ 扫描集"
 fi
-bash "$SUT" --face-total | grep -qE '^[0-9]+$' && ok "正常: --face-total 输出为整数" || no "正常: --face-total 非整数"
+bash "$SUT" --face-total >/dev/null 2>&1 && ok "正常: --face-total exit 0" || no "正常: --face-total 非 0"
+
+# ═══ W0（#1210）: 扩面三件事（.ts 进发现面 / --list 不混 .ts / 无 runner 判不了）═══
+# ① 逐面非零（含 .ts-only 面 tests/security）——旧实现只 glob .sh/.py ⇒ 该面恒 0
+FT_OUT="$(bash "$SUT" --face-total)"; FT_RC=$?
+if [ "$FT_RC" -eq 0 ] \
+   && printf '%s\n' "$FT_OUT" | grep -qE '^face=tests/control-tower count=[1-9][0-9]* runner=(bash|python|vitest|mixed)$' \
+   && printf '%s\n' "$FT_OUT" | grep -qE '^face=tests/doc-system count=[1-9][0-9]* runner=(bash|python|vitest|mixed)$' \
+   && printf '%s\n' "$FT_OUT" | grep -qE '^face=tests/security count=[1-9][0-9]* runner=vitest$'; then
+  ok "W0-①: --face-total 逐面非零（三面；tests/security 为 .ts-only 面 runner=vitest）"
+else
+  no "W0-①: --face-total 逐面输出异常（rc=${FT_RC}）: $(printf '%s' "$FT_OUT" | tr '\n' '|')"
+fi
+
+# ② 改坏即红（两态）: 删 .test.ts 支持 ⇒ tests/security 面 count=0 ⇒ exit 1
+MUT_TS="$TMPD/sealed-no-ts.sh"
+sed "s/^  SEALED_EXTS=.*/  SEALED_EXTS=\"*.test.sh *.test.py\"/" "$SUT" > "$MUT_TS"
+if ! bash -n "$MUT_TS" >/dev/null 2>&1; then
+  no "W0-②: 变异体生成失败（sed 替换 SEALED_EXTS 出错）"
+else
+  OUT="$(bash "$MUT_TS" --face-total --root "$REPO" 2>&1)"; rc=$?
+  if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '^face=tests/security count=0 '; then
+    ok "W0-②: 改坏即红（删 .test.ts glob ⇒ tests/security count=0 ⇒ exit 1；原态三面非零且 rc=0）"
+  else
+    no "W0-②: 变异体未红（rc=${rc}）—— .ts 支持是否为真判据存疑"
+  fi
+fi
+
+# ③ .ts 不进 bash 执行集（可见但不静默）+ 无 runner ⇒ exit 2 + degraded
+LIST_OUT="$(bash "$SUT" --list 2>"$TMPD/w0-list.err")"
+if ! printf '%s\n' "$LIST_OUT" | grep -qE '\.test\.ts$' && grep -q 'runner=vitest 待接线' "$TMPD/w0-list.err"; then
+  ok "W0-③: --list 保持只出 .sh/.py（无 .test.ts），且 stderr 明示 .ts 未进 bash 执行集"
+else
+  no "W0-③: --list 混入 .ts 或未明示（CI 会按扩展名分派用 bash 跑 .ts）"
+fi
+OUT="$(SYNO_VITEST_BIN="$TMPD/no-such-vitest" SYNO_GATE_DEGRADED_LOG="$TMPD/w0-degraded.log" bash "$SUT" --list-ts 2>&1)"; rc=$?
+if [ "$rc" -eq 2 ] && printf '%s\n' "$OUT" | grep -q 'degraded: E_NO_RUNNER'; then
+  ok "W0-④: 无 runner ⇒ --list-ts exit 2 ＋ degraded（判不了 ≠ 通过，禁静默 0）"
+else
+  no "W0-④: 无 runner 未 fail-closed（rc=${rc}）"
+fi
 
 # ── 合成仓工厂: 造 tests/control-tower + 台账 ──
 mkfix() {   # $1 = face-total 行内容（如 '3' 或 ''）; $2 = quarantine-total 行内容
@@ -87,8 +127,9 @@ OUT="$(run_in "$R3" --list)"; rc=$?
 #      （写集冲突源）。故棘轮只做**下界**：新增不红、净删除红。
 #   ⚠️ 代价（如实登记，不假装能抓）: 净零变换（删 1 个 + 加 1 个）**不可检测**——这是「不做逐条登记」的必然代价。
 #      生产实证: #1259 新增 3 个测试 ⇒ scan 141→144 ⇒ 下界语义下**不红**（旧贴边断言在此必红）。
-FLR_REAL="$(bash "$SUT" --face-total)"
-SCAN_REAL="$(bash "$SUT" --scan | grep -c . || true)"
+# #1210: --face-total 已改为逐面行（不再出单个整数）；下界从台账解析，scan 取**执行集口径**（.sh/.py）
+FLR_REAL="$(grep -oE '^# FACE-TOTAL=[0-9]+' "$REPO/scripts/control-tower/gate-integrity-baseline.txt" | tail -1 | grep -oE '[0-9]+')"
+SCAN_REAL="$(bash "$SUT" --scan | grep -cE '\.test\.(sh|py)$' || true)"
 if [ -n "$FLR_REAL" ] && [ "$SCAN_REAL" -ge "$FLR_REAL" ]; then
   ok "边界: 真仓下界语义成立（scan=${SCAN_REAL} >= FACE-TOTAL=${FLR_REAL}；余量 $((SCAN_REAL - FLR_REAL)) 为新增所致，非判据）"
 else
