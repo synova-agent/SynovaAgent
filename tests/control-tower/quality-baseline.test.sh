@@ -6,7 +6,7 @@
 # 覆盖（规格 §4 J3/J5/J6/J7/J8/J9 ＋ §4.2 R1–R5 判别力两态 ＋ 子命令 C1–C10b）:
 #   1. 头契约（@input/@output/@exit/@degraded ＋ 已知限制）与 L8 例外登记
 #   2. --selfcheck：判别力 1/1/1/1/1 clean=0；反向（T4 规则改回不查 return []）⇒ rc=1
-#   3. --check-registry：真件 REGISTRY-OK rows=22；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
+#   3. --check-registry：真件 REGISTRY-OK rows=26；反例（wired 无 consumer/多余键/坏行号/0 行/YAML 越界）
 #      ＋ #1126 防回退：真件 reportMirrorPushes 的 defined_at 必须双引号、owner 非空；
 #        改坏两态（去引号 ⇒ rc=2 E_YAML ／ 删 owner ⇒ rc=1 R3）
 #   4. --check-inventory：合成夹具 covered/PAIRING 契约；10 个改坏两态（C1/C3/C4/C5/C6/C7/C9/C9b/C10×2）
@@ -142,7 +142,15 @@ echo ""
 echo "── 3. --check-registry（J5 ＋ 反例）──"
 OUT=$("$PYBIN" "$TOOL" --check-registry "$REGISTRY" 2>&1); RC=$?
 assert_rc 0 "$RC" "--check-registry 真件"
-assert_contains "$OUT" "REGISTRY-OK rows=22" "末行 REGISTRY-OK rows=22"
+# #1152：与「独立来源」交叉核对（不与自身输出自比——那会变成同义反复）
+EXP_ROWS=$(grep -cE '^  - capability:' "$REGISTRY")
+ACT_ROWS=$(printf '%s\n' "$OUT" | tail -1 | sed -E 's/.*rows=([0-9]+).*/\1/')
+if printf '%s\n' "$OUT" | tail -1 | grep -qE '^REGISTRY-OK rows=[0-9]+$'; then
+  pass "末行格式 REGISTRY-OK rows=<n>"
+else
+  fail "末行格式不符: $(printf '%s\n' "$OUT" | tail -1)"
+fi
+assert_eq "$EXP_ROWS" "$ACT_ROWS" "rows 与独立条目计数（grep -c '^  - capability:'）一致"
 assert_contains "$OUT" "✅ R7" "R7 信号量（rows≥1）"
 
 # #1126 防回退（真件钉死）：tool.reportMirrorPushes 的 defined_at 必须双引号包裹
@@ -543,10 +551,15 @@ assert_eq "orphans=2/4" "$(printf '%s\n' "$OUT" | tail -1)" "夹具 orphans=2/4"
 OUT=$("$PYBIN" "$TOOL" --orphans-only 2>&1); RC=$?
 assert_rc 0 "$RC" "--orphans-only 真树（只报告不判红）"
 # #1126 期实测常量同步：GATE-INVENTORY 盘点器数 35 → 40（#1087/#1093/#1108 等增件；判据一字不动）
-if printf '%s\n' "$OUT" | tail -1 | grep -qE '^orphans=[0-9]+/40$'; then
-  pass "真树末行格式 orphans=<n>/35"
+# #1152：分母与独立计数交叉核对（classification 条目数），不再写死字面量
+EXP_TOTAL=$(awk '/^classification:/{s=1;next} s&&/^[a-z_]+:/{s=0} s&&/^  - id:/{c++} END{print c+0}' \
+  "$REPO_DIR/docs/authority/GATE-INVENTORY.yaml")
+ORPH_LINE=$(printf '%s\n' "$OUT" | tail -1)
+ACT_TOTAL=$(printf '%s\n' "$ORPH_LINE" | sed -E 's|^orphans=[0-9]+/([0-9]+)$|\1|')
+if printf '%s\n' "$ORPH_LINE" | grep -qE '^orphans=[0-9]+/[0-9]+$' && [ "$ACT_TOTAL" = "$EXP_TOTAL" ]; then
+  pass "真树末行 orphans=<n>/$EXP_TOTAL（与 classification 独立计数一致）"
 else
-  fail "真树末行格式不符: $(printf '%s\n' "$OUT" | tail -1)"
+  fail "orphans 分母与独立计数不符: line=$ORPH_LINE exp=$EXP_TOTAL"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
