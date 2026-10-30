@@ -1497,3 +1497,7 @@ documents:
     status: active
     owner: P2
     note: "#1173（E2E 批）：.gitea/workflows/local-gates.yml 受保护路径豁免 —— ③ 步把 tests/e2e/** 从 N_VITEST 剔除、单算 N_E2E、新增「合法跳过（E2E 面）」分支（根因：vitest.config.ts:29-36 在 CI 下 exclude tests/e2e/**）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
+
+  - id: DOC-1146
+    path: gate-exemptions/2026-10-29-1146-retire-batch1.md
+    note: "批1 零风险退役 8 项（B 类 5 项＋observer 产品件＋C 类 2 项）；台账标 retired、观察期 30 天、不删文件；含 GATE-INVENTORY retired 段与配套测试。"
