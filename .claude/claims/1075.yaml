@@ -85,6 +85,19 @@
 #        tests/init/role-pack-knowledge-filter.test.ts（下方已有条目）／.claude/claims/1075.yaml（本文件）。
 #        ⇒ writeset **零新增**；本文件只做纯追加（头注释依据 ＋ `done:` verify 行 ＋ `note:` 一段）。
 #        `src/routes/knowledge-ask.ts` 本批**只读参照、零改动**（规格硬约束 2）。
+#      ＋ #1169（P1 修复 · #1075 P2-2 缺陷 ＝ K3 P1-3「撤销/复核失败降级后岗位绑定持久化丢失」，2026-10-30，
+#        单 PR，锚 `2eba04e9c`）依据：规格 .handbook/派单件/2026-10-30-规格-1169-P2-2绑定持久化.md §2.4
+#        （4 条目 ＝ 3 修改 ＋ 本文件）：
+#          · src/agent/conversation-engine.ts —— `serialize()` 写入判据由运行期 `rolePack` 改为**绑定意图**
+#            真源 `boundRolePackId`（只持久化"已绑定"，**不**持久化"已生效"；是否生效仍由每轮
+#            `loadRolePackPersona()` 复核决定）＋ 三处注释编号/语义修正（规格 §2.1-e／§10）；
+#          · tests/agent/conversation-engine-role.test.ts —— 新增 R-J1（已绑定→`setRolePack(null)` 降级后
+#            `serialize()` 仍含 rolePackId，`fromState` 后仍保留）＋ 未绑定零变化往返；
+#          · tests/routes/conversations-role.test.ts —— J8 扩到四轮（删审批记录降级 ⇒ 降级轮落库仍带绑定
+#            ⇒ **恢复记录＋落库恢复路径**（`vi.resetModules()` 空 `sessionEngines`，R-J4）重新注入 ⇒ 再删仍降级）。
+#        🔴 4 条目**全部已在既有 writeset 内**（conversation-engine.ts／两个测试件／本文件）⇒ union 去重、
+#        **不新增任何路径**，下方 writeset 列表零改动。只读件（src/routes/conversations.ts／
+#        src/init/role-pack-*.ts／src/agent/tools.ts／scripts/**／docs/**）不在写集内。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
