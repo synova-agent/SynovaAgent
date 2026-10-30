@@ -17,8 +17,10 @@
  *   · `setRolePack(persona|null)` —— **每轮刷新**入口（生产唯一调用方 = 路由缓存命中路径）；幂等；
  *     内部同时把运行期 `engineCtx.messages` 重新对齐到本引擎的消息数组（`fromState()` 恢复后二者会分叉，
  *     见该方法注释 —— 不对齐则 LLM 调用看不到重建的 system 层）。
- *   · `serialize()` 仅在**绑定岗位**时写入 `rolePackId`（人设文本**不落库**，每轮从磁盘重解析）；
- *     无包时**不写该键** —— 保 J3 基线形态（`'rolePackId' in state === false`）。
+ *   · `serialize()` 写入 `rolePackId` 的判据 = **绑定意图**真源 `boundRolePackId`（人设文本**不落库**，
+ *     每轮从磁盘重解析）；未绑定会话**不写该键** —— 保 J3 基线形态（`'rolePackId' in state === false`）。
+ *     降级轮（复核失败/撤岗后 `rolePack === null` 但已绑定）**照样写**绑定意图 —— 「已绑定 ≠ 已生效」：
+ *     是否真正注入仍由每轮 `loadRolePackPersona()` 复核决定（#1169 修降级轮落库丢绑定；规格 §2.1-e／§10）。
  *   · `fromState(…, { rolePack })` —— 显式传 `persona`／`null` 才重建 system 层（`null` = 撤岗，
  *     必须把快照里的旧人设段刷掉）；不传（`undefined`）⇒ 既有恢复行为逐字不变（兼容旧调用方）。
  *
@@ -38,8 +40,9 @@
  *     **已绑定但本轮人设复核失败/撤岗**（`rolePack === null` 且 `boundRolePackId !== null`）⇒
  *     `setAllowedTools([])`（fail-closed，不因降级而全放行）。
  *   · 回滚开关 `SYNOVA_ROLE_PACK_TOOLS=off` ⇒ `setAllowedTools(null)` ＋ warn（D8，显式降级）。
- *   · @not-here 不判审批 scope／capabilities 内容／限额（归权限编译模块）；不改 `serialize()` 的
- *     `rolePackId` 写法（L8 已知限制：降级轮落库丢绑定）。
+ *   · @not-here 不判审批 scope／capabilities 内容／限额（归权限编译模块）；P2-4a 不改 `serialize()` 的
+ *     `rolePackId` 写法 —— 该写法由 **#1169** 修正（规格 §2.1-e／§10：只持久化**绑定意图**，是否生效
+ *     仍由每轮复核决定；降级轮落库不再丢绑定）。
  */
 import type { LLMProvider, LLMMessage, HealthCheckResult } from '../providers/types';
 // D363: 运行时 failover 接线 — chain 包装 + 环境变量派生备用 provider
@@ -1211,9 +1214,16 @@ export class ConversationEngine {
    * Serialize current engine state for storage/restore.
    * LLMProvider is NOT serialized — caller must provide provider on restore.
    *
-   * #1075 P2-2: 仅当本引擎持有岗位人设时写入 `rolePackId`（只存归属，人设文本不落库）。
-   * 无包会话**不写该键** —— `'rolePackId' in state === false` 是 J3/J7a 的基线判据。
-   * @output `EngineState`（`rolePackId` 为可选键，写入与否由是否绑定岗位决定）
+   * #1075 P2-2 / #1169（规格 §2.1-e／§10）：写入 `rolePackId` 的判据 = **绑定意图**真源
+   * `boundRolePackId`，**不是**运行期 `rolePack`。两者语义必须分清：
+   *   · **已绑定** = 本会话归属某岗位包 ⇒ 落库（跨重启/缓存逐出可恢复归属，J7a/J7c/R-J4）；
+   *   · **已生效** = 本轮人设复核通过并注入 ⇒ **不由本方法表达**，仍由每轮 `loadRolePackPersona()`
+   *     决定。降级轮（`rolePack === null` 但 `boundRolePackId !== null`）只落归属，不落"已生效"。
+   * 人设文本不落库（每轮从磁盘重解析）。
+   * 未绑定会话**不写该键** —— `'rolePackId' in state === false` 是 J3/J7a 的基线判据（零变化）。
+   *
+   * @output `EngineState`（`rolePackId` 为可选键；`boundRolePackId !== null` 时写入）
+   * @authority 绑定真源 = 本实例 `boundRolePackId`（唯一"是否已绑定"真源，见 P2-4a 段注释）
    */
   serialize(): EngineState {
     const state: EngineState = {
@@ -1222,7 +1232,9 @@ export class ConversationEngine {
       messages: [...this.messages],
       startedAt: new Date().toISOString(),
     };
-    if (this.rolePack !== null) state.rolePackId = this.rolePack.roleId;
+    // #1169：真源 = 绑定意图。`rolePack` 只表达"本轮是否生效"，撤岗/复核失败时为 null ⇒
+    //        旧写法（rolePack !== null）会把已绑定会话的归属丢掉，重启后复核不可达。
+    if (this.boundRolePackId !== null) state.rolePackId = this.boundRolePackId;
     return state;
   }
 
@@ -1263,7 +1275,8 @@ export class ConversationEngine {
     });
     engine.phase = state.phase;
     engine.messages = [...state.messages];
-    // #1075 P2-4a: 先从快照恢复绑定真源（`state.rolePackId` 只在 serialize 时绑定岗位才写入）
+    // #1075 P2-4a / #1169: 先从快照恢复绑定真源（`state.rolePackId` = serialize 落下的**绑定意图**，
+    //   降级轮也在 ⇒ 归属不丢；是否生效仍由本轮 wiring.rolePack 与每轮复核决定）
     engine.boundRolePackId = state.rolePackId ?? null;
     engine.pendingRolePackId = engine.boundRolePackId;
     // 删除人设段 / 注入人设都由 setRolePack 统一完成（它还会把 engineCtx.messages 对齐到新数组）。
