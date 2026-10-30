@@ -317,7 +317,7 @@ process.stdin.on('data', (chunk) => {
     buffer = buffer.slice(idx + 1);
     if (!line.trim()) continue;
     let request;
-    try { request = JSON.parse(line); } catch { continue; }
+    try { request = JSON.parse(line); } catch { continue; } // 非 JSON 行忽略（假 server 容错，不是生产静默降级）
     const result = request.method === 'tools/list'
       ? { tools: [] }
       : { protocolVersion: '2024-11-05', capabilities: {}, serverInfo: { name: 'envprobe', version: '0.0.0' } };
