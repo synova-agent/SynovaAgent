@@ -450,6 +450,39 @@ describe('阶段①生成 · 真生成器造 ops-e2e 六件 v3，未审批 ⇒ �
 
 describe('阶段②审批 · 真 HTTP approve ⇒ 200 ＋ usable 即时含 ＋ 审计链 valid', () => {
   it('E-J2（+E-J6）approve 200；usable 含；审计 role_pack.approved 恰 1 条；verifyChain(orgId).valid === true；记录真落盘', async () => {
+    console.info('[E2E-1173][阶段②审批] 先证 org 判别力（跨 org ⇒ 403 零写入零审计）→ 再 approve');
+
+    // 🔴 E-J2-0 **org 判据的独立断言（判别力前提）**：自验的"删审批 API org 校验"改坏试验
+    //    必须红在**这一条**（403 E_APPROVAL_ORG_MISMATCH），否则会偶然红在别处（例如先落进别的
+    //    org，再被后续 usable 断言间接发现）—— 那样"改坏仍红"就不是 org 判据的判别力证据。
+    //    覆盖读路径（GET）与写路径（POST）两条守卫入口。
+    const foreignOrg = 'org-1173-foreign';
+    const foreignToken = tokenFor('admin', foreignOrg);
+    const foreignGet = await getJson('/api/role-packs', foreignToken);
+    expect(foreignGet.status, 'E-J2-0 跨 org 读 ⇒ 403').toBe(403);
+    expect(foreignGet.body['code']).toBe('E_APPROVAL_ORG_MISMATCH');
+    const foreignPost = await postApproval(
+      ROLE,
+      { action: 'approve', scope: 'content', expectedContentHash: contentHashOf(ROLE) },
+      foreignToken,
+    );
+    expect(foreignPost.status, 'E-J2-0 跨 org 写 ⇒ 403').toBe(403);
+    expect(foreignPost.body['code']).toBe('E_APPROVAL_ORG_MISMATCH');
+    // 守卫分支**零写入零审计**（否则"拒绝"只是表面码，记录已落）
+    expect(existsSync(approvalPathOf(ROLE)), 'E-J2-0 跨 org 被拒不落库').toBe(false);
+    expect(AuditService.query(ORG, { action: AUDIT_APPROVED }), 'E-J2-0 跨 org 被拒不审计').toHaveLength(0);
+    expect(AuditService.query(foreignOrg, { action: AUDIT_APPROVED }), 'E-J2-0 也不得写进对方 org').toHaveLength(0);
+
+    // E-J2 判别力：身份两半的独立断言 —— ① 无 Bearer ⇒ 401 ② 角色不在白名单 ⇒ 403 E_APPROVAL_ROLE_FORBIDDEN
+    //   （自验若改坏"身份/角色"那两段守卫，红的必须是这两条，不是别处）
+    const noToken = await fetch(`${baseUrl}/api/role-packs`);
+    expect(noToken.status, 'E-J2 判别力：无 Bearer ⇒ 401').toBe(401);
+    const noTokenBody = (await noToken.json()) as Record<string, unknown>;
+    expect(noTokenBody['code']).toBe('UNAUTHORIZED');
+    const staffGet = await getJson('/api/role-packs', tokenFor('user'));
+    expect(staffGet.status, 'E-J2 判别力：角色白名单必须拦非审批角色').toBe(403);
+    expect(staffGet.body['code']).toBe('E_APPROVAL_ROLE_FORBIDDEN');
+
     console.info('[E2E-1173][阶段②审批] POST /api/role-packs/ops-e2e/approval {action:approve}');
     const hash = contentHashOf(ROLE);
     const res = await postApproval(
@@ -533,6 +566,19 @@ describe('阶段③会话生效 · 真引擎绑定资格 ＋ 真 SQLite 知识�
     );
 
     // ② 真 SQLite 过滤：只有 scope 内 ∧ sensitivity=normal ∧ access_level=team 那一条可见
+    //
+    // 🔴 E-J3 数据分布佐证（排除"库里恰好只有 1 条"的假绿）：直接读库计数 ——
+    //    同关键词共 **4** 条，其中 **3** 条 pkbDomain = 本 scope（visible/private/sensitive 同域）。
+    //    ⇒ 工具只返 1 条，证明的是**过滤器真在按 access_level ＋ 敏感度裁剪**，不是数据稀疏凑巧。
+    const totalRow = getDatabase()
+      .prepare('SELECT COUNT(*) AS n FROM knowledge_chunks WHERE text LIKE ?')
+      .get(`%${KEYWORD}%`) as Record<string, unknown> | undefined;
+    const inScopeRow = getDatabase()
+      .prepare('SELECT COUNT(*) AS n FROM knowledge_chunks WHERE text LIKE ? AND pkb_domain = ?')
+      .get(`%${KEYWORD}%`, SCOPE) as Record<string, unknown> | undefined;
+    expect(totalRow?.['n'], 'E-J3 库内同关键词共 4 条样本（分布事实）').toBe(4);
+    expect(inScopeRow?.['n'], 'E-J3 其中 3 条同 scope ⇒ 只返 1 条是过滤效果').toBe(3);
+
     const search = await current.getToolRegistry().execute('search_knowledge', { query: KEYWORD });
     expect(search.error, `E-J3 检索不得报错：${JSON.stringify(search.error)}`).toBeUndefined();
     expect(search['count'], 'E-J3 只允许 1 条可见').toBe(1);
