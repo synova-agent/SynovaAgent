@@ -50,6 +50,46 @@
 #          · 本次实际新增 2 条产品/测试路径（src/routes/knowledge-ask.ts／tests/routes/knowledge-ask.test.ts），
 #            逐条见下方 writeset 末尾 2 行。只读件（src/middleware/auth.ts 只 import／engine-auth／im.ts／
 #            knowledge-store.ts／scripts/**／.gitea/**）不在写集内。
+#      ＋ #1075 P2-4b-B（批八·角色会话内知识权限，2026-10-29，单 PR，锚 main `9ec742523`）
+#        依据：规格 .handbook/派单件/2026-10-29-规格-1075-P2-4b-B-会话知识权限.md §2.4（8 产品＋3 登记 ＝ 11 条目）
+#        ＋ gate-A 回执（三轮＋5 小项，结论可开工）。11 条目中 6 条**已在既有 writeset 内**（union 去重）：
+#        src/agent/tools.ts／src/agent/conversation-engine.ts／tests/agent/tool-permissions-role-pack.test.ts／
+#        docs/authority/WIRING-REGISTRY.yaml／.claude/claims/1075.yaml／tests/contract/triviality-manifest.yaml。
+#        本次实际新增 5 条：3 新建件（role-pack-knowledge-filter.ts ＋ 两测试件）＋ builtin-tools.ts ＋ knowledge-store.ts，
+#        逐条见下方 writeset 末尾 5 行。只读件（auth.ts 只 import／preset-loader／role-pack-*／routes/**／
+#        scripts/**／.gitea/**／packages/engine-auth/**）不在写集内。
+#        ⚠️ 三件**门禁强制同 PR 记账件**（不在规格 §2.4 声明写集，scripts/**／docs/authority／gate-exemptions 本只读）：
+#        ① scripts/control-tower/tool-signal-baseline.txt —— #915 Q-5 R4 迫使 builtin-tools.ts 内
+#           schedule_task/install_skill 补取消检查 ⇒ R5 双向棘轮要求同 PR 删对应基线行（纯删 2 行、
+#           无逻辑/阈值变更）；② gate-exemptions/2026-10-30-1075-p2-4b-b.md —— ①d 受保护路径豁免件
+#           （含 gate-exemptions 自覆盖）；③ docs/authority/DOCS-REGISTRY.yaml —— D2 登记门禁要求
+#           追加 DOC-1149 一行（该路径**已在既有 writeset**⇒不重复列）。三者均**待 L1 收件闸追认**。
+#      ＋ #1075 P3（批七·审批 UI · 2026-10-29 · 单 PR · 锚 main `9ec742523`）依据：
+#        规格 .handbook/派单件/2026-10-29-规格-1075-P3-审批UI.md §2.4（9 产品＋3 登记 ＝ 12 条目）
+#        ＋ gate-A 回执（四轮＋spot-check；结论＝可开工，2026-10-29）。12 条目中 5 条已被既有行覆盖
+#        （src/init/preset-loader.ts／src/routes/conversations.ts／tests/contract/triviality-manifest.yaml／
+#        docs/authority/WIRING-REGISTRY.yaml／本文件）⇒ 本次新增 7 条，逐条见下方 writeset 末尾 7 行。
+#        WIRING 同文件纯追加 2 行（permission.rolePackApprovalWrite／audit.rolePackApprovalChain）；
+#        triviality 追加 4 条 triage（3 个新增 ≥100 逻辑行模块＋approval-card 同批登记使 legacy 回 baseline）。
+#      ＋ #1075 P3 **整改轮 R1**（2026-10-29 · 退单：CTO 评论 #1159/8714）：
+#        CTO 评论 8714 批准扩写集 2 件（tests/agent/approval-card.test.ts／tests/routes/role-packs-page.test.ts）
+#        ⇒ 已补入下方 writeset；同时 docs/authority/WIRING-REGISTRY.yaml 纯追加 3 条
+#        （agent.approvalCardFrame／api.rolePacksApproval／ui.rolePacksGuidePage，使 CI 质量增量闸 R1.1 归零）。
+#        ＋ **第 15 件＝CTO 本次批准（CI ③ 冻结顺序断言随接线同步）**：tests/routes/middleware-order.test.ts
+#        （EXEMPT_REGISTRATIONS 5→6 项＋P4-2 计数 6；断言形态不放宽）⇒ 已补入下方 writeset。
+#      ＋ #1169（P1 修复 · #1075 P2-2 缺陷 ＝ K3 P1-3「撤销/复核失败降级后岗位绑定持久化丢失」，2026-10-30，
+#        单 PR，锚 `2eba04e9c`）依据：规格 .handbook/派单件/2026-10-30-规格-1169-P2-2绑定持久化.md §2.4
+#        （4 条目 ＝ 3 修改 ＋ 本文件）：
+#          · src/agent/conversation-engine.ts —— `serialize()` 写入判据由运行期 `rolePack` 改为**绑定意图**
+#            真源 `boundRolePackId`（只持久化"已绑定"，**不**持久化"已生效"；是否生效仍由每轮
+#            `loadRolePackPersona()` 复核决定）＋ 三处注释编号/语义修正（规格 §2.1-e／§10）；
+#          · tests/agent/conversation-engine-role.test.ts —— 新增 R-J1（已绑定→`setRolePack(null)` 降级后
+#            `serialize()` 仍含 rolePackId，`fromState` 后仍保留）＋ 未绑定零变化往返；
+#          · tests/routes/conversations-role.test.ts —— J8 扩到四轮（删审批记录降级 ⇒ 降级轮落库仍带绑定
+#            ⇒ **恢复记录＋落库恢复路径**（`vi.resetModules()` 空 `sessionEngines`，R-J4）重新注入 ⇒ 再删仍降级）。
+#        🔴 4 条目**全部已在既有 writeset 内**（conversation-engine.ts／两个测试件／本文件）⇒ union 去重、
+#        **不新增任何路径**，下方 writeset 列表零改动。只读件（src/routes/conversations.ts／
+#        src/init/role-pack-*.ts／src/agent/tools.ts／scripts/**／docs/**）不在写集内。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -102,6 +142,23 @@ writeset:
   - src/agent/tools.ts
   - src/routes/knowledge-ask.ts
   - tests/routes/knowledge-ask.test.ts
+  - src/init/role-pack-knowledge-filter.ts
+  - tests/init/role-pack-knowledge-filter.test.ts
+  - tests/agent/knowledge-search-tool.test.ts
+  - src/agent/builtin-tools.ts
+  - src/l4/knowledge-store.ts
+  - scripts/control-tower/tool-signal-baseline.txt
+  - gate-exemptions/2026-10-30-1075-p2-4b-b.md
+  - src/init/role-pack-approval-write.ts
+  - src/routes/role-approvals.ts
+  - src/agent/approval-card.ts
+  - src/routes/role-packs-page.ts
+  - src/server.ts
+  - tests/init/role-pack-approval-write.test.ts
+  - tests/routes/role-approvals.test.ts
+  - tests/agent/approval-card.test.ts
+  - tests/routes/role-packs-page.test.ts
+  - tests/routes/middleware-order.test.ts
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts

@@ -24,6 +24,9 @@
  *   J8  撤销：第一轮 approved 200；删审批记录；第二轮（不传 rolePackId、带 Bearer）⇒ **HTTP 200** ＋
  *       响应头 `x-synova-role-pack: degraded` ＋ 捕获的 system message **不含** `## 岗位设定：`
  *       （反例：撤销后仍注入 ⇒ 红；撤销后 409/500 ⇒ 红 —— N1「不锁死用户」）。
+ *       #1169（R-J3/R-J4）扩到四轮：②-b 降级轮落库**仍带** `rolePackId`（旧 serialize 在此已丢）→
+ *       ③ **恢复审批记录** ＋ `vi.resetModules()` 新路由（空 `sessionEngines` ⇒ cache-miss
+ *       → loadState → fromState）⇒ 200 ＋ 重新注入 ＋ **无** degraded 头 → ④ 再删 ⇒ 仍降级（撤销永远有效）。
  *
  * 🔴 夹具（不落仓）：`mkdtempSync` 造**仓库形状**临时根 —— `<tmp>/extensions/presets/roles/<id>/` 六件
  *   ＋ `<tmp>/extensions/ontology/outcome/financial.json`（`manifest.refs` 的 `kind:file` 目标）
@@ -39,7 +42,9 @@
  * @authority 判据归属 #1075 P2-2（规格 §4 J1b/J4/J5/J6/J7b/J7c/J8）。
  *
  * 已知限制：
- *   ① 集成侧**不做进程重启**（规格 §10-L7）：重启语义由 `fromState`（unit 面 J7a）覆盖，本文件只证缓存路径；
+ *   ① 集成侧**不做进程重启**（规格 §10-L7）：重启语义由 `fromState`（unit 面 J7a）覆盖；本文件 J7c-1／
+ *      J8-1 第三轮用 `vi.resetModules()` 造**空 `sessionEngines` ＋ 同一 db 句柄**的 cache-miss 落库恢复
+ *      路径（R-J4），但仍是同一进程内 —— 真进程重启由后续 E2E 批覆盖；
  *   ② 不测真实模型效果，只证"人设进了 provider 收到的 messages"（§10-L8）；
  *   ③ 不测 CORS `exposedHeaders`（`src/server.ts` 不在本批写集，规格 h）；
  *   ④ 审批记录是**夹具**直写（P3 才有人审批写入面），不证审批写路径。
@@ -616,15 +621,28 @@ describe('J7c 生产恢复路径（新进程内缓存 ＋ 同一 db 句柄）', 
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// J8 · 撤销（同一 cached engine 第二轮）
+// J8 · 撤销 + 恢复（#1169：降级轮落库不丢绑定 ⇒ 恢复审批记录后可再生效；再撤销仍降级）
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('J8 撤销：审批记录删除后不再注入（200 ＋ 降级头）', () => {
-  it('J8-1 第一轮 approved 200 ⇒ 删记录 ⇒ 第二轮 200 ＋ x-synova-role-pack: degraded ＋ 不注入', async () => {
+/** 读会话落库快照的**原始** JSON（判据"降级轮是否把绑定意图写进 state_json"；只读，不改库） */
+function persistedStateOf(sessionId: string): Record<string, unknown> | null {
+  const row = db.prepare('SELECT state_json FROM agent_sessions WHERE id=?').get(sessionId) as
+    | { state_json?: string | null }
+    | undefined;
+  const raw = row?.state_json;
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+  return JSON.parse(raw) as Record<string, unknown>;
+}
+
+describe('J8 撤销与恢复：审批记录删除后不再注入（200 ＋ 降级头）；恢复后可再生效（#1169 绑定持久化）', () => {
+  it('J8-1 四轮：approved 注入 ⇒ 删记录降级（落库仍带绑定）⇒ 落库恢复且记录恢复后再生效 ⇒ 再删仍降级（不锁死）', async () => {
+    // ① 第一轮：已审批 ⇒ 200 ＋ 注入人设
     const sessionId = await createBoundSession();
     expect(lastSystemContent()).toContain('## 岗位设定：ops');
 
+    // ② 删审批记录 ⇒ 第二轮：200 ＋ 降级头 ＋ 不注入（缓存命中路径；不锁死用户）
     removeApprovalRecord(ROLE);
+    let freshServer: Server | undefined;
     try {
       mocks.chatCalls.length = 0;
       const second = await postToSession(sessionId, { message: '撤销后第二轮' }, tokenFor('admin'));
@@ -632,14 +650,75 @@ describe('J8 撤销：审批记录删除后不再注入（200 ＋ 降级头）',
       expect(second.status).toBe(200);
       expect(second.headers.get('content-type')).toContain('text/event-stream');
       expect(second.headers.get('x-synova-role-pack')).toBe('degraded');
-      await second.text(); // drain
+      await second.text(); // drain（SSE 必须读完，否则连接悬挂）
 
-      const system = lastSystemContent();
-      expect(system, '撤销后不得再注入岗位设定段').not.toContain('## 岗位设定：');
-      expect(system).not.toContain(SENTINEL);
+      const system2 = lastSystemContent();
+      expect(system2, '撤销后不得再注入岗位设定段').not.toContain('## 岗位设定：');
+      expect(system2).not.toContain(SENTINEL);
+
+      // ②-b 🔴 #1169 缺陷机制的直接判据：降级轮的落库快照**仍带绑定意图**
+      //      旧 serialize（`rolePack !== null` 才写）⇒ 此处已被抹掉 ⇒ 第三轮必然不可达
+      const degradedState = persistedStateOf(sessionId);
+      expect(degradedState, '第二轮必须已落库（store.saveState）').not.toBeNull();
+      expect(degradedState?.rolePackId, '降级轮落库不得丢绑定（#1169）').toBe(ROLE);
+
+      // ③ 恢复审批记录 + **落库恢复路径**（R-J4：新路由模块 ⇒ 空 sessionEngines ⇒ 必然 cache-miss
+      //    → loadState → fromState；同一 db 句柄 ⇒ 同一份会话状态。不得只测内存缓存路径）
+      writeApprovalRecord(ROLE);
+      vi.resetModules();
+      const freshRouter = (await import('../../src/routes/conversations')).default;
+      // 判别力：resetModules 后必须拿到**另一个**路由实例（新模块 ⇒ 新私有 sessionEngines）
+      expect(freshRouter).not.toBe(initialRouter);
+      const { jwtAuthMiddleware: freshAuthMiddleware } = await import('../../src/middleware/auth');
+      const freshApp = express();
+      freshApp.use(express.json());
+      freshApp.locals.orchestration = { db }; // 同一个 db 句柄 ⇒ 同一份会话状态
+      freshApp.use(freshAuthMiddleware);
+      freshApp.use(freshRouter);
+      freshServer = freshApp.listen(0);
+      trackConnections(freshServer);
+      const freshUrl = await waitListening(freshServer);
+
+      mocks.chatCalls.length = 0;
+      const third = await postToSession(
+        sessionId,
+        { message: '恢复审批后第三轮（新进程内缓存）' },
+        tokenFor('admin'),
+        freshUrl,
+      );
+      // 反例：恢复后仍 409/500 ⇒ 红（不锁死）；仍降级 ⇒ 红（绑定丢失）
+      expect(third.status, '第三轮必须 200（恢复审批记录后不得再拒）').toBe(200);
+      expect(third.headers.get('content-type')).toContain('text/event-stream');
+      expect(third.headers.get('x-synova-role-pack'), '恢复后不得再带 degraded 头').toBeNull();
+      const frames3 = parseSse(await third.text());
+      expect(requireSessionId(frames3)).toBe(sessionId);
+
+      const system3 = lastSystemContent();
+      expect(system3, '落库恢复 + 审批恢复后必须重新注入人设（R-J4）').toContain('## 岗位设定：ops');
+      expect(system3).toContain(SENTINEL);
+
+      // ④ 再删审批记录 ⇒ 第四轮：仍降级 ＋ 不注入（恢复不是"一次性锁死"，撤销永远有效）
+      removeApprovalRecord(ROLE);
+      mocks.chatCalls.length = 0;
+      const fourth = await postToSession(
+        sessionId,
+        { message: '再次撤销后第四轮' },
+        tokenFor('admin'),
+        freshUrl,
+      );
+      expect(fourth.status).toBe(200);
+      expect(fourth.headers.get('x-synova-role-pack'), '再撤销必须再次降级（不锁死）').toBe('degraded');
+      await fourth.text();
+
+      const system4 = lastSystemContent();
+      expect(system4).not.toContain('## 岗位设定：');
+      expect(system4).not.toContain(SENTINEL);
     } finally {
       // 还原审批记录（后续用例/重跑需要同一夹具状态）
       writeApprovalRecord(ROLE);
+      if (freshServer !== undefined) {
+        await new Promise<void>((resolve) => freshServer?.close(() => resolve()));
+      }
     }
   });
 });

@@ -21,6 +21,9 @@
  *       **撤场景**：`fromState(state, {rolePack:null})` ⇒ 快照里的旧人设段被刷掉；
  *       **兼容**：不传 `rolePack`（`undefined`）⇒ 既有恢复行为逐字不变。
  *   J10 改坏必红（编码成员执行，见回执）：删 `buildRoleLayer` 注入／删 `serialize` 的 `rolePackId`。
+ *   J7d（#1169 R-J1）绑定意图持久化：已绑定 → `setRolePack(null)`（撤销降级）⇒ `serialize().rolePackId`
+ *       仍为原 roleId（真源 = `boundRolePackId`，**不是**运行期 `rolePack`），且 `fromState` 后仍保留；
+ *       零变化：未绑定会话 `serialize()` 仍无 `rolePackId` 键（与 J7a-2 互证，两处独立断言）。
  *
  * @degraded 本文件只读引擎输出；不产生日志判据（降级头/HTTP 面归 `tests/routes/conversations-role.test.ts`）。
  * @authority 判据归属 #1075 P2-2（规格 §4 J1a/J2/J3/J7a）；本文件不测路由、不测磁盘解析。
@@ -255,6 +258,41 @@ describe('J7a 持久化：serialize 带 rolePackId，fromState 恢复人设', ()
     const snapshot = withPersona.serialize();
     const restored = ConversationEngine.fromState(fakeProvider(), snapshot, {});
     expect(systemContent(restored)).toBe(snapshot.messages[0]?.content);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// J7d · #1169 绑定意图持久化（R-J1）—— 撤销/复核失败降级后 serialize 仍保留 rolePackId
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('J7d（#1169 R-J1）持久化真源 = 绑定意图，不是"本轮是否生效"', () => {
+  it('R-J1-1 已绑定 engine → setRolePack(null)（撤销降级）⇒ serialize().rolePackId 仍为 ops；fromState 后仍保留', () => {
+    const engine = new ConversationEngine(provider, { orgId: 'default', rolePack: basePersona() });
+    expect(engine.serialize().rolePackId).toBe('ops');
+
+    // 模拟"审批被撤销 / 本轮复核失败"：人设面清空，但绑定意图（boundRolePackId）按 D12 保留
+    engine.setRolePack(null);
+    const degraded = engine.serialize();
+    // 🔴 判别力：旧写法（`if (this.rolePack !== null)`）在降级轮 rolePack===null ⇒ 此键缺省 ⇒ 本断言红
+    expect(degraded.rolePackId).toBe('ops');
+    // 只落归属，不落人设文本（"已绑定"≠"已生效"）
+    expect(JSON.stringify(degraded)).not.toContain(ADDENDUM);
+
+    // 落库 → 恢复（生产重启/缓存逐出路径）：绑定真源跨恢复保留，但降级态**不**注入人设
+    const restored = ConversationEngine.fromState(fakeProvider(), degraded, { rolePack: null });
+    expect(systemContent(restored), '撤岗态不得注入岗位设定段（是否生效仍由复核决定）').not.toContain('## 岗位设定：');
+    expect(restored.serialize().rolePackId, '绑定真源必须跨 fromState 保留（否则重启后复核不可达）').toBe('ops');
+  });
+
+  it('R-J1-2 零变化 未绑定 engine → fromState 往返后 serialize() 仍不含 rolePackId 键（#1169 不动无包会话）', () => {
+    const engine = new ConversationEngine(provider, { orgId: 'default' });
+    const state = engine.serialize();
+    expect('rolePackId' in state).toBe(false);
+
+    const restored = ConversationEngine.fromState(fakeProvider(), state, {});
+    const roundTripped = restored.serialize();
+    expect('rolePackId' in roundTripped).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(roundTripped, 'rolePackId')).toBe(false);
   });
 });
 
