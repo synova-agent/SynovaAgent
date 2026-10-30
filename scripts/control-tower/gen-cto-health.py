@@ -8,7 +8,7 @@ gen-cto-health.py — CTO 健康仪表盘（第③面）生成器 v0.1 (D381, 20
 
 数据源:
   @input  — .claude/bypass.log (二进制安全读: 绕过/阻断/降级/超时事件)
-          + .claude/pre-commit-failures.log (门禁拒绝提交)
+          + .synova/logs/pre-commit-failures.log (门禁拒绝提交；legacy .claude/ 只读回落)
           + docs/synova/coordination/AUDIT-FINDINGS-LEDGER.md
             (§二 M 模式复发表 + §三 CT 改进队列)
   @output — docs/synova/CTO-HEALTH.md (Markdown)
@@ -38,7 +38,8 @@ from typing import Dict, List, Optional, Tuple
 
 REPO = Path(__file__).resolve().parent.parent.parent
 BYpass_LOG = REPO / ".claude" / "bypass.log"
-PRE_COMMIT_FAILURES = REPO / ".claude" / "pre-commit-failures.log"
+_NEW_FAIL = REPO / ".synova" / "logs" / "pre-commit-failures.log"
+PRE_COMMIT_FAILURES = _NEW_FAIL if _NEW_FAIL.exists() else REPO / ".claude" / "pre-commit-failures.log"
 LEDGER = REPO / "docs" / "synova" / "coordination" / "审计发现台账-DSH-CTO.md"
 TASK_STATE_DIR = REPO / "task-state"
 OUT = REPO / "docs" / "synova" / "CTO-HEALTH.md"

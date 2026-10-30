@@ -20,7 +20,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   $() 在运行时展开 → 克隆到任何机器路径均可用。
 #
 # pre-commit 包装器保留"双日志分离 + 成功标记"三段逻辑:
-#   失败 → 写 .claude/pre-commit-failures.log；成功 → 写 .claude/last-precommit-success。
+#   失败 → 写 .synova/logs/pre-commit-failures.log；成功 → 写 .synova/logs/last-precommit-success。
 #   post-commit.sh 靠 marker 检测 --no-verify 绕过（V4.5.1 核心机制，不可丢）。
 #
 # synova-commit alias: Windows 用 Git bash.exe 绝对路径；Mac/Linux 用 bash（PATH）。
@@ -51,18 +51,19 @@ if [ $_MT_RC -ne 0 ]; then
   echo "🔴 禁止在主树提交 — 请在独立 worktree 工作（SYNO_ALLOW_MAIN_TREE=1 显式放行并留痕）" >&2
   exit 1
 fi
+mkdir -p "$ROOT/.synova/logs" 2>/dev/null || true
 bash "$ROOT/scripts/pre-commit-check.sh"
 EXIT_CODE=$?
 if [ $EXIT_CODE -ne 0 ]; then
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) exit=$EXIT_CODE branch=$(git branch --show-current 2>/dev/null || echo unknown)" >> "$ROOT/.claude/pre-commit-failures.log"
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) exit=$EXIT_CODE branch=$(git branch --show-current 2>/dev/null || echo unknown)" >> "$ROOT/.synova/logs/pre-commit-failures.log"
   # 软提示: 记录门禁失败但放行（K3 审计证据），CI 权威判定
   # D508/Win#10: 软门禁噪声移出 bypass.log（证据链只记真实提交/绕过；软告警独立日志——
   #   否则每次 commit 污染 bypass.log → 下次操作前必 checkout 清理，实测 10+ 次）
-  echo "$(date -Iseconds) | GATE_FAIL_SOFT | exit=$EXIT_CODE | branch=$(git branch --show-current 2>/dev/null || echo unknown)" >> "$ROOT/.claude/gate-soft-warnings.log"
+  echo "$(date -Iseconds) | GATE_FAIL_SOFT | exit=$EXIT_CODE | branch=$(git branch --show-current 2>/dev/null || echo unknown)" >> "$ROOT/.synova/logs/gate-soft-warnings.log"
   echo "⚠️ 本地门禁未通过（exit=$EXIT_CODE）— 已放行，CI 将作为权威判定（merge 前必须绿）" >&2
 fi
 # 无论成败都写 marker（失败但放行 = 经过了 pre-commit，非 --no-verify）
-echo "$(git rev-parse HEAD 2>/dev/null || true)|$(date +%s)" > "$ROOT/.claude/last-precommit-success"
+echo "$(git rev-parse HEAD 2>/dev/null || true)|$(date +%s)" > "$ROOT/.synova/logs/last-precommit-success"
 exit 0'
   elif [ -f "$entry" ]; then
     # 门禁入口（commit-msg 需 "$1" 提交信息文件；pre-push 需 "$1" remote 名 "$2" url —

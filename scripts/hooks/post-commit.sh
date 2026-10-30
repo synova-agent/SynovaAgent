@@ -9,7 +9,13 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 所有 session 共用同一份，修改即同步。
 # ═══════════════════════════════════════════════════════════════════════════════
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-MARKER="$ROOT/.claude/last-precommit-success"
+# 工具中立路径 .synova/logs；legacy .claude/ 只读回落（迁移期，不写旧路径）
+MARKER="$ROOT/.synova/logs/last-precommit-success"
+LEGACY_LOG_DIR="$ROOT/.claude"
+if [ ! -f "$MARKER" ] && [ -f "$LEGACY_LOG_DIR/last-precommit-success" ]; then
+  MARKER="$LEGACY_LOG_DIR/last-precommit-success"
+  echo "::warning: 使用 legacy 路径 $MARKER（请重跑 scripts/install-hooks.sh 迁移）" >&2
+fi
 
 # ═══ D1145 / D735 Stage 2: bypass 账本 —— per-session 落点**权威** + 本地兼容镜像 ═══
 # 契约(铁律 47):

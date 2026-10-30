@@ -1404,7 +1404,12 @@ fi
 # 7c. V3.8 双日志审计 — 门禁故障 vs 人为绕过分离
 #   门禁故障日志 → 用于发现门禁本身的 bug（误报率 = 门禁需要修）
 #   绕过日志     → 用于发现开发者绕过模式（频繁绕过 = 门禁太重/开发者偷懒）
-FAILURE_LOG="$ROOT/.claude/pre-commit-failures.log"
+FAILURE_LOG="$ROOT/.synova/logs/pre-commit-failures.log"
+LEGACY_LOG_DIR="$ROOT/.claude"
+if [ ! -f "$FAILURE_LOG" ] && [ -f "$LEGACY_LOG_DIR/pre-commit-failures.log" ]; then
+  FAILURE_LOG="$LEGACY_LOG_DIR/pre-commit-failures.log"
+  echo "::warning: 使用 legacy 路径 $FAILURE_LOG（请重跑 scripts/install-hooks.sh 迁移）" >&2
+fi
 BYPASS_LOG="$ROOT/.claude/bypass.log"
 
 # ── 门禁故障审计 (警告不阻断) ──
