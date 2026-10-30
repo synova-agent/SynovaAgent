@@ -1,6 +1,3 @@
-issue: 1146
-branch: chore/decouple-install-hooks-logs
-base: main
 writeset:
   - docs/authority/DOCS-REGISTRY.yaml
   - scripts/install-hooks.sh
@@ -17,6 +14,7 @@ writeset:
   - .claude/claims/1146.yaml
   - memory/notes/proposed/2026-10-29-decouple-install-hooks.md
   - gate-exemptions/2026-10-29-decouple-install-hooks.md
+  - .claude/claims/1170.yaml
 done:
   - verify: "grep -rn 'ROOT/\.claude/\(pre-commit-failures\|gate-soft-warnings\|last-precommit-success\)' scripts/ | wc -l"
   - verify: "bash scripts/install-hooks.sh"
