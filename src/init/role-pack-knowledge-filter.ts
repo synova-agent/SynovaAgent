@@ -16,8 +16,9 @@
  * 契约（铁律 47）:
  *   @input    — `roleId`（岗位包角色 id，来自验签身份/绑定的岗位包）；`orgId`（客户槽；缺省由
  *               `resolveRoleKnowledgeScope` 按 `SYNOVA_ORG_ID`/config 解析）
- *   @output   — `{ok:true, filter}`：`conditions` 顺序固定 —— 第 0「access.sensitivity IN 敏感度白名单」、
- *               第 1「pkb_domain IN scopes」、随后每个 deny 一条「pkb_domain NOT_EQ id」；
+ *   @output   — `{ok:true, filter}`：`conditions` 顺序固定（**是判据，不得重排**）——
+ *               第 0「access.sensitivity IN 敏感度白名单」、第 1「access.level IN ['public','team']」、
+ *               第 2「pkb_domain IN scopes」、随后每个 deny 一条「pkb_domain NOT_EQ id」；
  *               `{ok:false, code:'E_KNOWLEDGE_SCOPE_UNAVAILABLE', reason}` 仅用于**未预期异常**
  *               （调用方按拒绝型处理，绝不回落全库）
  *   @degraded — **本函数从不抛**。三条降级路径全部收敛为**拒绝型**（`pkb_domain IN []` ⇒ 0 行，不放宽）:
@@ -31,8 +32,10 @@
  *   @error     — 无自定义错误类型：异常经 `ok:false` ＋ `code` 表达（永不抛，见上）。
  *
  * 已知限制（Known Limitations）:
- *   · 只覆盖 sensitivity ＋ pkb_domain 两维；`access_level`（public/team/private）不在本过滤器内
- *     （角色会话检索面由岗位包 scope 决定，规格 §2.2-D3）。
+ *   · 只覆盖 sensitivity ＋ `access_level` ＋ pkb_domain 三维；`access_level` **恒只放行
+ *     `public`/`team` 两档**（#1167 补丁A，与 HTTP 面 `src/routes/knowledge-ask.ts:124-126` 同口径），
+ *     `private`/`owner` 条目**恒不返回** —— 本过滤器**不**给 owner 归属做例外（规格 §4 最严口径）；
+ *     同租户内"本人 private 可见"要另卡（需 ownerId 进条件，属判据变更，不在本条内）。
  *   · 「未打标的 chunk」（`pkb_domain = NULL`）**恒不返回** —— 这是 fail-closed 的应有行为，
  *     历史数据需回填（规格 §10-L1）。
  *   · `declared=false` 分支与 auth 的 I-C4（不追加 scope 维）**不是同一分支**：这里恒拒绝（§10-L7）。
@@ -70,6 +73,16 @@ export interface RoleKnowledgeFilter {
 const REJECT_CONDITIONS: Array<RoleKnowledgeCondition> = [{ field: 'pkb_domain', operator: 'IN', value: [] }];
 
 /**
+ * 角色会话检索面放行的 `access_level`（#1167 补丁A；与 HTTP 面
+ * `src/routes/knowledge-ask.ts:124-126` 的 `['public','team']` **逐字同集合**）。
+ *
+ * 🔴 最严口径：**只** `public`/`team`，**不得**加 `private`/`owner` 例外（规格 §4）。
+ * 单值 `access_level` 列 ＋ `matchFilter` 严格 AND 语义下，缺这条会让角色会话把
+ * `private` 条目一并返回（`src/l4/knowledge-store.ts:725-748`）。
+ */
+const ROLE_KNOWLEDGE_ACCESS_LEVELS: readonly string[] = ['public', 'team'];
+
+/**
  * 构造**拒绝型**过滤面（`pkb_domain IN []` ⇒ L4 严格 AND 下恒 0 行）。
  *
  * @input  `reason` — 拒绝原因（只进日志，不进 SQL）
@@ -91,7 +104,8 @@ export function buildRejectedKnowledgeFilter(reason: string): RoleKnowledgeFilte
  * 编译某岗位（客户槽）的角色会话知识过滤面。
  *
  * 条件顺序（**是判据的一部分，不得重排**）:
- *   `[0] access.sensitivity IN 敏感度白名单` → `[1] pkb_domain IN scopes` → 每个 deny 一条 `pkb_domain NOT_EQ id`
+ *   `[0] access.sensitivity IN 敏感度白名单` → `[1] access.level IN ['public','team']`
+ *   → `[2] pkb_domain IN scopes` → 每个 deny 一条 `pkb_domain NOT_EQ id`
  *
  * @input  `roleId` — 岗位包角色 id；`orgId` — 客户槽（可选，缺省交给 loader 解析）
  * @output `{ok:true, filter}` 或 `{ok:false, code:'E_KNOWLEDGE_SCOPE_UNAVAILABLE', reason}`
@@ -144,11 +158,25 @@ export function buildRoleKnowledgeFilter(
 
     const scopes = [...scope.scopeIds];
     const denied = [...scope.denyIds];
+    // ⚠️ 形态约束（不是风格偏好）: 条件对象**先具名再组装**，且 `value:` 不得出现在行首
+    //   （`scripts/control-tower/check-quality-delta.py:421` 的 R4.4 启发式对行首
+    //   `value|secret|token:` 判「凭据读面返回明文」；实证见 `src/routes/knowledge-ask.ts:118-124`）。
+    const sensitivityCondition: RoleKnowledgeCondition = {
+      field: 'access.sensitivity', operator: 'IN', value: sensitivity,
+    };
+    // #1167 补丁A: access_level 维（只 public/team）—— 位置固定第 1，插在 scope 之前。
+    const accessLevelCondition: RoleKnowledgeCondition = {
+      field: 'access.level', operator: 'IN', value: [...ROLE_KNOWLEDGE_ACCESS_LEVELS],
+    };
+    const scopeCondition: RoleKnowledgeCondition = {
+      field: 'pkb_domain', operator: 'IN', value: scopes,
+    };
     const conditions: Array<RoleKnowledgeCondition> = [
-      { field: 'access.sensitivity', operator: 'IN', value: sensitivity },
-      { field: 'pkb_domain', operator: 'IN', value: scopes },
+      sensitivityCondition,
+      accessLevelCondition,
+      scopeCondition,
     ];
-    // D5: deny 逐条 NOT_EQ 追加在 access_level/scope 之后（AND 语义 ⇒ 只减不增）
+    // D5: deny 逐条 NOT_EQ 追加在 access.level/scope 之后（AND 语义 ⇒ 只减不增）
     for (const deniedId of denied) {
       conditions.push({ field: 'pkb_domain', operator: 'NOT_EQ', value: deniedId });
     }

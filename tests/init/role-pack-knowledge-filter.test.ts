@@ -10,8 +10,10 @@
  *   · 判据断言**真实检索结果**（不是"条件数组长得像"），条件形状另有一组显式断言（顺序/operator/value）。
  *
  * 判据分组（与规格 §4 逐条对齐）:
- *   B-J1 scope/deny：条件第 0=敏感度、第 1=pkb_domain IN scopes、随后逐 deny NOT_EQ；真 search 只返 scope 内条目。
+ *   B-J1 scope/deny/access_level：条件第 0=敏感度、第 1=access.level IN ['public','team']、
+ *        第 2=pkb_domain IN scopes、随后逐 deny NOT_EQ；真 search 只返 scope 内的 public/team 条目。
  *        反例（**删 scope 条件**）⇒ 域外条目可见 ⇒ 证明 scope 条件是**承重**的（不是装饰）。
+ *        反例（**private 条目**）⇒ 恒不可见 ⇒ 证明 access.level 条件是**承重**的（#1167 补丁A）。
  *   B-J2 敏感度：非 admin 档位∩grants ⇒ 字面值 `['normal']`；`sensitive` 条目检索不可见、`normal` 可见。
  *        反例（**换 `sensitivityWhitelistFromGrants`** 的更宽集合）⇒ `sensitive` 可见 ⇒ 证明漏斗是有牙的。
  *   B-J4 fail-closed：scope 缺件／空文档／坏 YAML／审批缺失（pending）⇒ 拒绝型 `pkb_domain IN []` ⇒ 0 行；
@@ -22,10 +24,11 @@
  *   六件内容指纹用生产纯核现算（`computeRolePackContentHash`）——手写 hex 必撞 CONTENT_CHANGED。
  *
  * @degraded 本文件对降级面的判据 = "拒绝型条件 ＋ 0 结果"（不逐字断日志文案）。
- * @authority 判据归属 #1075 P2-4b-B（规格 §4 B-J1/B-J2/B-J4）。
+ * @authority 判据归属 #1075 P2-4b-B ＋ #1167 补丁A（规格 §4 B-J1/B-J1b/B-J2/B-J4）。
  *
  * 已知限制：
- *   ① 只覆盖 sensitivity ＋ pkb_domain 两维（同实现，规格 §2.2-D3）；
+ *   ① 只覆盖 sensitivity ＋ `access_level` ＋ pkb_domain 三维；`access_level` 恒只放行
+ *      `public`/`team` 两档（`private` 恒不可见，#1167 补丁A 最严口径，无 owner 例外）；
  *   ② 审批记录是**夹具**直写（生产审批写入面归 P3），不证审批写路径；
  *   ③ 不测真实 LLM（检索面为纯 L4）。
  */
@@ -57,6 +60,12 @@ const REF_SCOPE = 'finance.statements';
 
 const SCOPES = ['finance.statements'] as const;
 const DENIES = ['finance.salaries'] as const;
+
+/**
+ * #1167 补丁A 的期望集合（**单一出处**，不散落字面量）。
+ * 与 HTTP 面 `src/routes/knowledge-ask.ts:124-126` 的 `['public','team']` **逐字同集合**。
+ */
+const ACCESS_LEVELS = ['public', 'team'] as const;
 
 let fixture: string;
 let root: string;
@@ -201,13 +210,14 @@ function insertChunk(
   label: string,
   domain: string | null,
   sensitivity: 'normal' | 'sensitive' = 'normal',
+  accessLevel: 'public' | 'team' | 'private' = 'team',
 ): string {
   return store.insert({
     text: `${label} 现金流 口径说明`,
     sourceType: 'document',
     sourceId: `doc-${label}`,
     authorityLevel: 'reference',
-    accessLevel: 'team',
+    accessLevel,
     accessSensitivity: sensitivity,
     ...(domain === null ? {} : { pkbDomain: domain }),
   });
@@ -251,7 +261,7 @@ afterEach(() => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('B-J1 · scope/deny 编译（条件顺序 ＋ 真检索）', () => {
-  it('B-J1-1 条件顺序：第 0 敏感度 IN、第 1 pkb_domain IN scopes、随后逐 deny NOT_EQ；degraded=false', () => {
+  it('B-J1-1 条件顺序：第 0 敏感度 IN、第 1 access.level IN (public,team)、第 2 pkb_domain IN scopes、随后逐 deny NOT_EQ；degraded=false', () => {
     writeRolePack();
     writeApprovalRecord();
     const built = buildRoleKnowledgeFilter(ROLE, 'org-b-j1');
@@ -259,11 +269,13 @@ describe('B-J1 · scope/deny 编译（条件顺序 ＋ 真检索）', () => {
     if (!built.ok) return;
     const filter = built.filter;
     expect(filter.degraded).toBe(false);
-    // 顺序是判据：sensitivity 恒第 0（L4 侧 fail-open 短路防线）、scope 第 1、deny 追加在后
-    expect(filter.conditions).toHaveLength(3);
+    // 顺序是判据：sensitivity 恒第 0（L4 侧 fail-open 短路防线）、access_level 第 1（#1167）、
+    // scope 第 2、deny 追加在后
+    expect(filter.conditions).toHaveLength(4);
     expect(filter.conditions[0]).toEqual({ field: 'access.sensitivity', operator: 'IN', value: ['normal'] });
-    expect(filter.conditions[1]).toEqual({ field: 'pkb_domain', operator: 'IN', value: [...SCOPES] });
-    expect(filter.conditions[2]).toEqual({ field: 'pkb_domain', operator: 'NOT_EQ', value: DENIES[0] });
+    expect(filter.conditions[1]).toEqual({ field: 'access.level', operator: 'IN', value: [...ACCESS_LEVELS] });
+    expect(filter.conditions[2]).toEqual({ field: 'pkb_domain', operator: 'IN', value: [...SCOPES] });
+    expect(filter.conditions[3]).toEqual({ field: 'pkb_domain', operator: 'NOT_EQ', value: DENIES[0] });
     expect(filter.scopes).toEqual([...SCOPES]);
     expect(filter.sensitivity).toEqual(['normal']);
   });
@@ -309,7 +321,7 @@ describe('B-J1 · scope/deny 编译（条件顺序 ＋ 真检索）', () => {
     }
   });
 
-  it('B-J1-4 多 scope／多 deny：条件数 = 1 敏感度 ＋ 1 scope ＋ N deny，deny 顺序保留', () => {
+  it('B-J1-4 多 scope／多 deny：条件数 = 1 敏感度 ＋ 1 access_level ＋ 1 scope ＋ N deny，deny 顺序保留', () => {
     writeRolePack({
       scopeYaml: `roleId: ${ROLE}\nversion: 2\nscopes:\n  - id: finance.statements\n  - id: finance.reports\ndeny:\n  - id: finance.salaries\n  - id: finance.bonus\n`,
     });
@@ -318,7 +330,10 @@ describe('B-J1 · scope/deny 编译（条件顺序 ＋ 真检索）', () => {
     expect(built.ok).toBe(true);
     if (!built.ok) return;
     const filter = built.filter;
-    expect(filter.conditions).toHaveLength(4);
+    // 1 敏感度 ＋ 1 access_level ＋ 1 scope ＋ 2 deny
+    expect(filter.conditions).toHaveLength(5);
+    expect(conditionsOf(filter, 'access.sensitivity')).toEqual([{ operator: 'IN', value: ['normal'] }]);
+    expect(conditionsOf(filter, 'access.level')).toEqual([{ operator: 'IN', value: [...ACCESS_LEVELS] }]);
     expect(conditionsOf(filter, 'pkb_domain')).toEqual([
       { operator: 'IN', value: ['finance.statements', 'finance.reports'] },
       { operator: 'NOT_EQ', value: 'finance.salaries' },
@@ -332,6 +347,86 @@ describe('B-J1 · scope/deny 编译（条件顺序 ＋ 真检索）', () => {
       insertChunk(store, 'chunk-d', 'finance.bonus');
       insertChunk(store, 'chunk-e', 'market.pricing');
       expect(searchIds(store, filter)).toEqual([a, b].sort());
+    } finally {
+      close();
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// B-J1b access_level（#1167 补丁A · 只 public/team，最严口径）
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('B-J1b · access_level 维（只 public/team；private 恒不可见）', () => {
+  it('B-J1-5 access_level 条件落在下标 1、value 恰为 (public,team)，且无 private/owner 例外', () => {
+    writeRolePack();
+    writeApprovalRecord();
+    const built = buildRoleKnowledgeFilter(ROLE, 'org-b-j1b');
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const filter = built.filter;
+    // 下标是判据：sensitivity 0 → access_level 1 → pkb_domain IN 2 → deny 3
+    expect(filter.conditions[1]).toEqual({ field: 'access.level', operator: 'IN', value: [...ACCESS_LEVELS] });
+    expect(filter.conditions.map((c) => c.field)).toEqual([
+      'access.sensitivity',
+      'access.level',
+      'pkb_domain',
+      'pkb_domain',
+    ]);
+    // 最严口径：白名单恰两档，private/owner 不得混入（规格 §4）
+    const levelValue = conditionsOf(filter, 'access.level')[0]?.value;
+    expect(levelValue).toEqual(['public', 'team']);
+    expect(levelValue).not.toContain('private');
+    expect(filter.conditions.filter((c) => c.field.startsWith('access.owner'))).toEqual([]);
+  });
+
+  it('B-J1-6 真检索：private chunk ⇒ 不返（0 行）', () => {
+    writeRolePack();
+    writeApprovalRecord();
+    const built = buildRoleKnowledgeFilter(ROLE, 'org-b-j1b');
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const { store, close } = makeStore();
+    try {
+      // 同 scope、同敏感度、同文本，**只有 access_level 不同** ⇒ 差异只能由 access_level 维解释
+      insertChunk(store, 'chunk-private', 'finance.statements', 'normal', 'private');
+      expect(searchIds(store, built.filter)).toEqual([]);
+      // 承重反例：把 access_level 条件摘掉 ⇒ 该 private 条目立即可见
+      const withoutLevel = built.filter.conditions.filter((c) => c.field !== 'access.level');
+      const leaked = store
+        .search('现金流', { conditions: withoutLevel }, 10)
+        .results.map((r) => r.id);
+      expect(leaked).toHaveLength(1);
+    } finally {
+      close();
+    }
+  });
+
+  it('B-J1-7 真检索：public chunk ⇒ 返', () => {
+    writeRolePack();
+    writeApprovalRecord();
+    const built = buildRoleKnowledgeFilter(ROLE, 'org-b-j1b');
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const { store, close } = makeStore();
+    try {
+      const publicChunk = insertChunk(store, 'chunk-public', 'finance.statements', 'normal', 'public');
+      expect(searchIds(store, built.filter)).toEqual([publicChunk]);
+    } finally {
+      close();
+    }
+  });
+
+  it('B-J1-8 真检索：team chunk ⇒ 返', () => {
+    writeRolePack();
+    writeApprovalRecord();
+    const built = buildRoleKnowledgeFilter(ROLE, 'org-b-j1b');
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const { store, close } = makeStore();
+    try {
+      const teamChunk = insertChunk(store, 'chunk-team', 'finance.statements', 'normal', 'team');
+      expect(searchIds(store, built.filter)).toEqual([teamChunk]);
     } finally {
       close();
     }
