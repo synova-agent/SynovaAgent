@@ -192,11 +192,25 @@ jobs:
           #         判据升级为三条：① 有非 vitest 代码面改动 **且** 变更集里一个 vitest 测试都没动
           #         ⇒ 合法跳过（显式标注「不可测面」）；② 代码面含**被删除的** vitest 测试 ⇒ 异常（真丢测试）；
           #         ③ 其余有代码面却零测试 ⇒ 照旧异常。
-          N_VITEST="$(printf '%s' "$CHANGED_FILES" | grep -cE '\.(test|spec)\.(ts|tsx)$' || true)"
+          # 🔴 #1173（2026-10-30）：判据必须与 vitest.config 的 exclude **同源** —— CI 下 `tests/e2e/**`
+          #   **不进收集面**，故它不算「vitest 可收集」：
+          #   证据①（代码）：`vitest.config.ts:29-36` 的
+          #     `exclude: process.env.CI ? [ … 'tests/e2e/**', /* Needs LLM API */ … ] : []`
+          #     ⇒ CI=true 时该目录整块不被收集；实测 `CI=true vitest run tests/e2e/…e2e.test.ts`
+          #       ⇒ `No test files found, exiting with code 1`（**连显式路径也跑不了**）。
+          #   证据②（本仓实测）：把 `'tests/e2e/**'` 移出 CI exclude 后同命令 ⇒ `Tests 6 passed (6)` exit 0
+          #     ⇒ 该面自身可跑，纯粹被 exclude 挡住；exclude 里加 `!tests/e2e/…` **无效**
+          #       （vitest 4.1.8 不支持否定）⇒ 只能改本分类器，不能靠 negation。
+          #   ⇒ 口径：`N_VITEST` 只数「CI 下真会被收集」的（= 全部 ts 测试 − `^tests/e2e/`）；
+          #     e2e 单算 `N_E2E`，走下面「合法跳过（E2E 面）」分支。
+          #   🔴 禁把该分支当假绿：它只说"本步覆盖不到 e2e 面"，e2e 真红必须靠人工/独立复核按命令跑。
+          N_VITEST_ALL="$(printf '%s' "$CHANGED_FILES" | grep -cE '\.(test|spec)\.(ts|tsx)$' || true)"
+          N_E2E="$(printf '%s' "$CHANGED_FILES" | grep -cE '^tests/e2e/.*\.(test|spec)\.(ts|tsx)$' || true)"
+          N_VITEST=$((N_VITEST_ALL - N_E2E)); [ "$N_VITEST" -lt 0 ] && N_VITEST=0
           N_SRC_TS="$(printf '%s' "$CHANGED_FILES" | grep -cE '^src/.*\.ts$' || true)"
           N_CODE_NONVITEST=$((N_CODE - N_VITEST)); [ "$N_CODE_NONVITEST" -lt 0 ] && N_CODE_NONVITEST=0
           DELETED_VITEST="$(git diff --name-only --diff-filter=D "$CHANGED_BASE"...HEAD 2>/dev/null | grep -E '\.(test|spec)\.(ts|tsx)$' || true)"
-          echo "本次变更集: ${N_FILES} 文件（代码面 ${N_CODE} 个，其中 vitest 可收集 ${N_VITEST} 个；不可测面 ${N_CODE_NONVITEST} 个）"
+          echo "本次变更集: ${N_FILES} 文件（代码面 ${N_CODE} 个，其中 vitest 可收集 ${N_VITEST} 个；E2E 面 ${N_E2E} 个（CI 下被 exclude，不进收集面）；不可测面 ${N_CODE_NONVITEST} 个）"
           # 🔴 CI 可诊断性（#338 前置 · 2026-10-12 实测钉死）：Gitea runner 对**每一步**注入 `set -e`
           #   （本 job 日志 step0 的 `Wrote command` 明示 `set -e\n…`），而
           #     VITEST_OUT="$(cmd)"; VITEST_RC=$?
@@ -231,6 +245,14 @@ jobs:
                 echo "   ⇒ 判据：新增/改动生产代码必须带测试（或显式说明为何不可测）。这不是通过。"
                 printf '%s\n' "$CHANGED_FILES" | grep -E '^src/.*\.ts$' | head -20 | sed 's/^/     - /'
                 exit 1
+              elif [ "$N_E2E" -gt 0 ]; then
+                # #1173（L1 已批扩写集 +1）：`tests/e2e/**` 在 CI 下被 vitest.config exclude（证据见上段注释）
+                #   ⇒ 变更集**只有** e2e 测试时，"零收集"是**配置语义决定的合法跳过**，不是假绿。
+                # 🔴 位置硬约束（不得移动）：本分支**必须**在「裁 421：src 改动却零测试」**之后** ——
+                #    否则「src 改动 ＋ 只加 e2e 测试」会被本条吞成绿（真红被掩盖，改坏仍绿）。
+                # 🔴 也不得当成"通过"：它只声明"本步覆盖不到 e2e 面"，e2e 真红由独立复核按命令执行。
+                echo "ℹ️  合法跳过（E2E 面）：本次变更含 ${N_E2E} 个 tests/e2e 测试，CI 下被 vitest.config exclude（Needs LLM API）⇒ 不进收集面；该面由独立复核按命令执行"
+                _EG_SKIP_REASON="E2E 面：${N_E2E} 个 tests/e2e 测试在 CI 下被 vitest.config exclude 排除，不进收集面"
               elif [ "$N_VITEST" -eq 0 ]; then
                 echo "ℹ️  合法跳过（不可测面）：本次变更 ${N_CODE} 个代码面文件**均非 vitest 可收集**（如 .test.sh/.yml/.py）"
                 echo "   ⇒ vitest --changed 无对象可跑属**正常**；这些面由各自门禁负责（本步只覆盖 vitest 面）。"

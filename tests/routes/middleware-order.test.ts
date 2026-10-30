@@ -3,9 +3,11 @@
  *
  * 覆盖判据：
  * - **P4** 中间件前移：`app.use(rbacMiddleware)` 必须落在冻结区间 [357,366]（L-2），
- *   且其**之前**的「路由注册」集合**恰好等于**冻结豁免集 5 项 = 按**标识符/路径**断言
- *   （`setupGuideGoneRouter` · `llmConfigRoutes` · `uploadV2GoneRouter` · `authRoutes` · 内联
- *   `GET /api/status/budget`）。**本文件不硬编码任何行号**——行号只进证据文件。
+ *   且其**之前**的「路由注册」集合**恰好等于**冻结豁免集 6 项 = 按**标识符/路径**断言
+ *   （`setupGuideGoneRouter` · `llmConfigRoutes` · `uploadV2GoneRouter` · `rolePacksPageRoutes` ·
+ *   `authRoutes` · 内联 `GET /api/status/budget`）。**本文件不硬编码任何行号**——行号只进证据文件。
+ *   🔴 #1075 P3（第 15 件，CTO 批准）：`rolePacksPageRoutes` 按 gate-A A2／规格 §2.2-D7 **必须先于
+ *   jwtAuthMiddleware** 挂载（否则无 token 页面 401）⇒ 冻结集 5→6 项是**接线同步**，断言形态零放宽。
  * - **P6** 零自欺：关键判据函数零 `void`（`canAccessWorkspace` / `canModifyWorkspace`）；
  *   装配期硬编码身份字面量与空调用已清除；import 已收窄为仅 `rbacMiddleware`。
  * - **I4 不变量**：rbac 不得早于 `jwtAuthMiddleware`（`req.rbac` 的唯一可信来源是验签后的 `req.auth`），
@@ -57,6 +59,8 @@ const EXEMPT_REGISTRATIONS = [
   'setupGuideGoneRouter',
   'llmConfigRoutes',
   'uploadV2GoneRouter',
+  // #1075 P3（第 15 件）：说明书页壳必须先于 jwtAuthMiddleware（gate-A A2／规格 §2.2-D7）
+  'rolePacksPageRoutes',
   'authRoutes',
   '/api/status/budget',
 ] as const;
@@ -146,12 +150,12 @@ afterAll(async () => {
 describe('D947 P4 — 装配顺序源码断言（标识符口径，无硬编码行号）', () => {
   const src = readFileSync(SERVER_TS, 'utf8');
 
-  it('P4-1 rbac 之前的「路由注册」恰好等于冻结豁免集 5 项', () => {
+  it('P4-1 rbac 之前的「路由注册」恰好等于冻结豁免集 6 项', () => {
     expect(registrationsBeforeRbac(src)).toEqual([...EXEMPT_REGISTRATIONS]);
   });
 
-  it('P4-2 前移后计数值恒为 5（与 P4-1 同源的显式计数，便于红时读数）', () => {
-    expect(registrationsBeforeRbac(src)).toHaveLength(5);
+  it('P4-2 前移后计数值恒为 6（与 P4-1 同源的显式计数，便于红时读数）', () => {
+    expect(registrationsBeforeRbac(src)).toHaveLength(6);
   });
 
   it('I4 rbac 晚于 jwtAuthMiddleware 与 rateLimitMiddleware，早于 homeRoutes 与 workspacesApiRoutes', () => {
