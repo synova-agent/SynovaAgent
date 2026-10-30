@@ -121,6 +121,16 @@
 #        纯追加 **DOC-1150** 一条（type=decision，path=gate-exemptions/2026-10-30-1173-ci-e2e.md，status=active，
 #        owner=P2）；同一豁免件补第 3 行 entry（`docs/authority/DOCS-REGISTRY.yaml` 亦受保护路径 ⇒ 须自登记）。
 #        🔴 该路径**已在下方既有 writeset 内**（第 150 行，P2-4b-B 批登记）⇒ union 去重、**不重复列**、writeset 零新增。
+#      ＋ #1182（UI 接线 · 审批卡＋说明书页消费者，2026-10-30，单 PR，锚 main `dbd4be2e6`（规格 as_of）／本批工作树 HEAD `a20480ade`）
+#        依据：规格 /Users/wane/SynovaAgent/.handbook/派单件/2026-10-30-规格-1182-审批UI接线.md §2.4
+#        （4 新建 ＋ 本文件登记 ＝ 5 条目）：
+#        · app/role-packs.html（新建，说明书页**静态零数据壳**）／app/js/role-packs.js（新建，列表／详情／审批动作消费者）
+#        · app/js/approval-card.js（新建，审批卡渲染 ＋ token／错误／请求构造的**唯一实现**）
+#          ／app/approval-session.html（新建，`/api/conversations` 的 `approval_card` 帧消费者）
+#        · .claude/claims/1075.yaml（本文件）—— 登记件自身**已在既有 writeset 内** ⇒ union 去重、不重复列。
+#        ⇒ 本次实际**新增 4 条** app/ 前端路径，逐条见下方 writeset 末尾 4 行。
+#        🔴 本批 UI 为 **additive 消费者**：`src/**` **零改动**（后端 API／卡帧／页面壳一律只读参照）；
+#          既有 `app/chat.html`／`app/js/chat-sse.js` 亦零改动；不引入框架／构建链（规格 §7 红线）。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -193,6 +203,11 @@ writeset:
   - tests/e2e/role-pack-lifecycle.e2e.test.ts
   - .gitea/workflows/local-gates.yml
   - gate-exemptions/2026-10-30-1173-ci-e2e.md
+  - app/role-packs.html
+  - app/js/role-packs.js
+  - app/js/approval-card.js
+  - app/approval-session.html
+  - .claude/task-briefs/2026-10-30-1182-approval-ui.md
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!--
+  app/role-packs.html — 岗位说明书页（静态壳；#1182 · #1075 P3 收口）
+
+  设计哲学（一句）: **壳与数据分离、壳与身份无关** —— 本文件里没有一个岗位字段，
+    页面可公开载入（`express.static('/app')` 直出），数据全由 `app/js/role-packs.js`
+    用浏览器自己的 Bearer 去 fetch；于是「壳可公开」与「数据必须鉴权」不冲突。
+
+  契约（铁律 47）:
+    @input  — 无（静态文件；不读 query/body/header，服务端零插值）。
+    @output — 本章零数据 HTML 壳 ＋ 两个 `<script src>`（顺序即契约：先 approval-card.js，
+              再 role-packs.js）。必备锚点：[data-testid=token-gate]（token 粘贴位）、
+              [#role-packs-app]（列表挂载点）、[#role-packs-detail]（详情挂载点）、
+              [#notice-slot]（可见提示）、[data-testid=not-logged-in]（未登录态）。
+    @degraded — 静态文件无 IO／无分支 ⇒ 无服务端降级路径（不是吞错：没有错误源）。
+              客户端降级由 role-packs.js 显式渲染成可见提示（含 typed code），不静默。
+    @authority — 只读壳。不写盘、不触 DB、不调 audit；写面全在 `/api/role-packs/:id/approval`。
+    @not-here — 🔴 **不内嵌任何岗位数据**（roleId／六件／hash／状态一律不出现）；
+              不做登录 UI（token 手工粘贴，规格 §10-L9）；不做 SPA/构建链；不做服务端转义
+              （零插值 ⇒ 无转义面；客户端一律 textContent）。
+
+  已知限制:
+    · L1 · 无 CSP/SRI：内联 `<style>` 需 `style-src 'unsafe-inline'`（本批不引入 CSP，§1.3 非目标）。
+    · L2 · 无框架/无实时刷新：改内容后需点「重新加载」或刷新页面（规格 §10-L4）。
+    · L3 · 未登录状态的初始渲染由 role-packs.js 负责（`#not-logged-in` 默认 `hidden`），
+      静态壳本身不判断登录态（无 JS 时页面只有 token 输入框，仍然零数据请求）。
+
+  Source map（本章内）:
+    | 锚点 | 角色 |
+    |---|---|
+    | `#notice-slot` | 可见提示区（错误/降级/成功；由 role-packs.js 写 textContent） |
+    | `[data-testid=token-gate]` ＋ `#token-input` ＋ `#token-save` | token 粘贴位（唯一身份入口） |
+    | `#not-logged-in`（`data-testid=not-logged-in`） | 未登录显式态（避免"空白页"被误读成"没数据"） |
+    | `#role-packs-app` | 列表挂载点（GET /api/role-packs） |
+    | `#role-packs-detail` | 详情挂载点（GET /api/role-packs/:roleId ＋ 审批动作） |
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synova · 岗位说明书（审批）</title>
+<link rel="stylesheet" href="/app/css/app.css">
+<style>
+  .rp-page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+  .rp-head h1 { font-size: 20px; margin: 0 0 6px; }
+  .rp-head p { margin: 0; }
+  .rp-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+  .rp-btn { background: #fff; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .rp-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .rp-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .rp-btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .rp-btn.primary:hover { background: var(--primary-dark); color: #fff; }
+  .rp-gate { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin: 16px 0; }
+  .rp-gate h2 { font-size: 15px; margin: 0 0 8px; }
+  .rp-gate label { display: block; font-size: 12px; color: var(--text-secondary); margin: 12px 0 6px; }
+  .rp-gate input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; font-family: ui-monospace, Menlo, monospace; }
+  #notice-slot .notice { border-radius: 6px; padding: 10px 12px; font-size: 13px; margin: 12px 0; border: 1px solid var(--border); background: var(--bg-card); }
+  #notice-slot .notice.warn { border-color: var(--warning); color: #92400e; }
+  #notice-slot .notice.err { border-color: var(--error); color: var(--error); }
+  #notice-slot .notice.ok { border-color: var(--success); color: #15803d; }
+  .rp-envelope { margin: 16px 0 8px; }
+  .rp-envelope .dim, .dim { color: var(--text-secondary); font-size: 12px; }
+  .rp-errors { margin: 6px 0 0 18px; padding: 0; font-size: 12px; color: var(--error); }
+  .rp-card, .rp-block, .rp-audit { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+  .rp-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .rp-role-id { background: none; border: none; padding: 0; font-size: 15px; font-weight: 600; color: var(--primary); cursor: pointer; font-family: ui-monospace, Menlo, monospace; }
+  .rp-role-id:hover { text-decoration: underline; }
+  .rp-role-id:disabled { color: var(--text-secondary); cursor: default; text-decoration: none; }
+  .rp-block h3 { font-size: 14px; margin: 0 0 10px; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 10px; border: 1px solid var(--border); color: var(--text-secondary); }
+  .badge.warn { border-color: var(--warning); color: #92400e; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 13px; }
+  .kv dt { color: var(--text-secondary); }
+  .kv dd { margin: 0; word-break: break-all; font-family: ui-monospace, Menlo, monospace; }
+  .rp-form { display: flex; flex-direction: column; gap: 8px; }
+  .rp-form label { font-size: 12px; color: var(--text-secondary); }
+  .rp-form select, .rp-form input { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: ui-monospace, Menlo, monospace; }
+  .rp-piece { border: 1px solid var(--border); border-radius: 6px; margin: 8px 0; padding: 8px 10px; }
+  .rp-piece summary { cursor: pointer; font-size: 13px; font-family: ui-monospace, Menlo, monospace; }
+  .rp-piece-text { white-space: pre-wrap; word-break: break-word; max-height: 420px; overflow: auto; background: var(--bg); border-radius: 4px; padding: 10px; font-size: 12px; margin: 8px 0 0; }
+  .rp-audit p { margin: 0 0 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<main class="rp-page">
+  <header class="rp-head">
+    <h1>岗位说明书（审批）</h1>
+    <p class="dim">页面只提供界面，不内嵌任何岗位数据；数据由本页用你的 token 直接调用 <code>/api/role-packs</code>。</p>
+    <div class="rp-actions">
+      <button id="reload-btn" class="rp-btn" type="button">重新加载</button>
+      <button id="switch-token-btn" class="rp-btn" type="button">更换 token</button>
+    </div>
+  </header>
+
+  <div id="notice-slot"></div>
+
+  <section class="rp-gate" data-testid="token-gate">
+    <h2>访问 token</h2>
+    <p class="dim">token 只保存在本标签页的 <code>sessionStorage['synova.token']</code>，不写入 URL、cookie 或 localStorage。未登录时本页不发起任何数据 API 请求。</p>
+    <p id="not-logged-in" data-testid="not-logged-in" class="dim" hidden>未登录：未检测到访问 token。</p>
+    <label for="token-input">粘贴 token</label>
+    <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴 token 后回车">
+    <div class="rp-actions">
+      <button id="token-save" class="rp-btn primary" type="button">保存并加载</button>
+    </div>
+  </section>
+
+  <section id="role-packs-app" aria-label="岗位包列表"></section>
+  <section id="role-packs-detail" aria-label="岗位详情"></section>
+</main>
+
+<script src="/app/js/approval-card.js"></script>
+<script src="/app/js/role-packs.js"></script>
+</body>
+</html>

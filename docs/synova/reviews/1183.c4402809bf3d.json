@@ -1,0 +1,117 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1183,
+  "author": "squad-1165（L2 实施会话，原实现作者）",
+  "reviewer": "review-1171（队外独立复核，fresh 零上下文；未参与实现，唯一写入 docs/synova/reviews/**）",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-30T16:52:00+08:00",
+  "verdict": "PASS",
+  "head_reviewed": "410cf70c579d4d45591627a5e67d230402fd62cc",
+  "base_reviewed": "ca9f9db488d5d603919fbdeaf73a0b286c15cc17",
+  "patch_fingerprint": "sha256:c4402809bf3d43b45deac5ed487c683d7f0c03cc54883f32332b3bd407925f53",
+  "resign": {
+    "supersedes_head": "7464b11ce09a62d49ee9c4ee19f6d6897addb58e",
+    "reason": "分支以 merge main 方式追平（410cf70c5 为合并提交，含父 ca9f9db48）⇒ 原回执的引入提交（e9efb9861）之后出现 26 个非 reviews 改动（全部来自 main 侧，非本 PR 作者），触发 R7「回执之后仍有代码改动」。按 R7 语义（回执须在最后一次树变更之后签发）在新 head 重签。",
+    "fp_invariance": "补丁指纹**不变**（c4402809bf3d…）：新增/改名的只有 docs/synova/reviews/**，而 fp 计算显式排除该路径（check-merge-conditions.sh:428）。因此无「新 fp12」可用 —— 规范文件名与旧回执同名为 1183.c4402809bf3d.json。旧回执已改名 docs/synova/reviews/1183.c4402809bf3d.premerge.json 留在树内（git 历史亦保留于 e9efb9861）。",
+    "patch_identity": "两次 base 下的 6 件补丁**逐字同一**：`git diff --stat a20480ade..7464b11ce` 与 `git diff --stat ca9f9db48..410cf70c5 -- . ':(exclude)docs/synova/reviews/**'` 均为 `6 files changed, 2733 insertions(+)`。"
+  },
+  "tool": "check-merge-conditions.sh（fp 定义）＋ 自建 node harness（22 断言，含真 HTTP 200/401）＋ 自建 vm 计数探针（fetch 计数）＋ /tmp 副本改坏 ＋ vitest 原命令复跑",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "新 head diff = 6 件 ＋ 旧回执；src/ 与 chat 面零改",
+      "result": "pass",
+      "cmd": "git merge-base ca9f9db48 HEAD ；git diff --name-status ca9f9db48..410cf70c5 ；git diff --name-only ca9f9db48..410cf70c5 -- src/ | wc -l",
+      "evidence": "merge-base = **ca9f9db48**（= base main），且 `merge-base --is-ancestor ca9f9db48 410cf70c5` ⇒ **YES**（main 已成为 head 祖先，原 ④ S1「落后 27 commits」已解）。diff 共 **7 件**：M .claude/claims/1075.yaml ／ A .claude/task-briefs/2026-10-30-1182-approval-ui.md ／ A app/approval-session.html ／ A app/js/approval-card.js ／ A app/js/role-packs.js ／ A app/role-packs.html ／ A docs/synova/reviews/1183.c4402809bf3d.json（旧回执）。**6 件产品/记账面与旧 head 逐字一致**；`src/` 变更计数 **0**；`app/chat.html`／`app/js/chat-sse.js` 变更 **0**。"
+    },
+    {
+      "id": "C2",
+      "title": "U-J1 无 token ⇒ 零数据 API 请求（动态计数，新 head 复核）",
+      "result": "pass",
+      "cmd": "自建 /tmp/ui-1183-rp.cjs（stub globalThis.fetch 计数，先无 token 后有 token 各调 bootstrap()）",
+      "evidence": "`fetch 调用次数(无 token) = 0 []`；`fetch 调用次数(有 token) = 1 [ '/api/role-packs' ]` ⇒ 无 token **零数据请求**、有 token **恰好一次**。代码侧：`bootstrap()` 先 `readTokenState()`，`ok !== true` 即 `return notLoggedIn()`，位于任何 loadList/loadDetail 之前。"
+    },
+    {
+      "id": "C3",
+      "title": "U-J2 Bearer 唯一出口 ＋ 真 HTTP 200/401",
+      "result": "pass",
+      "cmd": "自建 /tmp/ui-1183-harness.cjs（真 node:http：Bearer 不符 ⇒ 401、符 ⇒ 200；buildApprovalRequest 产出的 init 直喂 fetch）",
+      "evidence": "22/22 断言 PASS，exit 0（新 head 复跑同一结果）。含 `Authorization=Bearer TKN-abc` 精确匹配、`method=POST`、body 带 action/scope/expectedContentHash、**token 不进 URL**、未知 action ⇒ `E_APPROVAL_ACTION_UNKNOWN` 不发请求；真 HTTP：**带 Bearer 200** / **不带 401** 且 401 body 含可读码 `UNAUTHORIZED`。"
+    },
+    {
+      "id": "C4",
+      "title": "U-J3 卡帧消费：帧序 open→approval_card→end",
+      "result": "pass",
+      "cmd": "grep -nE 'EXPECTED_SEQUENCE|failOrder|approval_card' app/approval-session.html",
+      "evidence": "`EXPECTED_SEQUENCE = ['open','approval_card','end']`（:189）＋ 首帧校验 `open.mode==='approval'`；缺卡 ⇒ `E_APPROVAL_SESSION_NO_CARD` 不渲卡；乱序/缺帧/多余帧 ⇒ `E_APPROVAL_SESSION_FRAME_ORDER`（并与 SSE 解析失败码区分）。卡字段面覆盖 roleId/status/contentHash/scope/permissionsPending/detailPath ＋ buttons。"
+    },
+    {
+      "id": "C5",
+      "title": "U-J4 安全：全字符串转义、无 eval、零 innerHTML 拼数据",
+      "result": "pass",
+      "cmd": "harness 注入 evil frame（roleId/status/scope/contentHash/detailPath/buttons 均含 `<script>alert(1)</script>`）＋ grep eval/new Function ＋ grep innerHTML",
+      "evidence": "`cardHtml` 输出**不含** `<script`、`</script>`、`onerror=`；`roleId` 呈 `&lt;script&gt;`；`escapeHtml('<>&\"\\'')` === `&lt;&gt;&amp;&quot;&#39;`。设计侧：cardHtml 全插值经 `fieldHtml`/`escapeHtml`（含 data-* 属性），`data-action` 限 `ACTION_IDS` 白名单、未知 id 渲 disabled；`renderApprovalCard` 为唯一 DOM 写入点。`eval(`/`new Function` 两文件命中 **0**；role-packs.js 3 处 `innerHTML` 全在注释内、数据只经 `textContent`。"
+    },
+    {
+      "id": "C6",
+      "title": "U-J6 改坏 2 条红原文（新 head 沿用，改坏只在 /tmp）",
+      "result": "pass",
+      "cmd": "cp 到 /tmp/m-1183/{m1,m2}.js 定点替换后用同一 22 断言 harness 复跑（仓内零改动，git status 空）",
+      "evidence": "**删转义**（escapeHtml 改恒等）⇒ exit 1：`FAIL cardHtml 不含未转义 <script :: found <script` ＋ `FAIL roleId 被转义为 &lt;script&gt;`（pass=18 fail=4）。**删 Bearer**（init.headers 去 Authorization）⇒ exit 1：`FAIL Authorization=Bearer TKN-abc` ＋ `FAIL 带 Bearer ⇒ 200 :: 401`（pass=20 fail=2）。"
+    },
+    {
+      "id": "C7",
+      "title": "59 tests（自验原命令）在新 head 复跑 ＋ tsc 0 ＋ arch 0",
+      "result": "pass",
+      "cmd": "DEV_MODE=true vitest run tests/routes/role-approvals.test.ts tests/routes/role-packs-page.test.ts tests/agent/approval-card.test.ts tests/routes/middleware-order.test.ts ；tsc --noEmit ；check-architecture.sh",
+      "evidence": "新 head 复跑：**Test Files 4 passed / Tests 59 passed (59)**，exit 0（31＋7＋9＋12）——与旧 head 同值。tsc --noEmit exit 0；架构检查「全部通过 ✅」exit 0。"
+    },
+    {
+      "id": "C8",
+      "title": "CI 410cf70c5 双绿 pending=0；fp 现算；四条件状态",
+      "result": "pass",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/410cf70c5/status ；check-merge-conditions.sh --pr 1183 --base main",
+      "evidence": "CI state=success total_count=2（push + pull_request 双 success）⇒ pending=0。fp 现算 = c4402809bf3d43b45deac5ed487c683d7f0c03cc54883f32332b3bd407925f53（fp12=c4402809bf3d）。重签前 checker 实测：①=ok ②=ok **③=no（R7：回执之后仍有 26 个非 reviews 代码改动）** **④=ok（S1 已解）**。"
+    },
+    {
+      "id": "C9",
+      "title": "claims 纯追加（继承复核，未因 merge 改变）",
+      "result": "pass",
+      "cmd": "git diff ca9f9db48..410cf70c5 -- .claude/claims/1075.yaml",
+      "evidence": "writeset 追加 5 条（4 app/ 路径 ＋ 1 task-brief 路径），既有条目零删零改；另追加 1 段依据注释。merge main 未改动本 PR 的 claims 追加内容。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "规模 vs 规格估算（规格 front-matter「≈350–500 行」）",
+      "what": "规格估算 350–500 行，实测 4 件合计 **2676 行**（role-packs.js 1001／approval-session.html 908／approval-card.js 652／role-packs.html 115）⇒ ≈**5.3×** 上界。非正确性缺陷，但自验报告 R1（:819、:870「需 L1 知悉」）与 R2（:729「R1 遗留、未变」）**两次点名仍未裁定**。提请 L1/CTO 明确追认或要求说明。"
+    },
+    {
+      "severity": "warn",
+      "where": "仓内自动化覆盖（4 件新 UI，2676 行）",
+      "what": "仓内无任何测试引用这 4 件新文件（`grep -rln ... tests/` 命中 0）；U-J 证据与改坏证据只在 `/tmp/1182-verify/` 与我的 `/tmp` harness。规格 §4 已显式接受「无自动 UI 测试框架」，故不阻断；但 `escapeHtml`/`cardHtml`/`buildApprovalRequest` 已被证明是**纯函数**、无需浏览器 ⇒ 完全可用现有 vitest 入仓，成本极低，建议下批做（与 #1174 的「有性质无守卫」同类）。"
+    },
+    {
+      "severity": "info",
+      "where": "R7 与「merge main 追平」的语义冲突（本次重签的直接原因）",
+      "what": "本 PR 用 **merge main into branch**（410cf70c5）追平而非 rebase ⇒ main 侧的 26 个文件变更在时间序上落在原回执提交（e9efb9861）之后 ⇒ R7 判「回执之后仍有代码改动」而红，**尽管那 26 件全部来自 main、非本 PR 作者，且本 PR 补丁逐字未变**。R7 无法区分「作者改码」与「上游合并」。本次处置：在 merge 之后重新签发（R7 的本意即「回执须覆盖最终树」），并把旧回执改名 `.premerge.json` 留树存档（fp12 与旧值相同，规范名无第二个可选名）。🔴 这是**门禁语义边界**（属 A 类），我不改 R7；仅记录建议：若「merge 追平」是常规做法，R7 可考虑强制 rebase 或在判据里识别 merge commit 的上游侧——由 CTO 裁。"
+    },
+    {
+      "severity": "info",
+      "where": "错误码数量口径",
+      "what": "任务书写「8 错误码」不可核：实测 `HTTP_HINTS` **9 条**、`CODE_HINTS` **16 条**、UI 自有 typed 码去重 **40 条**，三者均非 8。本回执按实测报数，不沿引。"
+    },
+    {
+      "severity": "info",
+      "where": "claims 记账细节（不影响判据）",
+      "what": "① 注释写「4 新建 ＋ 本文件 ＝ 5 条目」，但本 PR 实际新增 5 条路径（4 app ＋ task-brief）—— task-brief 未进注释口径，writeset 列表已含该条（71→76 的 +5 含它）⇒ 注释少记 1、列表正确；② `done:` 未为 #1182 追加 `verify:` 行（59 tests／`node --check`／harness 只在 task-brief 里）⇒ 可复跑性弱于前几批。"
+    },
+    {
+      "severity": "info",
+      "where": "本回执的我方局限",
+      "what": "只读仓 ＋ /tmp 自建 harness/副本改坏，未改产品代码与门禁（`git status` 全程为空；唯一写入＝docs/synova/reviews/**）。未做真实浏览器 E2E（规格 §4 已列为不覆盖）；`renderApprovalCard` 的真 DOM 点击链路由代码审读＋唯一写入点核对，未做真浏览器点击验证。"
+    }
+  ],
+  "reviewer_note": "四条件③独立复核（**重签版**，head 410cf70c5）：PASS。重签理由：分支以 merge main 追平（410cf70c5），使 main 侧 26 件变更在时间序上晚于原回执提交，触发 R7；而补丁指纹**不变**（c4402809bf3d…，因 reviews/** 被排除）且 6 件补丁逐字同一（2733 insertions）⇒ 属「同补丁、新树」而非「回执后改码」。处置：旧回执改名 `.premerge.json` 存树，在规范名重签。新 head 复核结论与旧版一致并重跑：diff 6 件＋旧回执（src/ 与 chat 面零改）、U-J1 动态计数（无 token 0 次 / 有 token 1 次）、U-J2 真 HTTP 200 vs 401、U-J4 evil frame 无未转义 `<script`、U-J6 两条改坏均验红（删转义 `found <script`；删 Bearer `200 :: 401`）、**59 passed**、tsc/arch 0、CI 双绿、④ S1 已解。两条 warn 仍成立：规模 5.3× 超估算、仓内零自动化覆盖（纯函数面其实可入仓）。新增 1 条 info 记 R7 与 merge-追平的语义边界，供 CTO 裁（我不改门禁）。本回执不代替 K3 终审。"
+}
