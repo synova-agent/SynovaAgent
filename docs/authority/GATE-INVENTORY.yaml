@@ -1573,6 +1573,12 @@ run_by:
   - entrypoint: scripts/ci/verify-doc.sh
     run_by: "无"
     quota: false
+  - entrypoint: scripts/doc-system/check-doc-g3-datestamp.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
+    run_by: "无"
+    quota: false
   - entrypoint: scripts/doc-system/check-doc-truth.sh
     run_by: pre-commit
     quota: true
@@ -1739,6 +1745,10 @@ run_by_candidates:
     why: "实际运行腿=scripts/hooks/hook-enforce-loop.sh（PostToolUse 钩子），不在本五值枚举内 ⇒ 记 无 待裁"
   - entrypoint: scripts/control-tower/verify-governance.sh
     why: "#1122 总闸最小可跑版：尚未接线（写集不含 pre-commit/CI），显式调用才跑 ⇒ 记 无；接线后改 wired 并补真实腿"
+  - entrypoint: scripts/doc-system/check-doc-g3-datestamp.sh
+    why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
+  - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
+    why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
 
 gate_meta:
   measured_at: b615aa0ca
@@ -2428,6 +2438,20 @@ gate_meta:
       orphan: false
       quota: true
       quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/check-doc-g3-datestamp.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: doc
       nature: mechanical
     - entrypoint: scripts/doc-system/check-doc-truth.sh
       class: P2

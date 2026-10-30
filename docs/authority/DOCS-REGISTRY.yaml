@@ -1564,3 +1564,12 @@ documents:
     status: active
     owner: P4
     note: "#1147 余项 B2：scripts/control-tower/gen-gate-meta.sh 新增 --quota 三桶计数（non_doc≤30 / total≤45 / bypass≤8，只读 gate_meta 生成物）＋ --emit 失败一律 exit 2（E_EMIT_TMP/E_EMIT_EMPTY/E_EMIT_SHAPE）；scripts/control-tower/verify-governance.sh 新增 G11 配额双闸（PASS/FAIL/DEGRADED，汇总 3→4 项）＋两件配对测试（含改坏即红）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
+  # ---- P4 2026-10-30：#1148 B3 DOC-GATE 批1 豁免登记（DOC-1148-01；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1148-01
+    type: decision
+    path: gate-exemptions/2026-10-30-b3-docgate2.md
+    status: active
+    owner: P4
+    note: "#1148（B3 批1）：新增 G-DOC-3 日期戳与 G-DOC-5 裸文件名两支检查器＋配对测试；存量走基线棘轮（只减不增）；已建成未接线；含自覆盖行与 DOCS-REGISTRY 自登记行。"

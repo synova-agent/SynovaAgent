@@ -339,3 +339,18 @@ entries:
     status: wired
     owner: P3
     notes: "岗位说明书页 HTML 壳（#1075 P3）：零数据静态壳＋token-gate（Bearer 唯一来源 sessionStorage['synova.token']，客户端 textContent 渲染）；**必须先于 jwtAuthMiddleware 挂载**（src/server.ts:486 < 487），否则无 token 页面 401；数据面 GET /api/role-packs* 仍在 JWT 之后；改坏必红＝数据内联进 HTML／挂到 auth 之后 ⇒ J8 红"
+  # ---- P4 2026-10-30：#1148 B3 DOC-GATE 批1 两支检查器（已建成未接线；declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc3Datestamp
+    defined_at: "scripts/doc-system/check-doc-g3-datestamp.sh:1"
+    provider: "scripts/doc-system/check-doc-g3-datestamp.sh:1"
+    test: "tests/doc-system/check-doc-g3-datestamp.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-3 日期戳检查器（#1148 B3 批1）：头部声明日 vs git 首次提交日 ±1 天；三态 0/1/2 与基线棘轮；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批）。"
+  - capability: doc.gDoc5BareFilename
+    defined_at: "scripts/doc-system/check-doc-g5-bare-filename.sh:1"
+    provider: "scripts/doc-system/check-doc-g5-bare-filename.sh:1"
+    test: "tests/doc-system/check-doc-g5-bare-filename.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-5 裸文件名检查器（#1148 B3 批1）：内联代码 span 裸文件名须带路径；三态 0/1/2 与每文件计数基线棘轮；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批）。"
