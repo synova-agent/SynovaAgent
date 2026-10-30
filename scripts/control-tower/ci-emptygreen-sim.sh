@@ -11,7 +11,7 @@
 #   @input  SYNO_EG_WF  被测工作流路径（默认 = 仓内 `.gitea/workflows/local-gates.yml`）
 #                       ⇒ 测试可指向**副本**做改坏差分，**不碰真文件**
 #   @input  SYNO_EG_WS  沙箱工作区（默认 $TMPDIR/ci-emptygreen-sim）
-#   @output 每场景：step 原始 stdout ＋ `✅|❌ [甲|乙|丙|丙2|丁|戊] …`
+#   @output 每场景：step 原始 stdout ＋ `✅|❌ [甲|乙|丙|丙2|己|庚|辛|壬|丁|戊] …`
 #   @exit   0 = 全 PASS；1 = 有 FAIL；2 = harness 自身失败
 #           （抽不出该步 / 沙箱不可建 / **桩未被执行** —— 禁把「看不见」当「没问题」）
 #
@@ -171,6 +171,12 @@ else
   echo "  ⛔ [庚] HARNESS-BROKEN — 桩未被执行 ⇒ 该场景结论不可信"; HARNESS_BROKEN=1; FAILS=$((FAILS+1))
 fi
 
+# ── 辛/壬（新增 · #1177，#1174 A 类 E2E 分类器的守卫）──
+#   辛：src 改动 ＋ 仅 e2e 测试 ⇒ E2E 合法跳过分支**不得**吞掉「src 改动却零测试」的真红。
+run_case 辛 empty 1 "新增/改动生产代码必须带测试" "src 改动＋仅 e2e 测试 ⇒ 仍红（E2E 跳过分支不得吞真红）" src/a.ts tests/e2e/x.e2e.test.ts
+#   壬：仅 e2e 测试 ⇒ CI 不收集是配置语义 ⇒ 合法跳过（**不是通过**）。
+run_case 壬 empty 0 "合法跳过（E2E 面）" "仅 e2e 测试 ⇒ 合法跳过（CI 不收集，非通过）" tests/e2e/x.e2e.test.ts
+
 # 丁：vitest 真失败 ⇒ exit 1，**且必须给出可判读摘要**（#338 可诊断性判据 · 2026-10-12 收紧）
 #   判据锁 `摘要:` —— 只有「`set +e` 捕获 rc + 把失败摘要写进 `::error`」的新实现才有此行；
 #   旧实现（`VITEST_OUT="$(cmd)"; RC=$?` 在 Gitea 注入的 `set -e` 下**当场退出**）整步零输出
@@ -186,5 +192,5 @@ if [ "$HARNESS_BROKEN" -ne 0 ]; then
   echo "CI-EMPTYGREEN-SIM: HARNESS-BROKEN（桩未被执行 ⇒ 场景结论不可信；禁把「看不见」当「没问题」）failures=$FAILS"
   exit 2
 fi
-if [ "$FAILS" -eq 0 ]; then echo "CI-EMPTYGREEN-SIM: OK（8 场景全 PASS）"; exit 0; fi
+if [ "$FAILS" -eq 0 ]; then echo "CI-EMPTYGREEN-SIM: OK（10 场景全 PASS）"; exit 0; fi
 echo "CI-EMPTYGREEN-SIM: VIOLATION failures=$FAILS"; exit 1
