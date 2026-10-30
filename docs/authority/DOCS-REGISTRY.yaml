@@ -1549,3 +1549,10 @@ documents:
     status: active
     owner: P4
     note: "#1146（批1 解耦脏点）：门禁运行时日志 .claude/ -> .synova/logs/（pre-commit-failures/gate-soft-warnings/last-precommit-success），install-hooks 写入改新路径并 mkdir；读取方 8 件新路径优先＋legacy 只读回落带 warning（post-commit/pre-commit-check/loop-context/log-snapshot/gen-cto-health/pr-queue-scan/check-fde-terms/dashboards）；不改判据语义、不迁移历史文件；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-30：M6 四卡判据件豁免登记（DOC-709；按 C4 卡号落号，避免与 DOC-1158 撞号）----
+  - id: DOC-709
+    type: decision
+    path: gate-exemptions/2026-10-30-1158-m6-four-cards.md
+    status: active
+    owner: P4
+    note: "#1158（M6）：8 件判据件落在受保护面（scripts/control-tower/**、tests/control-tower/**）⇒ 逐条豁免，含自覆盖与 DOCS-REGISTRY 自登记；判据行为未变（C1 46→47＋指标级测量值／C2 真移走→新进程 45／C3 两次独立进程 sha 同＋改坏必红／C4 判据件存在性前置自检）。"

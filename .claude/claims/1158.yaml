@@ -1,0 +1,20 @@
+# .claude/claims/1158.yaml — M6 三条不可妥协 · 四卡判据件（C1/C2/C3/C4）
+# 判据源: MVP v1.2 §三 M6 行；规格 = .handbook/派单件/2026-10-30-规格-1158-M6-三条不可妥协.md（v2.5）
+writeset:
+  - scripts/control-tower/probe-content-reload.ts
+  - scripts/control-tower/probe-content-exile.ts
+  - scripts/control-tower/probe-m6-determinism.ts
+  - scripts/control-tower/probe-criterion-precheck.ts
+  - tests/control-tower/probe-content-reload.test.ts
+  - tests/control-tower/probe-content-exile.test.ts
+  - tests/control-tower/probe-m6-determinism.test.ts
+  - tests/control-tower/probe-criterion-precheck.test.ts
+  - gate-exemptions/2026-10-30-1158-m6-four-cards.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - .claude/claims/1175.yaml
+  - memory/notes/proposed/2026-10-30-m6-1158-four-cards.md
+  - .claude/claims/1158.yaml
+done:
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+note: "#1158 M6 四卡判据件：probe-*.ts 改 1 建 3 ＋ 4 配对测试（每文件 expect≥5）；判据件存在性前置自检（红B 立规）成件；默认并行/串行均 4 passed。"
