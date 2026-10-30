@@ -1513,3 +1513,10 @@ documents:
   - id: DOC-1175
     path: gate-exemptions/2026-10-30-b0-ledger-pointer.md
     note: "#1175 域守则补台账真源指针：agents/P4-门禁/AGENTS.md 加一行指向 synova-handbook main 的门禁总台账（§十＝体系总图）；不改既有条款。"
+  # ---- P4 2026-10-30：sealed 隔离台账陈旧条目修复豁免登记（DOC-1158；R1 口径 id=DOC-<Issue#>）----
+  - id: DOC-1158
+    type: decision
+    path: gate-exemptions/2026-10-30-gate-sealed-stale.md
+    status: active
+    owner: P4
+    note: "#1158/U2：① 删除指向已改名文件（brief-parseable.test.sh）的陈旧隔离条目（台账判据 b 须删条目）；② FACE-TOTAL 197→204（scan=209，余量 5；主树新增夹具未上调下界 ⇒ 撞 SLACK-CAP=10，显式上调留痕）；含自覆盖行与 DOCS-REGISTRY 自登记行；不改判据语义。"

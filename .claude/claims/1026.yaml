@@ -2,6 +2,8 @@ writeset:
   - .claude/claims/1026.yaml
   - scripts/control-tower/gate-integrity-baseline.txt
   - gate-exemptions/2026-10-26-cto-1026-face-total.md
+  - gate-exemptions/2026-10-30-gate-sealed-stale.md
+  - memory/notes/proposed/2026-10-30-gate-sealed-stale-entry.md
   - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: bash scripts/control-tower/check-gate-integrity.sh
