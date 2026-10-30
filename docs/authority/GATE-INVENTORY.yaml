@@ -1424,6 +1424,15 @@ run_by:
   - entrypoint: scripts/control-tower/probe-content-reload.ts
     run_by: "无"
     quota: false
+  - entrypoint: scripts/control-tower/probe-content-exile.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-m6-determinism.ts
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/control-tower/probe-criterion-precheck.ts
+    run_by: "无"
+    quota: false
   - entrypoint: scripts/control-tower/probe-cycle-edges.ts
     run_by: "无"
     quota: false
@@ -1673,6 +1682,9 @@ run_by_candidates:
   - entrypoint: scripts/control-tower/probe-content-layering.ts
   - entrypoint: scripts/control-tower/probe-content-registry.ts
   - entrypoint: scripts/control-tower/probe-content-reload.ts
+  - entrypoint: scripts/control-tower/probe-content-exile.ts
+  - entrypoint: scripts/control-tower/probe-m6-determinism.ts
+  - entrypoint: scripts/control-tower/probe-criterion-precheck.ts
   - entrypoint: scripts/control-tower/probe-cycle-edges.ts
   - entrypoint: scripts/control-tower/probe-cycle-valves.ts
   - entrypoint: scripts/control-tower/probe-decision-ledger.ts
@@ -1729,7 +1741,7 @@ run_by_candidates:
     why: "#1122 总闸最小可跑版：尚未接线（写集不含 pre-commit/CI），显式调用才跑 ⇒ 记 无；接线后改 wired 并补真实腿"
 
 gate_meta:
-  measured_at: fc3ed017e
+  measured_at: b615aa0ca
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
   legacy_sections:
     - name: meta
@@ -2193,6 +2205,13 @@ gate_meta:
       quota: false
       quota_scope: non-doc
       nature: mechanical
+    - entrypoint: scripts/control-tower/probe-content-exile.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
     - entrypoint: scripts/control-tower/probe-content-layering.ts
       class: P2
       run_by: 无
@@ -2208,6 +2227,13 @@ gate_meta:
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/probe-content-reload.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-criterion-precheck.ts
       class: P2
       run_by: 无
       orphan: true
@@ -2285,6 +2311,13 @@ gate_meta:
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/probe-line-signals.ts
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/probe-m6-determinism.ts
       class: P2
       run_by: 无
       orphan: true

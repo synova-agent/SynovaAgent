@@ -11,6 +11,8 @@ writeset:
   - tests/control-tower/probe-criterion-precheck.test.ts
   - gate-exemptions/2026-10-30-1158-m6-four-cards.md
   - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - .claude/claims/1175.yaml
   - memory/notes/proposed/2026-10-30-m6-1158-four-cards.md
   - .claude/claims/1158.yaml
 done:
