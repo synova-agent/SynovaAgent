@@ -3,6 +3,7 @@ writeset:
   - scripts/control-tower/ci-emptygreen-sim.sh
   - .claude/claims/1117.yaml
   - .claude/claims/1177.yaml
+  - .claude/task-briefs/2026-10-30-1177-sim-guard.md
   - gate-exemptions/2026-10-30-1177-sim-guard.md
   - docs/authority/DOCS-REGISTRY.yaml
 done:
