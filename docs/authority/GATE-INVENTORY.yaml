@@ -1302,7 +1302,8 @@ run_by:
     quota: true
   - entrypoint: scripts/control-tower/check-bypass-log.sh
     run_by: pre-push
-    quota: false
+    quota: true
+    quota_scope: bypass
   - entrypoint: scripts/control-tower/check-canary-drift.sh
     run_by: github-ci
     quota: true
@@ -1326,7 +1327,9 @@ run_by:
     quota: false
   - entrypoint: scripts/control-tower/check-fixture-requires.sh
     run_by: github-ci
-    quota: true
+    quota: false
+    scope: github-only-integration
+    na_cmd: "grep -rl 'check-fixture-requires.sh' .gitea/workflows 2>/dev/null | wc -l | grep -qx 0"
   - entrypoint: scripts/control-tower/check-gate-integrity.sh
     run_by: github-ci
     quota: true
@@ -1605,7 +1608,9 @@ run_by:
     quota: false
   - entrypoint: scripts/workflow/check-integration.sh
     run_by: github-ci
-    quota: true
+    quota: false
+    scope: github-only-integration
+    na_cmd: "grep -rl 'check-integration.sh' .gitea/workflows 2>/dev/null | wc -l | grep -qx 0"
   - entrypoint: scripts/workflow/check-self-diagnosis.sh
     run_by: "无"
     quota: false
@@ -1650,7 +1655,8 @@ run_by:
     quota: false
   - entrypoint: scripts/workflow/wire-check.sh
     run_by: npm
-    quota: false
+    quota: true
+    quota_scope: bypass
 
 
 # ---- run_by=无 的退役候选清单（M-15：无主件必须在此可见；与上方 run_by 段双向对齐）----
@@ -1751,7 +1757,7 @@ run_by_candidates:
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
 
 gate_meta:
-  measured_at: b615aa0ca
+  measured_at: 9842b5163
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
   legacy_sections:
     - name: meta
@@ -1967,8 +1973,8 @@ gate_meta:
       class: P1
       run_by: pre-push
       orphan: false
-      quota: false
-      quota_scope: non-doc
+      quota: true
+      quota_scope: bypass
       nature: mechanical
     - entrypoint: scripts/control-tower/check-canary-drift.sh
       class: P1
@@ -2030,7 +2036,7 @@ gate_meta:
       class: P2
       run_by: github-ci
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-integrity.sh
@@ -2513,7 +2519,7 @@ gate_meta:
       class: P2
       run_by: github-ci
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/workflow/check-self-diagnosis.sh
@@ -2618,8 +2624,8 @@ gate_meta:
       class: P2
       run_by: npm
       orphan: false
-      quota: false
-      quota_scope: non-doc
+      quota: true
+      quota_scope: bypass
       nature: mechanical
 retired:
 #   批1 零风险退役（#1146 · 创始人 2026-10-29 令）；不删文件，观察期 30 天。
@@ -2689,3 +2695,110 @@ retired:
     replacement: none
     evidence: "git cat-file 实测该路径不存在；无载体故无任何钩子被挂载"
     observation_until: 2026-11-28
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# workflows: 两仓 workflow 全量定态（W0-5 · GATE-STANDARD v3.1 §二 · #1205）
+# 四态：阻断（仅 Gitea 权威腿）／只报（GitHub 回传、不阻断）／advisory（只参考，不阻断
+#       不占配额，必须写理由）／账外（须整改 —— W0 出口判据＝本节 0 条账外）
+# trigger 逐条取自两仓 workflows/*.yml 的 on: 实况（禁凭记忆抄）；机检＝gen-gate-meta.sh --check
+# （双向对账：登记的 id 须有真 yml；两仓目录里的每个 yml 都须在册，否则判账外腿）
+# ═══════════════════════════════════════════════════════════════════════════════
+workflows:
+  - id: gitea/local-gates
+    repo: gitea
+    trigger: "push / pull_request[main] / workflow_dispatch"
+    state: 阻断
+    category: mixed
+    reason: "唯一权威腿：pre-commit 各组与 ①d/①b/①c/②/③/④ 全量执行；纪律与质量判定的阻断权只在这里"
+  - id: gitea/dual-repo-sync
+    repo: gitea
+    trigger: "schedule(0 1 * * *) / workflow_dispatch"
+    state: 阻断
+    category: discipline
+    reason: "自行判门禁放行后推送镜像，实为真阻断腿却长期不在账；定时触发依赖默认分支，迁移后须复核"
+  - id: gitea/asset-sync
+    repo: gitea
+    trigger: "push[main] / workflow_dispatch"
+    state: 只报
+    category: advisory
+    reason: "资产看板自动同步；失败只影响看板新鲜度，不参与判定"
+  - id: gitea/trunk-freeze-watch
+    repo: gitea
+    trigger: "schedule(0 2 * * *) / workflow_dispatch"
+    state: advisory
+    category: advisory
+    reason: "trunk 冻结定时看护；只告警不阻断合并，登记备查"
+  - id: github/ci
+    repo: github
+    trigger: "push[main] / pull_request[main] / merge_group / workflow_dispatch / schedule(0 20 * * 0)"
+    state: 只报
+    category: mixed
+    reason: "集成测试腿：12 个 job 逐个定态见 jobs:；纪律与质量类须先迁 Gitea 才可清 required（批 C）"
+    jobs:
+      - id: quality
+        category: discipline
+        state: 只报
+      - id: test
+        category: quality
+        state: 只报
+      - id: test-kit-architecture
+        category: integration
+        state: 只报
+      - id: control-tower-tests
+        category: discipline
+        state: 只报
+      - id: integration-check
+        category: integration
+        state: 只报
+      - id: checker-review
+        category: quality
+        state: 只报
+      - id: golden-case
+        category: quality
+        state: 只报
+      - id: gate-integrity
+        category: discipline
+        state: 只报
+      - id: windows-leg-trigger
+        category: advisory
+        state: advisory
+      - id: test-kit-windows-advisory
+        category: advisory
+        state: advisory
+      - id: control-tower-windows-advisory
+        category: advisory
+        state: advisory
+      - id: all-checks-passed
+        category: discipline
+        state: 只报
+        reason: "聚合 job；批 A 计划退（硬前置：先给 check-gate-integrity.sh 换 ci-reds 参与集单源）"
+  - id: github/dashboard-auto
+    repo: github
+    trigger: "push[main] / workflow_dispatch"
+    state: 只报
+    category: advisory
+    reason: "看板产物自动提交 bot 分支；失败不阻断合并"
+  - id: github/desktop-build
+    repo: github
+    trigger: "push[main, fix/d529-**] / workflow_dispatch"
+    state: 只报
+    category: integration
+    reason: "桌面端构建（构建类）；属集成面，不阻断"
+  - id: github/product-progress
+    repo: github
+    trigger: "push[main] / schedule(0 9 * * 5) / workflow_dispatch"
+    state: 只报
+    category: advisory
+    reason: "进度页重算（A1-A5）；数据面，不阻断"
+  - id: github/progress-freshness-watchdog
+    repo: github
+    trigger: "schedule(30 1 * * *) / workflow_dispatch"
+    state: advisory
+    category: advisory
+    reason: "进度新鲜度看护；只告警不阻断，登记备查"
+  - id: github/project-coordinates
+    repo: github
+    trigger: "issues[opened, edited]"
+    state: 只报
+    category: advisory
+    reason: "项目坐标同步（胶水 workflow，逻辑在脚本）；只由 issue 事件触发，不阻断合并"
