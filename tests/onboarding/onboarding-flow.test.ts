@@ -45,8 +45,9 @@ function roleSeed(roleId: string, scopeId: string, capability: string): RoleSeed
         id: `${scopeId}-ref`,
         label: `${scopeId} 口径`,
         source: `extensions/presets/roles/${roleId}/knowledge-scope.yaml#${scopeId}`,
+        why: '测试夹具：说明为何需要该上下文',
       },
-      { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan' },
+      { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan', why: '测试夹具：说明为何需要该上下文' },
     ],
     systemAddendum: `${roleId} 岗：结论必须标明口径来源。`,
     outputTemplate: {

@@ -83,7 +83,8 @@ const MAX_BAD_PARAMS = 5;
 export type RoleSeedRejectionCode =
   | 'ROLE_SEED_INCOMPLETE'
   | 'ROLE_SEED_BAD_SOURCE'
-  | 'ROLE_SEED_BAD_SCOPE_ID';
+  | 'ROLE_SEED_BAD_SCOPE_ID'
+  | 'ROLE_SEED_BAD_CONTEXT_WHY';
 
 /** 一个上下文来源的采集种子（§2.5-A） */
 export interface RoleContextSeed {
@@ -226,6 +227,22 @@ function invalidScopeIds(seed: RoleSeed): readonly string[] {
  * @param values - 非法取值（原值，已保序）
  * @returns ≤5 条原值；超出时末条为 `…(+N)`（N = 超出条数）
  */
+/**
+ * 列出 `contexts[].why` **缺失/空白/超长** 的字段路径（#1178；与人设面 `role-pack-persona.ts:417` 同口径）。
+ * 人设面把 `why` 当必填（1..200），生成器若放行 ⇒ 生成件过 loader、过不了人设解析。
+ */
+function invalidContextWhys(seed: RoleSeed): readonly string[] {
+  const contexts = seed.contexts ?? [];
+  const bad: string[] = [];
+  contexts.forEach((context, index) => {
+    const why = context.why;
+    if (typeof why !== 'string' || why.trim().length === 0 || why.length > 200) {
+      bad.push(`contexts[${String(index)}].why`);
+    }
+  });
+  return bad;
+}
+
 function summarizeBadParams(values: readonly string[]): readonly string[] {
   if (values.length <= MAX_BAD_PARAMS) return values;
   return [...values.slice(0, MAX_BAD_PARAMS), `…(+${String(values.length - MAX_BAD_PARAMS)})`];
@@ -470,6 +487,20 @@ export function generateConfigPack(input: GenerateConfigPackInput): ConfigPackRe
         { roleId: seed.roleId, code: 'ROLE_SEED_INCOMPLETE', missingParams: missing, badParams, degraded: true },
         '角色种子缺项 — 拒绝生成（零部分写）',
       );
+      continue;
+    }
+
+    // ②a 有但坏：contexts[].why 缺失/空白/超长 ⇒ 拒绝写（#1178；与人设面同口径）
+    const badWhys = invalidContextWhys(seed);
+    if (badWhys.length > 0) {
+      rejected.push({
+        roleId: seed.roleId,
+        code: 'ROLE_SEED_BAD_CONTEXT_WHY',
+        missingParams: [],
+        badParams: summarizeBadParams(badWhys),
+      });
+      errors.push(`${seed.roleId}: contexts[].why 缺失/空白/超长 ${badWhys.join(', ')}（ROLE_SEED_BAD_CONTEXT_WHY，该角色零写入）`);
+      log.warn({ roleId: seed.roleId, code: 'ROLE_SEED_BAD_CONTEXT_WHY', badParams: badWhys, degraded: true }, '角色种子 context why 非法 — 拒绝生成（零部分写）');
       continue;
     }
 

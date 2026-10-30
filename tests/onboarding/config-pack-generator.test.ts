@@ -79,9 +79,10 @@ function completeSeed(overrides: Partial<RoleSeed> = {}): RoleSeed {
         id: 'finance.statements-ref',
         label: '财务报表口径',
         source: 'extensions/presets/roles/finance/knowledge-scope.yaml#finance.statements',
+        why: '无统一口径的结论不可比对',
         required: true,
       },
-      { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan' },
+      { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan', why: '结论要落回业务动作' },
     ],
     systemAddendum: '你在为财务岗提供支持。\n结论必须标明口径来源。',
     outputTemplate: {
@@ -202,9 +203,10 @@ describe('config-pack-generator — J4 正常路径（六件）', () => {
           id: 'finance.statements-ref',
           label: '财务报表口径',
           source: 'extensions/presets/roles/ops/knowledge-scope.yaml#finance.statements',
+          why: '无统一口径的结论不可比对',
           required: true,
         },
-        { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan' },
+        { id: 'company.bp', label: '公司业务说明', source: 'profile.business-plan', why: '结论要落回业务动作' },
       ],
     });
     generateConfigPack({ roles: [seed], rootDir: root });
@@ -282,7 +284,7 @@ describe('config-pack-generator — 降级路径（rejected 零部分写）', ()
           knowledgeScope: ['a.b'],
           capabilities: ['c'],
           acceptanceCriteria: ['d'],
-          contexts: [{ id: 'ctx', label: 'ctx', source: 'profile.business-plan' }],
+          contexts: [{ id: 'ctx', label: 'ctx', source: 'profile.business-plan', why: 'w' }],
           systemAddendum: 'x',
           outputTemplate: { templateId: 'minimal.standard', sections: [{ id: 's', title: 's', must: ['m'] }] },
         }),
@@ -300,7 +302,7 @@ describe('config-pack-generator — 降级路径（rejected 零部分写）', ()
         roles: [
           completeSeed({
             roleId: 'bad-source',
-            contexts: [{ id: 'ctx', label: 'ctx', source }],
+            contexts: [{ id: 'ctx', label: 'ctx', source, why: 'w' }],
           }),
         ],
         rootDir: root,
@@ -310,6 +312,17 @@ describe('config-pack-generator — 降级路径（rejected 零部分写）', ()
       expect(r.rejected[0]?.missingParams, `source=${JSON.stringify(source)}`).toEqual(['contexts[0].source']);
       expect(r.written).toEqual([]);
       expect(existsSync(roleDir('bad-source'))).toBe(false);
+    }
+  });
+
+  it('J4-8 contexts[].why 缺失/空白/超长 ⇒ ROLE_SEED_BAD_CONTEXT_WHY 且零写入（#1178）', () => {
+    for (const why of [undefined, '   ', 'x'.repeat(201)]) {
+      const seed = completeSeed({ roleId: 'bad-why', contexts: [{ id: 'ctx', label: 'ctx', source: 'profile.business-plan', why }] });
+      const r = generateConfigPack({ roles: [seed], rootDir: root });
+      expect(r.rejected.length, `why=${String(why)}`).toBe(1);
+      expect(r.rejected[0]?.code).toBe('ROLE_SEED_BAD_CONTEXT_WHY');
+      expect(r.rejected[0]?.badParams).toEqual(['contexts[0].why']);
+      expect(r.written).toEqual([]);
     }
   });
 
