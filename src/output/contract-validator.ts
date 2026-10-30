@@ -28,20 +28,25 @@
  *   `ValidationResult.contractVersion` **记录用了哪版**（V6 可版本化）。
  *
  * 契约（铁律 47）:
- *   @input  — `validateOutputContract(subject, opts?)`
+ *   @input  — ① `validateOutputContract(subject, opts?)`
  *             —— 一页纸产出**提交口自检**，被 `src/agent/report-assembler.ts` 的
  *             `renderOnePager` 调用（真实链：`src/routes/diagnosis.ts:552/812` → `renderOnePager`）。
- *             ⚠️ **通用校验实现 `validateOutput(contractId, subject, opts?)` 目前不导出** ——
- *             它是本模块内部实现（`validateOutputContract` 调它）。卡面 Q3「按产出类型加载契约」
- *             的**消费方**（KPI 表 / 周报 / 诊断报告的提交口）尚未接线（K12-03 产出 /
- *             报表交付链不在本卡写集内）；**先把出口摆出来 = 导出但无人调用的表面积**
- *             （铁律 0-2，也正是 pre-commit 组 4「新 export 必须被引用」要拦的形态）。
- *             ⇒ 等那三类产出的提交口接线时再 `export`（那时它有真消费方），
- *                本文件**不需要改**（契约由入参定，不是内建清单）。
- *             ⚠️ 同理，`loadContract` / `recordValidationFailure` / `describeValidation` **不导出**。
+ *             ② `validateContractObject(contract, subject, opts?)`（**#1075 P2-3 additive 导出**）
+ *             —— **对象契约**入口：契约是**内存对象**（不落盘、不按 id 从磁盘加载）。
+ *             生产唯一调用方 = `src/init/role-pack-output-standard.ts` 编译出的岗位输出标准，
+ *             由 `src/routes/conversations.ts` 在**角色会话每轮 assistant 回复**上调用（非阻断留痕）。
+ *             ③ `safeRegExp(pattern)`（**#1075 P2-3 additive 导出**）—— 建正则的唯一实现
+ *             （非法模式 ⇒ `null` ＋ `log.warn`，不抛）：P2-3 编译期用它复核
+ *             `criteria[].machine.pattern`（**禁**在别处 `new RegExp` 复制一份语义）。
+ *             ⚠️ **按 id 从磁盘加载的通用实现 `validateOutput(contractId, subject, opts?)` 仍不导出** ——
+ *             它是本模块内部实现（`validateOutput` 与 `validateContractObject` 共用同一校验主体）。
+ *             卡面 Q3「按产出类型加载契约」的**磁盘侧消费方**（KPI 表 / 周报 / 诊断报告的提交口）
+ *             尚未接线（K12-03 产出 / 报表交付链不在本卡写集内）⇒ 等那时再 `export`。
+ *             ⚠️ 同理，`loadContract` / `recordValidationFailure` / `describeValidation` / `checkRules` **不导出**。
  *   @output — `validateOutputContract` 返回 `void`：产出方**无权**据校验结论改变产出
- *             （体检的职责是留痕，不是断路）。`validateOutput` 返回 `ValidationResult`
- *             （`ok` / `contractId` / `contractVersion` / `errors[]`），供**提交口**据此阻断提交。
+ *             （体检的职责是留痕，不是断路）。`validateOutput` / `validateContractObject` 返回
+ *             `ValidationResult`（`ok` / `contractId` / `contractVersion` / `errors[]`），供**提交口**
+ *             据此阻断提交；`safeRegExp` 返回 `RegExp | null`。
  *   @degraded — **全部函数永不抛出**（whole-body catch）。
  *             ① 契约文件缺失 / 目录缺失（ENOENT）= **正常默认** ⇒ `errors:[{code:'contract.not_found'}]`
  *                + `log.warn`；
@@ -579,8 +584,18 @@ function sectionLines(text: string, title: string): string[] {
   return out;
 }
 
-/** 建正则：模式非法 ⇒ 返回 null（不抛出，由调用方降级）。 */
-function safeRegExp(pattern: string): RegExp | null {
+/**
+ * 建正则（**本模块唯一实现**）：模式非法 ⇒ 返回 `null`（不抛出，由调用方降级）。
+ *
+ * 🔴 **#1075 P2-3 additive 导出**的理由：岗位输出标准编译期须复核 `criteria[].machine.pattern`
+ *   是否为合法正则（规格 §2.3-C 末条）。若在编译侧另写一个 `new RegExp` try/catch，
+ *   就会出现**第二套正则语义**（非法模式的判定/留痕两处漂移）⇒ 故导出本函数供复用
+ *   （生产调用方 = `src/init/role-pack-output-standard.ts`；本文件内部调用点不变）。
+ *
+ * @param pattern - 正则源串（调用方负责长度上限；本函数不限额）
+ * @returns 编译结果；非法模式 ⇒ `null` ＋ 一条 `log.warn`（不静默、不抛）
+ */
+export function safeRegExp(pattern: string): RegExp | null {
   try {
     return new RegExp(pattern);
   } catch (err: unknown) {
@@ -822,53 +837,24 @@ function recordValidationFailure(
 }
 
 /**
- * 校验一份产出。
+ * 组结果 ＋ 失败落账 ＋ 留痕（`validateOutput` 与 `validateContractObject` 的**唯一**收口）。
  *
- * 契约:
- *   @input  contractId — 契约 id（`contracts/<id>.yaml`）
- *           subject    — 产出本体（已解码对象；`text` 键为 markdown 正文时章节/引用可判）
- *           opts       — `contractsRoot` / `sinkPath` / `now`（见 `ValidateOptions`）
- *   @output `ValidationResult` —— `ok` + `contractId` + **`contractVersion`（产物记录用了哪版）**
- *            + `errors[]`（每条带稳定 code，点名契约+字段）+ `failureRecord` + `recorded`
- *   @degraded 契约未声明 / 解析失败 ⇒ `ok:false` + 一条 `contract.not_found`（或 `contract.load_failed`）
- *             错误；**校验失败不抛异常**（产出提交链不应因校验崩溃）。
- *             失败自动落账；落账失败不影响校验结论。
- *   ⚠️ `ok:false` 的语义 = **产出被拒**（提交链据此阻断），不是"校验器崩了"。
- *      调用方须读 `errors[].fieldPath` 点名缺哪个字段（V6 判据）。
+ * 抽出来的理由：两条入口的差别只在"契约从哪来"（磁盘按 id 加载 vs 内存对象），
+ * **结果形状/落账/日志必须逐字一致** —— 各写一份就是两套口径（改一处漏一处）。
+ *
+ * @param contract - 已加载/已建好的契约；`null` ⇒ 加载失败分支（`contractIdForLog` 用入参 id 记日志）
+ * @param contractIdForLog - 日志里的契约标识（加载失败时用入参 id；成功时 = `contract.meta.id`）
+ * @param errors - 校验错误累加器（**调用方持有**，本函数只读）
+ * @param opts - `sinkPath` / `now` 注入缝
+ * @returns `ValidationResult`；`ok:true` ⇒ 不落账、字段 `failureRecord`／`recorded` 均为 `null`
+ * @degraded 落账失败 ⇒ 校验结论不变（`recorded.reason` 点名，铁律 24）；**永不抛出**
  */
-function validateOutput(
-  contractId: string,
-  subject: Record<string, unknown>,
-  opts: ValidateOptions = {},
+function finalizeValidation(
+  contract: OutputContract | null,
+  contractIdForLog: string,
+  errors: readonly ContractError[],
+  opts: ValidateOptions,
 ): ValidationResult {
-  const errors: ContractError[] = [];
-  const loaded = loadContract(contractId, opts.contractsRoot);
-
-  if (loaded.contract === null) {
-    // 分类走**结构化 reason**，不靠文案前缀嗅探（文案改一个字就静默改判 = 口径漂移之源）
-    const isNotFound = loaded.reason === 'invalid-id' || loaded.reason === 'missing-file';
-    const kind = isNotFound ? 'not_found' : 'load_failed';
-    errors.push({
-      code: `contract.${kind}`,
-      contractId: null,
-      contractVersion: null,
-      kind,
-      fieldPath: contractId,
-      message: `[contract.${kind}] (未加载契约) ${contractId}: ${loaded.problem ?? '未知原因'}`,
-      sourcePath: null,
-    });
-  } else {
-    const contract = loaded.contract;
-    const rawText = subject['text'];
-    const text = typeof rawText === 'string' ? rawText : null;
-
-    checkFields(contract, subject, errors);
-    checkSections(contract, text, errors);
-    checkPointers(contract, text, errors);
-    checkRules(contract, subject, text, errors);
-  }
-
-  const contract = loaded.contract;
   const result: ValidationResult = {
     ok: errors.length === 0,
     contractId: contract === null ? null : contract.meta.id,
@@ -894,7 +880,7 @@ function validateOutput(
 
   log.warn(
     {
-      contractId, contractVersion: result.contractVersion,
+      contractId: contractIdForLog, contractVersion: result.contractVersion,
       codes: record.codes, fieldPaths: record.fieldPaths,
       recorded: recorded.recorded,
     },
@@ -902,6 +888,84 @@ function validateOutput(
   );
 
   return { ...result, failureRecord: record, recorded };
+}
+
+/**
+ * 校验一份**内存对象契约**（#1075 P2-3 导出的对象入口）。
+ *
+ * 契约:
+ *   @input  contract — 已建好的 `OutputContract`（**不从磁盘加载**；调用方负责其来源与可信性）
+ *           subject  — 产出本体（同 `validateOutput`：`text` 键为正文时章节/引用可判）
+ *           opts     — `sinkPath` / `now`（`contractsRoot` 对对象入口**不适用**，忽略；见 `ValidateOptions`）
+ *   @output `ValidationResult` —— 与 `validateOutput` **同形同义**（`ok` / `errors[]` / `failureRecord` / `recorded`）
+ *   @degraded 同 `validateOutput`：永不抛出；失败自动落账（`sinkPath` 缺省走 env／默认落点），
+ *             落账失败不影响校验结论。
+ *   @authority 生产唯一调用方 = `src/routes/conversations.ts`（经
+ *             `src/init/role-pack-output-standard.ts` 编译出的岗位输出标准）。
+ *             本函数**不做**"该不该校验"的判断（审批门/开关归编译侧）——它只校验、只留痕。
+ *   ⚠️ 与 `validateOutput` 的行为等价性由 `tests/output/contract-validator.test.ts`（33 用例，改前基线）
+ *      钉死：`validateOutput` 的契约存在分支改为调用本函数，故两条路径共用同一校验主体。
+ */
+export function validateContractObject(
+  contract: OutputContract,
+  subject: Record<string, unknown>,
+  opts: ValidateOptions = {},
+): ValidationResult {
+  const errors: ContractError[] = [];
+  const rawText = subject['text'];
+  const text = typeof rawText === 'string' ? rawText : null;
+
+  checkFields(contract, subject, errors);
+  checkSections(contract, text, errors);
+  checkPointers(contract, text, errors);
+  checkRules(contract, subject, text, errors);
+
+  return finalizeValidation(contract, contract.meta.id, errors, opts);
+}
+
+/**
+ * 校验一份产出（**按 id 从磁盘加载**的内部口；不导出）。
+ *
+ * 契约:
+ *   @input  contractId — 契约 id（`contracts/<id>.yaml`）
+ *           subject    — 产出本体（已解码对象；`text` 键为 markdown 正文时章节/引用可判）
+ *           opts       — `contractsRoot` / `sinkPath` / `now`（见 `ValidateOptions`）
+ *   @output `ValidationResult` —— `ok` + `contractId` + **`contractVersion`（产物记录用了哪版）**
+ *            + `errors[]`（每条带稳定 code，点名契约+字段）+ `failureRecord` + `recorded`
+ *   @degraded 契约未声明 / 解析失败 ⇒ `ok:false` + 一条 `contract.not_found`（或 `contract.load_failed`）
+ *             错误；**校验失败不抛异常**（产出提交链不应因校验崩溃）。
+ *             失败自动落账；落账失败不影响校验结论。
+ *   ⚠️ `ok:false` 的语义 = **产出被拒**（提交链据此阻断），不是"校验器崩了"。
+ *      调用方须读 `errors[].fieldPath` 点名缺哪个字段（V6 判据）。
+ *   🔴 #1075 P2-3：契约存在分支**改为调用 `validateContractObject`**（行为等价；既有 33 用例全绿是硬门）。
+ */
+function validateOutput(
+  contractId: string,
+  subject: Record<string, unknown>,
+  opts: ValidateOptions = {},
+): ValidationResult {
+  const loaded = loadContract(contractId, opts.contractsRoot);
+
+  if (loaded.contract !== null) {
+    return validateContractObject(loaded.contract, subject, opts);
+  }
+
+  // 分类走**结构化 reason**，不靠文案前缀嗅探（文案改一个字就静默改判 = 口径漂移之源）
+  const isNotFound = loaded.reason === 'invalid-id' || loaded.reason === 'missing-file';
+  const kind = isNotFound ? 'not_found' : 'load_failed';
+  const errors: ContractError[] = [
+    {
+      code: `contract.${kind}`,
+      contractId: null,
+      contractVersion: null,
+      kind,
+      fieldPath: contractId,
+      message: `[contract.${kind}] (未加载契约) ${contractId}: ${loaded.problem ?? '未知原因'}`,
+      sourcePath: null,
+    },
+  ];
+
+  return finalizeValidation(null, contractId, errors, opts);
 }
 
 /**

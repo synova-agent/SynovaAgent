@@ -1,0 +1,111 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1142,
+  "author": "synova-squad-lead（#1075 P2-3 实施会话；Gitea 提交身份 squad-1075）",
+  "reviewer": "review-1142（fresh 会话·零上下文·队外独立复核；未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "head_reviewed": "cc30c84ff",
+  "patch_fingerprint": "sha256:bbac3389d94fcc68dd3ef036f51553e54b87e6f96c98628de0bc561d7d86dfd3",
+  "issued_at": "2026-10-29T21:50:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ 必核 1–9 逐条物理复现",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "变更集 14 件；只读清单零越界",
+      "result": "pass",
+      "cmd": "git -C /tmp/w-1142b diff --name-only gitea/main...HEAD | wc -l ；同列表 grep -E '^(src/agent/report-assembler\\.ts|src/middleware/|src/init/role-pack-schema\\.ts|src/init/preset-loader\\.ts|\\.gitea/|scripts/audit/|scripts/control-tower/)'",
+      "evidence": "14 件（3 新建＋9 修改＋2 登记，与规格 §2.4 逐条对齐）；越界扫描命中 0 行（7 类只读路径全空）；git status --porcelain 空（工作区干净，无未提交改动）"
+    },
+    {
+      "id": "C2",
+      "title": "六测试件 125 passed EXIT=0",
+      "result": "pass",
+      "cmd": "cd /tmp/w-1142b && ./node_modules/.bin/vitest run tests/init/role-pack-output-standard.test.ts tests/routes/conversations-role-output.test.ts tests/output/contract-validator.test.ts tests/routes/conversations-role.test.ts tests/init/role-pack-approval.test.ts tests/contract/time-injection.test.ts",
+      "evidence": "Test Files 6 passed (6)｜Tests 125 passed (125)｜Duration 2.69s｜EXIT=0（日志 /tmp/1142-vitest.log）"
+    },
+    {
+      "id": "C3",
+      "title": "出厂锚：六件 raw-bytes 独立复算＝FACTORY_APPROVALS",
+      "result": "pass",
+      "cmd": "python3 /tmp/1142-anchor-check.py（hashlib.sha256(name_utf8 + 0x00 + rawBytes)×6，按 ROLE_PACK_PIECES 顺序；同时取 git cat-file blob 与工作树磁盘字节两路）",
+      "evidence": "finance dd2e6c59…90dc／hr 49d934f2…b793／sales 73123a7a…7cab 三包全 MATCH；blob 字节 == 磁盘字节（3/3）；复算脚本不依赖 computeRolePackContentHash（禁同源自证）"
+    },
+    {
+      "id": "C4",
+      "title": "三包内容 additive：删除行 0，kind 只 textPattern/noPattern",
+      "result": "pass",
+      "cmd": "git diff gitea/main...HEAD -- extensions/presets/roles/ | grep -c '^-[^-]' ；node -e 'js-yaml 解析三包 criteria[].machine'",
+      "evidence": "删除行 0／新增 24 行；10 条 criteria 中 8 条带 machine（finance 3：报告期/\\[src:/观察指标；hr 3：身份证|薪酬明细/noPattern＋周期/缺口；sales 2：口径/业绩周期）；kind 集合 = {textPattern, noPattern}；text/check 原文逐字未改"
+    },
+    {
+      "id": "C5",
+      "title": "接线防御：audit 调用点 try/catch（CTO 收件条件 3）",
+      "result": "pass",
+      "cmd": "grep -n 'auditRolePackOutput' src/routes/conversations.ts ；git diff gitea/main...HEAD -- src/routes/conversations.ts",
+      "evidence": "调用点 :744 在 `if (rolePack !== null) { try { auditRolePackOutput(rolePack.roleId, result.reply, orgId) } catch (err: unknown) { log.warn({audit:'rolePackOutput', rolePackId, degraded:true, err}, '岗位输出标准校验异常 — 忽略（非阻断）') } }`；try 只包 audit（store.addMessage :734 在 try 外，持久化语义未被吞）；J3-6 异常路径用例 = tests/routes/conversations-role-output.test.ts:621（断言 200/SSE、回复逐字不变、warn 一条含 degraded+err、异常不落账）"
+    },
+    {
+      "id": "C6",
+      "title": "J8 改坏必红（独立变异，3 条）",
+      "result": "pass",
+      "cmd": "git worktree add --detach /tmp/w-1142-mut cc30c84ff → 逐个变异 → vitest → git checkout -- 还原（真仓零改动；用完 worktree remove）",
+      "evidence": "基线同树 30 passed EXIT=0；①删接线（整块 if/try/catch 移除）⇒ EXIT=1，6 红（J3-1/3-3/3-4/3-5/3-6/J5-1）；②删审批门（步骤② if 移除）⇒ EXIT=1，2 红（J4-1/J4-2）；③删 machine→checks（checks.push 改 void）⇒ EXIT=1，4 红（J1-1/J2-2/J6-d/J6-e）。三条均先证同树基线绿再变异，排除环境红"
+    },
+    {
+      "id": "C7",
+      "title": "登记：doc-registry-gate 绿 ＋ WIRING 行号与实物一致",
+      "result": "pass",
+      "cmd": "bash scripts/doc-system/doc-registry-gate.sh ；grep -n 'auditRolePackOutput' src/routes/conversations.ts ；sed -n '490,500p' src/init/role-pack-output-standard.ts",
+      "evidence": "doc-registry-gate EXIT=0（199/188 条 DOC id 重号 0、path 失配 0、'✅ 登记门禁通过'）；WIRING content.rolePackOutputStandard：consumer='src/routes/conversations.ts:744' == 实物调用行 744 ✔；defined_at='src/init/role-pack-output-standard.ts:495' == `export function loadRolePackOutputStandard(` 行 495 ✔；status=wired、owner=P2、test 指向本批新建 route 测试件"
+    },
+    {
+      "id": "C8",
+      "title": "CI：state=success / total=2 / pending=0",
+      "result": "pass",
+      "cmd": "curl -H 'Authorization: token ***' http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/cc30c84ff/status",
+      "evidence": "HTTP 200｜state=success｜total_count=2｜pending=0｜statuses=[('local-gates / gates (push)','success'), ('local-gates / gates (pull_request)','success')]（终态，非中间态）"
+    },
+    {
+      "id": "C9",
+      "title": "补丁指纹与 CTO 现场值一致",
+      "result": "pass",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1142 --base main --diff-fingerprint",
+      "evidence": "bbac3389d94fcc68dd3ef036f51553e54b87e6f96c98628de0bc561d7d86dfd3（= CTO 收件核验现场值 bbac3389d94f…，逐字一致；fp12=bbac3389d94f ⇒ 回执路径 docs/synova/reviews/1142.bbac3389d94f.json）"
+    },
+    {
+      "id": "C10",
+      "title": "铁律与卫生扫描（越界风险面）",
+      "result": "pass",
+      "cmd": "对 14 件逐件 grep 'as any|as never|as unknown as'、grep 'TODO|FIXME|XXX'；git merge-base --is-ancestor gitea/main HEAD；grep -c 'expect(' 两新测试件",
+      "evidence": "`as any|as never|as unknown as` 代码命中 0（唯一 grep 命中为 conversations.ts:683 既有注释散文，不在本 PR diff 内）；TODO/FIXME/XXX 0；新增用例 30（standard 21 ＋ route 9，≥20 规格下限），新增 expect() 163（94+69，非空壳）；gitea/main 6d52c15af 已是 HEAD 祖先（落后 0 ⇒ CTO 收件条件 1 已满足）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "规模估算（规格 §批次规模）",
+      "what": "规格估 '≈600–800 行（含测试）'，实测 diffstat ＝ 14 件 +2380/−68（新模块 602 行 ＋ 两测试件 1462 行占大头）。非阻断：规模来自规格第三条件节要求（三态/边界/真 HTTP 夹具）与头部件要求，未发现与规格范围不符的新增能力；建议后续规格把『头部契约＋已知限制＋真 HTTP 夹具』计入估算。"
+    },
+    {
+      "severity": "info",
+      "where": "src/routes/conversations.ts（已知限制 l.）",
+      "what": "一次违标产生两条日志（路由 audit:'rolePackOutput' 一条 ＋ 引擎通用『已拒绝+落账』一条，业务码/字段一致）。已在文件『已知限制 l.』与规格 §10-L9 显式披露，引擎去重属语义变更（另批），本 PR 不做 ⇒ 非阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "CTO 收件评论（id 8580）vs 实物",
+      "what": "评论称『machine 仅 3 条/包』；实测 finance 3／hr 3／sales 2（sales 的 ac.deidentified 按规格 §2.3-C 保持散文）。以规格为准 ⇒ 实现合规、评论数字有偏（不影响收件结论）。"
+    }
+  ],
+  "review_scope": "只核 PR #1142 head cc30c84ff 对 main 6d52c15af 的差异；未评 K3 终审结论、未改任何业务代码/门禁/判据（唯一写入＝本回执文件）。",
+  "evidence_logs": [
+    "/tmp/1142-vitest.log（六件 125 passed EXIT=0）",
+    "/tmp/1142-anchor-check.py（出厂锚独立复算 3/3 MATCH）",
+    "/tmp/mut1.log（删接线 ⇒ 6 红）",
+    "/tmp/mut2.log（删审批门 ⇒ 2 红）",
+    "/tmp/mut3.log（删 machine→checks ⇒ 4 红）",
+    "/tmp/1142-docgate.log（doc-registry-gate EXIT=0）",
+    "/tmp/1142-ci.json（CI state=success total=2）"
+  ]
+}

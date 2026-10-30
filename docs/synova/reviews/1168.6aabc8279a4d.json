@@ -1,0 +1,101 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1168,
+  "author": "squad-1167（L2 实施会话；CTO 已裁定其 A-J4-2 偏离并追认锚漂移）",
+  "reviewer": "review-1171（队外独立复核，fresh 零上下文；未参与实现，唯一写入 docs/synova/reviews/**）",
+  "independence": "fresh-session",
+  "issued_at": "2026-10-30T11:58:00+08:00",
+  "verdict": "PASS",
+  "head_reviewed": "346c4f6d4239fc170b1d9b9e627ecd500d8f65f0",
+  "base_reviewed": "2e23ddbf73e41498b2899caead6d32cb99c4523a",
+  "patch_fingerprint": "sha256:6aabc8279a4d3ab5690f21ec013608883b065ff7729ffd1237f4a58918c0a82c",
+  "tool": "check-merge-conditions.sh（fp 定义）＋ vitest 实测 ＋ /tmp 隔离树变异注入 ＋ 源码/正则逐条核对 ＋ 双树探针",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "变更集恰 4 件；只读面零改；diff 无越界",
+      "result": "pass",
+      "cmd": "git diff --name-status 2e23ddbf7..HEAD ；逐路径计数只读面",
+      "evidence": "4 行：M .claude/claims/1075.yaml / M src/init/role-pack-knowledge-filter.ts / M tests/init/role-pack-knowledge-filter.test.ts / M tests/routes/knowledge-ask.test.ts（+173 −30）。过滤后无第 5 件（打印 OK: exactly 4）。只读面计数全 0：src/routes/knowledge-ask.ts=0 src/routes/=0 src/middleware/auth.ts=0 src/agent/tools.ts=0 src/agent/conversation-engine.ts=0 scripts/=0 —— 与规格 §2.4 逐字一致；CTO 条件「rebase 后不再出现 #1171 文件」已满足。"
+    },
+    {
+      "id": "C2",
+      "title": "access.level IN ['public','team'] 入条件序，且该维真生效（非装饰）",
+      "result": "pass",
+      "cmd": "git diff -- src/init/role-pack-knowledge-filter.ts ；sed -n '720,745p' src/l4/knowledge-store.ts",
+      "evidence": "新增 `const ROLE_KNOWLEDGE_ACCESS_LEVELS: readonly string[] = ['public','team']` ＋ `accessLevelCondition = {field:'access.level',operator:'IN',value:[...ROLE_KNOWLEDGE_ACCESS_LEVELS]}`，组装序 [0]sensitivity → [1]access.level → [2]pkb_domain IN → [3..]deny NOT_EQ（与规格 §1 顺序一致）。🔴 承重链已核到列：matchFilter（knowledge-store.ts:723-731）`c.field.replace('access.','')` ⇒ `level` ⇒ colMap `access_level`，`IN` 分支 `if (!allowed.includes(val)) return false` 且严格 AND ⇒ 该条件确实参与过滤，不会因字段名不匹配被静默忽略。拒绝型分支 REJECT_CONDITIONS（pkb_domain IN []）零改动。"
+    },
+    {
+      "id": "C3",
+      "title": "private 拒 / public·team 允（真 SQLite，含承重反例）",
+      "result": "pass",
+      "cmd": "vitest run tests/init/role-pack-knowledge-filter.test.ts",
+      "evidence": "16 passed（exit 0）。B-J1-6：同 scope/同敏感度/同文本、仅 access_level=private ⇒ `searchIds` = [] ；同用例内承重反例：摘掉 access.level 条件后该 private 条目 `leaked` 长度 1 —— 证明该维是承重的而非装饰。B-J1-7 public ⇒ 返回该 chunk；B-J1-8 team ⇒ 返回该 chunk。B-J1-5 断言 conditions[1] 恰为 access.level/(public,team)，且 `not.toContain('private')`、无 access.owner* 条件。全部真 better-sqlite3 ＋ 真 KnowledgeStore.search，零 mock。"
+    },
+    {
+      "id": "C4",
+      "title": "A-J2 与 HTTP 面逐字同集合（相等，非更宽）",
+      "result": "pass",
+      "cmd": "python3 提取两侧字面集合并比较（正则取 ROLE_KNOWLEDGE_ACCESS_LEVELS 与 knowledge-ask.ts 的 access_level IN value）",
+      "evidence": "role filter set = ['public','team']；HTTP face set = ['public','team']；EQUAL(list&order)=True；set(role)−set(http)=[] ⇒ 未更宽；contains private=False、contains owner=False。HTTP 面 `src/routes/knowledge-ask.ts` 本批零改动（read-only 计数 0），其 :125 为 `{field:'access_level',operator:'IN',value:['public','team']}`。"
+    },
+    {
+      "id": "C5",
+      "title": "静默早退零残留 ＋ 5 处显式断言 ＋ 40 passed ＋ tsc/arch 0",
+      "result": "pass",
+      "cmd": "grep -rn 'if (!getHandler) return' tests/ src/ ；grep -c \"toBeTypeOf('function')\" ；vitest run <3 件> ；tsc --noEmit ；check-architecture.sh",
+      "evidence": "`if (!getHandler) return;` 全树命中 **0**（基线 5）；`toBeTypeOf('function')` = **5**（基线 0），5 处均为「先断言再调用」，handler 变量改 `const h`，用例名/开关时序/既有断言零改动。A-J5 三件合跑 **40 passed**（knowledge-ask 12 ＋ filter 16 ＋ knowledge-search-tool 12），exit 0。tsc --noEmit exit 0；架构检查「全部通过 ✅」exit 0。"
+    },
+    {
+      "id": "C6",
+      "title": "改坏必红：删 access_level ⇒ 红；变异 X ⇒ 红；变异 Y ⇒ 绿（记录）",
+      "result": "pass",
+      "cmd": "独立 worktree /tmp/w-1168m-mut（同 HEAD 346c4f6d4）：python 定点替换 ＋ node node_modules/.bin/vitest run ＋ git checkout -- 还原",
+      "evidence": "① 删 access.level 条件（spec A-J4-1）⇒ exit 1，4 failed：B-J1-1/B-J1-4 条件序与长度、B-J1-5 value 断言、**B-J1-6 private 不返（安全属性直接抓到）**。② **变异 X**（删 beforeAll 赋值、保留新断言）⇒ exit 1，**5 failed**，5 条全为 `AssertionError: expected undefined to be type of 'function'`（与 CTO 记录逐字一致）。③ **变异 Y**（删赋值 ＋ 恢复早退）⇒ exit 0，**12 passed 全绿** —— 独立复现「静默假绿」洞，佐证 CTO 将 A-J4-2 改写为「变异 X 红、变异 Y 绿（记录）」的裁定正确。全部还原后 `git diff 346c4f6d4` = 0 件，3 件合跑 40 passed exit 0。另做**变异 M3（白名单加 private）** ⇒ exit 1，B-J1-5（not.toContain('private')）＋ B-J1-6（private 泄漏）双红 ⇒ 规格 §7 红线「不加宽」有牙。"
+    },
+    {
+      "id": "C7",
+      "title": "CI 双绿 pending=0；fp 现算一致",
+      "result": "pass",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/346c4f6d4/status ；check-merge-conditions.sh --pr 1168 --base main --diff-fingerprint",
+      "evidence": "CI state=success total_count=2：local-gates/gates(push)=success ＋ local-gates/gates(pull_request)=success ⇒ pending=0。fp 现算 6aabc8279a4d3ab5690f21ec013608883b065ff7729ffd1237f4a58918c0a82c。checker 基线（回执前）：①=ok ②=ok（0 处重叠，#1171 已合）③=no(缺回执) ④=ok。"
+    },
+    {
+      "id": "C8",
+      "title": "claims 并集保留（#1171 侧 ＋ #1167 侧同存），writeset 零增删",
+      "result": "pass",
+      "cmd": "grep -c '#1167 补丁A'/'#1169（P1 修复' ；对比 base 与 head 的 writeset 块（awk 抽取后 diff）",
+      "evidence": "#1167 注释块 2 处（头注释依据 ＋ note 尾段）、#1169 注释块 1 处 —— 两侧同存，rebase 未丢任一侧。writeset 条目数 base main=68 / head=68，两块 `diff` 结果 **IDENTICAL**（无新增、无删除、无重排）⇒ 与 CTO 条件「claims 纯追加、两侧同保、writeset 零增删」一致。"
+    },
+    {
+      "id": "C9",
+      "title": "探针基线两树同值（非本批引入）",
+      "result": "pass",
+      "cmd": "node tsx scripts/control-tower/probe-{role-config,knowledge-scope}.ts --all（HEAD 与 base 各一次，捕获真实退出码）",
+      "evidence": "HEAD 346c4f6d4：probe-role-config exit=1 RESULT=FAIL；probe-knowledge-scope exit=2 RESULT=NOT_IMPLEMENTED。BASE 2e23ddbf7：同两条逐字相同（1/FAIL、2/NOT_IMPLEMENTED）⇒ 无回归。🔴 分母口径：这两条按三态退出码**不算 PASS**（PR 正文已如实自报），本回执只证「两树同值＝非本批引入」，不将其计入绿。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "src/init/role-pack-knowledge-filter.ts:161-164（新增注释）",
+      "what": "注释称「⚠️ 形态约束（不是风格偏好）… `scripts/control-tower/check-quality-delta.py:421` 的 R4.4 启发式对行首 `value|secret|token:` 判「凭据读面返回明文」」——该归因对本文件**不成立**，两层都已核：(a) R4.4 所在 `scan_g4` 的调用点（check-quality-delta.py:899）限定 `p.endswith('.ts') and (p.startswith('src/routes/') or p.startswith('src/agent/'))`，`src/init/**` **根本不在扫描范围**；(b) 即便被扫，R4.4 还要求同文件命中 `res\\.json\\(|res\\.send\\(|reply\\.send\\(`，本文件该正则命中 **0**（行首 value: 命中 1）⇒ 也不会触发。结论：具名常量拆分**行为无害**（可读性更好），但注释断言的「硬外部约束」在此文件不成立（同样的注释在 `src/routes/knowledge-ask.ts` 成立）。建议下批把理由改成「可读性/与 HTTP 面对齐」或删除该段，避免后人据错误因果继续照抄。"
+    },
+    {
+      "severity": "info",
+      "where": "PR 号 vs 分支名",
+      "what": "承载 #1167 补丁A 的分支名为 `ct/1075-1167-access-level`、其 PR 号为 **#1168**；CTO 已在验收中「追认」该偏离（claims 解析与 CI 合并闸要求）。本回执按 PR#1168 复核。"
+    },
+    {
+      "severity": "info",
+      "where": "A-J4-2 判据与实测差异",
+      "what": "我独立复现：变异 Y（删赋值＋恢复早退）**12 passed 全绿**，变异 X（删赋值＋保留断言）**5 failed**。支持 CTO「接受执行方偏离、把 A-J4-2 改写为『变异 X 红、变异 Y 绿（记录）』、不回退实现」的裁定；原判据「恢复早退 ⇒ 红」确实与实测不符。建议规格侧尽快落文本（当前仍为旧表述）。"
+    },
+    {
+      "severity": "info",
+      "where": "本回执的我方局限",
+      "what": "我只做只读复核与 /tmp 隔离树变异，未改产品代码；未做跨进程 E2E、未覆盖 UI、未验历史数据回填（规格 §4 已列为另批）。另：首次调用探针时未按 `@input` 给 `--all/--case`，得到 `RESULT=ERROR` —— 那是**我的调用错误**，已按正确参数重跑，前次结果不采信。"
+    }
+  ],
+  "reviewer_note": "四条件③独立复核：PASS。核心结论：角色会话知识过滤面新增 `access.level IN ['public','team']`（最严，无 private/owner 例外），条件序为 sensitivity→access.level→pkb_domain→deny，且经 matchFilter 的 `access.`→列名映射实证该维真参与过滤（非装饰）；真 SQLite 下 private 恒 0 行、public/team 返回，并有摘除条件即泄漏的承重反例。与 HTTP 面集合逐字相等、未更宽。5 处静默早退零残留且改为先断言后调用。三条变异（删条件／变异X／变异M3 放宽）均验红，变异 Y 全绿如实记录。CI 双绿 pending=0，claims 并集与 writeset 68/68 零变。唯一 warn 为注释过度归因（行为无害）。本回执不代替 K3 终审。"
+}

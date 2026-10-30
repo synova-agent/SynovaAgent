@@ -24,7 +24,7 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=197   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# FACE-TOTAL=204   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #   2026-10-26 显式上调 173→197（CTO·裁 421）：P1–P12 期间新增密封测试（swallow-ratchet／契约测试接入等）
 #   使 scan=197、余量 24 > SLACK-CAP=10 ⇒ 按脚本要求**显式**登记全部现有夹具（slack=0，此后净删 1 个即红）。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
@@ -38,6 +38,8 @@
 #     ① FACE-TOTAL(173) ≤ SC   ② SC − 173 ≤ SLACK-CAP(10)   ③ 余量取 3~5（CI merge-ref 与本地 scan 差 1~2）
 #   复算命令: bash scripts/control-tower/sealed-tests.sh --scan | wc -l
 # 2026-10-19 #620（CTO 裁定）: FACE-TOTAL 151 → **173**（scan=177；slack=4，落 3~5）；
+# 2026-10-30 #1158/U2: FACE-TOTAL 197 → **204**（scan=209；余量 5，落 3~5）；依据: 主树自 197 后
+#   新增夹具未上调下界 ⇒ 撞 SLACK-CAP=10；本批同 diff 显式留痕（禁自动上调）。
 #   SLACK-CAP=10 与 QUARANTINE-TOTAL=77 **不动**。放宽 CAP 会废掉净删除检测 ⇒ 正确动作是显式上调下界（更严）。
 # QUARANTINE-TOTAL=77
 # SLACK-CAP=10
@@ -93,7 +95,6 @@ tests/control-tower/backup-db.test.sh
 tests/control-tower/ban-stash.test.sh
 tests/control-tower/baseline-check.test.sh
 tests/control-tower/baseline-exemption.test.sh
-tests/control-tower/brief-parseable.test.sh
 tests/control-tower/brief-template-decision.test.sh
 tests/control-tower/brief_parser.test.sh
 tests/control-tower/bypass-ledger.test.sh

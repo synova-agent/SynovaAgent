@@ -14,7 +14,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   T1 OK                lag=0、ancestor=true         ⇒ exit 0
 #   T2 LAG               远端领先 2                   ⇒ exit 1、lag=2
 #   T3 DEGRADED          Gitea 远端读不到             ⇒ exit 2（禁当"差=0"）
-#   T4 🔴 改坏必红       本地 local-main 陈旧（naive 算得 0 假绿）⇒ 必须 exit 1、lag=2
+#   T4 🔴 改坏必红       本地 main 陈旧（naive 算得 0 假绿）⇒ 必须 exit 1、lag=2
 #   T5 FORK              GitHub main 非祖先           ⇒ exit 1、verdict=FORK
 #   T6 JSON 落固定路径   schema/字段齐、degraded=false
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -40,7 +40,7 @@ git init -q "$TMP/work"
 g "$TMP/work" config user.email t@t; g "$TMP/work" config user.name t
 echo a > "$TMP/work/a.txt"; g "$TMP/work" add -A; g "$TMP/work" commit -qm A
 A="$(g "$TMP/work" rev-parse HEAD)"
-g "$TMP/work" push -q "$TMP/gitea.git" "HEAD:refs/heads/local-main"
+g "$TMP/work" push -q "$TMP/gitea.git" "HEAD:refs/heads/main"
 g "$TMP/work" push -q "$TMP/mirror.git" "HEAD:refs/heads/main"
 
 echo "T0 --help"
@@ -59,7 +59,7 @@ echo "T2 LAG（远端领先 2）"
 echo b > "$TMP/work/b.txt"; g "$TMP/work" add -A; g "$TMP/work" commit -qm B
 echo c > "$TMP/work/c.txt"; g "$TMP/work" add -A; g "$TMP/work" commit -qm C
 C="$(g "$TMP/work" rev-parse HEAD)"
-g "$TMP/work" push -q "$TMP/gitea.git" "HEAD:refs/heads/local-main"
+g "$TMP/work" push -q "$TMP/gitea.git" "HEAD:refs/heads/main"
 OUT2="$TMP/out2.json"
 SYNO_SYNC_REPO="$TMP/work" SYNO_SYNC_GITEA_URL="$TMP/gitea.git" \
 SYNO_SYNC_GITHUB_SHA="$A" SYNO_DUAL_REPO_OUT="$OUT2" \
@@ -74,11 +74,13 @@ SYNO_SYNC_GITHUB_SHA="$A" SYNO_DUAL_REPO_OUT="$OUT3" \
 assert_has "JSON degraded=true" '"degraded": true' "$OUT3"
 assert_has "JSON reason=gitea_unreadable" '"reason": "gitea_unreadable"' "$OUT3"
 
-echo "T4 🔴 改坏必红：本地 local-main 陈旧 ⇒ naive 算得 0（假绿），探针必须红"
-# 造"本地指针落后"现场：本地分支 local-main 停在 A，而 Gitea 远端已是 C
-g "$TMP/work" branch -f local-main "$A"
-NAIVE="$(g "$TMP/work" rev-list --count "$A..local-main")"
-echo "     原始输出（陷阱证据）: git rev-list --count <gh_main=$A>..local-main = $NAIVE"
+echo "T4 🔴 改坏必红：本地 main 陈旧 ⇒ naive 算得 0（假绿），探针必须红"
+# 造"本地指针落后"现场：本地分支 main 停在 A，而 Gitea 远端已是 C
+# 夹具默认分支即 main 且正被 checkout ⇒ 先 detached 再强制回退（否则 git 拒绝 force-update 已检出分支）
+g "$TMP/work" checkout -q --detach
+g "$TMP/work" branch -f main "$A"
+NAIVE="$(g "$TMP/work" rev-list --count "$A..main")"
+echo "     原始输出（陷阱证据）: git rev-list --count <gh_main=$A>..main = $NAIVE"
 OUT4="$TMP/out4.json"
 SYNO_SYNC_REPO="$TMP/work" SYNO_SYNC_GITEA_URL="$TMP/gitea.git" \
 SYNO_SYNC_GITHUB_SHA="$A" SYNO_DUAL_REPO_OUT="$OUT4" \
@@ -86,7 +88,7 @@ SYNO_SYNC_GITHUB_SHA="$A" SYNO_DUAL_REPO_OUT="$OUT4" \
 if [ "$NAIVE" = "0" ] && [ "$RC4" = "1" ]; then
   ok "陷阱被自己拦掉（naive=0 但探针 rc=1）"
 else
-  bad "陷阱未被拦（naive=$NAIVE 探针 rc=$RC4）"; cat "$TMP/log4"
+  bad "陷阱未被拦（naive=$NAIVE 探针 rc=${RC4}）"; cat "$TMP/log4"
 fi
 assert_has "探针 JSON lag=2（不是 0）" '"lag": 2' "$OUT4"
 echo "     探针原始输出: $(tail -1 "$TMP/log4")"

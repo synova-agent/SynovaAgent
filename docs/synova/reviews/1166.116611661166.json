@@ -1,0 +1,114 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1166,
+  "patch_fingerprint": "sha256:7a6fcf763221afb73cc83dfda5bdf9645f2ea7ed97430ab6b2db72f207acec6b",
+  "author": "win-push",
+  "reviewer": "code-forensics",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "base_ref": "main",
+  "base_tip": "f6581aa3becdb0a1f34d500a3401f0ace4779107",
+  "head": "fa808ba9d383b01b9126c25d27f32cf90ee9947e",
+  "merge_base": "f6581aa3becdb0a1f34d500a3401f0ace4779107",
+  "diff_files": 12,
+  "issued_at": "2026-10-30T03:58:35+08:00",
+  "tool": "DeepSeek Harness 独立自验成员（code-forensics，fresh 上下文、未参与实现、非编码成员）；产品工作树只读，四项变异在 /tmp/e1-verify 副本执行，最终 head 在 /tmp/e1-verify-final 独立复跑；证据全部为命令原始输出，落 /tmp/e1-analysis/verify-report.md、final-baseline.out 与 mutations/。",
+  "filename_note": "按 claim 预列名 docs/synova/reviews/1166.116611661166.json 落盘（PR 1166 前缀 + 12 位 [0-9a-f] 占位名，实测命中 check-merge-conditions.sh R1 回退正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$；R3 按回执内 patch_fingerprint 判真伪，真指纹 fp12=7a6fcf763221）。",
+  "checks": [
+    {
+      "id": "C1 基线类型面 tsc",
+      "cmd": "cd /tmp/e1-verify-final && /Users/wane/.nvm/versions/node/v22.23.2/bin/node node_modules/typescript/bin/tsc --noEmit; echo TSC_EXIT=$?",
+      "result": "pass",
+      "evidence": "TSC_EXIT=0（无输出）。验证树=/tmp/e1-verify-final（rsync -a --exclude node_modules 自 /private/tmp/e1-eb3b91755@fa808ba9d，node_modules symlink 回 /Users/wane/SynovaAgent/node_modules）；产品树 git status --porcelain 空。"
+    },
+    {
+      "id": "C2 基线目标测试 16 文件",
+      "cmd": "cd /tmp/e1-verify-final && node node_modules/vitest/vitest.mjs run tests/store/session-store-expected.test.ts tests/store/session-tx-atomic.test.ts tests/store/session-seq-concurrency.test.ts tests/store/session-event-log.test.ts tests/store/session-events-limit.test.ts tests/store/session-store.test.ts tests/store/session-projection.test.ts tests/orchestrator/session-manager-eventlog.test.ts tests/agent/diagnosis-session-events.test.ts tests/agent/tool-result-event.test.ts tests/agent/tool-cancel-timeout.test.ts tests/agent/tool-cancel.test.ts tests/agent/tool-loop-executor-resilience.integration.test.ts tests/agent/tool-loop-tool-pairing.integration.test.ts tests/contract/time-injection.test.ts tests/agent/tool-args-validation.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 16 passed (16)；Tests 146 passed (146)；Duration 3.88s。新增 tests/store/session-store-expected.test.ts 6 用例（逐项对 tests/expected/session/session-store.expected.json 断言）；其余同前：time-injection 10、session-event-log 30、tool-result-event 8、session-tx-atomic 7、tool-args-validation 13、tool-cancel-timeout 13、tool-loop-executor-resilience 4、session-manager-eventlog 8、session-seq-concurrency 7（T2a 2000/2000/0 degraded）、diagnosis-session-events 5、session-projection 7、session-store 3、session-events-limit 8、tool-cancel 12、tool-loop-tool-pairing 5。无 .skip/.only/.todo。"
+    },
+    {
+      "id": "C3 改坏必红 M1（删事务包裹）",
+      "cmd": "bash /tmp/e1-analysis/run-mutations.sh（M1 段；变异只在 /tmp/e1-verify，产品树只读）",
+      "result": "pass",
+      "evidence": "改前 EXIT=0（Tests 7 passed (7)）→ 改坏（isSessionTxEnabled()→false，走三条独立语句旧路径）EXIT=1：FAIL T1a `AssertionError: expected 1 to be +0`、FAIL T1b 同、FAIL T1e `expected 2 to be 1`（Tests 3 failed | 4 passed）→ 还原 EXIT=0（7 passed）。`git diff --stat e90db02a4 fa808ba9d -- src` 空 ⇒ 最终 head 的 src 与变异基线逐字节相同，结论对 fa808ba9d 成立；还原后与产品树 diff -q IDENTICAL。"
+    },
+    {
+      "id": "C4 改坏必红 M2（原子 seq 改回读后写）",
+      "cmd": "bash /tmp/e1-analysis/run-mutations.sh（M2 段；isSessionSeqAtomicEnabled()→false）",
+      "result": "pass",
+      "evidence": "改坏后 FAIL `T2a 20 子进程 ×100 写同一会话 ⇒ 2000 条、seq 1..2000 连续、0 degraded`，`AssertionError: expected 1969 to be 2000`；同轮日志 `{\"code\":\"SESSION_SEQ_GAP\",\"expected\":2,\"got\":3,\"degraded\":true,...}`（Tests 1 failed | 6 passed）→ 还原 EXIT=0（7 passed）；src 在最终 head 零改动（同 C3 证明）。"
+    },
+    {
+      "id": "C5 改坏必红 M3a/M3b（tool_result 写入 / 无 content 跳过）",
+      "cmd": "bash /tmp/e1-analysis/run-mutations.sh（M3a、M3b 段）",
+      "result": "pass",
+      "evidence": "M3a 删 tool_result 写入（appendToolResultEvent 首行 return）⇒ FAIL T3a `AssertionError: expected +0 to be 1`（Tests 1 failed | 7 skipped）；M3b 删 session-store.ts:949 无 content 跳过 ⇒ FAIL T3b `expected [ { id: 1, …(4) }, { id: 2, …(4) } ] to deeply equal [ { id: 1, …(4) } ]`；还原后各 `1 passed | 7 skipped`。"
+    },
+    {
+      "id": "C6 改坏必红 M4a/M4b（timeoutMs / 循环取消）",
+      "cmd": "bash /tmp/e1-analysis/run-mutations.sh（M4a、M4b 段）",
+      "result": "pass",
+      "evidence": "M4a 删 query_ontology `timeoutMs: 35000` ⇒ FAIL T4a `AssertionError: expected undefined to be 35000`（9 passed | 4 skipped）；M4b 删 3 处逐字循环 `if (sig?.aborted)` ⇒ FAIL T4c `expected 60 to be 5`、T4d `expected 62 to be 5`、T4e `expected 60 to be 5`（3 failed | 10 skipped）；还原后分别 9 passed | 4 skipped、3 passed | 10 skipped。"
+    },
+    {
+      "id": "C7 C5 per-turn 闩锁 + 路由零改可见",
+      "cmd": "cd /tmp/e1-verify-final && node node_modules/vitest/vitest.mjs run tests/store/session-tx-atomic.test.ts -t \"T1e|T1f|T1g\"；grep -n \"lastDegraded\" /private/tmp/e1-eb3b91755/src/routes/conversations.ts；git -C /private/tmp/e1-eb3b91755 diff --stat f6581aa3..fa808ba9d -- src/routes src/cli.ts src/l1 src/services src/orchestrator",
+      "result": "pass",
+      "evidence": "T1e/T1f/T1g：Tests 3 passed | 4 skipped (7)；`src/store/session-store.ts:647:        if (role === 'user') this.lastDegraded = false;`（assistant/system 成功不清闩）；路由既有读取点 `src/routes/conversations.ts:920:    if (store.lastDegraded) {`（base tip 同行号=920，零改动）；`git diff --stat` 空 ⇒ 零改路由即可见 STORE_DEGRADED。注：task-6 报告里的 757 是旧锚 eb3b91755 的行号，基线前移到 f6581aa3 后为 920（同文件同语句）。"
+    },
+    {
+      "id": "C8 C6 注释改正 + 无 content 跳过 + parity",
+      "cmd": "sed -n '941,949p' /private/tmp/e1-eb3b91755/src/store/session-store.ts；node node_modules/vitest/vitest.mjs run tests/agent/tool-result-event.test.ts -t \"T3b\"",
+      "result": "pass",
+      "evidence": "`:943-945` 注释已改正（『`message` 与 `tool_result` 是 surface；跳过的是 system/diagnosis_*』）；`:949:        if (ev.eventType === 'tool_result' && typeof payload.content !== 'string') continue;`。T3b 以写前/写后快照断言 `expect(derivedAfter).toEqual(derivedBefore)` 且前置 `expect(derivedBefore.length).toBe(1)`（排除空==空假绿）；基线/还原后 `1 passed`，删跳过即红（见 C5）。"
+    },
+    {
+      "id": "C9 DSH 隔离判据 + 判别力正控",
+      "cmd": "cd /private/tmp/e1-eb3b91755 && git grep -nE \"^\\s*(import|export)[^;]*from '@deepseek-ai'\" ; git grep -nE \"^[[:space:]]*(import|export)[^;]*from '@deepseek-ai'\" ; git grep --untracked -nE \"^[[:space:]]*(import|export)[^;]*from '@deepseek-ai'\" ; grep -c \"@deepseek-ai\" package.json",
+      "result": "pass",
+      "evidence": "@新 head fa808ba9d：三条 git grep 均 EXIT=1（0 行，含 --untracked）；package.json 计数=0；限定 src/packages 同式=0；基线注释提及 3 处（允许）。正控（/tmp/e1-analysis/iso-probe/probe.ts）：裁定命令命中 1 行（缩进行盲区实测复现）、POSIX 超集 2 行、强化式 `['\\\"]@deepseek-ai` 3 行 ⇒ 命令非盲。强化式全仓仅 1 处 docs 研究文档引文（非代码，见 findings[1]）。"
+    },
+    {
+      "id": "C10 时种棘轮计数不变",
+      "cmd": "grep -n \"tool-loop-executor\\|session-store\" /private/tmp/e1-eb3b91755/tests/contract/time-injection.test.ts；node node_modules/vitest/vitest.mjs run tests/contract/time-injection.test.ts",
+      "result": "pass",
+      "evidence": "@新 head 冻结表未变：`116:  'src/agent/tool-loop-executor.ts': [4, 4],`、`268:  'src/store/session-store.ts': [1, 5],`；16 文件基线中 `tests/contract/time-injection.test.ts (10 tests)` 绿（棘轮用例绿＝计数未被本批改动）。"
+    },
+    {
+      "id": "C11 C8 DSH 64 条引文校验可复跑",
+      "cmd": "/Users/wane/.nvm/versions/node/v22.23.2/bin/node /tmp/e1-analysis/verify-quotes.mjs",
+      "result": "pass",
+      "evidence": "EXIT=0；末行 `QUOTES-CHECK total=64 fail=0`；SUMMARY `anchors=58 quotes=64 exact=61 sparse=2 multi=1 fail=0`（输出 /tmp/e1-analysis/verify-quotes.rerun2.out；脚本无网络、无随机）。"
+    },
+    {
+      "id": "C12 PR 绑定 + 写集纪律（12 件）",
+      "cmd": "git diff --name-only f6581aa3becdb0a1f34d500a3401f0ace4779107 fa808ba9d383b01b9126c25d27f32cf90ee9947e；git merge-base fa808ba9d383b01b9126c25d27f32cf90ee9947e f6581aa3becdb0a1f34d500a3401f0ace4779107；git ls-remote gitea refs/heads/main；git diff --no-color -M --full-index --binary <mb> <head> -- . ':(exclude)docs/synova/reviews/**' | sha256",
+      "result": "pass",
+      "evidence": "diff 恰 12 件：.claude/claims/1165.yaml、src/store/session-store.ts、src/agent/tool-loop-executor.ts、src/agent/builtin-tools.ts、tests/store/session-tx-atomic.test.ts、tests/store/session-seq-concurrency.test.ts、tests/store/session-event-log.test.ts、tests/store/fixtures/seq-writer.ts、tests/store/session-store-expected.test.ts、tests/expected/session/session-store.expected.json、tests/agent/tool-result-event.test.ts、tests/agent/tool-cancel-timeout.test.ts；12/12 全在 claim writeset（13 条，含回执路径 `docs/synova/reviews/1166.116611661166.json`），missing=[]；越界面逐面 changed=0（src/routes|init、packages、scripts、.gitea、electron-renderer、src/cli.ts、src/l1、src/services、src/orchestrator）。merge-base=`f6581aa3…`＝base tip；`git ls-remote refs/heads/main`=`f6581aa3…`。按规格 §2 公式手动复算 fp=`7a6fcf763221afb73cc83dfda5bdf9645f2ea7ed97430ab6b2db72f207acec6b`（diff 130,502 B），与回执逐字符相同；官方工具 `--diff-fingerprint` 需远端 PR head 前进到 fa808ba9d 后才输出同值（当前远端 refs/pull/1166/head 仍=e90db02a4，故仍显示旧 fp 9eda02f9…——推送后复跑即可对齐）。"
+    },
+    {
+      "id": "expected-asset-obligation",
+      "cmd": "cd /private/tmp/e1-eb3b91755 && python3 scripts/control-tower/check-test-obligations.py --base gitea/main",
+      "result": "pass",
+      "evidence": "EXIT=0；原始输出两行：`ℹ️  base=gitea/main mb=f6581aa3becd head=fa808ba9d383 manifest=tests/contract/triviality-manifest.yaml baseline=470 changes=12 src_changes=3` / `modules=17 legacy=470 untriaged=0` / 末行 `TEST-OBLIGATIONS: PASS changes=12 src_changes=3 base=f6581aa3becd`。新增资产 tests/expected/session/session-store.expected.json（schema=synova-expected/v1，35 行）＋ tests/store/session-store-expected.test.ts（144 行 / 6 用例，逐项读取资产并断言：成功/降级结果与行数、seq 连续、tool_result log-only delta、cap 拒绝三态）。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "tests/agent/tool-loop-tool-pairing.integration.test.ts:218",
+      "what": "既存用例每次运行都会回写 git 跟踪的证据文件 docs/synova/product-lines/evidence/D819-capture-20260919.json（唯一差异 captured_date）。本次自验只在 /tmp 副本跑，产品树该文件仍 clean；提交前若在树内跑目标集会新增 1 处脏文件，勿误提交（建议 PR 前置检查 git status 不含 docs/synova/product-lines/evidence/）。"
+    },
+    {
+      "severity": "warn",
+      "where": "规格 §5 判据 ① / scripts/control-tower/check-merge-conditions.sh R1 口径",
+      "what": "DSH 隔离判据字面命令 `^\\s*(import|export)[^;]*from '@deepseek-ai'` 有两处盲区：① 缩进（POSIX ERE 的 \\s 非空白类）② 结尾字面单引号使 `from '@deepseek-ai/sub'`（子路径）不命中。已用 POSIX 超集＋强化式（两种引号＋子路径）复核：代码面 src/packages 0 命中；全仓仅 docs 研究文档 1 处引文。建议收口口径写明『判据范围＝代码面』并保留强化式命令。"
+    },
+    {
+      "severity": "warn",
+      "where": ".claude/claims/1165.yaml:14（回执预列路径）",
+      "what": "已按 PR 前缀占位解决：claim 回执路径已改为 docs/synova/reviews/1166.116611661166.json（PR 1166 前缀 + 12 位 [0-9a-f] 占位），实测命中 check-merge-conditions.sh R1 回退正则 ^docs/synova/reviews/<pr>\\.[0-9a-f]{12}\\.json$；R3 按回执内真指纹（fp12=7a6fcf763221）判定。交付前需 push 使远端 PR head 前进到 fa808ba9d（当前远端仍为 e90db02a4）。"
+    }
+  ]
+}

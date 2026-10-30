@@ -313,9 +313,123 @@ export class ToolRegistry {
   /** E2: Tool Profiles 角色限制 (null = 不限制) */
   private _role: string | null = null;
 
+  /**
+   * #1075 P2-4a: 岗位包工具白名单（**唯一执行门数据源**；`null` = 关闭包模式 = 既有行为）。
+   *
+   * 设计哲学: 白名单只**改数据**，不新增第二套判定分支 —— 复用既有 `_role` 拒绝分支的同一出口
+   *   （结构化 `ToolCallResult.error`），把"谁被授予"从角色档位换成岗位包声明（规格 §2.3-C）。
+   *
+   * 契约（铁律 47）:
+   * @input  经 `setAllowedTools()` 注入：`null` ⇒ 关闭包模式（恢复 profile 行为）；
+   *         `[]` ⇒ 全拒（权限待批/复核失败的 fail-closed）；`string[]` ⇒ 仅放行列出的工具名。
+   * @output `execute()` 命中白名单外 ⇒ `{ error: { name:'ToolPermissionError',
+   *         code:'TOOL_PERMISSION_DENIED', message } }`（handler 零调用）；`listTools()`／
+   *         `toOpenAITools()` 同步过滤（LLM 看不到未授权工具）。
+   * @degraded 拒绝 = 权限判定，不是降级：`log.warn({name, code:'TOOL_PERMISSION_DENIED'})` 留痕一次。
+   * @error  永不抛（与既有 execute 口径一致）。
+   * @not-here 不判 `enabled:false`／审批 scope／已注册性 —— 那是权限编译模块与引擎装配的职责；
+   *           本类只做"名单内放行、名单外拒绝"。
+   */
+  private _allowedTools: readonly string[] | null = null;
+
+  /**
+   * #1075 P2-4b-B: 系统工具提供者（`null` = 无系统工具）。见 `setSystemToolProvider()` 的契约。
+   * 🔴 与 `_allowedTools` **互相独立**：两个回滚开关（`SYNOVA_ROLE_PACK_TOOLS` / `SYNOVA_ROLE_KNOWLEDGE`）
+   *   各管一面，不得互相替代（规格 §2.2-D9）。
+   */
+  private _systemToolProvider: (() => ToolDefinition[]) | null = null;
+
   /** 设置当前角色 (影响工具可见性和权限) */
   setRole(role: string): void {
     this._role = role;
+  }
+
+  /**
+   * #1075 P2-4a: 设置岗位包工具白名单（`null` = 关闭包模式）。
+   *
+   * @input  names — `readonly string[]`（放行清单；空数组 = 全拒）或 `null`（关闭包模式）
+   * @output 无。**必须**清 `_cachedOpenAITools` —— 否则 `toOpenAITools()` 仍返回旧清单，
+   *         LLM 继续看到未授权工具（规格 §1.2-2 的硬判据）。
+   * @degraded 不适用（纯状态写入，无 IO）
+   * @error  永不抛
+   */
+  setAllowedTools(names: readonly string[] | null): void {
+    this._allowedTools = names === null ? null : [...names];
+    this._cachedOpenAITools = null;
+  }
+
+  /**
+   * #1075 P2-4b-B: **系统工具提供者**（`null` = 无系统工具 = 既有行为）。
+   *
+   * 为什么不是 `register()`（规格 §2.2-D1，CTO A 类裁定）:
+   *   · 系统工具**不属于**岗位包声明面 ⇒ 不受岗位白名单约束（P2-4a 的"声明∩已注册"语义保持纯净）；
+   *   · P2-4a 判据 `allToolNames() === 0`／"白名单编译只看已注册工具"依赖注册表语义 ⇒ 系统工具**不注册**，
+   *     否则会把 allowlist 编译搅成"系统工具也算已落地"。
+   *   ⇒ 系统工具只经本 provider 进入 **LLM 可见面**（`listTools()`／`toOpenAITools()`）与执行分发。
+   *
+   * 契约（铁律 47）:
+   * @input   provider — `() => ToolDefinition[]`：**每次求值**返回当前系统工具（可返回 `[]`）；
+   *          `null` ⇒ 卸载（无系统工具）。provider 闭包可捕获运行期状态（如会话过滤器），故不缓存结果。
+   * @output  无。**必须**清 `_cachedOpenAITools` —— 否则 `toOpenAITools()` 仍返回旧清单（同 setAllowedTools）。
+   * @degraded provider 求值抛错 ⇒ 视为"本次无系统工具"＋`log.warn`（不阻断既有工具；见 `systemTools()`）
+   * @error   永不抛
+   * @not-here 系统工具**不参与** `allToolNames()`／白名单编译 —— 两者只看 `register()` 的注册项。
+   */
+  setSystemToolProvider(provider: (() => ToolDefinition[]) | null): void {
+    this._systemToolProvider = provider;
+    this._cachedOpenAITools = null;
+  }
+
+  /**
+   * #1075 P2-4b-B: 求值当前系统工具（provider 缺失 ⇒ `[]`；求值抛错 ⇒ `[]` ＋ warn）。
+   *
+   * @input  无
+   * @output 系统工具数组（**不缓存**：闭包读运行期状态，缓存会让撤销/换岗不生效）
+   * @degraded provider 抛错 ⇒ `[]` ＋ `log.warn({code:'SYSTEM_TOOL_PROVIDER_FAILED', degraded:true})`
+   * @error  永不抛（execute 的"永不抛"契约由本方法兜住）
+   */
+  private systemTools(): ToolDefinition[] {
+    const provider = this._systemToolProvider;
+    if (provider === null) return [];
+    try {
+      const tools = provider();
+      return Array.isArray(tools) ? tools : [];
+    } catch (err: unknown) {
+      log.warn(
+        {
+          err: err instanceof Error ? err.message : String(err),
+          code: 'SYSTEM_TOOL_PROVIDER_FAILED',
+          degraded: true,
+        },
+        '系统工具 provider 求值失败 — 本次视为无系统工具（既有工具不受影响）',
+      );
+      return [];
+    }
+  }
+
+  /**
+   * #1075 P2-4b-B: 取系统工具中的同名工具（`execute()` 的第一查找段）。
+   *
+   * @input   name — 工具名
+   * @output 命中 ⇒ 该 ToolDefinition；未命中 ⇒ undefined（调用方回退既有注册/白名单分支）
+   * @degraded 见 `systemTools()`
+   * @error   永不抛
+   */
+  private findSystemTool(name: string): ToolDefinition | undefined {
+    return this.systemTools().find((tool) => tool.name === name);
+  }
+
+  /**
+   * #1075 P2-4a: 工具注册原始清单（**不受白名单／角色档位过滤**）。
+   *
+   * 用途：权限编译的 `knownTools` 注入源。🔴 不得用 `listTools()` 代替 —— 后者已被白名单过滤，
+   *   二次解析会把"声明且已注册、但上一轮未被放行"的工具误判为未落地（规格 §2.3-B.5）。
+   * @output 工具名数组（注册顺序；只读快照，调用方可安全持有）
+   * @degraded 不适用
+   * @error  永不抛
+   */
+  allToolNames(): readonly string[] {
+    return [...this.tools.keys()];
   }
 
   /** Bind to ConnectorRegistry for 'connector' mode tools (Slice 4.1) */
@@ -347,6 +461,20 @@ export class ToolRegistry {
       const profile = getProfileForRole(this._role);
       tools = tools.filter(t => profile.allowedTools.includes('*') || profile.allowedTools.includes(t.name));
     }
+    // #1075 P2-4a: 岗位包白名单过滤（在 profile 过滤**之外**再折一层；空名单 ⇒ []）
+    if (this._allowedTools !== null) {
+      const allowed = new Set(this._allowedTools);
+      tools = tools.filter(t => allowed.has(t.name));
+    }
+    // #1075 P2-4b-B: 系统工具（provider）**不受上面两层过滤** —— 它们不在岗位声明面内，
+    //   可见性由 provider 自身（引擎按会话状态注入/卸载）决定。同名去重：注册表优先（守既有语义）。
+    const system = this.systemTools();
+    if (system.length > 0) {
+      const registered = new Set(tools.map(t => t.name));
+      const extra = system.filter(t => !registered.has(t.name));
+      // 合并后整体按 name 排序（保持既有"listTools 排序后"语义，判据按排序后断言）
+      tools = [...tools, ...extra].sort((a, b) => a.name.localeCompare(b.name));
+    }
     return tools;
   }
 
@@ -376,16 +504,34 @@ export class ToolRegistry {
   async execute(name: string, params: Record<string, unknown>, opts?: ToolExecOptions): Promise<ToolCallResult> {
     // #915 Q-5: 回滚开关单一谓词（关闭 ⇒ signal 视同未传，回旧行为）
     const signal = isToolAbortEnabled() ? opts?.signal : undefined;
-    // E2: Tool Profiles — 检查当前角色是否有权限执行此工具
-    if (this._role) {
-      const profile = getProfileForRole(this._role);
-      if (!profile.allowedTools.includes('*') && !profile.allowedTools.includes(name)) {
-        log.warn({ name, role: this._role }, '工具权限被拒绝');
-        return { error: `权限不足: 当前角色不允许执行 "${name}"` };
+    // #1075 P2-4b-B（D9 执行顺序）: **先查找工具** —— 系统工具（provider）优先命中；
+    //   命中 ⇒ **跳过**岗位白名单与角色档位两道门（它们只管"岗位声明面内的工具"），
+    //   直接走下面的入参校验→分发。未命中 ⇒ 原样进入既有 allowlist→role→未知工具 分支。
+    const systemTool = this.findSystemTool(name);
+    if (systemTool === undefined) {
+      // #1075 P2-4a: 岗位包白名单（**先于**既有 _role 分支；`null` = 关闭包模式 = 回旧行为）
+      // 拒绝用结构化 error（既有 ToolCallResult.error 形态，不改类型）；handler 零调用。
+      if (this._allowedTools !== null && !this._allowedTools.includes(name)) {
+        log.warn({ name, code: 'TOOL_PERMISSION_DENIED' }, '岗位工具白名单拒绝 — 未授权工具不进 handler');
+        return {
+          error: {
+            name: 'ToolPermissionError',
+            code: 'TOOL_PERMISSION_DENIED',
+            message: `权限不足: 该岗位未被授予工具 "${name}"（或权限待批）`,
+          },
+        };
+      }
+      // E2: Tool Profiles — 检查当前角色是否有权限执行此工具
+      if (this._role) {
+        const profile = getProfileForRole(this._role);
+        if (!profile.allowedTools.includes('*') && !profile.allowedTools.includes(name)) {
+          log.warn({ name, role: this._role }, '工具权限被拒绝');
+          return { error: `权限不足: 当前角色不允许执行 "${name}"` };
+        }
       }
     }
 
-    const tool = this.tools.get(name);
+    const tool = systemTool ?? this.tools.get(name);
     if (!tool) {
       log.warn({ name }, '未知工具调用');
       return { error: `未知工具: ${name}` };

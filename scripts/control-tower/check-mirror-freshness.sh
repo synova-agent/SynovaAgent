@@ -8,16 +8,16 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 设计哲学（一句）: **"通过"必须绑定一个可指名的新鲜提交；镜象落后时，任何绿都是
 #                    旧树绿 —— 本器只回答"这棵树是不是最新的"，不回答"代码好不好"。**
 #
-# 背景（2026-10-28 实测，非转述）:
-#   `git ls-remote origin refs/heads/main` = 1ca0d4dfc（GitHub 镜像最后同步点）
-#   `git rev-parse gitea/local-main`       = a32efef5b
-#   `git rev-list --count 1ca0d4dfc..a32efef5b` = 117
-#   ⇒ GitHub 侧任何"已通过门禁"结论都对应 117 提交之前的树。
+# 背景（2026-10-29 实测，非转述；trunk 名已于 #1117 统一为 main）:
+#   `git ls-remote origin refs/heads/main` = 0569f2d4b（GitHub 镜像最后同步点，live）
+#   `git rev-parse gitea/main`             = 94ed76b2d（Gitea trunk）
+#   ⇒ 两者不在同一提交 ⇒ GitHub 侧任何"已通过门禁"结论都可能对应旧树。
 #
 # 契约（铁律 47）:
 #   @usage  bash scripts/control-tower/check-mirror-freshness.sh \\
 #             [--canonical <ref>] [--mirror-url <url> | --mirror-ref <ref>] [--json] [--root <dir>]
-#   @input  git 仓库（默认 -C <root>）；canonical 默认 `gitea/local-main`；
+#   @input  git 仓库（默认 -C <root>）；canonical 默认 `gitea/${SYNO_TRUNK_REF:-main}`（缺省 gitea/main；
+#           --canonical 显式注入优先）。SYNO_TRUNK_REF = trunk 名（缺省 main；#1117 唯一单源）；
 #           镜象二选一：--mirror-url（**live**，git ls-remote；默认 `origin` 的 URL）
 #                        / --mirror-ref（**离线**，本地 tracking ref，可能过期）
 #   @output stdout: 逐行人读结论 ＋ 末行 `结果: <STATUS> behind=<N> ahead=<N>`；
@@ -37,13 +37,13 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 已知限制（Known Limitations）:
 #   1. `--mirror-ref` 模式只能证明"我们上次看到的镜象"，tracking ref 未 fetch 时**可能过期**
 #      ⇒ 结论行显式标注 "(本地 tracking ref，可能过期)"，周报应优先用 --mirror-url。
-#   2. 只比 main 一条线；其它分支/标签不在本器判据内（W5 只要求 main）。
+#   2. 只比 trunk 一条线（缺省 main）；其它分支/标签不在本器判据内（W5 只要求 trunk）。
 #   3. 不做时间性判断（"落后多少天"）；只给提交数，避免把时钟当判据。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
 ROOT=""
-CANONICAL="gitea/local-main"
+CANONICAL="gitea/${SYNO_TRUNK_REF:-main}"
 MIRROR_URL=""
 MIRROR_REF=""
 MIRROR_REF_GIVEN=0
@@ -77,7 +77,7 @@ degraded() { # <code> <reason>
     printf '{"time":"%s","component":"check-mirror-freshness","code":"%s","phase":"resolve","retryable":true,"reason":"%s"}\n' \
       "$now" "$code" "${reason//\"/\'}" >> "$DEG_LOG" 2>/dev/null || true   # swallow-ok: 降级日志不可写不得改变门禁结论
   else
-    echo "degraded: 降级日志目录不可建（$DEG_LOG）——已 stderr 提示，不静默" >&2
+    echo "degraded: 降级日志目录不可建（${DEG_LOG}）——已 stderr 提示，不静默" >&2
   fi
   exit 2
 }
@@ -94,15 +94,15 @@ if [ -n "$MIRROR_URL" ]; then
   MIRROR_DESC="$MIRROR_URL"
   LS_OUT="$(GIT_TERMINAL_PROMPT=0 git -C "$ROOT" ls-remote "$MIRROR_URL" refs/heads/main 2>/dev/null)"  # swallow-ok: 失败由 LS_RC 显式分支 degraded，不吞
   LS_RC=$?
-  [ "$LS_RC" -eq 0 ] || degraded E_MIRROR_UNREACHABLE "git ls-remote 失败（rc=$LS_RC）: $MIRROR_URL"
+  [ "$LS_RC" -eq 0 ] || degraded E_MIRROR_UNREACHABLE "git ls-remote 失败（rc=${LS_RC}）: $MIRROR_URL"
   MIRROR_SHA="$(printf '%s\n' "$LS_OUT" | awk 'NR==1{print $1}')"
   [ -n "$MIRROR_SHA" ] || degraded E_MIRROR_NO_MAIN "镜象无 refs/heads/main: $MIRROR_URL"
 else
   if [ "$MIRROR_REF_GIVEN" -eq 1 ]; then
-    MIRROR_DESC="$MIRROR_REF（本地 tracking ref，可能过期）"
+    MIRROR_DESC="${MIRROR_REF}（本地 tracking ref，可能过期）"
   else
     MIRROR_REF="origin/main"
-    MIRROR_DESC="$MIRROR_REF（本地 tracking ref，可能过期）"
+    MIRROR_DESC="${MIRROR_REF}（本地 tracking ref，可能过期）"
   fi
   MIRROR_SHA="$(git -C "$ROOT" rev-parse --verify --quiet "${MIRROR_REF}^{commit}" 2>/dev/null)"  # swallow-ok: 缺失由下一行显式 degraded exit 2
   [ -n "$MIRROR_SHA" ] || degraded E_MIRROR_UNREACHABLE "镜象 ref 不可解析: $MIRROR_REF"
@@ -110,10 +110,10 @@ fi
 
 # ── 判定 ─────────────────────────────────────────────────────────────────────
 # 🔴 前置：镜象提交对象必须在本仓可见，否则「落后 vs 分叉」不可分辨
-#    （ls-remote 只给 sha，不搬对象；典型 push 镜象的 sha 是 local-main 祖先 ⇒ 天然可见）
+#    （ls-remote 只给 sha，不搬对象；典型 push 镜象的 sha 是 trunk 祖先 ⇒ 天然可见）
 if [ "$MIRROR_SHA" != "$CANON_SHA" ]; then
   git -C "$ROOT" cat-file -e "${MIRROR_SHA}^{commit}" 2>/dev/null \
-    || degraded E_MIRROR_OBJECT_MISSING "镜象提交对象不在本仓（$MIRROR_SHA）—— 判不了落后/分叉，禁当通过；先 fetch 或改 --mirror-ref"
+    || degraded E_MIRROR_OBJECT_MISSING "镜象提交对象不在本仓（${MIRROR_SHA}）—— 判不了落后/分叉，禁当通过；先 fetch 或改 --mirror-ref"
 fi
 STATUS=""; BEHIND=0; AHEAD=0; EXIT_CODE=2
 if [ "$MIRROR_SHA" = "$CANON_SHA" ]; then  # @mutate-point: fresh

@@ -1,0 +1,18 @@
+# .claude/claims/1118.yaml — #1115 后续 · resolve-ci-base legacy 别名安全阀 ＋ 配对测试修正
+# #CRITERIA: D ｜ 架构层: 不属五层业务（治理脚本）
+# 声明载体 = 本件（writeset + done 两字段制）；Q1/Q2/Q3 的可读说明见
+# .claude/task-briefs/2026-10-28-1118-resolver-valve.md（同批）。
+# 定位: 补 #1115 缺口（别名安全阀 ＋ 配对测试），非重复；canonical 保持 gitea/main，方向不反。
+writeset:
+  - scripts/control-tower/resolve-ci-base.sh
+  - tests/control-tower/resolve-ci-base.test.sh
+  - gate-exemptions/2026-10-28-1118-resolver-valve.md
+  - .claude/task-briefs/2026-10-28-1118-resolver-valve.md
+  - .claude/claims/1118.yaml
+  - memory/notes/proposed/2026-10-28-1118-resolver-valve.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: bash scripts/control-tower/resolve-ci-base.sh
+  - verify: bash tests/control-tower/resolve-ci-base.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "#1118（#1115 后续，P0 收口）：resolve-ci-base.sh 拆 main 与 local-main 两臂，legacy 别名加 ④b 一致性阀（候选 refs/heads/local-main + refs/remotes/*/local-main 与 canonical gitea/main 比 SHA：相等放行／祖先容忍加告警／分叉或领先 exit 2），并修正 #1115 头注错字；配对测试修用例 3/4/5 断言到 gitea/main 并补 9 至 14b（含两条改坏即红）。不动 workflow 与 #1115 其它写集，不新增 --base 入参。"

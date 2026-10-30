@@ -9,7 +9,7 @@ name: local-gates
 on:
   push:
   pull_request:
-    branches: [ main, local-main ]
+    branches: [ main ]
   workflow_dispatch:
 jobs:
   gates:
@@ -94,7 +94,7 @@ jobs:
           #   受保护路径，必须有带理由、带裁定号、且由批准人提交的豁免。
           #   检查器契约（三态退出码 0/1/2）见 `scripts/control-tower/check-gate-protection.sh` 头部。
           #
-          # 🔴 BASE 解析链（spec §S1-e）：SYNO_BASE_REF → GITHUB_BASE_REF → gitea/local-main
+          # 🔴 BASE 解析链（#1117 §6.3）：SYNO_BASE_REF → GITHUB_BASE_REF → <唯一远端>/${SYNO_TRUNK_REF:-main}
           #   · 本步块内不写 GitHub 镜像远端的分支名（自证脚本 ⑪ 对本步块做 grep 硬判）；
           #     该镜像已断且落后 351+ commits（实测）⇒ 拿陈旧 base 算 diff 只会得到假红/假绿。
           #   · 仍不可解析时**不猜、不降级**：把 canonical 名交给检查器 ⇒ 它判 exit 2（fail loud）。
@@ -103,7 +103,7 @@ jobs:
           echo "①d base = $BASE"
           #
           # 🔴 语义澄清（spec §7 Known Limitations 5，禁写成「push 也拦了」）：
-          #   push 到 local-main 时 base == HEAD ⇒ diff 为空 ⇒ 本步只做清单完整性 ＋ pin；
+          #   push 到 main 时 base == HEAD ⇒ diff 为空 ⇒ 本步只做清单完整性 ＋ pin；
           #   真正拦截在 pull_request 腿（required status check `local-gates / gates (pull_request)`）。
           #
           # `|| exit $?` 原样保留三态（0 通过 / 1 真红 / 2 检查自身失败）—— 禁把三态折叠成单一退出码。
@@ -159,20 +159,22 @@ jobs:
       - name: ③ 增量测试（vitest --changed；只测改动面，避免全量摩擦）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
-          # CTO 2026-10-11：增量基线改用 local-main（与 D734 check-pr-budget.sh 同口径）——
-          #   origin/main = GitHub 旧 main（停 5a6591c4），拿它当基线会把 local-main 全部
-          #   diverge 提交的存量红算进本 PR（实测 141 tests failed，与本 PR 改动零相关）。
-          #   优先 origin/local-main（CI 内 origin=本机 Gitea，必存在），不存在时回退 origin/main。
+          # #1117：增量基线 = trunk（主树已改 main；基线名由 SYNO_TRUNK_REF 单源注入，缺省 main）——
+          #   不再取冻结分支名（旧口径把 trunk 历史重算进本 PR，实测 141 tests failed 与本 PR 零相关）。
+          #   CI 内 origin=本机 Gitea ⇒ 直接 origin/<TRUNK>；仍不可解析时**不猜、不降级**，回落
+          #   resolve-ci-base.sh（三态原样透传：它不可解析即 exit 2）。
           #   只改基线，不改测试判据/门禁组数。
-          CHANGED_BASE=origin/local-main
-          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          CHANGED_BASE="origin/${SYNO_TRUNK_REF:-main}"
+          if ! git rev-parse --verify -q "$CHANGED_BASE" >/dev/null 2>&1; then
+            CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          fi
           echo "增量基线 = $CHANGED_BASE"
           # 🔴 2026-10-11 创始人裁决②：**区分「纯文档合法空绿」与「有代码改动却空绿 = 异常」**
           #   病根（实测）：vitest --changed 在变更集为空/无测试命中时打印
           #     No test files found, exiting with code 0
           #   ⇒ 本步恒绿。本机日志实测**连续 33 个 job** 全是这一行 ⇒ 该步不提供任何信息。
           #   为什么不能"一律变红"：合并后分支态 HEAD 常已就是基线（实测 3 个 job 的 HEAD
-          #     vs local-main 变更集 = **0 文件**）⇒ 那种情况"无对象可测"是**对的**，变红即噪音。
+          #     vs main 变更集 = **0 文件**）⇒ 那种情况"无对象可测"是**对的**，变红即噪音。
           #   ⇒ 判据必须**分类**：先算变更集，再看它含不含代码面/测试面。
           set -o pipefail
           CHANGED_FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
@@ -190,11 +192,25 @@ jobs:
           #         判据升级为三条：① 有非 vitest 代码面改动 **且** 变更集里一个 vitest 测试都没动
           #         ⇒ 合法跳过（显式标注「不可测面」）；② 代码面含**被删除的** vitest 测试 ⇒ 异常（真丢测试）；
           #         ③ 其余有代码面却零测试 ⇒ 照旧异常。
-          N_VITEST="$(printf '%s' "$CHANGED_FILES" | grep -cE '\.(test|spec)\.(ts|tsx)$' || true)"
+          # 🔴 #1173（2026-10-30）：判据必须与 vitest.config 的 exclude **同源** —— CI 下 `tests/e2e/**`
+          #   **不进收集面**，故它不算「vitest 可收集」：
+          #   证据①（代码）：`vitest.config.ts:29-36` 的
+          #     `exclude: process.env.CI ? [ … 'tests/e2e/**', /* Needs LLM API */ … ] : []`
+          #     ⇒ CI=true 时该目录整块不被收集；实测 `CI=true vitest run tests/e2e/…e2e.test.ts`
+          #       ⇒ `No test files found, exiting with code 1`（**连显式路径也跑不了**）。
+          #   证据②（本仓实测）：把 `'tests/e2e/**'` 移出 CI exclude 后同命令 ⇒ `Tests 6 passed (6)` exit 0
+          #     ⇒ 该面自身可跑，纯粹被 exclude 挡住；exclude 里加 `!tests/e2e/…` **无效**
+          #       （vitest 4.1.8 不支持否定）⇒ 只能改本分类器，不能靠 negation。
+          #   ⇒ 口径：`N_VITEST` 只数「CI 下真会被收集」的（= 全部 ts 测试 − `^tests/e2e/`）；
+          #     e2e 单算 `N_E2E`，走下面「合法跳过（E2E 面）」分支。
+          #   🔴 禁把该分支当假绿：它只说"本步覆盖不到 e2e 面"，e2e 真红必须靠人工/独立复核按命令跑。
+          N_VITEST_ALL="$(printf '%s' "$CHANGED_FILES" | grep -cE '\.(test|spec)\.(ts|tsx)$' || true)"
+          N_E2E="$(printf '%s' "$CHANGED_FILES" | grep -cE '^tests/e2e/.*\.(test|spec)\.(ts|tsx)$' || true)"
+          N_VITEST=$((N_VITEST_ALL - N_E2E)); [ "$N_VITEST" -lt 0 ] && N_VITEST=0
           N_SRC_TS="$(printf '%s' "$CHANGED_FILES" | grep -cE '^src/.*\.ts$' || true)"
           N_CODE_NONVITEST=$((N_CODE - N_VITEST)); [ "$N_CODE_NONVITEST" -lt 0 ] && N_CODE_NONVITEST=0
           DELETED_VITEST="$(git diff --name-only --diff-filter=D "$CHANGED_BASE"...HEAD 2>/dev/null | grep -E '\.(test|spec)\.(ts|tsx)$' || true)"
-          echo "本次变更集: ${N_FILES} 文件（代码面 ${N_CODE} 个，其中 vitest 可收集 ${N_VITEST} 个；不可测面 ${N_CODE_NONVITEST} 个）"
+          echo "本次变更集: ${N_FILES} 文件（代码面 ${N_CODE} 个，其中 vitest 可收集 ${N_VITEST} 个；E2E 面 ${N_E2E} 个（CI 下被 exclude，不进收集面）；不可测面 ${N_CODE_NONVITEST} 个）"
           # 🔴 CI 可诊断性（#338 前置 · 2026-10-12 实测钉死）：Gitea runner 对**每一步**注入 `set -e`
           #   （本 job 日志 step0 的 `Wrote command` 明示 `set -e\n…`），而
           #     VITEST_OUT="$(cmd)"; VITEST_RC=$?
@@ -229,6 +245,14 @@ jobs:
                 echo "   ⇒ 判据：新增/改动生产代码必须带测试（或显式说明为何不可测）。这不是通过。"
                 printf '%s\n' "$CHANGED_FILES" | grep -E '^src/.*\.ts$' | head -20 | sed 's/^/     - /'
                 exit 1
+              elif [ "$N_E2E" -gt 0 ]; then
+                # #1173（L1 已批扩写集 +1）：`tests/e2e/**` 在 CI 下被 vitest.config exclude（证据见上段注释）
+                #   ⇒ 变更集**只有** e2e 测试时，"零收集"是**配置语义决定的合法跳过**，不是假绿。
+                # 🔴 位置硬约束（不得移动）：本分支**必须**在「裁 421：src 改动却零测试」**之后** ——
+                #    否则「src 改动 ＋ 只加 e2e 测试」会被本条吞成绿（真红被掩盖，改坏仍绿）。
+                # 🔴 也不得当成"通过"：它只声明"本步覆盖不到 e2e 面"，e2e 真红由独立复核按命令执行。
+                echo "ℹ️  合法跳过（E2E 面）：本次变更含 ${N_E2E} 个 tests/e2e 测试，CI 下被 vitest.config exclude（Needs LLM API）⇒ 不进收集面；该面由独立复核按命令执行"
+                _EG_SKIP_REASON="E2E 面：${N_E2E} 个 tests/e2e 测试在 CI 下被 vitest.config exclude 排除，不进收集面"
               elif [ "$N_VITEST" -eq 0 ]; then
                 echo "ℹ️  合法跳过（不可测面）：本次变更 ${N_CODE} 个代码面文件**均非 vitest 可收集**（如 .test.sh/.yml/.py）"
                 echo "   ⇒ vitest --changed 无对象可跑属**正常**；这些面由各自门禁负责（本步只覆盖 vitest 面）。"
@@ -278,8 +302,10 @@ jobs:
           #   `bash -e`（与 Gitea 同构）执行 ⇒ 若有人把 ③ 步的 `set +e` 拿掉（= 复现 #338 那个
           #   「set -e 下子命令失败即退 ⇒ 整步零输出」的缺陷），该 harness 会判 HARNESS-BROKEN 并 **exit 2**
           #   ⇒ 本步在 CI 上红。即：**这条链自己抓自己**。
-          CHANGED_BASE=origin/local-main
-          git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main
+          CHANGED_BASE="origin/${SYNO_TRUNK_REF:-main}"
+          if ! git rev-parse --verify -q "$CHANGED_BASE" >/dev/null 2>&1; then
+            CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          fi
           FILES="$(git diff --name-only "$CHANGED_BASE"...HEAD 2>/dev/null || true)"
           if ! printf '%s\n' "$FILES" | grep -qE '^(\.gitea/workflows/local-gates\.yml|scripts/control-tower/ci-(emptygreen|deps-step)-sim\.sh|tests/control-tower/ci-(emptygreen|deps-step)-sim\.test\.sh)$'; then
             echo "ℹ️  条件跳过（变更集未触碰 工作流/复现器/夹具）—— <1s"
@@ -356,7 +382,7 @@ jobs:
           NODE_BIN=/Users/wane/.nvm/versions/node/v24.19.0/bin
           # 一进一出（裁 300／#917 拍 1）：**进** ①f ｜ **退** GitHub `architecture` job（同一 PR）。
           # 缺口的准确形状：合并门在本机 Gitea，而「类型检查」此前**只有** GitHub quality 跑，
-          #   GitHub main 落后且红无人看 ⇒ 类型错误可以一路合进 local-main。
+          #   GitHub main 落后且红无人看 ⇒ 类型错误可以一路合进 main。
           # ① 类型：真缺口（本步新增）。三态原样透传（0 通过 / 1 真红 / 2 检查自身失败）。
           PATH="$NODE_BIN:$PATH" npx tsc --noEmit --pretty false || exit $?
           # ② 铁律：`npm run check:iron-laws` 的**同一脚本**（scripts/pre-commit-check.sh）。

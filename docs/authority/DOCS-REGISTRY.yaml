@@ -1381,3 +1381,142 @@ documents:
     status: active
     owner: P4
     note: "#1108（W10）：scripts/control-tower/**（新扫描器 check-unicode-confusable.py）＋ tests/control-tower/**（配对测试）＋ scripts/pre-commit-check.sh（治理面自检段接入）＋ .gitea/workflows/**（⑥ step）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；A/B/C 分档 P0 阻断、D 档仅提醒、只判 diff 新增行；已接线（WIRING=wired）。"
+  # ---- P4 2026-10-28：#1115 trunk 切 main · 工具链主引用豁免登记（DOC-0324）----
+  - id: DOC-0324
+    type: decision
+    path: gate-exemptions/2026-10-28-1115-trunk-main.md
+    status: active
+    owner: P4
+    note: "#1115（冻结期阶段 1）：7 处无回退链的 local-main 主引用切 main（四条件基线/镜像/触发/canonical）＋豁免自覆盖＋DOCS-REGISTRY 自登记；local-gates.yml 与 pre-commit-check.sh 因与 #943/#801 写集重叠移出，留清理批；SYNO_TRUNK 语义由既有环境变量覆盖，不改判据强度。"
+  # ---- #1075 2026-10-29：P2-1 审批门探针夹具豁免登记（DOC-1075＝按裁定 A 随 Issue#；0323/#1108、0324/#1115 已占）----
+  - id: DOC-1075
+    type: decision
+    path: gate-exemptions/2026-10-28-1075-p2-approval-gate.md
+    status: active
+    owner: P2
+    note: "#1075（P2-1）：scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配（断言不变，探针回基线）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。0323/#1108、0324/#1115 已占；本号按 A 随卡派生。"
+  # ---- P4 2026-10-29：#1124 冻结哨兵豁免登记（DOC-0325）----
+  - id: DOC-0325
+    type: decision
+    path: gate-exemptions/2026-10-29-1124-freeze-watch.md
+    status: active
+    owner: P4
+    note: "#1124：新增 .gitea/workflows/trunk-freeze-watch.yml（每日 schedule 比对 local-main 锚点 b8edf9860，不等即红）；无写操作、无 token；含豁免自覆盖与 DOCS-REGISTRY 自登记。"
+
+
+  # ---- P4 2026-10-28：#1114 Step 0 · run_by 全量建账豁免登记（DOC-1114；末号 0323 + 1）----
+  - id: DOC-1114
+    type: decision
+    path: gate-exemptions/2026-10-28-1114-runby.md
+    status: active
+    owner: P4
+    note: "#1114（门禁配额制 Step 0）：docs/authority/GATE-INVENTORY.yaml 纯追加 run_by 段（116 件）＋ run_by_candidates 段（70 件，M-15 可见）；scripts/control-tower/check-gate-inventory.sh 扩 ⑥–⑨ 判据（覆盖双向/五值/quota 布尔/M-15 两向/现实一致性）；tests/control-tower/check-gate-inventory.test.sh 扩 ①–⑲；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1114 Step 0 · run_by 全量建账豁免登记（DOC-1114；末号 0323 + 1）----
+
+
+  # ---- #1134 2026-10-29：D331 对账基走 resolver（A 类语义变更）豁免登记（DOC-1134）----
+  - id: DOC-1134
+    type: decision
+    path: gate-exemptions/2026-10-29-1134-d331-resolver-base.md
+    status: active
+    owner: P4
+    note: "#1134（A 类，创始人 2026-10-29 裁定）：pre-push 的 D331 对账基改走 resolve-ci-base.sh（禁 trunk 字面）＋ check-bypass-log.sh 缺失改 fail-closed ＋ 判定体抽 d331-bypass-gate.sh 并可单测；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
+  # ---- P4 2026-10-28：#1112 W6 接线豁免登记（DOC-1112；0323 为最大已用号，先读末号 +1）----
+  - id: DOC-1112
+    type: decision
+    path: gate-exemptions/2026-10-28-1112-w6-wiring.md
+    status: active
+    owner: P4
+    note: "#1112（W6 接线）：scripts/control-tower/check-gate-inventory.sh ＋ scripts/control-tower/check-ci-empty-green.sh（判据出口一律经 gate-assert 的 ga_run 归一，126/127/128/137 与白名单外码 ⇒ 2）＋ tests/control-tower/**（两件配对测试补 ⑬⑭⑮）＋ gate-exemptions/**（自覆盖）＋ docs/authority/DOCS-REGISTRY.yaml（自登记）受保护路径豁免；零判据语义改动；WIRING gate.assertLib 由 declared-only 改 wired（consumer=check-gate-inventory.sh:98）。写集内含 WIRING-REGISTRY.yaml（该路径不在 protected-files.txt 保护面，故无需豁免行）。"
+
+  # ---- P4 2026-10-28：#1118（#1115 后续）legacy 别名安全阀豁免登记（DOC-1118；R1 口径：id = DOC-<Issue#>）----
+  - id: DOC-1118
+    type: decision
+    path: gate-exemptions/2026-10-28-1118-resolver-valve.md
+    status: active
+    owner: P4
+    note: "#1118（#1115 后续，P0 收口）：resolve-ci-base.sh 拆 main 与 local-main 两臂并加 ④b 一致性阀（相等放行／祖先容忍加告警／分叉或领先 exit 2），配对测试修用例 3/4/5 并补 9 至 14b（含两条改坏即红）；豁免自覆盖＋DOCS-REGISTRY 自登记。canonical 保持 gitea/main，不动 workflow 与 #1115 其它写集。"
+
+
+
+  # ---- P4 2026-10-29：#1125 写集门禁删除项语义豁免登记（DOC-1125，按派单指定号落号）----
+  - id: DOC-1125
+    type: decision
+    path: gate-exemptions/2026-10-29-1125-dev-doc-writeset.md
+    status: active
+    owner: P4
+    note: "#1125：scripts/workflow/check-dev-doc-write-set.sh（变更集三处补 D ＋ 带状态判：声明删除 ⇔ D、声明修改仍须 A/C/M/R、git 不可用 exit 2）与 tests/control-tower/check-dev-doc-write-set.test.sh（真 git 夹具含改坏即红）受保护路径豁免；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+
+
+  # ---- P4 2026-10-28：#1126 WIRING-REGISTRY 裸标量修复豁免登记（DOC-1126，按已裁 R1：id=DOC-<Issue#>）----
+  - id: DOC-1126
+    type: decision
+    path: gate-exemptions/2026-10-28-1126-wiring-yaml.md
+    status: active
+    owner: P4
+    note: "#1126（WIRING 登记表恢复可用）：tool.reportMirrorPushes 的 defined_at 加双引号（裸 path:line 含 ':' 被严格子集解析器 fail-closed 判非法 ⇒ 整器 E_YAML rc=2）＋ 补 R3 必填 owner: CTO（依据 DOC-0295 同属 #1034）；防回退并入既有配对测试（真件钉死两断言 ＋ bare-scalar/missing-owner 两条改坏反例）＋ 实测常量同步；受保护路径豁免三条，含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-28：#1122 门禁配额制 Step 1 总闸最小可跑版豁免登记（DOC-1122；R1 口径 id = DOC-<Issue#>，不再用 DOC-0xxx 递增号）----
+  - id: DOC-1122
+    type: decision
+    path: gate-exemptions/2026-10-28-1122-verify-governance.md
+    status: active
+    owner: P4
+    note: "#1122（Step 1）：scripts/control-tower/verify-governance.sh（G2 遥测 ran 判定 / G6 复用 ga_run 归一 / G10 同形字两态）＋ tests/control-tower/verify-governance.test.sh（配对测试 T0 至 T16）受保护路径豁免；判不了 exit 2、遥测缺失 SKIP 不计 PASS；本批未接线（WIRING=declared-only）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-10-29：#1117 主树 main 迁移残余批豁免登记（DOC-1117＝按裁定 A 随 Issue#；0323/#1108、0324/#1115、0325/#1124 已占）----
+  - id: DOC-1117
+    type: decision
+    path: gate-exemptions/2026-10-29-1117-trunk-main.md
+    status: active
+    owner: P4
+    note: "#1117（残余批）：trunk 名单源 SYNO_TRUNK_REF（缺省 main），21 件代码＋11 件配对测试切 main，推送端 bypass 基链与控制塔 base 链统一；main 保护段逐字不动，三态/判据强度/门禁组数不变；含 L1 批准扩写集 2 件配对夹具；豁免自覆盖＋DOCS-REGISTRY 自登记。"
+  # ---- P4 2026-10-30：#1147 T2.5 门禁元数据生成器豁免登记（DOC-1147-01；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1147-01
+    type: decision
+    path: gate-exemptions/2026-10-30-t25-gate-meta.md
+    status: active
+    owner: P4
+    note: "#1147（T2.5）：scripts/control-tower/gen-gate-meta.sh（gate_meta 六字段机械产出，--emit/--check，三态 exit 0/1/2，orphan 且 quota 组合违规，legacy_sections 登记 6 段）＋ check-gate-inventory.sh 加 R10 同源校验 ＋ tests/control-tower/gen-gate-meta.test.sh（12 夹具）受保护路径豁免；GATE-INVENTORY 纯追加 gate_meta 段（117 行，删除数 0）；含自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P2 2026-10-30：#1075 P2-4b-B 棘轮基线同 PR 收缩豁免登记（DOC-1149＝随卡 #1149；DOC-1075 已被 P2-1 占用，门禁只认纯数字号，故用 B 卡 Issue 号）----
+  - id: DOC-1149
+    type: decision
+    path: gate-exemptions/2026-10-30-1075-p2-4b-b.md
+    status: active
+    owner: P2
+    note: "#1075（P2-4b-B 角色会话内知识权限）：scripts/control-tower/tool-signal-baseline.txt 受保护路径豁免 —— #915 Q-5 R4（副作用工具必须可取消）迫使 builtin-tools.ts 的 schedule_task/install_skill 补 ctx＋throwIfAborted；R5 双向棘轮要求同 PR 删对应登记行（纯删 2 行，无判定/阈值/退出码变更）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
+
+  # ---- P2 2026-10-30：#1173 CI ③ 分类器修正的受保护路径豁免登记 ----
+  - id: DOC-1150
+    type: decision
+    path: gate-exemptions/2026-10-30-1173-ci-e2e.md
+    status: active
+    owner: P2
+    note: "#1173（E2E 批）：.gitea/workflows/local-gates.yml 受保护路径豁免 —— ③ 步把 tests/e2e/** 从 N_VITEST 剔除、单算 N_E2E、新增「合法跳过（E2E 面）」分支（根因：vitest.config.ts:29-36 在 CI 下 exclude tests/e2e/**）；含 gate-exemptions/** 自覆盖行与 DOCS-REGISTRY 自登记行。属门禁强制同 PR 记账件，待 L1 收件闸追认。"
+  # ---- #1177 2026-10-30：ci-emptygreen-sim E2E 守卫豁免登记 ----
+  - id: DOC-1177
+    type: decision
+    path: gate-exemptions/2026-10-30-1177-sim-guard.md
+    status: active
+    owner: P2
+    note: "#1177：为 #1174 A 类 E2E 分类器补复现器守卫（辛/壬），受保护路径 ci-emptygreen-sim.sh 豁免；只加场景/计数，不改工作流与退出码。"
+
+  - id: DOC-1146
+    path: gate-exemptions/2026-10-29-1146-retire-batch1.md
+    note: "批1 零风险退役 8 项（B 类 5 项＋observer 产品件＋C 类 2 项）；台账标 retired、观察期 30 天、不删文件；含 GATE-INVENTORY retired 段与配套测试。"
+
+
+  - id: DOC-1175
+    path: gate-exemptions/2026-10-30-b0-ledger-pointer.md
+    note: "#1175 域守则补台账真源指针：agents/P4-门禁/AGENTS.md 加一行指向 synova-handbook main 的门禁总台账（§十＝体系总图）；不改既有条款。"
+  # ---- P4 2026-10-30：sealed 隔离台账陈旧条目修复豁免登记（DOC-1158；R1 口径 id=DOC-<Issue#>）----
+  - id: DOC-1158
+    type: decision
+    path: gate-exemptions/2026-10-30-gate-sealed-stale.md
+    status: active
+    owner: P4
+    note: "#1158/U2：① 删除指向已改名文件（brief-parseable.test.sh）的陈旧隔离条目（台账判据 b 须删条目）；② FACE-TOTAL 197→204（scan=209，余量 5；主树新增夹具未上调下界 ⇒ 撞 SLACK-CAP=10，显式上调留痕）；含自覆盖行与 DOCS-REGISTRY 自登记行；不改判据语义。"

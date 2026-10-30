@@ -13,9 +13,9 @@
 #                                  #734 PR 预算门禁的 `--files` 注入缝（:51 口径））
 #              --staged            `git diff --cached`（本地 pre-commit 用）
 #              --base <ref>        `git diff <merge-base(base,HEAD)>...HEAD`（CI 用）
-#              皆未给 → base 解析链：$SYNO_DIFF_BASE → gitea/local-main → origin/local-main
-#                        → local-main → HEAD~1（**有意偏离 #912**：集成分支是 local-main，
-#                        依 CTO 2026-10-12 P0 裁定；origin/local-main 已陈旧）
+#              皆未给 → base 解析链：$SYNO_DIFF_BASE → gitea/$TRUNK → origin/$TRUNK
+#                        → $TRUNK → HEAD~1（TRUNK=$SYNO_TRUNK_REF，缺省 main；**有意偏离 #912**：
+#                        集成分支在 gitea 侧，origin 可能是陈旧镜像，故 gitea 优先）
 #            辅助件: --baseline <path>（默认 scripts/control-tower/tool-args-baseline.txt）
 #                    --signal-baseline <path>（默认 scripts/control-tower/tool-signal-baseline.txt
 #                    ＃Q-5：存量「缺取消检查副作用工具」棘轮登记面）
@@ -114,6 +114,8 @@ except (AttributeError, ValueError):
     pass
 
 COMPONENT = "check-tool-args-delta"
+# trunk 名唯一来源（#1117 §6.1）：改 trunk 名只改本契约，不在各处自造字面
+TRUNK = os.environ.get("SYNO_TRUNK_REF", "").strip() or "main"
 # 🔴 同一扫描面（R1/R2/R3 共用）；**不得**复用 #912 增量闸的 CODE_ROOTS（缺 vendor/）
 SCAN_ROOTS = ("src/agent/", "src/tools/", "vendor/pandoc-skill/")
 CODE_EXT = (".ts", ".tsx", ".js", ".mjs", ".cjs")
@@ -164,9 +166,9 @@ def git(root: str, *args: str) -> str:
 
 
 def resolve_base(root: str) -> str:
-    """base 解析链：$SYNO_DIFF_BASE → gitea/local-main → origin/local-main → local-main → HEAD~1。"""
-    cands = [os.environ.get("SYNO_DIFF_BASE", ""), "gitea/local-main", "origin/local-main",
-             "local-main", "HEAD~1"]
+    """base 解析链：$SYNO_DIFF_BASE → gitea/$TRUNK → origin/$TRUNK → $TRUNK → HEAD~1（TRUNK=$SYNO_TRUNK_REF，缺省 main）。"""
+    cands = [os.environ.get("SYNO_DIFF_BASE", ""), "gitea/" + TRUNK, "origin/" + TRUNK,
+             TRUNK, "HEAD~1"]
     for c in cands:
         c = (c or "").strip()
         if not c:
@@ -176,8 +178,8 @@ def resolve_base(root: str) -> str:
         if p.returncode == 0:
             return c
     raise DeltaError("E_BAD_BASE",
-                     "base 解析链全不可解析（$SYNO_DIFF_BASE/gitea/local-main/origin/local-main/"
-                     "local-main/HEAD~1）")
+                     "base 解析链全不可解析（$SYNO_DIFF_BASE/gitea/%s/origin/%s/%s/HEAD~1）"
+                     % (TRUNK, TRUNK, TRUNK))
 
 
 def change_set(root: str, base: Optional[str], staged: bool) -> Tuple[List[str], str]:
@@ -615,8 +617,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="工具入参校验增量闸（R1/R2/R3 · 只判变更集）")
     ap.add_argument("--root", default=None, help="仓库根（默认 git toplevel）")
     ap.add_argument("--base", default=None,
-                    help="base ref（默认链：$SYNO_DIFF_BASE → gitea/local-main → "
-                         "origin/local-main → local-main → HEAD~1）")
+                    help="base ref（默认链：$SYNO_DIFF_BASE → gitea/%s → "
+                         "origin/%s → %s → HEAD~1）" % (TRUNK, TRUNK, TRUNK))
     ap.add_argument("--staged", action="store_true", help="用暂存区作为变更集（本地 pre-commit）")
     ap.add_argument("--files", default=None,
                     help='显式变更集（空格分隔；**整体替换**变更集，同 #734 PR 预算门禁 :51 口径）')

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
 # 契约（铁律 47·裁 421 补齐 D 项）
-#   @input  对账范围 base（默认 gitea/local-main）＋ 本机待推提交集合
+#   @input  对账范围 base（默认 gitea/$TRUNK，TRUNK=${SYNO_TRUNK_REF:-main}）＋ 本机待推提交集合
 #   @output 逐条列出缺失 COMMITTED 记录的提交；全有记录时打印 ✅
 #   @exit   0=通过/无待记录；1=缺记录或来源全空；2=base 不可解析（fail-closed）
 #   @degraded 日志/路径缺失时显式点名，不静默放行
@@ -19,7 +19,7 @@
 #        `.claude/bypass.log`）；缺失 → 列出 + exit 1（新提交硬要求）；全部有记录 → exit 0。
 #
 # 用法: bash check-bypass-log.sh [base-ref]
-#       默认 base: origin/feat/prompt-architecture（D311 改基约定）
+#       默认 base: gitea/$TRUNK（TRUNK=${SYNO_TRUNK_REF:-main}，即 gitea/main）
 # 注入: SYNO_BASE_REF 环境变量覆盖（测试隔离；显式给出则必须可解析）
 # 豁免: 历史提交一次性补记（D331 已对 ea1cb71/dc369fd 回填）；对账从 D331 起强制
 # 降级: 日志缺失 → exit 1（执行证据链缺失显式列出）；base 不可解析且非显式
@@ -81,12 +81,14 @@ LEDGER_SOURCES="$(printf '%s\n' "$LEDGER_SOURCES" | awk 'NF' | sort -u)"
 # 🔴 2026-10-12 基线口径（CTO P0 裁定 bug 1 同病第三处）: 原默认硬编码
 #   `origin/feat/prompt-architecture`（陈旧特性分支）⇒ merge-base 极旧 ⇒ 对账 range
 #   卷入大量他线已过闸提交 ⇒ 推送被误拦。修法: 优先当前分支 upstream（@{u}），
-#   回退 gitea/local-main → local-main；旧硬编码仅作最后兼容回退。
+#   回落 gitea/$TRUNK → $TRUNK → origin/$TRUNK（TRUNK=${SYNO_TRUNK_REF:-main}）；
+#   旧硬编码 origin/feat/prompt-architecture 仅作最后兼容回退（非本批判据面）。
 _BASE_UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "")" # swallow-ok: 无 upstream 走回退链
-BASE="${SYNO_BASE_REF:-${1:-${_BASE_UPSTREAM:-gitea/local-main}}}"
+TRUNK="${SYNO_TRUNK_REF:-main}"
+BASE="${SYNO_BASE_REF:-${1:-${_BASE_UPSTREAM:-gitea/${TRUNK}}}}"
 # base 解析链: 显式/upstream 不可解析时按序回退（与 check-pr-budget.sh 口径一致）
 if ! git rev-parse --verify --quiet "$BASE" >/dev/null 2>&1; then
-  for _bcand in gitea/local-main local-main origin/local-main origin/feat/prompt-architecture; do
+  for _bcand in "gitea/${TRUNK}" "${TRUNK}" "origin/${TRUNK}" origin/feat/prompt-architecture; do
     if git rev-parse --verify --quiet "$_bcand" >/dev/null 2>&1; then BASE="$_bcand"; break; fi
   done
 fi

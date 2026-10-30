@@ -1,0 +1,97 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 1171,
+ "author": "squad-1165（L2 实施会话，本 PR 3 个提交的作者）",
+ "reviewer": "review-1171（队外独立复核，fresh 零上下文；未参与实现，仅写 docs/synova/reviews/**）",
+ "independence": "fresh-session",
+ "issued_at": "2026-10-30T11:30:00+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "5cbca2b4c051105b3ecd70e35598a8ff0fc49e9b",
+ "base_reviewed": "2eba04e9c940f59dcb358f9e21179d1aeab3e74b",
+ "patch_fingerprint": "sha256:89b2023b1b512a805ae5895b03ca22e1a245180fce15bf166da083e24dd12c37",
+ "tool": "check-merge-conditions.sh（fp 定义）＋ vitest 实测 ＋ /tmp 隔离树改坏注入 ＋ 源码逐行核对",
+ "checks": [
+  {
+   "id": "C1",
+   "title": "变更集恰好 4 件；只读面零改；diff 无越界",
+   "result": "pass",
+   "cmd": "git diff --name-status 2eba04e9c..HEAD",
+   "evidence": "4 行：M .claude/claims/1075.yaml / M src/agent/conversation-engine.ts / M tests/agent/conversation-engine-role.test.ts / M tests/routes/conversations-role.test.ts（+160 −17）。grep 过滤后无第 5 件（命令打印 OK: exactly 4）。只读面逐项计数全 0：src/routes/conversations.ts=0 src/init/=0 src/agent/tools.ts=0 scripts/=0 docs/=0 —— 与规格 §2.4 写集逐字一致。"
+  },
+  {
+   "id": "C2",
+   "title": "serialize() 真源 = boundRolePackId（非运行期 rolePack）",
+   "result": "pass",
+   "cmd": "git diff 2eba04e9c..HEAD -- src/agent/conversation-engine.ts ＋ sed -n '1228,1239p'",
+   "evidence": "conversation-engine.ts:1237 `if (this.boundRolePackId !== null) state.rolePackId = this.boundRolePackId;`（旧式 `if (this.rolePack !== null) state.rolePackId = this.rolePack.roleId;` 已删除）。fromState:1280 `engine.boundRolePackId = state.rolePackId ?? null;` 语义未变、注释更新为「state.rolePackId = 绑定意图」。注释挪用「L8 编号」已改为规格 §2.1-e／§10（3 处）。"
+  },
+  {
+   "id": "C3",
+   "title": "未绑定不写键；降级后仍保留绑定（R-J1）",
+   "result": "pass",
+   "cmd": "npx vitest run tests/agent/conversation-engine-role.test.ts -t 'R-J1'",
+   "evidence": "R-J1-1（:269）：已绑定 → setRolePack(null) 降级 → `serialize().rolePackId === 'ops'`，且 fromState({rolePack:null}) 后仍为 'ops' 且不注入人设段。R-J1-2（:287）：未绑定 `'rolePackId' in state === false` 且 fromState 往返后仍 false（双断言）。源码互证：setRolePack:667-676 仅 persona!==null 时改写 boundRolePackId ⇒ persona=null 保留绑定（D12）。"
+  },
+  {
+   "id": "C4",
+   "title": "J8-1 四轮 + agent_sessions.state_json.rolePackId 有值",
+   "result": "pass",
+   "cmd": "npx vitest run tests/routes/conversations-role.test.ts -t 'J8-1 四轮' --reporter=verbose",
+   "evidence": "Tests 1 passed | 12 skipped（534ms），exit 0。① approved 200 + 注入 `## 岗位设定：ops`；② 删记录 → 200 + `x-synova-role-pack: degraded` + 不注入；②-b 直读 `SELECT state_json FROM agent_sessions`（:629）断言 `degradedState?.rolePackId === 'ops'`（:663）；③ 恢复记录 + vi.resetModules() 新路由（空 sessionEngines ⇒ cache-miss→loadState→fromState，断言 freshRouter !== initialRouter）→ 200 + 无 degraded 头 + 重新注入；④ 再删 → 仍 degraded + 不注入（不锁死）。"
+  },
+  {
+   "id": "C5",
+   "title": "本批 29 passed；回归全绿；tsc/arch 0",
+   "result": "pass",
+   "cmd": "npx vitest run <2 件> ；npx vitest run <15 件 role 面> ；npx tsc --noEmit ；bash scripts/check-architecture.sh",
+   "evidence": "本批 2 件：Test Files 2 passed / Tests 29 passed，exit 0。回归：取 role 面全量 15 件（含 P2-2/P2-3/P2-4a/P2-4b-B 与全部 role-pack 单测）⇒ Test Files 15 passed / Tests 304 passed，exit 0（0 红 0 skip）。tsc --noEmit 无输出 exit 0；架构检查「全部通过 ✅」exit 0。"
+  },
+  {
+   "id": "C6",
+   "title": "改坏 2 条 ⇒ 红；还原 ⇒ 复绿（判别力）",
+   "result": "pass",
+   "cmd": "独立 worktree /tmp/w-1171-mut（同 HEAD 5cbca2b4c）：python 定点替换 + node node_modules/.bin/vitest run <2 件> + git checkout -- 还原",
+   "evidence": "变异1（serialize 还原为旧 `this.rolePack !== null` 逻辑）⇒ exit 1，Tests 2 failed | 27 passed：R-J1-1 `expected undefined to be 'ops'`、J8-1 `降级轮落库不得丢绑定（#1169）: expected undefined to be 'ops'`。变异2（fromState 绑定源 `engine.boundRolePackId = null`）⇒ exit 1，R-J1-1 `绑定真源必须跨 fromState 保留…: expected undefined to be 'ops'`。git checkout -- 还原后 git diff 5cbca2b4c = 0 件，Tests 29 passed exit 0。"
+  },
+  {
+   "id": "C7",
+   "title": "CI 终态与 fp 现算一致",
+   "result": "pass",
+   "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/5cbca2b4c.../status ；bash scripts/control-tower/check-merge-conditions.sh --pr 1171 --base main --diff-fingerprint",
+   "evidence": "CI：state=success total_count=2，local-gates/gates(push)=success ＋ local-gates/gates(pull_request)=success ⇒ pending=0（2/2 完结）。fp 现算 = 89b2023b1b512a805ae5895b03ca22e1a245180fce15bf166da083e24dd12c37，与 CTO 现场值 89b2023b1b51… 前 12 位一致。checker 基线（回执前）：①=ok ②=no ③=no(缺回执) ④=ok。"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "warn",
+   "where": "PR 正文「判据与证据 · 回归 R-J6」",
+   "what": "PR 声称「回归 10 件 Tests 192 passed」不可复现：未给出 10 件清单，穷举 15 个 role 面测试件后共有 43 种「10 件组合」可得 192，故该数字不具口径唯一性；实测我取的自然 10 件（2 本批 + 8 件 role-pack/路由）= 229 passed，全量 15 件 = 304 passed，均全绿。实质属性（无回归）成立，但 192 为不可核数字，建议下批统一给文件清单＋命令。"
+  },
+  {
+   "severity": "warn",
+   "where": "变异 2 覆盖面",
+   "what": "把 fromState 的绑定源改为 null（`engine.boundRolePackId = null`）时，仅单测 R-J1-1 变红，HTTP J8-1 仍绿 —— 因第三轮路由经 wiring.rolePack 显式传 persona，setRolePack 在 :1283 重新写入 boundRolePackId，掩盖了 fromState 自身的恢复缺失。即「引擎级 fromState 绑定恢复」目前只由 unit 面覆盖、HTTP 面不独立覆盖。规格 R-J5 允许此形态（『或删 fromState 保留 ⇒ R-J4 红』），故不阻断；登记为后续加强项。"
+  },
+  {
+   "severity": "info",
+   "where": "条件 ② 写集重叠（不属本回执判域）",
+   "what": "checker 报 OVL_FILE: .claude/claims/1075.yaml → PR#1171,#1168（注意：实际竞争 PR 是 #1168，其分支名 ct/1075-1167-access-level 承载 #1167 补丁A；任务书写的『#1167』为数号混用）。经 merge-tree 实测：唯一冲突文件即该 claims 文件；两侧均只在同一注释锚点后追加注释块（#1171 追加 #1169 段、#1168 追加 #1167 段）+ done:verify 行 + note 尾段，writeset: 列表两侧零增删 ⇒ 纯追加冲突，可两侧同保。串行裁定权归 CTO，本回执不判。"
+  },
+  {
+   "severity": "info",
+   "where": "任务书对象 vs 实际 head 分支",
+   "what": "任务书称 head 分支 ct/1171-p2-2-binding；实测远端无此 ref（git ls-remote gitea 'refs/heads/ct/117*' 空）。PR#1171 实际 head ref = ct/1169 @ 5cbca2b4c，base main @ 2eba04e9c ⇒ SHA 与任务书一致，仅分支名不符。本回执按 PR#1171 真实 head 复核，回执提交推至 ct/1169。"
+  },
+  {
+   "severity": "info",
+   "where": "src/routes/conversations.ts:895（只读件）",
+   "what": "注释仍写「conv.serialize() 在**绑定岗位时**带 rolePackId」，修正后语义应为「已绑定时」。该件在只读面、本批零改，PR 正文已自报为已知滞后项，不阻断。"
+  },
+  {
+   "severity": "info",
+   "where": "回执提交身份",
+   "what": "本机 git config user = squad-1165（与 PR 代码提交同邮箱）。为保可追溯与 R9 告警可读性，本回执提交显式使用 review-1171 <review-1171@synova.local> 身份。"
+  }
+ ],
+ "reviewer_note": "四条件③独立复核：PASS。7 项检查逐条留命令＋原文＋退出码。核心结论：serialize 真源已由运行期 rolePack 改为绑定意图 boundRolePackId（conversation-engine.ts:1237），未绑定会话零变化（键缺省），降级轮落库保留绑定（state_json.rolePackId 直读断言），恢复审批记录后经落库恢复路径可再生效、再撤销仍降级（不锁死）。两条改坏变异均验红后复原复绿，判别力成立。不建议以本回执代替 K3 终审。"
+}

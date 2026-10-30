@@ -134,7 +134,8 @@ entries:
     consumer: null
     test: tests/control-tower/report-mirror-pushes.test.sh
     status: declared-only
-    defined_at: scripts/control-tower/report-mirror-pushes.sh:15
+    owner: CTO
+    defined_at: "scripts/control-tower/report-mirror-pushes.sh:15"
     notes: "#1034 DeployKey 旁路只读取证工具（运维/审计人工调用）"
   - capability: control-tower.acceptanceMatrix
     defined_at: "scripts/control-tower/check-acceptance-matrix.py:1"
@@ -155,11 +156,11 @@ entries:
   - capability: gate.assertLib
     defined_at: "scripts/control-tower/gate-assert.sh:1"
     provider: "scripts/control-tower/gate-assert.sh:1"
-    consumer: null
+    consumer: "scripts/control-tower/check-gate-inventory.sh:98"
     test: "tests/control-tower/gate-assert.test.sh"
-    status: declared-only
+    status: wired
     owner: P4
-    notes: "#1096 W6 判据自检库（库件）：ga_run 三态归一＋128/137/126 等非白名单码归判据故障(2)；接线＝后续判据抽样接入，本批不做 ⇒ 无生产消费者。"
+    notes: "#1096 W6 判据自检库 ＋ #1112 W6 接线（本行由 declared-only 改 wired）。**已接线（两个生产消费者）**：① `scripts/control-tower/check-gate-inventory.sh:98` —— 判据子进程经 `ga_run` 归一（本行 consumer 取该主调用点；R5 只容单条 path:line）；② `scripts/control-tower/check-ci-empty-green.sh:259/260/261` —— file／env／selfcheck 三个出口各经 `ga_run` 包装。归一语义＝0/1/2 原样透传，128／137／126／白名单外码一律归 2 并打 `判据故障: <code>`（绝不归 0、也不原样穿透成本器退出码）；两器在归一库缺失时均 exit 2（fail-closed）。改坏即红：把归一里 128 分支改成 0 ⇒ `tests/control-tower/check-gate-inventory.test.sh` ⑮ 与 `tests/control-tower/check-ci-empty-green.test.sh` ⑮ 的 rc=2 断言必红。"
   - capability: gate.telemetry
     defined_at: "scripts/control-tower/gate-telemetry.sh:1"
     provider: "scripts/control-tower/gate-telemetry.sh:1"
@@ -214,3 +215,127 @@ entries:
     status: wired
     owner: P4
     notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"
+  - capability: content.rolePackApproval
+    defined_at: "src/init/role-pack-approval.ts:1"
+    provider: "src/init/role-pack-approval.ts:651"
+    consumer: "src/init/preset-loader.ts:456"
+    test: "tests/init/role-pack-approval.test.ts:256"
+    status: wired
+    owner: P2
+    notes: "岗位包审批门（#1075 P2-1）：记录侧审批态判定（approved/pending/unverified）＋出厂代码锚（FACTORY_APPROVALS）；唯一生产消费者＝preset-loader 单读→contentHash→判定；判定侧不 import role-pack-schema（N6 防循环依赖）"
+  - capability: gate.d331Bypass
+    defined_at: "scripts/control-tower/d331-bypass-gate.sh:1"
+    provider: "scripts/control-tower/d331-bypass-gate.sh:1"
+    consumer: "scripts/pre-push-check.sh:545"
+    test: "tests/control-tower/d331-bypass-gate.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1134：D331 L4-2 判定体（对账基走 resolve-ci-base.sh；缺件 fail-closed）。唯一生产消费者＝pre-push 门禁 7；证据源自证不可审 ⇒ P1，退役触发＝W9 分支保护落地。"
+
+
+  # ---- P4 2026-10-28：#1122 门禁配额制 Step 1 · 总闸最小可跑版（governance.verifyGovernance）----
+  - capability: governance.verifyGovernance
+    defined_at: "scripts/control-tower/verify-governance.sh:1"
+    provider: "scripts/control-tower/verify-governance.sh:1"
+    consumer: null
+    test: "tests/control-tower/verify-governance.test.sh"
+    status: declared-only
+    owner: P4
+    notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/y PASS`，判不了 exit 2。**本批未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
+  - capability: content.rolePackPersona
+    defined_at: "src/init/role-pack-persona.ts:1"
+    provider: "src/init/role-pack-persona.ts:442"
+    consumer: "src/routes/conversations.ts:495"
+    test: "tests/init/role-pack-persona.test.ts:372"
+    status: wired
+    owner: P2
+    notes: "岗位包人设＋上下文消费（#1075 P2-2）：approved 包的 prompt.systemAddendum 与 contexts 清单进系统提示词；六件自读→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；撤销⇒200＋x-synova-role-pack: degraded＋不注入"
+  - capability: content.rolePackOutputStandard
+    defined_at: "src/init/role-pack-output-standard.ts:495"
+    provider: "src/init/role-pack-output-standard.ts:495"
+    consumer: "src/routes/conversations.ts:744"
+    test: "tests/routes/conversations-role-output.test.ts:1"
+    status: wired
+    owner: P2
+    notes: "岗位包输出标准消费（#1075 P2-3）：approved 包的 criteria[].machine 编译成 OutputContract 对象，角色会话每轮 assistant 回复后非阻断校验＋留痕（永不抛出／不改回复）；六件单读快照→computeRolePackContentHash 与 pack.validation.contentHash 比对→审批门→限额；无 machine 的 criteria 进 unverifiable[]（可见不静默）；无岗位会话零副作用"
+
+  - capability: content.rolePackToolPermissions
+    defined_at: "src/init/role-pack-permissions.ts:412"
+    provider: "src/init/role-pack-permissions.ts:412"
+    consumer: "src/agent/conversation-engine.ts:763"
+    test: "tests/agent/tool-permissions-role-pack.test.ts:1"
+    status: wired
+    owner: P2
+    notes: "岗位包工具白名单消费（#1075 P2-4a）：审批 scope ＋ capabilities[].tool 编译成 allowlist／disabled／declaredUnavailable；未注册工具**不入白名单**（不越权、不静默丢弃），enabled:false 永远拒（disabled 优先），permissionsPending ⇒ 全拒；engine 在 process 入口惰性重解析（ensurePermissionsApplied／refreshRolePackPermissions），失败 fail-closed 置 []。改坏必红由 tests/agent/tool-permissions-role-pack.test.ts 的 J1 时序A/B、J2 未列即拒（含 listTools/toOpenAITools）、J3 disabled 硬拒、J6 未绑定零变化覆盖。"
+
+  # ---- P2 2026-10-29：#1075 P2-4b-A · 公共知识入口的 grants 生效（knowledge-ask 认证分支）----
+  - capability: permission.knowledgeGrantsBridge
+    defined_at: "src/middleware/auth.ts:373"
+    provider: "src/middleware/auth.ts:373"
+    consumer: "src/routes/knowledge-ask.ts:143"
+    test: "tests/routes/knowledge-ask.test.ts:154"
+    status: wired
+    owner: P2
+    notes: "认证主路径 src/middleware/auth.ts:964 亦为该漏斗消费者（registry:44-51 先例）"
+  - capability: gate.metaGenerator
+    defined_at: "scripts/control-tower/gen-gate-meta.sh:1"
+    provider: "scripts/control-tower/gen-gate-meta.sh:1"
+    consumer: "scripts/control-tower/check-gate-inventory.sh:129"
+    test: "tests/control-tower/gen-gate-meta.test.sh"
+    status: wired
+    owner: P4
+    notes: "#1147 T2.5：门禁元数据生成器（gate_meta 六字段机械产出，--emit/--check，三态 0/1/2，孤儿与配额非法组合即违规）。唯一生产消费者＝check-gate-inventory.sh 的 R10 同源校验；生成器缺失或判不了归 2。"
+
+  # ---- P2 2026-10-29：#1075 P2-4b-B · 角色会话内知识权限（系统工具 search_knowledge）----
+  - capability: knowledge.roleSessionSearch
+    defined_at: "src/init/role-pack-knowledge-filter.ts:100"
+    provider: "src/init/role-pack-knowledge-filter.ts:100"
+    consumer: "src/agent/conversation-engine.ts:791"
+    test: "tests/init/role-pack-knowledge-filter.test.ts:257"
+    status: wired
+    owner: P2
+    notes: "角色会话知识过滤编译（scope/deny＋认证面同源敏感度 → FilterClause）：条件顺序固定 sensitivity IN(第0)/pkb_domain IN scopes(第1)/逐 deny NOT_EQ；degraded（审批未过/内容坏/未声明）⇒ 拒绝型 pkb_domain IN []（0 行，不回落全库）。消费者＝conversation-engine 的 applyRoleKnowledgeProvider（setSystemToolProvider 注入**系统工具** search_knowledge，不 register ⇒ allToolNames 不变；进 listTools/toOpenAITools）；工具 handler 动态 import L4；撤销/换岗经 refreshRolePackPermissions 即时重建；回滚开关 SYNOVA_ROLE_KNOWLEDGE=off（与 SYNOVA_ROLE_PACK_TOOLS 互不替代）"
+
+  # ---- P3 2026-10-29：#1075 P3 · 审批写 API 与审计链（页面壳先于 JWT；数据 API 后于 JWT）----
+  - capability: permission.rolePackApprovalWrite
+    defined_at: "src/init/role-pack-approval-write.ts:420"
+    provider: "src/init/role-pack-approval-write.ts:420"
+    consumer: "src/routes/role-approvals.ts:582"
+    test: "tests/routes/role-approvals.test.ts:413"
+    status: wired
+    owner: P3
+    notes: "岗位包审批写入（#1075 P3）：approveRolePack/revokeRolePack（revoke 生产调用点 src/routes/role-approvals.ts:538）＋六件单读指纹＋出厂锁（FACTORY_APPROVALS）＋原子写（tmp 0600→rename；记录 ≤8 KiB）＋typed WriteResult（九码不抛）；同 hash 同 scope 重复批准 ⇒ unchanged（不重写、不新增审计）；改坏必红＝删指纹比对 ⇒ J3-1 红"
+  - capability: audit.rolePackApprovalChain
+    defined_at: "src/services/audit-service.ts:46"
+    provider: "src/services/audit-service.ts:46"
+    consumer: "src/routes/role-approvals.ts:315"
+    test: "tests/routes/role-approvals.test.ts:728"
+    status: wired
+    owner: P3
+    notes: "岗位包审批审计链（#1075 P3）：role_pack.approved/revoked/scope_changed 三 action 只写 contentHash/scope/approvalId（禁六件正文）；唯一通道＝AuditService（路由不 import src/l4/**）；详情 API 返回 getStore().verifyChain(orgId)（src/routes/role-approvals.ts:198）；链只证事件序、不证记录文件（§10-L2）"
+
+  # ---- P3 整改 R1（2026-10-29）：#1159/8714 第 4 项 —— 补 3 个新增能力件的 defined_at（R1.1 归零）----
+  - capability: agent.approvalCardFrame
+    defined_at: "src/agent/approval-card.ts:119"
+    provider: "src/agent/approval-card.ts:119"
+    consumer: "src/routes/conversations.ts:528"
+    test: "tests/agent/approval-card.test.ts:46"
+    status: wired
+    owner: P3
+    notes: "审批会话卡帧构造（#1075 P3）：纯核 buildApprovalCardFrame —— approved ⇒ scope/permissionsPending 真实值；pending/unverified ⇒ 两者为 null（不谎报 false）；contentHash 读不出 ⇒ null。生产唯一消费者＝审批会话分支（src/routes/conversations.ts:528，open→approval_card→end，不建会话/不跑 LLM）；改坏必红＝删卡帧发送 ⇒ J7 红"
+  - capability: api.rolePacksApproval
+    defined_at: "src/routes/role-approvals.ts:355"
+    provider: "src/routes/role-approvals.ts:471"
+    consumer: "src/server.ts:541"
+    test: "tests/routes/role-approvals.test.ts:369"
+    status: wired
+    owner: P3
+    notes: "岗位包审批读/写 API（#1075 P3）：GET /api/role-packs（:355）＋详情（:381）＋POST approve/revoke（:471）；身份 org/角色（admin/manager/ga）守卫、审计只经 AuditService、写判定在 src/init/role-pack-approval-write.ts（本件不复制）；生产挂载在 jwtAuthMiddleware 之后（src/server.ts:541）；改坏必红＝删身份守卫 ⇒ J1 红"
+  - capability: ui.rolePacksGuidePage
+    defined_at: "src/routes/role-packs-page.ts:378"
+    provider: "src/routes/role-packs-page.ts:378"
+    consumer: "src/server.ts:486"
+    test: "tests/routes/role-packs-page.test.ts:79"
+    status: wired
+    owner: P3
+    notes: "岗位说明书页 HTML 壳（#1075 P3）：零数据静态壳＋token-gate（Bearer 唯一来源 sessionStorage['synova.token']，客户端 textContent 渲染）；**必须先于 jwtAuthMiddleware 挂载**（src/server.ts:486 < 487），否则无 token 页面 401；数据面 GET /api/role-packs* 仍在 JWT 之后；改坏必红＝数据内联进 HTML／挂到 auth 之后 ⇒ J8 红"

@@ -1,0 +1,104 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1129,
+  "patch_fingerprint": "sha256:6fb4ff73b3fcf907dd8b5a2bfcb3b8940c851a490d46d89d6f3a919ef24b88a3",
+  "author": "synova-squad-lead-P4-1117",
+  "reviewer": "review-1129",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "C1-变更集与登记",
+      "cmd": "git diff --name-only gitea/main..HEAD | wc -l; git diff --name-only gitea/main..HEAD | grep -cE '^(src/|scripts/audit/)'; grep -c 'id: DOC-1117' docs/authority/DOCS-REGISTRY.yaml; grep -n -A3 'id: DOC-0325' docs/authority/DOCS-REGISTRY.yaml",
+      "result": "pass",
+      "evidence": "复核时点 head=cee2f731d4d623d4185b63356e2ca7548722d089（本回执未计入）：32 件；src/**=0、scripts/audit/**=0；DOC-1117 恰 1 条（:1471 path=gate-exemptions/2026-10-29-1117-trunk-main.md）；DOC-0325 仍属 #1124（:1399 path=gate-exemptions/2026-10-29-1124-freeze-watch.md）"
+    },
+    {
+      "id": "C2-红线与铁律",
+      "cmd": "git diff gitea/main..HEAD --name-only | grep -cE '^(src/|scripts/audit/)'; git diff gitea/main..HEAD --name-only | grep -E '\\.(ts|tsx)$' | xargs -I{} grep -Hn 'as any\\|TODO' '{}'",
+      "result": "pass",
+      "evidence": "业务源码 0 件、审计脚本 0 件（scripts/audit/** 未触碰）；唯一 .ts 变更 scripts/control-tower/probe-ontology-instances.ts 仅 :465 断言文案 1 行（+1/-1，零逻辑），as any/TODO 命中 0；架构门禁无对象（无 src 改动）"
+    },
+    {
+      "id": "C3-resolver单源",
+      "cmd": "bash tests/control-tower/resolve-ci-base.test.sh; grep -c 'local-main' scripts/control-tower/resolve-ci-base.sh; grep -c 'local-main) BASE=' scripts/control-tower/resolve-ci-base.sh",
+      "result": "pass",
+      "evidence": "结果: 21 通过 / 0 失败（rc=0；含 T9 SYNO_TRUNK_REF 单源、T11 正例/反例、T11b 变异体改坏必红、T12 字面=0、T10b 判别力）；helper 内 local-main 字面=0；legacy 别名臂 grep=0（已删，旧配置 exit 2 fail-closed）"
+    },
+    {
+      "id": "C4-J1修订口径",
+      "cmd": "git grep -n 'local-main' -- '.gitea/**' 'scripts/**' | awk '{l=$0; sub(/^[^:]*:[0-9]+:/,\"\",l); if (l ~ /^[[:space:]]*(#|\\/\\/|\\*|\\/\\*)/) next; print}' | tee /tmp/j1-noncomment.txt; wc -l < /tmp/j1-noncomment.txt; git grep -n 'local-main' -- '.gitea/**' 'scripts/**' | tee /tmp/j1-literal.txt; wc -l < /tmp/j1-literal.txt",
+      "result": "pass",
+      "evidence": "J1-a PASS rc=0：非注释 4 行，文件唯一 .gitea/workflows/trunk-freeze-watch.yml（:13/:17/:21/:24；该件不在本 PR diff，来自 main #1124 冻结哨兵）；J1-b PASS rc=0：字面 11 行＝冻结哨兵 5＋d331-bypass-gate.sh 历史注释 3＋probe 历史注释 3（probe-approval-seam.ts:35/probe-department-axis.ts:32/probe-ontology-instances.ts:7），与 CTO 评论 8549 及 handbook b645695 修订口径一致"
+    },
+    {
+      "id": "C5-pre-push-D331与bypass测试",
+      "cmd": "grep -c d331_gate scripts/pre-push-check.sh; grep -n d331_gate scripts/pre-push-check.sh; grep -c local-main scripts/pre-push-check.sh; for t in check-bypass-log d331-bypass-gate tag-bypass-wiring bypass-ledger bypass-rewrite-classify bypass-union-merge fastlane-bypass-only pre-push-mirror; do bash tests/control-tower/$t.test.sh; done",
+      "result": "pass",
+      "evidence": "d331_gate 计数=1（:545 `if ! d331_gate \"$RESOLVER\" \"$CHECK_BYPASS\"`）；无内联 trunk 兜底块（local-main 字面=0；:531 注释明示对账基一律走 resolver、本段禁 trunk 字面）；本 PR 对 scripts/pre-push-check.sh 净 diff 为空（main 侧 #1134 已就位，取 main 版）。测试：check-bypass-log 28/0、pre-push-mirror 24/0、tag-bypass-wiring 27/0、bypass-ledger 0 失败、bypass-rewrite-classify 9/0、bypass-union 通过、fastlane-bypass-only 8/0 均 rc=0；d331-bypass-gate.test.sh rc=1 系 macOS bash3.2 多字节变量名解析（同件在 gitea/main 基线复现同型，非本 PR 引入，见 findings）"
+    },
+    {
+      "id": "C6-登记门禁",
+      "cmd": "bash scripts/doc-system/doc-registry-gate.sh",
+      "result": "pass",
+      "evidence": "EXIT=0；唯一性：188 条 DOC id，重号 0；存活：152 条 active，path 失配 0；汇总：检查 1 个文档、0 个未登记（base=gitea/main merge-base=26f06d66）"
+    },
+    {
+      "id": "C7-CI双绿",
+      "cmd": "curl -s -H 'Authorization: token <gitea-token>' http://127.0.0.1:3000/api/v1/repos/synova-agent/SynovaAgent/commits/cee2f731d4d623d4185b63356e2ca7548722d089/status; curl .../actions/runs/2533; curl .../actions/runs/2534",
+      "result": "pass",
+      "evidence": "state=success total_count=2：local-gates/gates (push) run 2533 与 local-gates/gates (pull_request) run 2534 均 status=completed、conclusion=success、head_sha=cee2f731d；pending=0（2/2 完结）"
+    },
+    {
+      "id": "C8-refs未动",
+      "cmd": "git ls-remote gitea refs/heads/main refs/heads/local-main refs/heads/ct/1117-trunk-main-2",
+      "result": "pass",
+      "evidence": "main=26f06d664bc394ab5fdcb3e0c3dc80c5c9452492（=PR base 锚）；local-main=b8edf9860990a7ef6962aa12a1bae473e753f6d0（复核开始/结束同值，未删未动）；分支 head=cee2f731d4d623d4185b63356e2ca7548722d089"
+    },
+    {
+      "id": "C9-写集归类与受保护豁免",
+      "cmd": "git diff --name-only gitea/main..HEAD（awk 分类）; bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main; bash tests/control-tower/resolve-ci-base.test.sh; bash tests/control-tower/ci-emptygreen-sim.test.sh; bash tests/control-tower/mirror-sync-push.test.sh; bash tests/control-tower/check-dual-repo-sync.test.sh; bash tests/control-tower/tag-bypass-wiring.test.sh; bash tests/doc-system/doc-registry-gate.test.sh",
+      "result": "pass",
+      "evidence": "32 件归类：workflows 3／scripts 17／tests 7／docs 1／reviews 1／exemptions 1／notes 1／claims 1，other=0，无越界（src/audit 0；均为 #1117 规格写集或 L1 批准扩写集 2 件）；①d 受保护豁免核验 37 通过 0 失败（豁免首行 # review: #1129）；变更测试 6/7 全绿：resolve 21/0、ci-emptygreen 11/0、mirror-sync 19/0、dual-repo 15/0、tag-bypass 27/0、doc-registry 63/0；第 7 件 founder-truth rc=2 为台账遗留（见 findings，非 rc=1 业务红）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "PR #1129 正文 / memory/notes/proposed/2026-10-29-1117-trunk-main.md / gate-exemptions/2026-10-29-1117-trunk-main.md",
+      "what": "验收口径与写集披露仍停在 main 合并前：正文写 J1-a=0 行/J1-b=3 行、规格 9f0ca18、写集 36 件（含 scripts/pre-push-check.sh），而现 head 实测为 J1-a=4/J1-b=11、实际 diff 32 件、pre-push 净 diff 空（已由 main #1134 取代）。CTO 评论 8549 已修订 J1 并落 handbook b645695，判据本身以 b645695 为准且已满足；建议合入前/后同步正文、Note 与豁免件文案（不改判据）。"
+    },
+    {
+      "severity": "warn",
+      "where": "gate-exemptions/2026-10-29-1117-trunk-main.md 末行",
+      "what": "豁免件称「docs/authority/DOCS-REGISTRY.yaml — 仅末尾追加 DOC-0325 登记本豁免文件」，但注册表实际登记为 DOC-1117（:1471，DOC-0325 属 #1124 冻结哨兵，:1399）。注册表本身正确且门禁绿，属一行文案滞后；建议改 DOC-1117 以免审计误读。"
+    },
+    {
+      "severity": "warn",
+      "where": "tests/control-tower/check-test-obligations.test.sh（写集内「首跑红才改」件，本 PR 未改）",
+      "what": "在现 head 实跑 47/1：唯一失败 S1 期望 `SKIP: 无 src/** 变更`，但该用例把 base 固定为 gitea/local-main，而 main 已前进（git diff gitea/local-main..gitea/main 有 7 个 src 变更；本 PR 自身 main..HEAD 的 src 变更=0）⇒ 该断言在纯 main 上同型失败，非本 PR diff 引入，且该测试未接线 CI（CI 直接跑 check-test-obligations.py --base origin/main，已绿）。PR 正文「check-test-obligations 48/0」系 main 合并前读数。建议后续按 §5.1「首跑红才改」一行把 BASE_REF 改 gitea/main（会改指纹，故本批不阻断 ③）。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/control-tower/d331-bypass-gate.test.sh（未在本 PR diff）",
+      "what": "macOS /bin/bash 3.2.57 + LC_ALL=C.UTF-8 下 rc=1：F5 之后 F5 断言行 `no \"...（$OUT）\"` 的变量名后接全角括号被判入变量名 ⇒ `OUT<byte>: unbound variable`；同文件在 gitea/main 基线（git archive 复制）复现同型。该测试与 d331-bypass-gate.sh 均不在本 PR 写集，CI（Linux bash5）绿；与仓内 ci-emptygreen-sim.sh:150 记录的「变量名与多字节字符必须 ${VAR} 定界」同型，属工具链已知问题，非本 PR 回归。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/control-tower/founder-truth-acceptance.test.sh（本 PR 仅改 base 链）",
+      "what": "rc=2（degraded）复现：sealed-tests --list 报「隔离台账条目指向不存在的文件: tests/control-tower/brief-parseable.test.sh」且 FACE-TOTAL=197 落后树 208（继承 over-cap）；台账 scripts/control-tower/gate-integrity-baseline.txt 不在本 PR 写集、未改；该测试不在 CI 接线内。非 rc=1 业务红，属环境遗留（PR 正文已披露）。"
+    },
+    {
+      "severity": "info",
+      "where": "check-merge-conditions.sh --pr 1129 ②（合并时序前置，非本补丁缺陷）",
+      "what": "② 零写集重叠仍为 no：与 open PR #801 在 scripts/pre-commit-check.sh 重叠（1 处文件重叠；12 处共享追加白名单不计）。须由 L1/CTO 定序（后合者 rebase）；本回执只对 ③ 负责，不代表 ② 可放行。"
+    },
+    {
+      "severity": "info",
+      "where": "docs/synova/reviews/1129.6b37ec3d3af7.json（旧回执）",
+      "what": "旧指纹回执仍在 head 树（CTO 评论 8549 已判作废）。R1 取规范路径 1129.6fb4ff73b3fc.json，旧件不参与判定；R7 只认本次新增回执的引入提交，故本回执提交后不触发改码告警。建议后续 clean-up 删除旧件（本回复核不改写集）。"
+    }
+  ],
+  "issued_at": "2026-10-29T20:33:30+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ check-merge-conditions.sh 机器回执"
+}

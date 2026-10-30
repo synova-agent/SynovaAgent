@@ -57,6 +57,108 @@ function toolAbortCode(result: unknown): ToolAbortErrorCode {
   return 'TOOL_ABORTED_BEFORE_DISPATCH';
 }
 
+// ═══ #1165 E1（item ③）: 工具结果进事件流（log-only）═══
+
+/**
+ * #1165 E1: 工具结果事件 payload（writer 侧契约；复用既有事件类型 `tool_result`，不新增类型）。
+ *
+ * 为什么 **不含 `content`**（log-only）：`SessionStore.deriveMessages` 把"带 `content` 的
+ * `tool_result`"投影为 assistant 消息（旧数据兼容），无 `content` 的行显式跳过（C6）
+ * ⇒ 本 payload 只做"日志可查＋统计可派生"这一半，replay 的模型可见消息**零增量**（parity，设计稿 §2.3）。
+ * `role='tool'` 的 surface 投影契约属 R-2 冻结面，本批不做。
+ */
+export interface ToolResultEventPayload {
+  /** 模型侧 tool_call id（与 assistant.tool_calls / role='tool' 消息同源） */
+  toolCallId: string;
+  /** 工具名 */
+  name: string;
+  /** 是否成功（判定：`execResult.error` 缺失 = true） */
+  ok: boolean;
+  /** 失败码（TOOL_TIMEOUT / TOOL_DENIED / TOOL_BLOCKED / 工具自报 code；成功可缺省） */
+  code?: string;
+  /** 执行耗时（`performance.now()` 差值；禁系统时钟直取 —— P12 时种棘轮） */
+  durationMs: number;
+  /** `JSON.stringify(execResult)` 的 UTF-8 字节数（全量结果不落事件流） */
+  resultBytes?: number;
+  /** 结果预览（≤2048 字节，UTF-8 安全截断；永不存全量） */
+  resultPreview?: string;
+}
+
+/** 预览字节上限（规格 §4.3「预览 ≤2KB」；#991 事件上限 20k 条 ⇒ 单条 payload 必须小） */
+const TOOL_RESULT_PREVIEW_MAX_BYTES = 2048;
+
+/**
+ * #1165 E1: `tool_result` 写入开关（逐调用读取；`SYNO_TOOL_RESULT_EVENT=0` ⇒ 不写 = 回旧行为）。
+ * @input  无（读 process.env.SYNO_TOOL_RESULT_EVENT）
+ * @output true = 写事件；false = 不写
+ * @error  永不抛（纯 env 读取）
+ */
+function isToolResultEventEnabled(): boolean {
+  return process.env.SYNO_TOOL_RESULT_EVENT !== '0';
+}
+
+/**
+ * #1165 E1: 按 UTF-8 **字节**安全截断（D732 UTF-8 口径：绝不切坏多字节字符）。
+ * @input  text — 原文；maxBytes — 字节上限（≤0 ⇒ 空串）
+ * @output 截断结果：UTF-8 字节数 ≤ maxBytes，且不产生替换符 U+FFFD（回退到字符起始边界）
+ * @error  永不抛（纯函数）
+ */
+function truncateUtf8(text: string, maxBytes: number): string {
+  if (maxBytes <= 0) return '';
+  const bytes = Buffer.from(text, 'utf8');
+  if (bytes.length <= maxBytes) return text;
+  let end = maxBytes;
+  // UTF-8 续字节形如 10xxxxxx ⇒ 向左回退到字符起始边界（多字节字符不被切开）
+  while (end > 0 && (bytes[end] & 0xc0) === 0x80) end -= 1;
+  return bytes.subarray(0, end).toString('utf8');
+}
+
+/**
+ * #1165 E1: 工具结果 → 可序列化文本（`resultBytes/resultPreview` 的同源输入）。
+ * @input  execResult — `toolRegistry.execute` 的返回值（或抛错归一后的 `{ error }`）
+ * @output JSON 文本；`undefined`/不可序列化（循环引用等）⇒ 可读占位串
+ * @error  永不抛（落盘缝不得反向打断工具循环）
+ */
+function serializeToolResult(execResult: unknown): string {
+  try {
+    const json = JSON.stringify(execResult);
+    return typeof json === 'string' ? json : String(execResult);
+  } catch (err: unknown) {
+    return `[unserializable tool result: ${errorMessage(err)}]`;
+  }
+}
+
+/**
+ * #1165 E1: 工具结果事件 payload 构造（执行完成写点的唯一入口；**不含 `content`**）。
+ * @input  toolCallId, name — 调用身份；execResult — 执行结果/归一错误；durationMs — 执行耗时
+ * @output ToolResultEventPayload（`ok` = `execResult.error` 缺失；结构化 `error.code` ⇒ `payload.code`）
+ * @error  永不抛（序列化兜底见 serializeToolResult）
+ */
+function buildToolResultPayload(
+  toolCallId: string,
+  name: string,
+  execResult: unknown,
+  durationMs: number,
+): ToolResultEventPayload {
+  const serialized = serializeToolResult(execResult);
+  const error = typeof execResult === 'object' && execResult !== null
+    ? (execResult as ToolExecResult).error
+    : undefined;
+  const payload: ToolResultEventPayload = {
+    toolCallId,
+    name,
+    ok: !error,
+    durationMs: Math.round(durationMs),
+    resultBytes: Buffer.byteLength(serialized, 'utf8'),
+    resultPreview: truncateUtf8(serialized, TOOL_RESULT_PREVIEW_MAX_BYTES),
+  };
+  if (typeof error === 'object' && error !== null) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string') payload.code = code;
+  }
+  return payload;
+}
+
 /** D819: 出站 assistant.tool_calls 的 OpenAI 形状（id/type/function）—— 配对 id 的唯一来源 */
 type OutboundToolCall = ToolCall & { id: string; type: 'function' };
 
@@ -162,6 +264,39 @@ export class ToolLoopExecutor {
   }
 
   /**
+   * #1165 E1（item ③）: `tool_result` 落事件流（log-only）。
+   *
+   * 写入范式照 `onLlmRetry`（D810）：必须 `appendEvent.bind(store)`（解构出的方法会丢 this）；
+   * 落盘失败/抛错 ⇒ `log.warn({degraded:true})`，**不阻断本轮**（工具结果照常进模型消息）。
+   * 取消返回与 guard reminder 不是 result 语义 ⇒ 调用方不调用本方法（设计稿 §2.3/§6-3）。
+   *
+   * @input  payload — 已构造好的 ToolResultEventPayload（**不含 content**）
+   * @output 无（void）；`SYNO_TOOL_RESULT_EVENT=0` / 无 store / 无 sessionId ⇒ 跳过
+   * @degraded 写失败 ⇒ log.warn({degraded:true})，不抛
+   * @error  永不抛（落盘是旁路，不得反向打断对话）
+   */
+  private appendToolResultEvent(payload: ToolResultEventPayload): void {
+    if (!isToolResultEventEnabled()) return;
+    const store = this.ctx.sessionStore;
+    const sessionId = this.ctx.sessionId;
+    if (!store?.appendEvent || !sessionId) return;
+    try {
+      const result = store.appendEvent.bind(store)(sessionId, 'tool_result', payload);
+      if (!result.ok) {
+        this.log.warn(
+          { code: payload.code, tool: payload.name, degraded: true, error: result.error },
+          'tool_result 事件落盘降级 — 不阻断本轮',
+        );
+      }
+    } catch (err: unknown) {
+      this.log.warn(
+        { code: payload.code, tool: payload.name, degraded: true, error: errorMessage(err) },
+        'tool_result 事件落盘抛错 — 不阻断本轮',
+      );
+    }
+  }
+
+  /**
    * Call LLM with tool execution loop (non-streaming).
    * Max 3 rounds of tool calls to prevent infinite loops.
    *
@@ -254,6 +389,14 @@ export class ToolLoopExecutor {
                 traceId: sessionId, spanId: sessionId.slice(0, 16),
                 timestamp: new Date().toISOString(),
               });
+              // #1165 E1: Hook deny 是工具终态 ⇒ 也落 tool_result（无执行 ⇒ durationMs 0、无结果字节）
+              this.appendToolResultEvent({
+                toolCallId: tc.id,
+                name: tc.function.name,
+                ok: false,
+                code: 'TOOL_DENIED',
+                durationMs: 0,
+              });
               continue; // Skip this tool, continue next
             }
             if (preResult.action === 'modify' && preResult.modifiedInput) {
@@ -266,6 +409,14 @@ export class ToolLoopExecutor {
           if (!guardDecision.allow) {
             this.log.warn({ tool: tc.function.name, reason: guardDecision.reason }, '工具被 ToolGuard 阻止');
             messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: `工具被阻止: ${guardDecision.reason}` }) });
+            // #1165 E1: ToolGuard block 是工具终态 ⇒ 也落 tool_result（未执行 ⇒ durationMs 0）
+            this.appendToolResultEvent({
+              toolCallId: tc.id,
+              name: tc.function.name,
+              ok: false,
+              code: 'TOOL_BLOCKED',
+              durationMs: 0,
+            });
             continue;
           }
           // D473: reminder 注入模型可见上下文（不阻断执行，决策留给模型 — DSH advisory 范式）
@@ -277,13 +428,27 @@ export class ToolLoopExecutor {
             });
           }
 
-          const execResult = await toolRegistry.execute(tc.function.name, effectiveParams, { signal: sig });
+          // #1165 E1: 执行耗时用 performance.now()（禁 Date.now —— P12 时种棘轮）
+          const executeStartedAt = performance.now();
+          let execResult: unknown;
+          try {
+            execResult = await toolRegistry.execute(tc.function.name, effectiveParams, { signal: sig });
+          } catch (err: unknown) {
+            // 防御归一：execute 契约「永不抛」；若抛则与模型消息同源折成 { error }（ok=false，不阻断本轮）
+            this.log.warn({ err: errorMessage(err), tool: tc.function.name, degraded: true }, '工具执行抛错 — 归一为 { error }（execute 契约外的防御分支）');
+            execResult = { error: `工具执行失败: ${errorMessage(err)}` };
+          }
 
           // #915 Q-5: 取消两码 ⇒ 停止本轮并返回取消文案（不当普通失败，DS-4）
           if (isToolAbortResult(execResult)) {
             this.log.info({ code: toolAbortCode(execResult), tool: tc.function.name, round }, '工具已取消 — 停止本轮，返回前缀+取消标记');
             return `${generated}${TOOL_CANCELLED_REPLY}`;
           }
+
+          // #1165 E1: 执行完成 ⇒ tool_result 落事件流（log-only；取消不写）
+          this.appendToolResultEvent(
+            buildToolResultPayload(tc.id, tc.function.name, execResult, performance.now() - executeStartedAt),
+          );
 
           // L3 ToolGuard: 工具调用后记录（失败计数）
           this.toolGuard.afterCall(tc.function.name, execResult, 0);
@@ -349,7 +514,9 @@ export class ToolLoopExecutor {
    * #915 Q-5 契约扩展（铁律 47）:
    * @input  onToken, signal?: AbortSignal（SYNO_TOOL_ABORT=0 ⇒ 忽略，回旧行为）
    * @output 取消 ⇒ `${已流式生成前缀}${TOOL_CANCELLED_REPLY}`——onToken 已收到的 token
-   *         前缀 ⊆ 返回内容（中断锚不变量，规格 §4.3；S7 前缀完整性）
+   *         前缀 ⊆ 返回内容（中断锚不变量，规格 §4.3；S7 前缀完整性）；
+   *         #1165 E1：3 处逐字动画循环内每个字符 emit **前**也查 `sig?.aborted`
+   *         ⇒ 取消后不再把剩余字符 sleep 完，返回值仍为「已流前缀＋取消标记」
    * @degraded 取消是控制流：不设 degraded；log.info 留痕一次
    * @error  不抛（取消结果化）
    */
@@ -401,6 +568,11 @@ export class ToolLoopExecutor {
         // 此处不再 push（旧实现与本方法出口双推 → 出站角色序出现 assistant,assistant，D817-F2）。
         if (!result.toolCalls || result.toolCalls.length === 0) {
           for (const ch of content) {
+            // #1165 E1: emit 前查取消 ⇒ 已流前缀＋取消标记（Q-5 前缀不变量；不把剩余字符 sleep 完）
+            if (sig?.aborted) {
+              this.log.info({ code: 'TOOL_ABORTED', round, streamedChars: streamedText.length }, '逐字动画已取消 — 停止剩余字符（无工具调用分支）');
+              return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+            }
             emit(ch);
             await sleep(5); // P3-06: 5ms/char 流式动画
           }
@@ -411,6 +583,11 @@ export class ToolLoopExecutor {
         this.log.debug({ count: result.toolCalls.length, round }, 'streamWithToolLoop: 工具调用');
 
         for (const ch of content) {
+          // #1165 E1: emit 前查取消 ⇒ 已流前缀＋取消标记（Q-5 前缀不变量；工具调用前的文本分支）
+          if (sig?.aborted) {
+            this.log.info({ code: 'TOOL_ABORTED', round, streamedChars: streamedText.length }, '逐字动画已取消 — 停止剩余字符（工具调用前文本分支）');
+            return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+          }
           emit(ch);
           await sleep(5);
         }
@@ -441,6 +618,14 @@ export class ToolLoopExecutor {
             if (preResult.action === 'deny') {
               messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: `工具被拒绝: ${preResult.reason}` }) });
               eventBus?.emit({ id: `evt_${Date.now().toString(36)}`, type: 'tool.denied', consultationId: sessionId, data: { toolName: tc.function.name, reason: preResult.reason }, traceId: sessionId, spanId: sessionId.slice(0, 16), timestamp: new Date().toISOString() });
+              // #1165 E1: Hook deny 是工具终态 ⇒ 也落 tool_result（无执行 ⇒ durationMs 0、无结果字节）
+              this.appendToolResultEvent({
+                toolCallId: tc.id,
+                name: tc.function.name,
+                ok: false,
+                code: 'TOOL_DENIED',
+                durationMs: 0,
+              });
               continue;
             }
             if (preResult.action === 'modify' && preResult.modifiedInput) {
@@ -453,6 +638,14 @@ export class ToolLoopExecutor {
           if (!guardDecision.allow) {
             this.log.warn({ tool: tc.function.name, reason: guardDecision.reason }, '工具被 ToolGuard 阻止');
             messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: `工具被阻止: ${guardDecision.reason}` }) });
+            // #1165 E1: ToolGuard block 是工具终态 ⇒ 也落 tool_result（未执行 ⇒ durationMs 0）
+            this.appendToolResultEvent({
+              toolCallId: tc.id,
+              name: tc.function.name,
+              ok: false,
+              code: 'TOOL_BLOCKED',
+              durationMs: 0,
+            });
             continue;
           }
           // D473: reminder 注入模型可见上下文（streaming 路径同样消费，不阻断执行）
@@ -464,6 +657,8 @@ export class ToolLoopExecutor {
             });
           }
 
+          // #1165 E1: 执行耗时用 performance.now()（禁 Date.now —— P12 时种棘轮）
+          const executeStartedAt = performance.now();
           let execResult: unknown;
           try {
             execResult = await toolRegistry.execute(tc.function.name, effectiveParams, { signal: sig });
@@ -482,6 +677,11 @@ export class ToolLoopExecutor {
             this.log.info({ code: toolAbortCode(execResult), tool: tc.function.name, round }, '流式工具已取消 — 停止本轮，返回前缀+取消标记');
             return `${streamedText}${TOOL_CANCELLED_REPLY}`;
           }
+
+          // #1165 E1: 执行完成 ⇒ tool_result 落事件流（log-only；取消不写）
+          this.appendToolResultEvent(
+            buildToolResultPayload(tc.id, tc.function.name, execResult, performance.now() - executeStartedAt),
+          );
 
           // L3 ToolGuard: 工具调用后记录
           this.toolGuard.afterCall(tc.function.name, execResult, 0);
@@ -526,6 +726,11 @@ export class ToolLoopExecutor {
       }
       const final = outcome.result;
       for (const ch of (final.content || '')) {
+        // #1165 E1: emit 前查取消 ⇒ 已流前缀＋取消标记（Q-5 前缀不变量；轮尽收尾分支）
+        if (sig?.aborted) {
+          this.log.info({ code: 'TOOL_ABORTED', streamedChars: streamedText.length }, '逐字动画已取消 — 停止剩余字符（轮尽收尾分支）');
+          return `${streamedText}${TOOL_CANCELLED_REPLY}`;
+        }
         emit(ch);
         await sleep(5);
       }

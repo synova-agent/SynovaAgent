@@ -2,7 +2,7 @@
   "version": "1.0",
   "created": "2026-09-08T00:00:00Z",
   "approved_by": "founder",
-  "current_phase": 3,
+  "current_phase": 4,
   "principles": [
     "原则2: 测试先行 red→green，spec DS1-DS8 机器可验契约",
     "数组整值替换 > 逐元素合并（DSH mergeLayers 范式，哨兵阈值数组禁止产生不可控混合）",
@@ -61,6 +61,17 @@
         "projectContextSource",
         "validateManifestDoc",
         "reconcileRefs"
+      ],
+      "checks": { "wiring": "deferred", "test_pairing": "enforce" }
+    },
+    {
+      "step": 4,
+      "action": "#1075 P2-1 审批门：新模块 src/init/role-pack-approval.ts 的 readApprovalRecord() 生产消费者＝同文件 judgeRolePackApproval()（已由 src/init/preset-loader.ts 调用）；测试面 10 处直调断言 J8 记录类型/大小/形状；P3 审批写入器接入后转为跨文件消费。组 4a 分阶段接线声明，wiring deferred（D588/D333／P1 phase 3 先例）",
+      "files": [
+        "src/init/role-pack-approval.ts"
+      ],
+      "exports": [
+        "readApprovalRecord"
       ],
       "checks": { "wiring": "deferred", "test_pairing": "enforce" }
     }

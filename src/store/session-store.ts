@@ -128,6 +128,14 @@ export interface ConversationState {
   phase: number;
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
   startedAt: string;
+  /**
+   * #1075 P2-2（additive，可选）：会话**绑定的岗位 id**（`EngineState.rolePackId` 的落库形态）。
+   *
+   * 口径：只存"岗位归属"，**人设文本不落库** —— 每轮由
+   * `src/init/role-pack-persona.ts` 的 `loadRolePackPersona()` 从磁盘重解析（审批态/内容变更即时生效）。
+   * 无岗位绑定的既有会话：该键**缺省**（不是 `null`）⇒ 读路径逐字不变。
+   */
+  rolePackId?: string;
 }
 
 // ═══ D500: 事件溯源类型 ═══
@@ -269,19 +277,144 @@ export type AppendEventResult =
   | { ok: true; seq: number }
   | { ok: false; degraded: true; error: string };
 
+/**
+ * R-E1 ①: `addMessage` 结果契约（铁律 47）。
+ *
+ * `{ok:true, seq}` = 消息行与事件行**已整笔落账**（事务态）／已按旧路径落账（回滚态）；
+ * `{ok:false, degraded:true, error}` = appendEvent 折成 degraded ⇒ 事务态下**整笔已回滚**。
+ * 返回值是 **additive**：既有 11+1 处调用方全部忽略返回值 ⇒ 源码零改动（设计稿 §2.1）。
+ */
+export type AddMessageResult =
+  | { ok: true; seq: number }
+  | { ok: false; degraded: true; error: string };
+
+// ═══ R-E1（#1165）: 事务 / seq 原子 / busy_timeout 的开关与阈值 ═══
+
+/**
+ * R-E1 ①: 消息双写事务开关（默认开；`SYNO_SESSION_TX=0` ⇒ 回旧行为）。
+ *
+ * 回旧行为 = 三条独立语句（消息行**不**回滚）。逐调用读取（可测试注入）。
+ * 为何必须有开关：事务化把"消息落了、事件没落"的静默半截改成"整笔回滚"，
+ * 错误面变化必须留回滚路径（规格 §4.1「回滚开关」）。
+ */
+function isSessionTxEnabled(): boolean {
+  return process.env.SYNO_SESSION_TX !== '0';
+}
+
+/**
+ * R-E1 ②: seq 单语句原子分配开关（默认开；`SYNO_SESSION_SEQ_ATOMIC=0` ⇒ 回旧"读后写"）。
+ *
+ * 旧路径单线程仍得 1..N；多进程下会撞 `UNIQUE(session_id,seq)` ⇒ degraded，
+ * 正是本批要修的洞（P5 实测 1936/2000、64 degraded）。逐调用读取。
+ */
+function isSessionSeqAtomicEnabled(): boolean {
+  return process.env.SYNO_SESSION_SEQ_ATOMIC !== '0';
+}
+
+/** R-E1 ②: 默认 busy_timeout（毫秒）——SQLite 跨进程写等待窗（L1 裁定 3） */
+export const DEFAULT_SESSION_BUSY_TIMEOUT_MS = 5_000;
+
+/** R-E1 ②: busy_timeout 硬上界（防误配天文数字把"等待"变成"挂死"） */
+export const MAX_SESSION_BUSY_TIMEOUT_MS = 60_000;
+
+/**
+ * 解析本连接生效的 busy_timeout（**逐构造读取**，clamp [1, 60000]，L1 裁定 3）。
+ *
+ * 模板同 `maxSessionEvents()`（裁 219 字面模板）：未配/非数/0 ⇒ 默认 5000；
+ * 负数 ⇒ 下界 1；超上界 ⇒ 夹到 `MAX_SESSION_BUSY_TIMEOUT_MS`；其余原样。
+ * @input  无（读 `process.env.SYNO_SESSION_BUSY_TIMEOUT_MS`）
+ * @output 正整数毫秒
+ * @degraded 不适用（纯解析，无 IO、无 catch 分支）
+ */
+export function sessionBusyTimeoutMs(): number {
+  const raw =
+    Number.parseInt(process.env.SYNO_SESSION_BUSY_TIMEOUT_MS ?? '', 10) || DEFAULT_SESSION_BUSY_TIMEOUT_MS;
+  return Math.min(MAX_SESSION_BUSY_TIMEOUT_MS, Math.max(1, raw));
+}
+
+/**
+ * R-E1 ①: `addMessage` 事务体内的**内部哨兵**（typed，带 `code`；**不导出**）。
+ *
+ * 为什么需要它：`appendEvent` 已把 I/O 失败折成 `{ok:false,degraded:true}` 返回值
+ * （它的契约不变、不感知事务），而事务体只有"抛"才能触发 ROLLBACK ⇒
+ * 事务体内把该返回值转成本哨兵抛出，外层 catch 再转回 degraded 返回值。
+ * typed（`SESSION_EVENT_LIMIT`/`UNKNOWN_EVENT_TYPE`）/ SQL 错**不经**本哨兵（原样抛）。
+ * 边界：本类永不逃出 `addMessage` ⇒ 不纳入导出的 `SessionEventErrorCode` 词表。
+ */
+class AppendEventDegradedError extends Error {
+  readonly code = 'APPEND_EVENT_DEGRADED';
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`appendEvent 已降级（事务回滚）: ${reason}`);
+    this.name = 'AppendEventDegradedError';
+    this.reason = reason;
+  }
+}
+
+/** 取 unknown 错误的字符串 `code`（零断言：`in` 窄化后判类型，缺省空串） */
+function errorCodeOf(err: unknown): string {
+  if (typeof err === 'object' && err !== null && 'code' in err) {
+    const code = err.code;
+    if (typeof code === 'string') return code;
+  }
+  return '';
+}
+
+/**
+ * R-E1 ②: 是否「冲突类」错误（可重试 1 次）。
+ *
+ * `UNIQUE(session_id,seq)` 冲突（并发同 seq）／`SQLITE_BUSY`（写锁未获）⇒ 重试一次
+ * （设计稿 §2.2；**禁止无限重试**）。第二次仍失败 ⇒ 交外层折 degraded（铁律 24/31）。
+ */
+function isRetryableSeqError(err: unknown): boolean {
+  const code = errorCodeOf(err);
+  if (code === 'SQLITE_BUSY' || code === 'SQLITE_CONSTRAINT_UNIQUE' || code === 'SQLITE_CONSTRAINT') {
+    return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return /UNIQUE constraint failed/i.test(msg) || /database is locked|SQLITE_BUSY/i.test(msg);
+}
+
+/**
+ * R-E1 ②: 「事件数上限」typed error（消息保留既有 `SYNO_MAX_SESSION_EVENTS`／`新开一个会话`
+ * 子串 —— `tests/store/session-events-limit.test.ts` 据此断言可执行指引，禁改文案骨架）。
+ */
+function sessionEventLimitError(cap: number, nextSeq: number): SessionEventError {
+  return new SessionEventError(
+    'SESSION_EVENT_LIMIT',
+    'validate',
+    `会话事件数已达上限 ${cap}（下一条 seq=${nextSeq}）；` +
+      `可用 SYNO_MAX_SESSION_EVENTS 调整（默认 ${DEFAULT_MAX_SESSION_EVENTS}，范围 1-${MAX_SESSION_EVENTS_CEILING}），` +
+      `或新开一个会话继续 —— 本条被拒，会话与既有事件不受影响。`,
+  );
+}
+
 // ═══ SessionStore ═══
 
 export class SessionStore {
   private db: Database.Database;
 
   /**
-   * D500: 降级信号传播（铁律 31）——appendEvent 双写失败时置 true，
-   * 调用方（SessionManager model-visible⟺logged 断言）检查。
+   * D500 / C5: 降级信号传播（铁律 31）——appendEvent 双写失败时置 true，
+   * 调用方（SessionManager model-visible⟺logged 断言 / 路由 `STORE_DEGRADED` 帧）检查。
+   *
+   * 🔴 C5（spec §9.2，R-E1）: 语义为「**本轮累积**」而非「本次调用结果」——
+   *   任何失败（degraded 返回或抛错）置 true 并**保持**；**只有一次成功的 `role='user'`
+   *   写入**才清闩（轮边界＝新轮起点）；`assistant`/`system` 成功**不清**。
+   *   旧语义（"后一次成功即重置"）会让同轮 `:734` 的 assistant 成功把 `:720` 的 user
+   *   失败抹掉，路由 `conversations.ts:757` 就看不见降级（院方 P1-2 的洞）。
+   *   已知限制：闩是 **store 级**（同一实例共享）；只有 system/assistant 写入的会话，
+   *   降级会保持到下一次 user 写入。
    */
   lastDegraded = false;
 
   constructor(db: Database.Database) {
     this.db = db;
+    // R-E1 ②（L1 裁定 3）: 跨进程 SQLITE_BUSY 需要显式等待窗。better-sqlite3 自带默认值，
+    // 但本仓从未显式设过 ⇒ 显式设 + 可配 + 可测试注入（逐构造读取，clamp [1, 60000]）。
+    // 已知限制：DB 连接级设置，影响该连接的全部使用者。
+    this.db.pragma(`busy_timeout = ${sessionBusyTimeoutMs()}`);
     this.initSchema();
   }
 
@@ -481,29 +614,106 @@ export class SessionStore {
   // ═══ Messages ═══
 
   /**
-   * D500: 消息写入（双写——agent_messages 兼容 + session_events 事件流下沉）。
-   * 契约:
-   *   @input  — sessionId, role, content
-   *   @output — void（事件双写失败 → lastDegraded=true，铁律 31 降级信号传播）
-   *   双写下沉决策（2026-08-22）: 8 处直连生产调用方（cli/im-inbound/graceful-shutdown/
-   *     stuck-session-detector/restart-recovery）经本方法写入，自动获得事件流，
-   *     无需逐个修改调用方。
+   * D500 / R-E1 ①: 消息写入（双写——agent_messages 兼容 + session_events 事件流下沉）。
+   *
+   * 契约（铁律 47）:
+   *   @input    — sessionId, role, content
+   *   @output   — `AddMessageResult`：`{ok:true, seq}` ｜ `{ok:false, degraded:true, error}`
+   *               （**additive**：既有 11+1 处调用方全部忽略返回值 ⇒ 源码零改动）
+   *   @degraded — appendEvent 折成 degraded ⇒（事务态）**整笔回滚** ＋ `lastDegraded=true`
+   *               ＋ `log.error` ＋ 返回 degraded（**不抛**，铁律 24/31）
+   *   @error    — appendEvent 抛 typed（`SESSION_EVENT_LIMIT`/`UNKNOWN_EVENT_TYPE`）或
+   *               INSERT/UPDATE 的 SQL 错 ⇒（事务态）回滚后**原样抛出**（保持调用方既有抛错面；
+   *               半截行不再残留 —— 这正是 P3 实测的洞）
+   *   @rollback — `SYNO_SESSION_TX=0` ⇒ 旧行为（三条独立语句，消息行不回滚）
+   *   @authority — 仅本进程持 store 实例者调用；**事务体内禁止 `await`**（better-sqlite3 同步）
+   *   @not-here — 不做会话数配额/归档压缩；不改调用方对抛错的处置（11+1 处逐处实测，设计稿 §2.1 表）
+   *
+   * C5（spec §9.2）: 闩锁语义见 `lastDegraded` 字段注释——失败置闩并保持，
+   * **只有成功的 `role='user'` 写入**才清闩（轮边界）；`assistant`/`system` 成功不清。
+   *
+   * 双写下沉决策（2026-08-22）: 11 处 `store.addMessage` ＋ 1 处 `SessionManager` 封装
+   * （设计稿 §2.1 逐处实测）经本方法写入，自动获得事件流，无需逐个修改调用方。
    */
-  addMessage(sessionId: string, role: MessageRow['role'], content: string): void {
+  addMessage(sessionId: string, role: MessageRow['role'], content: string): AddMessageResult {
+    // 🔴 时间戳只取**一次**（事务态与回滚态共用）：`tests/contract/time-injection.test.ts` 的
+    // 时种棘轮按**字面计数**（注释里的同形文本也计入）冻结本文件为 [1,5] ⇒ 禁逐分支各取一次
+    // （会 +1 变红），也禁改成 NOW 形态（NOW 计数同样被冻结）。
+    const updatedAt = new Date().toISOString();
+    try {
+      const result = this.writeMessage(sessionId, role, content, updatedAt);
+      if (result.ok) {
+        // C5: 只有「新轮起点」（成功的 user 写入）清闩；assistant/system 成功**不清**
+        if (role === 'user') this.lastDegraded = false;
+        return result;
+      }
+      log.error(
+        { sessionId, role, error: result.error, degraded: true },
+        'appendEvent 双写失败 — model-visible⟺logged 断裂（事务态整笔回滚）',
+      );
+      this.lastDegraded = true;
+      return result;
+    } catch (err) {
+      // P3 的第二个洞：抛错路径同样必须置位（旧实现只在 degraded 返回值时置位）
+      this.lastDegraded = true;
+      throw err;
+    }
+  }
+
+  /**
+   * R-E1 ①: `addMessage` 主体——事务态／回滚态两分支（同步，无 await）。
+   *
+   * 事务态：`db.transaction` 包 `INSERT agent_messages` → `appendEvent('message')` →
+   * `UPDATE agent_sessions.updated_at`；appendEvent 降级 ⇒ 抛内部哨兵触发 ROLLBACK，
+   * 本方法把它转回 degraded 返回值；typed/SQL 错 ⇒ 回滚后原样抛。
+   * 回滚态（`SYNO_SESSION_TX=0`）：逐字复刻改造前的三条独立语句。
+   *
+   * 已知限制：事务体用 better-sqlite3 `db.transaction`（同步；嵌套时自动 SAVEPOINT），
+   * 不自写 `BEGIN`——避免"已在外层事务"时炸（设计稿 §2.1 实现要点 1）。
+   */
+  private writeMessage(
+    sessionId: string,
+    role: MessageRow['role'],
+    content: string,
+    updatedAt: string,
+  ): AddMessageResult {
+    if (!isSessionTxEnabled()) {
+      return this.writeMessageSequential(sessionId, role, content, updatedAt);
+    }
+    const writeAll = this.db.transaction((): number => {
+      this.db.prepare('INSERT INTO agent_messages (session_id, role, content) VALUES (?,?,?)')
+        .run(sessionId, role, content);
+      // D500: 事件流双写（append-only，model-visible⟺logged 根基）
+      const res = this.appendEvent(sessionId, 'message', { role, content });
+      // appendEvent 的契约不变（自己折 degraded）⇒ 这里用内部哨兵把"降级"变成"回滚"
+      if (!res.ok) throw new AppendEventDegradedError(res.error);
+      this.db.prepare('UPDATE agent_sessions SET updated_at=? WHERE id=?')
+        .run(updatedAt, sessionId);
+      return res.seq;
+    });
+    try {
+      return { ok: true, seq: writeAll() };
+    } catch (err) {
+      if (err instanceof AppendEventDegradedError) {
+        return { ok: false, degraded: true, error: err.reason };
+      }
+      throw err; // typed（SESSION_EVENT_LIMIT / UNKNOWN_EVENT_TYPE）/ SQL 错：回滚后原样抛
+    }
+  }
+
+  /** `SYNO_SESSION_TX=0` 回滚态：旧三条独立语句（与改造前逐字同形；消息行不回滚）。 */
+  private writeMessageSequential(
+    sessionId: string,
+    role: MessageRow['role'],
+    content: string,
+    updatedAt: string,
+  ): AddMessageResult {
     this.db.prepare('INSERT INTO agent_messages (session_id, role, content) VALUES (?,?,?)')
       .run(sessionId, role, content);
-    // D500: 事件流双写（append-only，model-visible⟺logged 根基）
-    // 2026-08-22 复核修正: 事件写入成功时重置 lastDegraded——降级信号反映"本次"结果，
-    // 非历史粘滞（原实现一次失败后永久 true，transient 故障恢复后误报持续）
     const res = this.appendEvent(sessionId, 'message', { role, content });
-    if (!res.ok) {
-      log.error({ sessionId, role, error: res.error }, 'appendEvent 双写失败 — model-visible⟺logged 断裂');
-      this.lastDegraded = true;
-    } else {
-      this.lastDegraded = false;
-    }
     this.db.prepare('UPDATE agent_sessions SET updated_at=? WHERE id=?')
-      .run(new Date().toISOString(), sessionId);
+      .run(updatedAt, sessionId);
+    return res.ok ? { ok: true, seq: res.seq } : { ok: false, degraded: true, error: res.error };
   }
 
   /**
@@ -524,6 +734,15 @@ export class SessionStore {
    *   下一条 seq > `maxSessionEvents()`（默认 20000，`SYNO_MAX_SESSION_EVENTS` 可配）⇒
    *   **写库前抛** `SessionEventError('SESSION_EVENT_LIMIT','validate')` —— 拒单条、不断会话；
    *   本上限**独立于** `SYNO_SESSION_EVENT_STRICT`（关词表校验不回滚上限）。
+   *
+   * R-E1 ② 契约变更（#1165，本批）:
+   *   seq 分配改为**单语句原子**（`INSERT…SELECT COALESCE(MAX(seq),0)+1 … HAVING … RETURNING seq`）
+   *   —— 跨进程不再有"读后写"窗口（P5 实测旧路径 20 进程×100 ⇒ 1936/2000、64 degraded）。
+   *   `UNIQUE(session_id,seq)` 或 `SQLITE_BUSY` ⇒ **重试 1 次**（幂等，禁止无限重试）；
+   *   第二次仍失败 ⇒ 照旧折 degraded 返回（铁律 24/31，不静默）。
+   *   回滚开关 `SYNO_SESSION_SEQ_ATOMIC=0` ⇒ 回旧"SELECT MAX 后 INSERT"（逐调用读取）。
+   *   已知限制：`RETURNING` 需 SQLite ≥ 3.35（本仓实测 3.53.2）；cap 拒单时多一次只读
+   *   `SELECT MAX(seq)` 仅用于错误文案报真实 nextSeq（不进热路径）。
    */
   appendEvent(sessionId: string, eventType: SessionEventType, payload: unknown): AppendEventResult {
     // 词表 fail-closed：必须在 try 之前（否则会被下面的 catch 折成 degraded = 旧病复发）
@@ -536,35 +755,101 @@ export class SessionStore {
         );
       }
       warnStrictDisabled('appendEvent');
+      this.lastDegraded = true; // C5: 任一写入降级 ⇒ 置闩（不是只有 addMessage 一条路）
       return { ok: false, degraded: true, error: `unknown event type: ${String(eventType)}` };
     }
     try {
-      // 持久化 lastSeq: 基于 MAX(seq) 续写，禁止内存回退（缺陷②防线）
-      const row = this.db.prepare('SELECT MAX(seq) as max_seq FROM session_events WHERE session_id=?')
-        .get(sessionId) as SqliteRow | undefined;
-      const nextSeq = Number((row?.max_seq as number | null) ?? 0) + 1;
-      // #991 Q-12：超限即拒 —— 写库前拒绝单条（不静默丢、不折 degraded、不断会话）
-      const cap = maxSessionEvents();
-      if (nextSeq > cap) {
-        throw new SessionEventError(
-          'SESSION_EVENT_LIMIT',
-          'validate',
-          `会话事件数已达上限 ${cap}（下一条 seq=${nextSeq}）；` +
-            `可用 SYNO_MAX_SESSION_EVENTS 调整（默认 ${DEFAULT_MAX_SESSION_EVENTS}，范围 1-${MAX_SESSION_EVENTS_CEILING}），` +
-            `或新开一个会话继续 —— 本条被拒，会话与既有事件不受影响。`,
-        );
-      }
-      this.db.prepare(
-        'INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version) VALUES (?,?,?,?,?)'
-      ).run(sessionId, nextSeq, eventType, JSON.stringify(payload), SESSION_EVENT_FORMAT_VERSION);
-      return { ok: true, seq: nextSeq };
+      const payloadJson = JSON.stringify(payload);
+      const seq = isSessionSeqAtomicEnabled()
+        ? this.insertEventAtomic(sessionId, eventType, payloadJson)
+        : this.insertEventReadThenWrite(sessionId, eventType, payloadJson);
+      return { ok: true, seq };
     } catch (err) {
       // typed error 必须原样抛：折成 degraded 就等于「静默丢事件」，正是 Q-12 要治的形态
       if (err instanceof SessionEventError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
-      log.error({ sessionId, eventType, error: msg }, 'appendEvent 写入失败 — degraded');
+      log.error({ sessionId, eventType, error: msg, degraded: true }, 'appendEvent 写入失败 — degraded');
+      // C5（spec §9.2）: 任一写入降级 ⇒ 置闩（含 BUSY/UNIQUE 重试后仍失败、直连 appendEvent 的调用方）
+      this.lastDegraded = true;
       return { ok: false, degraded: true, error: msg };
     }
+  }
+
+  /**
+   * R-E1 ②: **单语句原子分配** —— seq 的唯一正确写法（跨进程）。
+   *
+   * `INSERT…SELECT COALESCE(MAX(seq),0)+1 … WHERE session_id=?`：`MAX(seq)` 与 INSERT
+   * 在同一条语句内求值 ⇒ 不存在"读到 MAX=5 再写 6 时别人已写 6"的窗口。
+   * `HAVING … <= ?`：cap 超限时语句**不插入**、`RETURNING` 无行（实测 SQLite 3.53.2）
+   *   ⇒ 抛 `SESSION_EVENT_LIMIT`（写库前拒，Q-12 语义不变；错误文案报真实 nextSeq）。
+   * 冲突/BUSY ⇒ 重试 1 次（第二次的 `MAX(seq)` 会重新求值，天然幂等恢复）。
+   *
+   * @input   sessionId, eventType, payloadJson（已序列化）
+   * @output  成功写入的 seq（≥1）
+   * @error   `SESSION_EVENT_LIMIT`（cap 超限）｜ 两次仍冲突/BUSY 的原生 SQLite 错（交外层折 degraded）
+   */
+  private insertEventAtomic(sessionId: string, eventType: SessionEventType, payloadJson: string): number {
+    const cap = maxSessionEvents();
+    const stmt = this.db.prepare(
+      `INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version)
+       SELECT ?, COALESCE(MAX(seq),0)+1, ?, ?, ? FROM session_events WHERE session_id=?
+       HAVING COALESCE(MAX(seq),0)+1 <= ?
+       RETURNING seq`,
+    );
+    // 至多重试 1 次：`for (;;)` 内每条路径都 return 或 throw ⇒ 无"看似返回 undefined"的落空分支
+    let retried = false;
+    for (;;) {
+      try {
+        const row = stmt.get(
+          sessionId,
+          eventType,
+          payloadJson,
+          SESSION_EVENT_FORMAT_VERSION,
+          sessionId,
+          cap,
+        ) as { seq?: number } | undefined;
+        if (row === undefined) {
+          // HAVING 过滤 = 下一条 seq 超过 cap ⇒ **未插入**（不是"插入后被删"）
+          throw sessionEventLimitError(cap, this.readMaxSeq(sessionId) + 1);
+        }
+        return Number(row.seq);
+      } catch (err) {
+        if (err instanceof SessionEventError) throw err;
+        // 只有**冲突类**错误才重试，且只重试一次（设计稿 §2.2；禁止无限重试）
+        if (retried || !isRetryableSeqError(err)) throw err;
+        retried = true;
+        const msg = err instanceof Error ? err.message : String(err);
+        log.warn(
+          { sessionId, eventType, attempt: 2, error: msg, degraded: true },
+          'appendEvent seq 冲突/BUSY — 重试 1 次',
+        );
+      }
+    }
+  }
+
+  /** `SYNO_SESSION_SEQ_ATOMIC=0` 回滚态：旧"先 SELECT MAX(seq) 再 INSERT"（保留原注释语义） */
+  private insertEventReadThenWrite(
+    sessionId: string,
+    eventType: SessionEventType,
+    payloadJson: string,
+  ): number {
+    // 持久化 lastSeq: 基于 MAX(seq) 续写，禁止内存回退（缺陷②防线）
+    const nextSeq = this.readMaxSeq(sessionId) + 1;
+    // #991 Q-12：超限即拒 —— 写库前拒绝单条（不静默丢、不折 degraded、不断会话）
+    const cap = maxSessionEvents();
+    if (nextSeq > cap) throw sessionEventLimitError(cap, nextSeq);
+    this.db.prepare(
+      'INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version) VALUES (?,?,?,?,?)',
+    ).run(sessionId, nextSeq, eventType, payloadJson, SESSION_EVENT_FORMAT_VERSION);
+    return nextSeq;
+  }
+
+  /** 该会话当前最大 seq（空会话 = 0）；用于旧路径与上限报错文案 */
+  private readMaxSeq(sessionId: string): number {
+    const row = this.db
+      .prepare('SELECT MAX(seq) as max_seq FROM session_events WHERE session_id=?')
+      .get(sessionId) as SqliteRow | undefined;
+    return Number((row?.max_seq as number | null) ?? 0);
   }
 
   /**
@@ -617,23 +902,51 @@ export class SessionStore {
   }
 
   /**
-   * D500: 从事件流投影消息历史（dsh-session deriveMessages 范式，B1）。
-   * 契约:
-   *   @input  — sessionId
-   *   @output — MessageRow[]（按 seq 排序；投影 message/tool_result 两类 surface 事件，log-only 跳过）
-   *   @degraded — 事件流含半截事件（缺尾部）→ log.warn + 返回可重建前缀 + lastDegraded=true（铁律 24）
-   *   空事件流 → []（边界）
+   * D500 / R-E1 ②③: 从事件流投影消息历史（dsh-session deriveMessages 范式，B1）。
+   *
+   * 契约（铁律 47）:
+   *   @input    — sessionId
+   *   @output   — MessageRow[]（按 seq 升序；投影 `message` 与「带 content 的 `tool_result`」两类
+   *               surface 事件；其余 log-only 跳过）
+   *   @degraded — ① 事件流含半截事件（缺尾部）：log.warn + 返回可重建前缀 + `lastDegraded=true`；
+   *               ② **seq 拓扑缺口**（R-E1 ②）：`log.error({code:'SESSION_SEQ_GAP',degraded:true})`
+   *               + `lastDegraded=true`，**返回值语义不变**（仍返回全部可投影消息）
+   *   @error    — 事件行词表/格式版本违约 ⇒ 由 `getEvents` 抛 typed `SessionEventError`（fail-closed）
+   *   @authority — 只读派生；不写库（不修洞、不补 seq —— 缺口只报不猜，对齐 DSH chain 契约）
+   *   @not-here  — 不做 `tool` 角色投影（`MessageRow` 无 `tool`；surface 投影契约属 R-2 冻结后另开）
+   *   空事件流 → []（边界，且**不置位**降级 —— 防假绿）
    *   model-visible ⟺ logged: 投影输出 = 模型看到的输入（不变量，测试断言）
    */
   deriveMessages(sessionId: string): MessageRow[] {
     const events = this.getEvents(sessionId);
     const messages: MessageRow[] = [];
     let truncated = false;
+    let gap = false;
+    let gapReported = false;
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
+      // R-E1 ②: 读侧连续性 —— seq 必须逐位 +1（`getEvents` 按 seq 升序 ⇒ 期望 = i+1）。
+      // 只报不猜：缺口 ⇒ log.error + 降级信号；**不改变返回值语义**（仍返回可投影消息）。
+      // 每次 deriveMessages 只细报**首个**缺口（防长会话日志洪水），后续缺口仅置位。
+      if (ev.seq !== i + 1) {
+        gap = true;
+        if (!gapReported) {
+          gapReported = true;
+          log.error(
+            { code: 'SESSION_SEQ_GAP', sessionId, expected: i + 1, got: ev.seq, degraded: true },
+            '事件流 seq 缺口 — 日志不连续（只报不猜，返回值语义不变）',
+          );
+        }
+      }
       try {
         const payload = JSON.parse(ev.payloadJson) as { role?: string; content?: string };
-        if (ev.eventType !== 'message' && ev.eventType !== 'tool_result') continue; // log-only 跳过
+        // 事实源口径（C6 注释改正）: `message` 与 `tool_result` 是 surface 事件；其余
+        // （`system`/`diagnosis_*`）是 log-only —— 这里跳过的**是后者**，不是 `tool_result`。
+        if (ev.eventType !== 'message' && ev.eventType !== 'tool_result') continue; // log-only（system/diagnosis_*）跳过
+        // C6（spec §9.2）: 无 `content` 的 `tool_result` = log-only 工具结果事件（E1 写入侧
+        // payload 不含 content）⇒ **显式跳过**，不投影成空 assistant 消息（否则 parity 必破）。
+        // 带 `content` 的历史 `tool_result` 行保持旧投影（assistant + content），兼容既有数据。
+        if (ev.eventType === 'tool_result' && typeof payload.content !== 'string') continue;
         // tool_result 事件投影为 assistant 角色（2026-08-22 实测修正：Synova 消息契约
         // MessageRow.role = system|user|assistant，conversation-engine 用 assistant 承载工具结果；
         // 无独立 tool 角色——对齐现有模型，避免 MessageRow 类型膨胀）
@@ -654,6 +967,9 @@ export class SessionStore {
       }
     }
     if (truncated) {
+      this.lastDegraded = true;
+    }
+    if (gap) {
       this.lastDegraded = true;
     }
     return messages;

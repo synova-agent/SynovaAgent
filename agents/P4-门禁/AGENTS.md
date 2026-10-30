@@ -35,6 +35,7 @@ scripts/control-tower/**（除 probe-*.ts 与 install-deps.sh）｜tests/control
 
 `scripts/control-tower/AGENTS.md`（**probe 三态退出码；信号量==0⇒exit 2**）｜`tests/control-tower/AGENTS.md`（零失败才合并）｜`.gitea/AGENTS.md`（**改门禁只认本目录；须独立送审**）｜`memory/notes/AGENTS.md`｜（👁）`docs/AGENTS.md`
 
+> **门禁总台账（唯一真源）**：`synova/synova-handbook @ main 批次收口/2026-10-29-门禁总台账.md`（§十＝体系总图；改结构必须改 §十并留 commit）
 > 口径：**12 份域守则按"目录"切，10 个包按"职责"切 —— 正交** ⇒ 本清单是交集（全表 `handbook 包/交叉矩阵-12守则×10包.md`）
 > 🔴 **DSH 无法额外注入指定文件 ⇒ 必须显式 `read`**（不 read 就会漏）
 

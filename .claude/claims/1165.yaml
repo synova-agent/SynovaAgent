@@ -1,0 +1,27 @@
+# .claude/claims/1165.yaml — #1165 R 引擎 E1：会话账本不变量四修（写集声明）
+#
+# 依据：规格 .handbook/派单件/2026-10-30-规格-1165-R引擎E1-会话账本不变量.md §3 写集 ＋ §9 L1 裁定；
+#      设计稿 .handbook/派单件/2026-10-30-设计-1165-R引擎E1.md（含 C5–C9）。
+# 纪律：本分支提交集 ⊆ 本写集。产品代码写集 = 3 件 src + 6 件 tests；另含本 claim 与独立复核回执
+#   （回执名 <PR>.<12hex>.json 按 1075/1105 先例预列占位 12 位 hex，回执内 patch_fingerprint 为真指纹；
+#    check-merge-conditions R1 对"非当前指纹路径"有回退查找，R3 再按回执内指纹判真伪）。
+writeset:
+  - .claude/claims/1165.yaml
+  - src/store/session-store.ts
+  - src/agent/tool-loop-executor.ts
+  - src/agent/builtin-tools.ts
+  - tests/store/session-tx-atomic.test.ts
+  - tests/store/session-seq-concurrency.test.ts
+  - tests/store/session-event-log.test.ts
+  - tests/store/fixtures/seq-writer.ts
+  - tests/agent/tool-result-event.test.ts
+  - tests/agent/tool-cancel-timeout.test.ts
+  - tests/expected/session/session-store.expected.json
+  - tests/store/session-store-expected.test.ts
+  - docs/synova/reviews/1166.116611661166.json
+done:
+  - verify: npx vitest run tests/store/session-store-expected.test.ts tests/store/session-tx-atomic.test.ts tests/store/session-seq-concurrency.test.ts tests/store/session-event-log.test.ts tests/store/session-events-limit.test.ts tests/store/session-store.test.ts tests/store/session-projection.test.ts
+  - verify: npx vitest run tests/agent/tool-result-event.test.ts tests/agent/tool-cancel-timeout.test.ts tests/agent/tool-cancel.test.ts tests/agent/tool-loop-executor-resilience.integration.test.ts tests/agent/tool-loop-tool-pairing.integration.test.ts
+  - verify: npx vitest run tests/contract/time-injection.test.ts tests/orchestrator/session-manager-eventlog.test.ts tests/agent/diagnosis-session-events.test.ts
+  - verify: npx tsc --noEmit
+note: "#1165 R-E1 四修：① addMessage 事务化（AddMessageResult，回滚开关 SYNO_SESSION_TX）② appendEvent seq 单语句原子＋读侧连续性（SYNO_SESSION_SEQ_ATOMIC；busy_timeout）③ tool_result 写事件流（log-only，SYNO_TOOL_RESULT_EVENT）④ 9 工具 timeoutMs 声明＋3 处逐字循环查 signal。C5 per-turn 降级闩锁；C6 tool_result 注释/投影/parity；C7 conversation-engine 第 4 循环记 R-2 backlog 不修；C8 DSH 64 引文校验脚本可复跑；C9 超时值待实测校准、不宣称流式已真。"

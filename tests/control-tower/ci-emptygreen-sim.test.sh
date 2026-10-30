@@ -72,6 +72,8 @@ else
 fi
 
 # ── ③ 改坏即红（纪律③）：副本上把 ③ 步换回"改动前原样" ────────────────────
+#   基线名随 #1117 迁移到 main（与改后 ③ 步同一基线口径）；断言（rc=1 ＋ 丙/丙2 具体失败点）
+#   一律不放宽 —— 差分判的是「空绿分类逻辑」而不失基线名。
 #   用 python heredoc 做**精确行替换**（不写 .py 文件；输入走 sys.argv，无引号嵌套）
 cp "$WF" "$TMP/wf-broken.yml"
 python3 - "$TMP/wf-broken.yml" <<'PYEOF'
@@ -80,7 +82,7 @@ p = sys.argv[1]
 lines = open(p, encoding="utf-8").read().split("\n")
 NEW = [
     'cd /Users/wane/.ci-work/SynovaAgent',
-    'CHANGED_BASE=origin/local-main',
+    'CHANGED_BASE=origin/main',
     'git rev-parse --verify -q "$CHANGED_BASE" >/dev/null || CHANGED_BASE=origin/main',
     'echo "增量基线 = $CHANGED_BASE"',
     'PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" npx vitest run --changed "$CHANGED_BASE" 2>&1 | tail -20 || {',
