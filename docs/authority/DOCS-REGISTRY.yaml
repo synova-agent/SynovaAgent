@@ -1501,3 +1501,8 @@ documents:
   - id: DOC-1146
     path: gate-exemptions/2026-10-29-1146-retire-batch1.md
     note: "批1 零风险退役 8 项（B 类 5 项＋observer 产品件＋C 类 2 项）；台账标 retired、观察期 30 天、不删文件；含 GATE-INVENTORY retired 段与配套测试。"
+
+
+  - id: DOC-1175
+    path: gate-exemptions/2026-10-30-b0-ledger-pointer.md
+    note: "#1175 域守则补台账真源指针：agents/P4-门禁/AGENTS.md 加一行指向 synova-handbook main 的门禁总台账（§十＝体系总图）；不改既有条款。"
