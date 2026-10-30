@@ -111,6 +111,11 @@
 #        修法（只改 ③ 步分类逻辑，六条既有判据与 DELETED_VITEST 红分支、_EG_* 登记、test_count 写入点未动）：
 #        e2e 从 `N_VITEST` 剔除并单算 `N_E2E`，新增「合法跳过（E2E 面）」分支 + `_EG_SKIP_REASON`。
 #        ⇒ 本次新增 1 条路径（workflow 自身），逐条见下方 writeset 末行；src/**、vitest.config.ts 零改动。
+#      ＋ #1173-E2E-7（门禁豁免件，2026-10-30，**L1 已批本批扩写集第 4 件**）
+#        依据：`.gitea/protected-files.txt` 含 `.gitea/workflows/**` 与 `gate-exemptions/**` ⇒ 本批改 ③ 步后
+#        CI ①d 必红（job 2764 原文：`❌ 受保护路径无合规豁免: .gitea/workflows/local-gates.yml`）⇒ 须同 diff
+#        带豁免件，且豁免件自身受保护 ⇒ 须**自覆盖**（#623）。本次新增 1 条路径（豁免件自身），
+#        逐条见下方 writeset 末行；仍不动 src/**、tests/**、vitest.config.ts。
 writeset:
   - extensions/presets/schema/role-pack-v2.schema.json
   - src/init/role-pack-schema.ts
@@ -182,6 +187,7 @@ writeset:
   - tests/routes/middleware-order.test.ts
   - tests/e2e/role-pack-lifecycle.e2e.test.ts
   - .gitea/workflows/local-gates.yml
+  - gate-exemptions/2026-10-30-1173-ci-e2e.md
 done:
   - verify: node node_modules/.bin/vitest run tests/init/role-pack-schema.test.ts
   - verify: node node_modules/.bin/vitest run tests/init/preset-loader.test.ts
@@ -199,5 +205,6 @@ done:
   - verify: node node_modules/.bin/vitest run tests/routes/knowledge-ask.test.ts
   - verify: node node_modules/.bin/vitest run tests/e2e/role-pack-lifecycle.e2e.test.ts
   - verify: bash scripts/control-tower/ci-emptygreen-sim.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
   - verify: node node_modules/.bin/tsc --noEmit
-note: "岗位包 v2（#1075 批一）：P1-a 校验面（随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，J1/J2/J3）＋ P1-b 生成面（生成器 6 件＋scopes: 键名修复＋缺项拒绝写＋真 HTTP J4/J5），两 PR 串行。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。#1104（P1-c，验收新增小修）：repoRoot 由内容根派生（不依赖 cwd）＋ROLE_PACK_DIR_UNREADABLE 补 log（T4）＋seed scope id 执行体（ROLE_SEED_BAD_SCOPE_ID）；连带修 knowledge-scope-wiring 夹具为仓库形状（L1 批准第 6 件，断言零改动）。#1075 P2-1（批二·审批门，2026-10-28）L1 批准 2 件配套件：① tests/contract/triviality-manifest.yaml 的 triage 行（CI ①g O2）② scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配 P2-1（判据仪器夹具，断言不变）。#1075 P2-2（批三·人设与上下文，2026-10-29，叠栈基线 bca95ccbe）：J1–J12（三测试件 ≥34 用例；本层 7 件为 role-pack-persona 解析器＋引擎/路由/存储 additive 接线）；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；未审批/撤销一律不注入。#1167 补丁A（K3 P1-② 整改，2026-10-30）：buildRoleKnowledgeFilter 主路径补 access.level IN [public,team]（最严口径、无 private/owner 例外），条件序固定 sensitivity→access.level→pkb_domain→逐 deny NOT_EQ；拒绝型分支 pkb_domain IN [] 零改动；HTTP 面 src/routes/knowledge-ask.ts 只读零改动；测试沿用 B-J1-2 的真 SQLite harness（非 mock）新增 private 不返／public 返／team 返三例（本文件用例数 12→16）。#1173（E2E 批）：新增岗位包生命周期 E2E（生成→审批→会话生效→撤销→恢复，E-J1–E-J8）。#1173-E2E-4：修 CI ③ 分类器 —— tests/e2e/** 在 CI 下被 vitest.config exclude ⇒ 从 N_VITEST 剔除、单算 N_E2E、新增「合法跳过（E2E 面）」分支（八场景判别力自检全 PASS）。"
+note: "岗位包 v2（#1075 批一）：P1-a 校验面（随仓 schema＋zod 进 loader＋refs 双向对账＋出厂三包迁 v2，J1/J2/J3）＋ P1-b 生成面（生成器 6 件＋scopes: 键名修复＋缺项拒绝写＋真 HTTP J4/J5），两 PR 串行。plan.json phase3 = 组4a 分阶段接线声明（gate-mandated，只覆盖 src/init/role-pack-schema.ts）。#1104（P1-c，验收新增小修）：repoRoot 由内容根派生（不依赖 cwd）＋ROLE_PACK_DIR_UNREADABLE 补 log（T4）＋seed scope id 执行体（ROLE_SEED_BAD_SCOPE_ID）；连带修 knowledge-scope-wiring 夹具为仓库形状（L1 批准第 6 件，断言零改动）。#1075 P2-1（批二·审批门，2026-10-28）L1 批准 2 件配套件：① tests/contract/triviality-manifest.yaml 的 triage 行（CI ①g O2）② scripts/control-tower/probe-knowledge-scope.ts 的 V6(ii) 夹具适配 P2-1（判据仪器夹具，断言不变）。#1075 P2-2（批三·人设与上下文，2026-10-29，叠栈基线 bca95ccbe）：J1–J12（三测试件 ≥34 用例；本层 7 件为 role-pack-persona 解析器＋引擎/路由/存储 additive 接线）；无包会话提示词逐字不变（J3 基准 976ca690…fd33／LEN=1462）；未审批/撤销一律不注入。#1167 补丁A（K3 P1-② 整改，2026-10-30）：buildRoleKnowledgeFilter 主路径补 access.level IN [public,team]（最严口径、无 private/owner 例外），条件序固定 sensitivity→access.level→pkb_domain→逐 deny NOT_EQ；拒绝型分支 pkb_domain IN [] 零改动；HTTP 面 src/routes/knowledge-ask.ts 只读零改动；测试沿用 B-J1-2 的真 SQLite harness（非 mock）新增 private 不返／public 返／team 返三例（本文件用例数 12→16）。#1173（E2E 批）：新增岗位包生命周期 E2E（生成→审批→会话生效→撤销→恢复，E-J1–E-J8）。#1173-E2E-4：修 CI ③ 分类器 —— tests/e2e/** 在 CI 下被 vitest.config exclude ⇒ 从 N_VITEST 剔除、单算 N_E2E、新增「合法跳过（E2E 面）」分支（八场景判别力自检全 PASS）。#1173-E2E-7：补 gate-exemptions/2026-10-30-1173-ci-e2e.md（受保护路径豁免：workflow ③ 步 ＋ 豁免目录自覆盖 #623）。"
