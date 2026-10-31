@@ -1597,3 +1597,38 @@ documents:
     status: active
     owner: P4
     note: "#1219 W1 退役批（retired 26 条／配额降旁路／参与集单源／invariant 与三份配对测试动态化）的受保护路径豁免；含 gate-exemptions 自覆盖行与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-31：#1227 W3 skill 收敛 载体阶段 受保护路径豁免（DOC-1227；R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1227
+    type: decision
+    path: gate-exemptions/2026-10-31-w3-1227.md
+    status: active
+    owner: P4
+    note: "#1227（W3 skill 收敛·载体阶段）：AGENTS.md V7.2 三项（判据中枢指 GATE-STANDARD、pre-commit 组数改指针、预算口径只留头部一处）＋ cto-bookkeeping 引用同批改指 cto-handover ＋ scripts/ci/verify-d703.sh 模板引用改 dev-doc-spec ＋ 编码指令模板原样迁移；受保护路径逐条豁免（.synova/skills/**、.dsh/skills/**、AGENTS.md、scripts/pre-commit-check.sh、scripts/workflow/sync-dsh-skills.sh、scripts/ci/verify-d703.sh、tests/control-tower/**）；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-31：#1227 W3 技能模板迁移登记（DOC-1227-01；R1 口径 id = DOC-<Issue#>-NN）----
+  # 🔴 R2 限制（如实）: 登记对象 = .synova/skills/dev-doc-spec/template/编码指令模板.md；该文件名不含数字
+  #    且按 #1227 要求「字节级原样复制」不得加 front-matter ⇒ 新条目 path 若直指该件，R2「Issue 来源派生」必红。
+  #    故 path 指向本批可派生件（gate-exemptions/2026-10-31-w3-1227.md），登记对象写在 note 首行（登记门禁按
+  #    「路径或 basename 出现在台账文本中」判定 ⇒ 满足 D2）。
+  - id: DOC-1227-01
+    type: devdoc
+    path: gate-exemptions/2026-10-31-w3-1227.md
+    status: active
+    owner: W3
+    note: "登记对象 = .synova/skills/dev-doc-spec/template/编码指令模板.md：由 dev-doc-delivery/template 原样迁入 dev-doc-spec/template（sha256 一致，原件随本批删除）；本条目用于满足 D2 登记门禁（新增 .md 须登记）；path 字段按 R2 可派生件回指本批豁免件，不代表该模板的文档归属。"
+
+  # ---- CTO 2026-10-31：#1227 CI 修复——GATE-STANDARD.md 补登记（DOC-1227-02；R1 口径 id = DOC-<Issue#>-NN）----
+  # 🔴 R2 限制（如实）: 登记对象 = docs/authority/GATE-STANDARD.md；该文件名不含数字（无 `-<N>-`）且正文首 12 行
+  #    无 `任务: "#N"` front-matter（其头部是版本行 + 裁定号 D763）⇒ 新条目 path 若直指该件，R2「Issue 来源派生」必红。
+  #    故 path 指向本批可派生件（gate-exemptions/2026-10-31-w3-1227.md），登记对象写在 note 首行（登记门禁按
+  #    「路径或 basename 出现在台账文本中」判定 ⇒ 满足 D2）。
+  # 修复对象: CI run 2889/2888 唯一红点 D782 D2 —— GATE-STANDARD.md 系 main 上 PR #1231 新增件但未登记，
+  #    CI 的 base（merge-base=6d52c15a）把它算进 base..HEAD 新增 ⇒ 判「未登记」；本地 base=gitea/main 已含该件故不复现。
+  - id: DOC-1227-02
+    type: governance
+    path: gate-exemptions/2026-10-31-w3-1227.md
+    status: active
+    owner: CTO
+    note: "登记对象 = docs/authority/GATE-STANDARD.md（GATE-STANDARD v3.1 / 裁定 D763 / 入 main 依据 PR #1231 @586ecb8ff43fa）；该件是本仓唯一工程质量体系标准（判据中枢），由 AGENTS.md V7.2 头部指向；本条目用于满足 D2 登记门禁（新增 .md 须登记），path 字段按 R2 可派生件回指本批豁免件，不代表该标准的文档归属。"
+

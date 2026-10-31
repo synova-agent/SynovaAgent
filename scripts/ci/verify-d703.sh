@@ -90,8 +90,8 @@ else
 scripts/ci/verify-d703.sh
 tests/control-tower/verify-doc.test.sh
 .github/workflows/ci.yml
-.synova/skills/dev-doc-delivery/template/编码指令模板.md
-.dsh/skills/dev-doc-delivery/template/编码指令模板.md
+.synova/skills/dev-doc-spec/template/编码指令模板.md
+.dsh/skills/dev-doc-spec/template/编码指令模板.md
 .codex/control-tower/VERSION.md
 $SPEC_D703"
   EXTRA=$(git -c core.quotepath=off diff --name-only origin/main...HEAD 2>/dev/null | grep -v '^\.claude/' | grep -Fvx -f <(printf '%s\n' "$WSET") || true) # swallow-ok: 非 git 仓时 EXTRA 非空 → FAIL，不静默

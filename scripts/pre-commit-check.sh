@@ -91,9 +91,11 @@ GROUP_DONE=0
 
 # ═══ 裁 409（2026-10-25）: 降级清单 —— 这些组在 CI 上**只报不拦** ═══
 #   背景：创始人「别让实施把时间全花在应付门禁上」；裁 409 定 5 条降 report。
-#   实现：降级一律由**组界开关 GROUP_DOWN** 决定（组界八行 —— 裁 409 范围冻结，一行不动）；
+#   实现：降级一律由**组界开关 GROUP_DOWN** 决定（组界八行 —— 组5/6、组8、组9/10、
+#         **#912 质量增量闸**（#912 为 #1227 W3 独立包裹，用途=保原态）；
+#         **组 13 已于 #1227 W3 退出降级区** ⇒ CI 硬阻断 / 本地软提示）；
 #         **降级只摘计数，❌ 与点名一律保留**。
-#         🔴 八行行号**锚定本批起点 0fda487e2**（锚时 :933/:1294/:1450/:1481/:1483/:1640/:1935/:1988）。
+#         🔴 八行行号**锚定 #1227 W3 批**（:973/:1334/:1495/:1526/:1528/:1685/:2027/:2060）；
 #            之后任何卡改本文件都会再次位移 ⇒ **定位用 `grep -n '^GROUP_DOWN='`（行首锚定，
 #            本注释不自命中），勿照抄行号**。
 #   回滚：SYNO_GATE_STRICT_LEGACY=1 ⇒ 恢复原语义（全硬）。
@@ -1984,27 +1986,45 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 # ═══ 组 13: 技能同步一致性 (.synova/skills ↔ .dsh/skills, D370) ═══
 # 背景: DSH 技能发现根 .dsh/skills（rank 100）不读 .synova/skills → 单源复制 + 漂移门禁。
 # fail-closed (D328): 检查脚本 exit 2 = 检查执行失败 → 同样硬阻断, 不与"通过"混同。
+# #1227 W3（2026-10-31，GATE-STANDARD §六批D）两处判据收窄（**判据变更，已由本批卡批**）:
+#   ① **退出裁 409 降级区**: 原 `GROUP_DOWN=1` 使 CI（SYNO_CI=1）也只报不拦 ⇒ 漂移永不被拦。
+#      现: CI（SYNO_CI=1）→ hard_check（计 HARD_FAIL）；本地 → soft_check（⚠️ 软提示，不拦本地提交）。
+#      （CI 分支名逐字保留 —— tests/control-tower/hard-gate-convergence.test.sh:49 与
+#        GATE-INVENTORY.yaml PC-G13 的 checkpoint 串都按原文锚定，改名即断链。）
+#   ② **无条件检查**: 原「暂存区无 .synova/skills/ 或 .dsh/skills/ 就跳过」会漏拦
+#      「改了 .synova/skills 却提交别的文件、且忘同步」⇒ 改为总是跑 `--check`。
+#   回滚: SYNO_CI=0（本地软）／判据零改动；恢复"只报不拦"须重新开卡（属判据变更）。
+#   已知限制: CT-34 纯文档提交在组 6 前早退 ⇒ 组 13 不执行（技能目录不在文档白名单，不构成漏拦）。
 echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
-GROUP_DOWN=1  # 裁 409：组13 降级
-
-# 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
-if [ "${SYNO_DOWN_SELFTEST:-}" = "13" ]; then hard_check "SELFTEST-组13 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
-SKILL_FILES_STAGED=$(echo "$STAGED_ALL" | grep -E "\.synova/skills/|\.dsh/skills/" || true)
-if [ -n "$SKILL_FILES_STAGED" ]; then
-  SKILL_SYNC_OUT=$(bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check 2>&1)
-  SKILL_SYNC_EXIT=$?
-  if [ "$SKILL_SYNC_EXIT" -eq 0 ]; then
-    soft_pass "G13: 技能同步一致 ($(echo "$SKILL_SYNC_OUT" | head -1 | sed 's/SYNC-OK: //'))"
-  elif [ "$SKILL_SYNC_EXIT" -eq 1 ]; then
-    hard_check "G13: 技能漂移 — 运行 bash scripts/workflow/sync-dsh-skills.sh 后重新暂存" "$SKILL_SYNC_OUT"
+
+# 裁 409 确定性自检缝（#1227 W3 更新语义：注入 ⇒ CI 硬阻断 / 本地仅软提示）
+if [ "${SYNO_DOWN_SELFTEST:-}" = "13" ]; then
+  if [ "${SYNO_CI:-0}" = "1" ]; then
+    hard_check "SELFTEST-组13 注入（CI 应硬阻断）" "injected"
   else
-    hard_check "G13: 技能同步检查执行失败 (exit=$SKILL_SYNC_EXIT, D328 三态)" "$SKILL_SYNC_OUT"
+    soft_check "SELFTEST-组13 注入（本地应只软提示）" "injected"
   fi
-else
-  soft_pass "G13: 无技能文件变更(跳过)"
 fi
 
+SKILL_SYNC_OUT=$(bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check 2>&1)
+SKILL_SYNC_EXIT=$?
+if [ "$SKILL_SYNC_EXIT" -eq 0 ]; then
+  soft_pass "G13: 技能同步一致 ($(echo "$SKILL_SYNC_OUT" | head -1 | sed 's/SYNC-OK: //'))"
+elif [ "$SKILL_SYNC_EXIT" -eq 1 ]; then
+  # 强度两分（D515/D516 同口径）: CI strict 硬阻断；本地软提示
+  if [ "${SYNO_CI:-0}" = "1" ]; then
+    hard_check "G13: 技能漂移 — 运行 bash scripts/workflow/sync-dsh-skills.sh 后重新暂存" "$SKILL_SYNC_OUT"
+  else
+    soft_check "G13: 技能漂移 — 运行 bash scripts/workflow/sync-dsh-skills.sh 后重新暂存" "$SKILL_SYNC_OUT"
+  fi
+else
+  hard_check "G13: 技能同步检查执行失败 (exit=$SKILL_SYNC_EXIT, D328 三态)" "$SKILL_SYNC_OUT"
+fi
+
+# #1227 W3: 组 13 退出降级区时**保住 #912 原态** —— 本批判据（判据 4/5）只要求组 13 可阻断，
+#   未要求改 #912 语义；不独立包裹会连带恢复其硬阻断（副作用）⇒ 用组界开关保原态。
+GROUP_DOWN=1  # 裁 409：质量增量闸降级（#1227 保持原态）
 # ═══ #912 批 1: 质量增量闸（G1/G3/G4 · 只判变更集；**不计组号** —— 同 D782/D734 接入模式）═══
 # 判据源: 标准 v1（docs/authority/quality-standard-g1g6.md）＋ #912 评论 5792（裁 330 批，3 条必改 A1/A2/A3）
 # 语义: 只判**本次变更集**；过滤后空代码变更 ⇒ SKIP 退出 0（A1：纯文档 PR 是常态，不是"看不见"）；
@@ -2037,8 +2057,8 @@ else
       "$(printf '%s' "${_QD_OUT:-<无输出>}" | grep -E 'ERROR|degraded' | head -3)"
   fi
 fi
+GROUP_DOWN=0  # 质量增量闸降级范围结束（#1227 W3 保持原态）
 
-GROUP_DOWN=0  # 组13 降级范围结束
 # ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 12 组编号——同 D734 接入模式）═══
 # 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
