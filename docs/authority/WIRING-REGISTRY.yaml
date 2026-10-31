@@ -243,7 +243,7 @@ entries:
     test: "tests/control-tower/verify-governance.test.sh"
     status: declared-only
     owner: P4
-    notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/y PASS`，判不了 exit 2。**本批未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
+    notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/4 PASS（y 判不了）`，判不了 exit 2。#1234（v3）起 G2 改分腿证据源（evidence: telemetry|ci-step|none；--ci-evidence 注入缝），末行固定带「y 判不了」。#1122 批**未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
   - capability: content.rolePackPersona
     defined_at: "src/init/role-pack-persona.ts:1"
     provider: "src/init/role-pack-persona.ts:442"
