@@ -363,3 +363,12 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1210 W0-6 耗时预算机检（旁路，未接 pre-commit 主路径；接线由后续 A3/W6 卡决定）"
+  # ---- P4 2026-10-31：#1210 B-Redo GATE-INVENTORY 不变式伴生件（declared-only 显式豁免 R1.2）----
+  - capability: gate.inventoryInvariant
+    defined_at: "scripts/control-tower/gate-inventory.invariant.sh:1"
+    provider: "scripts/control-tower/gate-inventory.invariant.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-inventory.invariant.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "#1210 B-Redo 不变式伴生件：39=35+2+2／id 唯一／workflows 段／disk↔registry 双向对齐；旁路，未接 pre-commit 主路径（接线另批）"
