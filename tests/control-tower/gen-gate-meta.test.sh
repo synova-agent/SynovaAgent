@@ -14,18 +14,25 @@
 #  ⑨ check-gate-inventory 集成：gate_meta 与生成物不一致 ⇒ VIOLATION 1（R10）
 #  ⑩ check-gate-inventory 集成：一致 ⇒ OK（无回归）
 #  ⑪ 改坏即红：把 --check 的比对改成恒真（/tmp 副本）⇒ ③ 用例必须红
-#  ⑫ --quota 真树：rc=1（超编）；non_doc=37/30、total=39/45、bypass=0/8、quota_true=39；
-#     独立交叉核对 gate_meta 段 quota:true=39（整文件 79 = run_by 39 + gate_meta 39 + 注释 1）；
+#  ⑫ --quota 真树：rc=1（超编）；non_doc=35/30、total=37/45、bypass=2/8、quota_true=39；
+#     独立交叉核对 gate_meta 段 quota:true=39 / run_by 段 quota:true=39（整文件 79 = 39+39+注释 1）；
 #     ⑫b --quota --json 三桶/rows/超编条目齐全
 #  ⑬ 手改 artifact 的 quota（true→false 副本）：--check rc=1 且点名 B3；--quota 计数相应变小
 #     （证明 --quota 的数字来自 artifact，不是重算 run_by）
-#  ⑭ bypass 9 条夹具（artifact 副本）：--quota rc=1 + `bypass=9/8` + 逐条点名 9 条
+#  ⑭ bypass 夹具（artifact 副本：9 条新增 + 2 条真回填）⇒ --quota rc=1 + `bypass=11/8` + 逐条点名
 #  ⑮ --emit 失败两态：(a) run_by 段零行夹具 ⇒ rc=2（E_EMIT_SHAPE）；
 #     (b) TMPDIR=/nonexistent ⇒ rc=2（E_EMIT_TMP，写临时文件失败）
 #  ⑯ quota_scope 非法 / 缺失 / quota 非布尔夹具 ⇒ --quota rc=2（E_QUOTA_SCOPE）；
 #     ⑯b gate_meta 段缺失 ⇒ rc=2（E_GATE_META_MISSING）／段内 0 行 ⇒ rc=2（E_NO_ROWS）
 #  ⑰ 改坏即红：副本把 non_doc >30 判断改恒假 ⇒ 31 条非文档夹具由 rc=1 变 rc=0（原断言失效，证明承重）
 #  ⑰b 边界绿：non_doc=30（恰在限内）⇒ 原脚本 rc=0 且无 QUOTA-OVER（防恒红）
+#  ⑱ A2 固化（#1205）：run_by 两条 scope=github-only-integration ⇒ 生成物 quota:false；
+#     N1 两态：该行改成 quota:true ⇒ --check rc=1 点名 [N1]；N2 两态：删 na_cmd ⇒ rc=1 点名 [N2]
+#  ⑲ A3 bypass 回填（#1205）：真树 bypass=2/8 且两件 artifact 为 quota:true ∧ quota_scope:bypass；
+#     两态：run_by 行 quota_scope 改非法 ⇒ --check rc=2（E_QUOTA_SCOPE，判不了 ≠ 通过）
+#  ⑳ workflow 全量定态（W0-5）：真树 --check 出 `WORKFLOWS: OK n=10`；
+#     两态：某 workflow state 改非法 ⇒ rc=1 且点名；state=账外 ⇒ rc=1（W0 出口是无账外）；
+#     缺 workflows: 段 ⇒ rc=1（W0 之后它是必需项）
 #
 # 口径：三态 0/1/2；零失败 ⇒ exit 0
 set -uo pipefail
@@ -278,25 +285,25 @@ PY
 # ── ⑫ --quota 真树：三桶计数 + 独立交叉核对 ─────────────────────────────
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
 Q_HIT=0
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=37/30（超编 7） total=39/45 bypass=0/8' && Q_HIT=$((Q_HIT+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=39 doc=2 non_doc=37 bypass=0 rows=120' && Q_HIT=$((Q_HIT+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=35/30（超编 5） total=37/45 bypass=2/8' && Q_HIT=$((Q_HIT+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=39 doc=2 non_doc=35 bypass=2 rows=123' && Q_HIT=$((Q_HIT+1))
 Q_OVER=$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')
 # 独立交叉核对（不读被测命令输出）：gate_meta 段 39 ／ run_by 段 39 ／ 注释 1 ／ 整文件 79
 GM_TRUE=$(sed -n '/^gate_meta:/,/^retired:/p' "$INV" | grep -c '^      quota: true')
 RB_TRUE=$(sed -n '/^run_by:/,/^run_by_candidates:/p' "$INV" | grep -c '^    quota: true')
 CMT_TRUE=$(grep -c '^#.*quota: true' "$INV")
 ALL_TRUE=$(grep -c 'quota: true' "$INV")
-if [ "$RC" -eq 1 ] && [ "$Q_HIT" -eq 2 ] && [ "$Q_OVER" -eq 37 ] \
+if [ "$RC" -eq 1 ] && [ "$Q_HIT" -eq 2 ] && [ "$Q_OVER" -eq 35 ] \
    && [ "$GM_TRUE" -eq 39 ] && [ "$RB_TRUE" -eq 39 ] && [ "$CMT_TRUE" -eq 1 ] && [ "$ALL_TRUE" -eq 79 ]; then
-  ok "⑫ --quota 真树 ⇒ rc=1；non_doc=37/30 total=39/45 bypass=0/8 quota_true=39 超编 37 条；交叉核对 gate_meta=39 + run_by=39 + 注释=1 = 整文件 79"
+  ok "⑫ --quota 真树 ⇒ rc=1；non_doc=35/30 total=37/45 bypass=2/8 quota_true=39 超编 35 条；交叉核对 gate_meta=39 + run_by=39 + 注释=1 = 整文件 79"
 else
   no "⑫ --quota 真树异常（rc=$RC hit=$Q_HIT over=$Q_OVER gm=$GM_TRUE rb=$RB_TRUE cmt=$CMT_TRUE all=$ALL_TRUE）"
 fi
 
 # ⑫b --quota --json：机器行含三桶 / rows / 全部超编条目
 OUT="$(bash "$GEN" --quota --json --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
-printf '%s\n' "$OUT" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["non_doc"],d["doc"],d["total"],d["bypass"],d["quota_true"],d["rows"])==(37,2,39,0,39,120) and len(d["over"])==37 and all(o["bucket"]=="non-doc" for o in d["over"])' 2>/dev/null \
-  && ok "⑫b --quota --json：三桶/rows/超编条目齐全（37 条非文档）" || no "⑫b --quota --json 异常（rc=$RC）"
+printf '%s\n' "$OUT" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["non_doc"],d["doc"],d["total"],d["bypass"],d["quota_true"],d["rows"])==(35,2,37,2,39,123) and len(d["over"])==35 and all(o["bucket"]=="non-doc" for o in d["over"])' 2>/dev/null \
+  && ok "⑫b --quota --json：三桶/rows/超编条目齐全（35 条非文档）" || no "⑫b --quota --json 异常（rc=$RC）"
 
 # ── ⑬ 手改 artifact 的 quota（true→false）：--check 点名 B3；--quota 变小 ────────
 mangle "$INV" "$TMPD/inv13-quota.yaml" flip_quota_false 1
@@ -304,29 +311,48 @@ OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv13-quota.yaml" 2>&1)";
 C13=0
 [ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '\[B3\]' && C13=$((C13+1))
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv13-quota.yaml" 2>&1)"; RC=$?
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=36/30（超编 6） total=38/45 bypass=0/8' && C13=$((C13+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=38 doc=2 non_doc=36 bypass=0 rows=120' && C13=$((C13+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=34/30（超编 4） total=36/45 bypass=2/8' && C13=$((C13+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=38 doc=2 non_doc=34 bypass=2 rows=123' && C13=$((C13+1))
 if [ "$RC" -eq 1 ] && [ "$C13" -eq 3 ]; then
-  ok "⑬ 手改 artifact quota=true→false：--check rc=1 点名 B3；--quota 计数 38/36（数字来自 artifact）"
+  ok "⑬ 手改 artifact quota=true→false：--check rc=1 点名 B3；--quota 计数 38/34（数字来自 artifact）"
 else
   no "⑬ 手改 artifact 未按预期（--quota rc=$RC 命中=$C13/3）"
 fi
 
-# ── ⑭ bypass 9 条夹具：rc=1 + bypass=9/8 + 逐条点名 ─────────────────────────────
+# ── ⑭ bypass 夹具：9 条新增（+ 2 条真回填 = 11 条）⇒ rc=1 + bypass=11/8 + 逐条点名 ────
 mangle "$INV" "$TMPD/inv14-bypass9.yaml" scope_bypass 9
+# 从夹具 artifact 独立提取全部 bypass 行（禁手写名单）：逐条点名用
+python3 - "$TMPD/inv14-bypass9.yaml" "$TMPD/inv14.eps" <<'PY'
+import re, sys
+src, dst = sys.argv[1], sys.argv[2]
+lines = open(src, encoding="utf-8").read().splitlines()
+st = next(i for i, ln in enumerate(lines) if re.match(r"^gate_meta:\s*$", ln))
+eps, cur = [], None
+for i in range(st + 1, len(lines)):
+    ln = lines[i]
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*:", ln):
+        break
+    m = re.match(r"^    - entrypoint:\s*(.*)$", ln)
+    if m:
+        cur = m.group(1).strip(); continue
+    m2 = re.match(r"^      quota_scope:\s*(.*)$", ln)
+    if m2 and cur is not None and m2.group(1).strip() == "bypass":
+        eps.append(cur); cur = None
+open(dst, "w", encoding="utf-8", newline="\n").write("\n".join(eps) + "\n")
+PY
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv14-bypass9.yaml" 2>&1)"; RC=$?
 C14=0
 [ "$RC" -eq 1 ] && C14=$((C14+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=28/30（超编 0） total=30/45 bypass=9/8' && C14=$((C14+1))
-[ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: bypass ')" -eq 9 ] && C14=$((C14+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=26/30（超编 0） total=28/45 bypass=11/8' && C14=$((C14+1))
+[ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: bypass ')" -eq 11 ] && C14=$((C14+1))
 NAMED=0
 while IFS= read -r ep; do
   [ -n "$ep" ] && printf '%s\n' "$OUT" | grep -qF "QUOTA-OVER: bypass $ep" && NAMED=$((NAMED+1))
-done < "$TMPD/inv14-bypass9.yaml.eps"
-[ "$NAMED" -eq 9 ] && C14=$((C14+1))
+done < "$TMPD/inv14.eps"
+[ "$NAMED" -eq 11 ] && C14=$((C14+1))
 [ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')" -eq 0 ] && C14=$((C14+1))
 if [ "$C14" -eq 5 ]; then
-  ok "⑭ bypass 9 条夹具 ⇒ rc=1；bypass=9/8；逐条点名 9/9；非文档桶不再超编"
+  ok "⑭ bypass 夹具（9 新增 + 2 回填）⇒ rc=1；bypass=11/8；逐条点名 11/11；非文档桶不再超编"
 else
   no "⑭ bypass 夹具异常（rc=$RC 命中=$C14/5 named=$NAMED）"
 fi
@@ -414,11 +440,11 @@ OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv16b-norows.yaml" 2>&1)
 [ "$C16B" -eq 2 ] && ok "⑯b gate_meta 段缺失 ⇒ rc=2（E_GATE_META_MISSING）；段内 0 行 ⇒ rc=2（E_NO_ROWS）" || no "⑯b 段级夹具未全判 2（命中 $C16B/2）"
 
 # ── ⑰ 改坏即红：non_doc >30 判断恒假 ⇒ 31 条夹具由红变绿 ────────────────────────
-mangle "$INV" "$TMPD/inv17-non31.yaml" flip_quota_false 6
+mangle "$INV" "$TMPD/inv17-non31.yaml" flip_quota_false 4
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv17-non31.yaml" 2>&1)"; RC=$?
 C17=0
 [ "$RC" -eq 1 ] && C17=$((C17+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=31/30（超编 1） total=33/45 bypass=0/8' && C17=$((C17+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=31/30（超编 1） total=33/45 bypass=2/8' && C17=$((C17+1))
 [ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')" -eq 31 ] && C17=$((C17+1))
 python3 - "$GEN" "$TMPD/gen_bad_quota.sh" <<'PY'
 import sys
@@ -432,7 +458,7 @@ open(dst, "w", encoding="utf-8", newline="\n").write(s.replace(old, new))
 PY
 cp "$REPO/scripts/control-tower/gate-assert.sh" "$TMPD/gate-assert.sh"
 OUTM="$(bash "$TMPD/gen_bad_quota.sh" --quota --root "$REPO" --inv "$TMPD/inv17-non31.yaml" 2>&1)"; MRC=$?
-printf '%s\n' "$OUTM" | grep -q '^QUOTA: non_doc=31/30（超编 1） total=33/45 bypass=0/8' && C17=$((C17+1))
+printf '%s\n' "$OUTM" | grep -q '^QUOTA: non_doc=31/30（超编 1） total=33/45 bypass=2/8' && C17=$((C17+1))
 [ "$MRC" -eq 0 ] && C17=$((C17+1))
 if [ "$C17" -eq 5 ]; then
   ok "⑰ 改坏即红：>30 恒假 ⇒ 31 条非文档夹具 rc 1→0（原断言失效，证明比较承重）"
@@ -441,17 +467,180 @@ else
 fi
 
 # ── ⑰b 边界绿：non_doc=30（恰在限内）⇒ rc=0 且无 QUOTA-OVER（防恒红）────────────
-mangle "$INV" "$TMPD/inv17b-non30.yaml" flip_quota_false 7
+mangle "$INV" "$TMPD/inv17b-non30.yaml" flip_quota_false 5
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv17b-non30.yaml" 2>&1)"; RC=$?
 C17B=0
 [ "$RC" -eq 0 ] && C17B=$((C17B+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=30/30（超编 0） total=32/45 bypass=0/8' && C17B=$((C17B+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=32 doc=2 non_doc=30 bypass=0 rows=120' && C17B=$((C17B+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=30/30（超编 0） total=32/45 bypass=2/8' && C17B=$((C17B+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=34 doc=2 non_doc=30 bypass=2 rows=123' && C17B=$((C17B+1))
 [ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: ')" -eq 0 ] && C17B=$((C17B+1))
 if [ "$C17B" -eq 4 ]; then
   ok "⑰b 边界绿：non_doc=30 ⇒ rc=0 且无 QUOTA-OVER（未超不得误红）"
 else
   no "⑰b 边界异常（rc=$RC 命中=$C17B/4）"
+fi
+
+# ═══ ⑱ 起：W0 · #1205（A2 固化／A3 bypass 回填／W0-5 workflow 定态）═══════════════
+# 取生成物里某 entrypoint 的字段（禁手写名单）；用法:
+#   python3 gmfield.py <inventory> "<ep>::<field>::<期望值>" ...
+cat > "$TMPD/gmfield.py" <<'PY'
+import re, sys
+
+def blocks(p):
+    lines = open(p, encoding="utf-8").read().splitlines()
+    st = next(i for i, ln in enumerate(lines) if re.match(r"^gate_meta:\s*$", ln))
+    out, cur = {}, None
+    for ln in lines[st + 1:]:
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*:", ln):
+            break
+        m = re.match(r"^    - entrypoint:\s*(.*)$", ln)
+        if m:
+            cur = m.group(1).strip().strip('"'); out[cur] = {}; continue
+        m2 = re.match(r"^      ([A-Za-z_]+):\s*(.*)$", ln)
+        if m2 and cur is not None:
+            out[cur][m2.group(1)] = m2.group(2).strip().strip('"')
+    return out
+
+b = blocks(sys.argv[1])
+bad = 0
+for spec in sys.argv[2:]:
+    ep, field, want = spec.split("::")
+    got = b.get(ep, {}).get(field)
+    if got != want:
+        print("MISMATCH %s.%s=%r（期望 %r）" % (ep, field, got, want)); bad += 1
+sys.exit(1 if bad else 0)
+PY
+
+# ── ⑱ A2 固化（#1205）：scope=github-only-integration ⇒ 生成物 quota:false ＋ na_cmd 必填 ─
+C18=0
+python3 "$TMPD/gmfield.py" "$INV" \
+  "scripts/control-tower/check-fixture-requires.sh::quota::false" \
+  "scripts/control-tower/check-fixture-requires.sh::quota_scope::non-doc" \
+  "scripts/workflow/check-integration.sh::quota::false" \
+  && C18=$((C18+1))
+RB_SCOPE=$(sed -n '/^run_by:/,/^run_by_candidates:/p' "$INV" | grep -cE '^    scope: github-only-integration')
+RB_NACMD=$(sed -n '/^run_by:/,/^run_by_candidates:/p' "$INV" | grep -cE '^    na_cmd: ')
+[ "$RB_SCOPE" -eq 2 ] && [ "$RB_NACMD" -eq 2 ] && C18=$((C18+1))
+# N1 两态：github-only 行改成 quota:true ⇒ --check rc=1 且点名 [N1]
+cp "$INV" "$TMPD/inv18-n1.yaml"
+python3 - "$TMPD/inv18-n1.yaml" <<'PY'
+import re, sys
+p = sys.argv[1]
+lines = open(p, encoding="utf-8").read().splitlines()
+si = next(i for i, ln in enumerate(lines) if ln.strip() == "scope: github-only-integration")
+b = si
+while b > 0 and not re.match(r"^  - entrypoint:", lines[b]):
+    b -= 1
+for i in range(b, si):
+    if lines[i].strip() == "quota: false":
+        lines[i] = "    quota: true"; break
+else:
+    raise SystemExit("fixture: 该块无 quota: false")
+open(p, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+PY
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv18-n1.yaml" 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '\[N1\]' && C18=$((C18+1))
+# N2 两态：删 na_cmd ⇒ --check rc=1 且点名 [N2]
+cp "$INV" "$TMPD/inv18-n2.yaml"
+python3 - "$TMPD/inv18-n2.yaml" <<'PY'
+import sys
+p = sys.argv[1]
+lines = open(p, encoding="utf-8").read().splitlines()
+i = next(k for k, ln in enumerate(lines) if ln.strip().startswith("na_cmd:"))
+del lines[i]
+open(p, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+PY
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv18-n2.yaml" 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '\[N2\]' && C18=$((C18+1))
+# 闭合：原树仍 rc=0（两态可回）
+bash "$GEN" --check --root "$REPO" --inv "$INV" >/dev/null 2>&1; RC=$?
+[ "$RC" -eq 0 ] && C18=$((C18+1))
+if [ "$C18" -eq 5 ]; then
+  ok "⑱ A2 固化：两件 github-only ⇒ 生成物 quota:false；N1（quota:true）rc=1 点名；N2（缺 na_cmd）rc=1 点名；原树 rc=0"
+else
+  no "⑱ A2 固化异常（命中=$C18/5）"
+fi
+
+# ── ⑲ A3 bypass 回填（#1205）：两件 artifact 为 quota:true ∧ quota_scope:bypass ────────
+C19=0
+python3 "$TMPD/gmfield.py" "$INV" \
+  "scripts/control-tower/check-bypass-log.sh::quota::true" \
+  "scripts/control-tower/check-bypass-log.sh::quota_scope::bypass" \
+  "scripts/workflow/wire-check.sh::quota::true" \
+  "scripts/workflow/wire-check.sh::quota_scope::bypass" \
+  && C19=$((C19+1))
+RB_BYP=$(sed -n '/^run_by:/,/^run_by_candidates:/p' "$INV" | grep -cE '^    quota_scope: bypass')
+[ "$RB_BYP" -eq 2 ] && C19=$((C19+1))
+# 两态：run_by 行 quota_scope 改非法 ⇒ --check rc=2（判不了 ≠ 通过，禁静默回落缺省）
+cp "$INV" "$TMPD/inv19-badscope.yaml"
+python3 - "$TMPD/inv19-badscope.yaml" <<'PY'
+import sys
+p = sys.argv[1]
+lines = open(p, encoding="utf-8").read().splitlines()
+i = next(k for k, ln in enumerate(lines) if ln.strip() == "quota_scope: bypass")
+lines[i] = "    quota_scope: bypass-typo"
+open(p, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+PY
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv19-badscope.yaml" 2>&1)"; RC=$?
+[ "$RC" -eq 2 ] && printf '%s\n' "$OUT" | grep -q 'E_QUOTA_SCOPE' && C19=$((C19+1))
+if [ "$C19" -eq 3 ]; then
+  ok "⑲ A3 bypass 回填：两件 quota:true ∧ quota_scope:bypass；非法 quota_scope ⇒ rc=2（E_QUOTA_SCOPE）"
+else
+  no "⑲ A3 bypass 回填异常（命中=$C19/3）"
+fi
+
+# ── ⑳ workflow 全量定态（W0-5）：OK n=10 ＋ 非法 state／账外态／缺段 三组两态 ──────────
+C20=0
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
+[ "$RC" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^WORKFLOWS: OK n=10' && C20=$((C20+1))
+# 两态①：某 workflow state 改非法 ⇒ rc=1 且点名该 id
+cp "$INV" "$TMPD/inv20-badstate.yaml"
+python3 - "$TMPD/inv20-badstate.yaml" "疑似账外" <<'PY'
+import re, sys
+p, new = sys.argv[1], sys.argv[2]
+lines = open(p, encoding="utf-8").read().splitlines()
+i = next(k for k, ln in enumerate(lines) if ln.strip() == "- id: gitea/asset-sync")
+for j in range(i, i + 8):
+    if re.match(r"^    state:", lines[j]):
+        lines[j] = "    state: " + new; break
+else:
+    raise SystemExit("fixture: gitea/asset-sync 无 state 行")
+open(p, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+PY
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv20-badstate.yaml" 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '^WORKFLOWS: VIOLATION k=' \
+  && printf '%s\n' "$OUT" | grep -q 'gitea/asset-sync state 非法' && C20=$((C20+1))
+# 两态②：state=账外 ⇒ rc=1（W0 出口判据＝无账外）
+cp "$INV" "$TMPD/inv20-offbook.yaml"
+python3 - "$TMPD/inv20-offbook.yaml" "账外" <<'PY'
+import re, sys
+p, new = sys.argv[1], sys.argv[2]
+lines = open(p, encoding="utf-8").read().splitlines()
+i = next(k for k, ln in enumerate(lines) if ln.strip() == "- id: gitea/asset-sync")
+for j in range(i, i + 8):
+    if re.match(r"^    state:", lines[j]):
+        lines[j] = "    state: " + new; break
+else:
+    raise SystemExit("fixture: gitea/asset-sync 无 state 行")
+open(p, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+PY
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv20-offbook.yaml" 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -qF 'state=账外' && C20=$((C20+1))
+# 两态③：删 workflows: 段 ⇒ rc=1（W0 之后它是必需项，禁删段绕过）
+cp "$INV" "$TMPD/inv20-noseg.yaml"
+python3 - "$TMPD/inv20-noseg.yaml" <<'PY'
+import sys
+p = sys.argv[1]
+lines = open(p, encoding="utf-8").read().splitlines()
+i = next(k for k, ln in enumerate(lines) if ln.strip() == "workflows:")
+open(p, "w", encoding="utf-8", newline="\n").write("\n".join(lines[:i]) + "\n")
+PY
+OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv20-noseg.yaml" 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -qF '缺 workflows: 段' && C20=$((C20+1))
+if [ "$C20" -eq 4 ]; then
+  ok "⑳ workflow 定态：OK n=10；非法 state ⇒ rc=1 点名；账外态 ⇒ rc=1；缺段 ⇒ rc=1（禁删段绕过）"
+else
+  no "⑳ workflow 定态异常（命中=$C20/4）"
 fi
 
 echo "═══════════════════════════════════════════════════════════"

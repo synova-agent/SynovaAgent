@@ -1574,6 +1574,14 @@ documents:
     owner: P4
     note: "#1148（B3 批1）：新增 G-DOC-3 日期戳与 G-DOC-5 裸文件名两支检查器＋配对测试；存量走基线棘轮（只减不增）；已建成未接线；含自覆盖行与 DOCS-REGISTRY 自登记行。"
 
+  # ---- P4 2026-10-31：#1205 W0 前置 受保护路径豁免（D2 登记）----
+  - id: DOC-1205
+    type: decision
+    path: gate-exemptions/2026-10-31-w0-1205.md
+    status: active
+    owner: P4
+    note: "#1205 W0-A（GATE-INVENTORY 定态/39-2 固化/bypass 回填/verify-governance G11 核账）的受保护路径豁免；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+
   # ---- P4 2026-10-31：#1210 W0 附通道 B 豁免登记（DOC-1210；R1 口径 id = DOC-<Issue#>）----
   - id: DOC-1210
     type: decision
