@@ -8,7 +8,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # 覆盖矩阵（铁律 48 三路径 ＋ 判别性 ＋ 变异体）:
 #   正常 — 真清单 ⇒ schema／①配额恒等式／②id 唯一／③workflows／④disk↔registry 五项全绿，
 #          末行 `GATE-INVENTORY-INVARIANT: OK`、exit 0
-#   失败 — 改坏①：gate_meta 一条 quota_scope non-doc→doc ⇒ ① 红（35→34／2→3），exit 1
+#   失败 — 改坏①：gate_meta 一条 quota_scope non-doc→doc ⇒ ① 红（28→27／2→3），exit 1
 #   失败 — 改坏②：classification 复制一条完整行（同 id）⇒ ② 红，exit 1
 #   失败 — 改坏③：删 workflows: 段 ⇒ ③ 红（段缺失），exit 1
 #   降级 — 清单不存在 ⇒ exit 2 ＋ degraded: E_INV_MISSING（判不了 ≠ 通过）
@@ -35,12 +35,12 @@ echo "=== B3: gate-inventory.invariant.sh 不变式夹具 ==="
 OUT="$(bash "$SUT" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] \
    && printf '%s\n' "$OUT" | grep -q '✅ \[schema\] 段名白名单' \
-   && printf '%s\n' "$OUT" | grep -q '✅ \[①配额恒等式\] quota_true=39 = non_doc 35 ＋ doc 2 ＋ bypass 2' \
+   && printf '%s\n' "$OUT" | grep -q '✅ \[①配额恒等式\] quota_true=32 = non_doc 28 ＋ doc 2 ＋ bypass 2' \
    && printf '%s\n' "$OUT" | grep -q '✅ \[②id 唯一\]' \
    && printf '%s\n' "$OUT" | grep -q '✅ \[③workflows\] n=10' \
    && printf '%s\n' "$OUT" | grep -q '✅ \[④disk↔registry\] check-gate-inventory rc=0' \
    && printf '%s\n' "$OUT" | grep -q '^GATE-INVENTORY-INVARIANT: OK$'; then
-  ok "正常: 五项全绿（schema／① 39=35+2+2／② id／③ workflows n=10／④ 对齐）＋ OK 末行"
+  ok "正常: 五项全绿（schema／① 32=28+2+2／② id／③ workflows n=10／④ 对齐）＋ OK 末行"
 else
   no "正常: 真清单未全绿（rc=${rc}）: $(printf '%s' "$OUT" | tr '\n' '|' | cut -c1-220)"
 fi
@@ -82,8 +82,8 @@ open(dst, "w", encoding="utf-8", newline="").write("\n".join(lines))
 PY
 OUT="$(bash "$SUT" --inv "$F1" 2>&1)"; rc=$?
 if [ "$rc" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '❌ \[①配额恒等式\]' \
-   && printf '%s\n' "$OUT" | grep -q 'non_doc=34' ; then
-  ok "改坏①: gate_meta 一条 non-doc→doc ⇒ ① 红（non_doc=34，常量 35）＋ exit 1"
+   && printf '%s\n' "$OUT" | grep -q 'non_doc=27' ; then
+  ok "改坏①: gate_meta 一条 non-doc→doc ⇒ ① 红（non_doc=27，常量 28）＋ exit 1"
 else
   no "改坏①: 恒等式未变红（rc=${rc}）"
 fi

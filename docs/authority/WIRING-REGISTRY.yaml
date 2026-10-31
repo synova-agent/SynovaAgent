@@ -143,9 +143,10 @@ entries:
     provider: "scripts/control-tower/check-acceptance-matrix.py:1"
     consumer: null
     test: "tests/control-tower/check-acceptance-matrix.test.sh"
-    status: declared-only
+    status: retired
     owner: P4
     notes: "#1054 验收矩阵机制 P0：P0 明确不接 CI/pre-commit（规格 §3 非目标）⇒ 无生产消费者；矩阵载体＋三态校验器，手动运行。"
+    retired_reason: "W1 #1219 退役（absorbed_by scripts/control-tower/verify-governance.sh）：三态机制归总闸；四腿零引用、无生产消费者；观察期至 2026-11-30"
   - capability: content.rolePackSchema
     defined_at: "src/init/role-pack-schema.ts:59"
     provider: "src/init/role-pack-schema.ts:578"

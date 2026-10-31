@@ -28,10 +28,11 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #             忽略）。修复动作不在本件：生成物重放归 `gen-gate-meta.sh --regen`，登记面归人。
 #
 # 四项不变量 ＋ schema 面（判据）:
-#   ① 配额恒等式（W0 出口数字，创始人裁定 #1212）：quota_true=39 = non_doc 35 ＋ doc 2 ＋ bypass 2。
+#   ① 配额恒等式（W1 出口数字，#1219）：quota_true=32 = non_doc 28 ＋ doc 2 ＋ bypass 2。
 #      · 从 gate_meta 段机械统计（quota:true 的 quota_scope 分布）；
 #      · 与 `gen-gate-meta.sh --quota` 的 `QUOTA-SRC:` 行逐数字对照（禁只信自己算的）；
-#      · 常量是 **W0 出口棘轮**：W1 退役批把 37→30 时须**同批显式更新**（改常量 = 改判据，带卡号）。
+#      · 常量是 **W1 出口棘轮**（#1219：W0 出口 39／35 经 W1 退役批下调为本批数字）：
+#        再动须**同批显式更新**（改常量 = 改判据，带卡号）。
 #   ② id 唯一：全清单所有 `- id:` 值（classification／retired／candidates …）出现次数 == 去重数。
 #   ③ workflows：段存在、恰好 10 条、state ∈ {阻断,只报,advisory,账外}、**账外 = 0**。
 #   ④ disk↔registry 双向对齐：**直接复用** `check-gate-inventory.sh --root <root>` 的退出码
@@ -48,12 +49,12 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #      跨段复用，须先把账改对而不是放宽本件。
 #   4. **workflows 的 trigger 实况对账不在本件**（归 `gen-gate-meta.sh --check` 的实况①②）；
 #      本件只判「段在／n=10／四态合法／无账外」。
-#   5. **不判配额是否超编**（35>30 现网预期红，归 gen-gate-meta --quota / W1 退役批）；
+#   5. **不判配额是否超编**（W1 出口 non_doc=28 ≤ 30；超编判定归 gen-gate-meta --quota）；
 #      本件只判恒等式与常量不回退。
 #   6. **不判语义**：字段「写得对不对」仍需评审；本件只拦结构/类型/算术/枚举。
 #
 # 判别力自检（改坏确实红，见配对测试 tests/control-tower/gate-inventory.invariant.test.sh）:
-#   · 改一条 gate_meta 的 quota_scope（non-doc→doc）⇒ ① 红（35→34、2→3，恒等式 39≠39 值不符）
+#   · 改一条 gate_meta 的 quota_scope（non-doc→doc）⇒ ① 红（non_doc 28→27、doc 2→3，常量对照不符）
 #   · 复制一个 id ⇒ ② 红
 #   · 删 workflows 段 ⇒ ③ 红
 #   · 清单不可读 / 缺 classification 段 ⇒ exit 2（判不了 ≠ 通过）
@@ -121,8 +122,8 @@ import sys
 
 inv_path, src_line = sys.argv[1], sys.argv[2]
 
-# W0 出口数字（创始人裁定 #1212；W1 退役批须同批显式更新，改常量 = 改判据）
-EXPECT = {"quota_true": 39, "non_doc": 35, "doc": 2, "bypass": 2}
+# W1 出口数字（#1212 的 W0 出口经 #1219 退役批下调；再动须同批显式更新，改常量 = 改判据）
+EXPECT = {"quota_true": 32, "non_doc": 28, "doc": 2, "bypass": 2}
 WF_IDS_EXPECT = 10
 WF_STATES = ("阻断", "只报", "advisory", "账外")
 TOP_ALLOWED = {
@@ -269,7 +270,7 @@ if got["quota_true"] != got["non_doc"] + got["doc"] + got["bypass"]:
                 % (got["quota_true"], c_non_doc, c_doc, c_byp, c_non_doc + c_doc + c_byp))
 for k in ("quota_true", "non_doc", "doc", "bypass"):
     if got[k] != EXPECT[k]:
-        bad1.append("%s=%d ≠ W0 出口常量 %d（账本回退或被手改）" % (k, got[k], EXPECT[k]))
+        bad1.append("%s=%d ≠ W1 出口常量 %d（账本回退或被手改）" % (k, got[k], EXPECT[k]))
 # 与 --quota 的 QUOTA-SRC 逐数字对照（禁只信自己算的）
 m = re.match(r"^QUOTA-SRC:\s*quota_true=(\d+)\s+doc=(\d+)\s+non_doc=(\d+)\s+bypass=(\d+)\s+rows=(\d+)",
              src_line)
