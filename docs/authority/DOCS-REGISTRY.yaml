@@ -1589,3 +1589,11 @@ documents:
     status: active
     owner: P4
     note: "#1210 W0-附（sealed-tests 扩面 + check-gate-budget）的受保护路径豁免；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-31：#1219 W1 退役批 受保护路径豁免登记（R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1219
+    type: decision
+    path: gate-exemptions/2026-10-31-w1-1219.md
+    status: active
+    owner: P4
+    note: "#1219 W1 退役批（retired 26 条／配额降旁路／参与集单源／invariant 与三份配对测试动态化）的受保护路径豁免；含 gate-exemptions 自覆盖行与 DOCS-REGISTRY 自登记行。"
