@@ -354,3 +354,12 @@ entries:
     status: declared-only
     owner: P4
     notes: "G-DOC-5 裸文件名检查器（#1148 B3 批1）：内联代码 span 裸文件名须带路径；三态 0/1/2 与每文件计数基线棘轮；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批）。"
+  # ---- P4 2026-10-31：#1210 W0-6 耗时预算机检（旁路；declared-only 显式豁免 R1.2）----
+  - capability: check-gate-budget
+    defined_at: "scripts/control-tower/check-gate-budget.sh:1"
+    provider: "scripts/control-tower/check-gate-budget.sh:1"
+    consumer: null
+    test: "tests/control-tower/check-gate-budget.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "#1210 W0-6 耗时预算机检（旁路，未接 pre-commit 主路径；接线由后续 A3/W6 卡决定）"

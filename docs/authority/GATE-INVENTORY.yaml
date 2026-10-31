@@ -1283,6 +1283,15 @@ classification:
     required_ci: false
     confirmed_by: pending-cto
 
+  # ---- P4 2026-10-31：#1210 W0 附通道 B 耗时预算机检（纯追加；旁路未接线故 required_ci: false）----
+  - id: CT-check-gate-budget
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gate-budget.sh
+    required_ci: false
+    confirmed_by: pending-cto
+
 run_by:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
@@ -1659,8 +1668,12 @@ run_by:
   - entrypoint: scripts/control-tower/verify-governance.sh
     run_by: "无"
     quota: false
+  - entrypoint: scripts/control-tower/check-gate-budget.sh
+    run_by: "无"
+    quota: false
 run_by_candidates:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）（20 件）
+  - entrypoint: scripts/control-tower/check-gate-budget.sh
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
   - entrypoint: scripts/control-tower/check-block-paths.ts
   - entrypoint: scripts/control-tower/check-board-metrics.ts
@@ -1751,7 +1764,7 @@ run_by_candidates:
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
 
 gate_meta:
-  measured_at: b615aa0ca
+  measured_at: 1a123eebd
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
   legacy_sections:
     - name: meta
@@ -2031,6 +2044,13 @@ gate_meta:
       run_by: github-ci
       orphan: false
       quota: true
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-gate-budget.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-integrity.sh
