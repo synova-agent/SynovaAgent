@@ -14,9 +14,10 @@
 #  ⑨ check-gate-inventory 集成：gate_meta 与生成物不一致 ⇒ VIOLATION 1（R10）
 #  ⑩ check-gate-inventory 集成：一致 ⇒ OK（无回归）
 #  ⑪ 改坏即红：把 --check 的比对改成恒真（/tmp 副本）⇒ ③ 用例必须红
-#  ⑫ --quota 真树：rc=1（超编）；non_doc=35/30、total=37/45、bypass=2/8、quota_true=39；
-#     独立交叉核对 gate_meta 段 quota:true=39 / run_by 段 quota:true=39（整文件 79 = 39+39+注释 1）；
-#     ⑫b --quota --json 三桶/rows/超编条目齐全
+#  ⑫ --quota 真树：期望全动态（W1 出口 non_doc=28 ⇒ rc=0）；QUOTA 行须解析出 non_doc/total/bypass，
+#     QUOTA-SRC 须 quota_true=non_doc+doc+bypass、rows=123；QUOTA-OVER 条数 = max(0, non_doc-30)；
+#     独立交叉核对 gate_meta 段 = run_by 段 = quota_true（整文件 = 2×quota_true + 注释 1）；
+#     ⑫b --quota --json 与 ⑫ 同一组动态数字（bypass、rows=123、超编=max(0,non_doc-30)、三桶恒等式）
 #  ⑬ 手改 artifact 的 quota（true→false 副本）：--check rc=1 且点名 B3；--quota 计数相应变小
 #     （证明 --quota 的数字来自 artifact，不是重算 run_by）
 #  ⑭ bypass 夹具（artifact 副本：9 条新增 + 2 条真回填）⇒ --quota rc=1 + `bypass=11/8` + 逐条点名
@@ -222,8 +223,8 @@ bash "$TMPD/gen_bad.sh" --check --root "$REPO" --inv "$TMPD/inv3.yaml" >/dev/nul
 # ═══ ⑫ 起：配额双闸（--quota）与 --emit 假绿防线 ═══════════════════════════════
 # 夹具统一 $TMPD 沙箱（mktemp -d + EXIT trap）；篡改只发生副本，不触真清单。
 # mangle <src> <dst> <op> <n>：按 gate_meta 行块机械篡改（op ∈ flip_quota_false /
-# scope_bypass / scope_bad / scope_missing / quota_bad）；scope_bypass 另写 <dst>.eps
-# 记录被改 entrypoint（逐条点名用）。
+# flip_scope_to_non_doc / scope_bypass / scope_bad / scope_missing / quota_bad）；
+# scope_bypass 另写 <dst>.eps 记录被改 entrypoint（逐条点名用）。
 mangle() {
   python3 - "$1" "$2" "$3" "$4" <<'PY'
 import re, sys
@@ -260,6 +261,22 @@ if op == "flip_quota_false":
             lines[field(b, "quota")] = "      quota: false"; used += 1
     if used != n:
         raise SystemExit("fixture: flip_quota_false 只改了 %d/%d" % (used, n))
+elif op == "flip_scope_to_non_doc":
+    # 把 quota:true 且 quota_scope=doc/bypass 的行改成 non-doc（doc 优先）：
+    # flip_quota_false 只能减，边界两态（non_doc=30/31）需要从基准往上抬，故另设此 op
+    used = 0
+    for want in ("doc", "bypass"):
+        for b in blocks:
+            if used >= n:
+                break
+            if lines[field(b, "quota")].strip() == "quota: true" \
+               and lines[field(b, "quota_scope")].strip() == "quota_scope: " + want:
+                lines[field(b, "quota_scope")] = "      quota_scope: non-doc"
+                used += 1
+        if used >= n:
+            break
+    if used != n:
+        raise SystemExit("fixture: flip_scope_to_non_doc 只改了 %d/%d" % (used, n))
 elif op == "scope_bypass":
     used, eps = 0, []
     for b in blocks:
@@ -282,41 +299,106 @@ open(dst, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
 PY
 }
 
-# ── ⑫ --quota 真树：三桶计数 + 独立交叉核对 ─────────────────────────────
+# buckets <inv> → 「non_doc doc bypass quota_true rows」
+# 从夹具/真清单的 gate_meta 段机械统计（期望值按夹具实算，禁手写数字）
+buckets() {
+  python3 - "$1" <<'PY'
+import re, sys
+lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
+st = next(i for i, ln in enumerate(lines) if re.match(r"^gate_meta:\s*$", ln))
+rows, cur = [], None
+for ln in lines[st + 1:]:
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*:", ln):
+        break
+    m = re.match(r"^    - entrypoint:\s*(.*)$", ln)
+    if m:
+        cur = {"entrypoint": m.group(1).strip()}
+        rows.append(cur); continue
+    m2 = re.match(r"^      ([A-Za-z_]+):\s*(.*)$", ln)
+    if m2 and cur is not None:
+        cur[m2.group(1)] = m2.group(2).strip()
+q = [r for r in rows if r.get("quota") == "true"]
+nd = sum(1 for r in q if r.get("quota_scope") == "non-doc")
+dc = sum(1 for r in q if r.get("quota_scope") == "doc")
+bp = sum(1 for r in q if r.get("quota_scope") == "bypass")
+print("%d %d %d %d %d" % (nd, dc, bp, len(q), len(rows)))
+PY
+}
+
+# ── ⑫ --quota 真树：三桶计数 + 独立交叉核对（W1：期望值全动态，禁写死）────────
+# 基准数字取自 --quota 自身，再与清单 gate_meta／run_by 段机械对账；两说即红。
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
-Q_HIT=0
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=35/30（超编 5） total=37/45 bypass=2/8' && Q_HIT=$((Q_HIT+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=39 doc=2 non_doc=35 bypass=2 rows=123' && Q_HIT=$((Q_HIT+1))
-Q_OVER=$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')
-# 独立交叉核对（不读被测命令输出）：gate_meta 段 39 ／ run_by 段 39 ／ 注释 1 ／ 整文件 79
+QLINE="$(printf '%s\n' "$OUT" | grep -m1 '^QUOTA:')"
+SRCLINE="$(printf '%s\n' "$OUT" | grep -m1 '^QUOTA-SRC:')"
+Q_NON=$(printf '%s\n' "$QLINE" | sed -n 's/^QUOTA: non_doc=\([0-9]*\)\/30.*$/\1/p')
+Q_OVER_SHOWN=$(printf '%s\n' "$QLINE" | sed -n 's/^QUOTA: non_doc=[0-9]*\/30（超编 \([0-9]*\)）.*$/\1/p')
+Q_TOTAL=$(printf '%s\n' "$QLINE" | sed -n 's/^.*total=\([0-9]*\)\/45.*$/\1/p')
+Q_BYP=$(printf '%s\n' "$QLINE" | sed -n 's/^.*bypass=\([0-9]*\)\/8$/\1/p')
+Q_TRUE=$(printf '%s\n' "$SRCLINE" | sed -n 's/^QUOTA-SRC: quota_true=\([0-9]*\) doc=.*$/\1/p')
+Q_DOC=$(printf '%s\n' "$SRCLINE" | sed -n 's/^QUOTA-SRC: quota_true=[0-9]* doc=\([0-9]*\) .*$/\1/p')
+Q_SRC_NON=$(printf '%s\n' "$SRCLINE" | sed -n 's/^.* non_doc=\([0-9]*\) bypass=.*$/\1/p')
+Q_SRC_BYP=$(printf '%s\n' "$SRCLINE" | sed -n 's/^.* bypass=\([0-9]*\) rows=.*$/\1/p')
+Q_SRC_ROWS=$(printf '%s\n' "$SRCLINE" | sed -n 's/^.* rows=\([0-9]*\)$/\1/p')
+C12=0
+if [ -n "$Q_NON" ] && [ -n "$Q_TOTAL" ] && [ -n "$Q_BYP" ] && [ -n "$Q_TRUE" ] \
+   && [ -n "$Q_DOC" ] && [ -n "$Q_SRC_NON" ] && [ -n "$Q_SRC_BYP" ] && [ -n "$Q_SRC_ROWS" ]; then
+  C12=$((C12+1))
+fi
+Q_NON="${Q_NON:-0}"; Q_TOTAL="${Q_TOTAL:-0}"; Q_BYP="${Q_BYP:-0}"; Q_TRUE="${Q_TRUE:-0}"
+Q_DOC="${Q_DOC:-0}"; Q_SRC_NON="${Q_SRC_NON:-0}"; Q_SRC_BYP="${Q_SRC_BYP:-0}"; Q_SRC_ROWS="${Q_SRC_ROWS:-0}"
+Q_OVER_SHOWN="${Q_OVER_SHOWN:-0}"
+EXP_OVER=$((Q_NON - 30)); [ "$EXP_OVER" -lt 0 ] && EXP_OVER=0
+EXP_RC=0; [ "$Q_NON" -gt 30 ] && EXP_RC=1
+Q_OVER_LINES=$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')
+# 独立交叉核对（不读被测命令输出，直接数清单）：gate_meta 段／run_by 段／注释／整文件
 GM_TRUE=$(sed -n '/^gate_meta:/,/^retired:/p' "$INV" | grep -c '^      quota: true')
 RB_TRUE=$(sed -n '/^run_by:/,/^run_by_candidates:/p' "$INV" | grep -c '^    quota: true')
 CMT_TRUE=$(grep -c '^#.*quota: true' "$INV")
 ALL_TRUE=$(grep -c 'quota: true' "$INV")
-if [ "$RC" -eq 1 ] && [ "$Q_HIT" -eq 2 ] && [ "$Q_OVER" -eq 35 ] \
-   && [ "$GM_TRUE" -eq 39 ] && [ "$RB_TRUE" -eq 39 ] && [ "$CMT_TRUE" -eq 1 ] && [ "$ALL_TRUE" -eq 79 ]; then
-  ok "⑫ --quota 真树 ⇒ rc=1；non_doc=35/30 total=37/45 bypass=2/8 quota_true=39 超编 35 条；交叉核对 gate_meta=39 + run_by=39 + 注释=1 = 整文件 79"
+[ "$RC" -eq "$EXP_RC" ] && C12=$((C12+1))
+[ "$Q_TRUE" -eq $((Q_SRC_NON + Q_DOC + Q_SRC_BYP)) ] && C12=$((C12+1))
+[ "$Q_SRC_ROWS" -eq 123 ] && [ "$Q_NON" = "$Q_SRC_NON" ] && [ "$Q_BYP" = "$Q_SRC_BYP" ] && C12=$((C12+1))
+[ "$Q_TOTAL" -eq $((Q_NON + Q_DOC)) ] && C12=$((C12+1))
+[ "$Q_OVER_SHOWN" -eq "$EXP_OVER" ] && [ "$Q_OVER_LINES" -eq "$EXP_OVER" ] && C12=$((C12+1))
+[ "$GM_TRUE" -eq "$Q_TRUE" ] && [ "$RB_TRUE" -eq "$Q_TRUE" ] && C12=$((C12+1))
+[ "$ALL_TRUE" -eq $((2 * Q_TRUE + CMT_TRUE)) ] && C12=$((C12+1))
+if [ "$C12" -eq 8 ]; then
+  ok "⑫ --quota 真树动态核对（rc=$RC 按 non_doc=$Q_NON 与 30 比较；non_doc=$Q_NON/30 total=$Q_TOTAL/45 bypass=$Q_BYP/8 quota_true=$Q_TRUE 超编 $EXP_OVER 条；恒等式 quota_true=$Q_TRUE=non_doc+doc+bypass；交叉核对 gate_meta=$GM_TRUE + run_by=$RB_TRUE + 注释=$CMT_TRUE = 整文件 $ALL_TRUE）"
 else
-  no "⑫ --quota 真树异常（rc=$RC hit=$Q_HIT over=$Q_OVER gm=$GM_TRUE rb=$RB_TRUE cmt=$CMT_TRUE all=$ALL_TRUE）"
+  no "⑫ --quota 真树异常（rc=$RC 期望 $EXP_RC 命中=$C12/8 non_doc=$Q_NON total=$Q_TOTAL bypass=$Q_BYP quota_true=$Q_TRUE doc=$Q_DOC src=$Q_SRC_NON/$Q_SRC_BYP/$Q_SRC_ROWS over=$Q_OVER_SHOWN/$Q_OVER_LINES gm=$GM_TRUE rb=$RB_TRUE cmt=$CMT_TRUE all=$ALL_TRUE）"
 fi
 
-# ⑫b --quota --json：机器行含三桶 / rows / 全部超编条目
+# ⑫b --quota --json：机器行与 ⑫ 同一组动态数字（三桶 / rows=123 / 超编条数）
 OUT="$(bash "$GEN" --quota --json --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
-printf '%s\n' "$OUT" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["non_doc"],d["doc"],d["total"],d["bypass"],d["quota_true"],d["rows"])==(35,2,37,2,39,123) and len(d["over"])==35 and all(o["bucket"]=="non-doc" for o in d["over"])' 2>/dev/null \
-  && ok "⑫b --quota --json：三桶/rows/超编条目齐全（35 条非文档）" || no "⑫b --quota --json 异常（rc=$RC）"
+printf '%s\n' "$OUT" | tail -1 | Q_NON="$Q_NON" Q_DOC="$Q_DOC" Q_TOTAL="$Q_TOTAL" Q_BYP="$Q_BYP" Q_TRUE="$Q_TRUE" EXP_OVER="$EXP_OVER" RC="$RC" EXPECT_RC="$EXP_RC" python3 -c '
+import json, os, sys
+d = json.load(sys.stdin)
+n = int(os.environ["Q_NON"]); doc = int(os.environ["Q_DOC"]); tot = int(os.environ["Q_TOTAL"])
+b = int(os.environ["Q_BYP"]); qt = int(os.environ["Q_TRUE"]); over = int(os.environ["EXP_OVER"])
+assert (d["non_doc"], d["doc"], d["total"], d["bypass"], d["quota_true"], d["rows"]) == (n, doc, tot, b, qt, 123), d
+assert len(d["over"]) == over, (len(d["over"]), over)
+assert all(o["bucket"] == "non-doc" for o in d["over"]), d["over"]
+assert int(os.environ["RC"]) == int(os.environ["EXPECT_RC"]), os.environ["RC"]
+' 2>/dev/null \
+  && ok "⑫b --quota --json：与 ⑫ 同一组动态数字（non_doc=$Q_NON doc=$Q_DOC total=$Q_TOTAL bypass=$Q_BYP quota_true=$Q_TRUE rows=123 超编 $EXP_OVER）" \
+  || no "⑫b --quota --json 异常（rc=$RC 期望 $EXP_RC）"
 
-# ── ⑬ 手改 artifact 的 quota（true→false）：--check 点名 B3；--quota 变小 ────────
+# ── ⑬ 手改 artifact 的 quota（true→false）：--check 点名 B3；--quota 从基准动态变小 ────────
 mangle "$INV" "$TMPD/inv13-quota.yaml" flip_quota_false 1
 OUT="$(bash "$GEN" --check --root "$REPO" --inv "$TMPD/inv13-quota.yaml" 2>&1)"; RC=$?
 C13=0
 [ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '\[B3\]' && C13=$((C13+1))
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv13-quota.yaml" 2>&1)"; RC=$?
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=34/30（超编 4） total=36/45 bypass=2/8' && C13=$((C13+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=38 doc=2 non_doc=34 bypass=2 rows=123' && C13=$((C13+1))
-if [ "$RC" -eq 1 ] && [ "$C13" -eq 3 ]; then
-  ok "⑬ 手改 artifact quota=true→false：--check rc=1 点名 B3；--quota 计数 38/34（数字来自 artifact）"
+E13_NON=$((Q_NON-1)); E13_TOT=$((Q_TOTAL-1)); E13_TRUE=$((Q_TRUE-1))
+E13_OVER=$((E13_NON-30)); [ "$E13_OVER" -lt 0 ] && E13_OVER=0
+E13_RC=0; [ "$E13_NON" -gt 30 ] && E13_RC=1
+printf '%s\n' "$OUT" | grep -q "^QUOTA: non_doc=${E13_NON}/30（超编 ${E13_OVER}） total=${E13_TOT}/45 bypass=${Q_BYP}/8$" && C13=$((C13+1))
+printf '%s\n' "$OUT" | grep -q "^QUOTA-SRC: quota_true=${E13_TRUE} doc=${Q_DOC} non_doc=${E13_NON} bypass=${Q_BYP} rows=123$" && C13=$((C13+1))
+[ "$RC" -eq "$E13_RC" ] && C13=$((C13+1))
+if [ "$C13" -eq 4 ]; then
+  ok "⑬ 手改 artifact quota=true→false：--check rc=1 点名 B3；--quota 计数 ${E13_TRUE}/${E13_NON}（基准 ${Q_TRUE}/${Q_NON}，数字来自 artifact）rc=$RC"
 else
-  no "⑬ 手改 artifact 未按预期（--quota rc=$RC 命中=$C13/3）"
+  no "⑬ 手改 artifact 未按预期（--quota rc=$RC 期望 $E13_RC 命中=$C13/4）"
 fi
 
 # ── ⑭ bypass 夹具：9 条新增（+ 2 条真回填 = 11 条）⇒ rc=1 + bypass=11/8 + 逐条点名 ────
@@ -341,18 +423,20 @@ for i in range(st + 1, len(lines)):
 open(dst, "w", encoding="utf-8", newline="\n").write("\n".join(eps) + "\n")
 PY
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv14-bypass9.yaml" 2>&1)"; RC=$?
+E14_NON=$((Q_NON-9)); E14_TOT=$((Q_TOTAL-9)); E14_BYP=$((Q_BYP+9))
+E14_OVER=$((E14_NON-30)); [ "$E14_OVER" -lt 0 ] && E14_OVER=0
 C14=0
 [ "$RC" -eq 1 ] && C14=$((C14+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=26/30（超编 0） total=28/45 bypass=11/8' && C14=$((C14+1))
-[ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: bypass ')" -eq 11 ] && C14=$((C14+1))
+printf '%s\n' "$OUT" | grep -q "^QUOTA: non_doc=${E14_NON}/30（超编 ${E14_OVER}） total=${E14_TOT}/45 bypass=${E14_BYP}/8$" && C14=$((C14+1))
+[ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: bypass ')" -eq "$E14_BYP" ] && C14=$((C14+1))
 NAMED=0
 while IFS= read -r ep; do
   [ -n "$ep" ] && printf '%s\n' "$OUT" | grep -qF "QUOTA-OVER: bypass $ep" && NAMED=$((NAMED+1))
 done < "$TMPD/inv14.eps"
-[ "$NAMED" -eq 11 ] && C14=$((C14+1))
+[ "$NAMED" -eq "$E14_BYP" ] && C14=$((C14+1))
 [ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')" -eq 0 ] && C14=$((C14+1))
 if [ "$C14" -eq 5 ]; then
-  ok "⑭ bypass 夹具（9 新增 + 2 回填）⇒ rc=1；bypass=11/8；逐条点名 11/11；非文档桶不再超编"
+  ok "⑭ bypass 夹具（9 新增 + 2 回填）⇒ rc=1；bypass=$E14_BYP/8（基准 $Q_BYP）；逐条点名 $NAMED/$E14_BYP；非文档桶不再超编"
 else
   no "⑭ bypass 夹具异常（rc=$RC 命中=$C14/5 named=$NAMED）"
 fi
@@ -440,12 +524,21 @@ OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv16b-norows.yaml" 2>&1)
 [ "$C16B" -eq 2 ] && ok "⑯b gate_meta 段缺失 ⇒ rc=2（E_GATE_META_MISSING）；段内 0 行 ⇒ rc=2（E_NO_ROWS）" || no "⑯b 段级夹具未全判 2（命中 $C16B/2）"
 
 # ── ⑰ 改坏即红：non_doc >30 判断恒假 ⇒ 31 条夹具由红变绿 ────────────────────────
-mangle "$INV" "$TMPD/inv17-non31.yaml" flip_quota_false 4
+# 夹具：flip_scope_to_non_doc 把 doc/bypass 行改成 non-doc，从基准（W1 出口 28）抬到 non_doc=31；
+# 期望 QUOTA／QUOTA-SRC 全按夹具实算（buckets），不写死。
+NEED31=$((31 - Q_NON)); [ "$NEED31" -lt 0 ] && NEED31=0
+mangle "$INV" "$TMPD/inv17-non31.yaml" flip_scope_to_non_doc "$NEED31"
+read -r F_NON F_DOC F_BYP F_TRUE F_ROWS <<< "$(buckets "$TMPD/inv17-non31.yaml")"
+F_NON="${F_NON:-0}"; F_DOC="${F_DOC:-0}"; F_BYP="${F_BYP:-0}"; F_TRUE="${F_TRUE:-0}"; F_ROWS="${F_ROWS:-0}"
+F_OVER=$((F_NON-30)); [ "$F_OVER" -lt 0 ] && F_OVER=0
+F_TOT=$((F_NON+F_DOC))
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv17-non31.yaml" 2>&1)"; RC=$?
 C17=0
+[ "$F_NON" -eq 31 ] && C17=$((C17+1))
 [ "$RC" -eq 1 ] && C17=$((C17+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=31/30（超编 1） total=33/45 bypass=2/8' && C17=$((C17+1))
-[ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')" -eq 31 ] && C17=$((C17+1))
+printf '%s\n' "$OUT" | grep -q "^QUOTA: non_doc=${F_NON}/30（超编 ${F_OVER}） total=${F_TOT}/45 bypass=${F_BYP}/8$" && C17=$((C17+1))
+printf '%s\n' "$OUT" | grep -q "^QUOTA-SRC: quota_true=${F_TRUE} doc=${F_DOC} non_doc=${F_NON} bypass=${F_BYP} rows=123$" && C17=$((C17+1))
+[ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')" -eq "$F_NON" ] && C17=$((C17+1))
 python3 - "$GEN" "$TMPD/gen_bad_quota.sh" <<'PY'
 import sys
 src, dst = sys.argv[1], sys.argv[2]
@@ -458,26 +551,31 @@ open(dst, "w", encoding="utf-8", newline="\n").write(s.replace(old, new))
 PY
 cp "$REPO/scripts/control-tower/gate-assert.sh" "$TMPD/gate-assert.sh"
 OUTM="$(bash "$TMPD/gen_bad_quota.sh" --quota --root "$REPO" --inv "$TMPD/inv17-non31.yaml" 2>&1)"; MRC=$?
-printf '%s\n' "$OUTM" | grep -q '^QUOTA: non_doc=31/30（超编 1） total=33/45 bypass=2/8' && C17=$((C17+1))
+printf '%s\n' "$OUTM" | grep -q "^QUOTA: non_doc=${F_NON}/30（超编 ${F_OVER}） total=${F_TOT}/45 bypass=${F_BYP}/8$" && C17=$((C17+1))
 [ "$MRC" -eq 0 ] && C17=$((C17+1))
-if [ "$C17" -eq 5 ]; then
-  ok "⑰ 改坏即红：>30 恒假 ⇒ 31 条非文档夹具 rc 1→0（原断言失效，证明比较承重）"
+if [ "$C17" -eq 7 ]; then
+  ok "⑰ 改坏即红：non_doc=31 夹具 rc=1（$F_NON 条点名，QUOTA/QUOTA-SRC 按夹具实算）⇒ >30 判断恒假后 mutant rc=0（原断言失效，证明比较承重）"
 else
-  no "⑰ 改坏即红未按预期（原 rc=$RC 命中=$C17/5 mutant_rc=$MRC）"
+  no "⑰ 改坏即红未按预期（夹具 non_doc=$F_NON 原 rc=$RC 命中=$C17/7 mutant_rc=$MRC）"
 fi
 
 # ── ⑰b 边界绿：non_doc=30（恰在限内）⇒ rc=0 且无 QUOTA-OVER（防恒红）────────────
-mangle "$INV" "$TMPD/inv17b-non30.yaml" flip_quota_false 5
+NEED30=$((30 - Q_NON)); [ "$NEED30" -lt 0 ] && NEED30=0
+mangle "$INV" "$TMPD/inv17b-non30.yaml" flip_scope_to_non_doc "$NEED30"
+read -r G_NON G_DOC G_BYP G_TRUE G_ROWS <<< "$(buckets "$TMPD/inv17b-non30.yaml")"
+G_NON="${G_NON:-0}"; G_DOC="${G_DOC:-0}"; G_BYP="${G_BYP:-0}"; G_TRUE="${G_TRUE:-0}"; G_ROWS="${G_ROWS:-0}"
+G_TOT=$((G_NON+G_DOC))
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv17b-non30.yaml" 2>&1)"; RC=$?
 C17B=0
+[ "$G_NON" -eq 30 ] && C17B=$((C17B+1))
 [ "$RC" -eq 0 ] && C17B=$((C17B+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=30/30（超编 0） total=32/45 bypass=2/8' && C17B=$((C17B+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=34 doc=2 non_doc=30 bypass=2 rows=123' && C17B=$((C17B+1))
+printf '%s\n' "$OUT" | grep -q "^QUOTA: non_doc=${G_NON}/30（超编 0） total=${G_TOT}/45 bypass=${G_BYP}/8$" && C17B=$((C17B+1))
+printf '%s\n' "$OUT" | grep -q "^QUOTA-SRC: quota_true=${G_TRUE} doc=${G_DOC} non_doc=${G_NON} bypass=${G_BYP} rows=123$" && C17B=$((C17B+1))
 [ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: ')" -eq 0 ] && C17B=$((C17B+1))
-if [ "$C17B" -eq 4 ]; then
-  ok "⑰b 边界绿：non_doc=30 ⇒ rc=0 且无 QUOTA-OVER（未超不得误红）"
+if [ "$C17B" -eq 5 ]; then
+  ok "⑰b 边界绿：non_doc=30 ⇒ rc=0 且无 QUOTA-OVER（未超不得误红；doc=$G_DOC bypass=$G_BYP）"
 else
-  no "⑰b 边界异常（rc=$RC 命中=$C17B/4）"
+  no "⑰b 边界异常（rc=$RC 命中=$C17B/5）"
 fi
 
 # ═══ ⑱ 起：W0 · #1205（A2 固化／A3 bypass 回填／W0-5 workflow 定态）═══════════════
