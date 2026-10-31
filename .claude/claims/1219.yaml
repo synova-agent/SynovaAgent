@@ -1,0 +1,24 @@
+writeset:
+  - scripts/control-tower/check-gate-integrity.sh
+  - scripts/control-tower/gate-inventory.invariant.sh
+  - scripts/workflow/checkpoint-runtime.sh
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - tests/control-tower/gate-retirement-batch1.test.sh
+  - tests/control-tower/gate-inventory.invariant.test.sh
+  - tests/control-tower/gen-gate-meta.test.sh
+  - gate-exemptions/2026-10-31-w1-1219.md
+  - .claude/task-briefs/2026-10-31-1219-W1.md
+  - .claude/claims/1219.yaml
+  - memory/notes/proposed/2026-10-31-1219-W1.md
+done:
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --quota
+  - verify: bash scripts/control-tower/gate-inventory.invariant.sh
+  - verify: bash tests/control-tower/gate-retirement-batch1.test.sh
+  - verify: bash tests/control-tower/gen-gate-meta.test.sh
+  - verify: bash tests/control-tower/gate-inventory.invariant.test.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "1219 W1 退役批载体件：受保护路径豁免 8 条 ＋ brief ＋ claim ＋ 五段 Note ＋ DOC-1219 登记；退出数字 non_doc=28/30 total=30/45 bypass=2/8，retired 26 条，观察期至 2026-11-30。"
