@@ -24,7 +24,7 @@ bash 在 UTF-8 locale 下把**全角标点当变量名字符**：`$DST）` 被�
 echo "结果（${VAR}）"   # ✅ 花括号显式边界
 echo "结果（$VAR）"     # ❌ set -u 下 unbound variable
 ```
-排查线索：报错变量名尾部出现乱码（`DST�: unbound variable`）＝全角标点紧贴变量。
+排查线索：报错变量名尾部出现乱码（`DST□: unbound variable`）＝全角标点紧贴变量。
 另：macOS BSD sed 不支持 `\+`（GNU 扩展）→ 用 `sed -E` ＋ `+`。
 
 ### A3 条件跳过保持 <1s（组 10 CP3 同款）
