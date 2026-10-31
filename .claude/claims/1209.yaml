@@ -3,9 +3,12 @@
 # 判据源：.handbook/派单件/2026-10-31-规格-1209-S0-2a-子进程env白名单.md §2.4（3 改 + 3 新建 = 6 件）。
 # 写集 +1（创始人 2026-10-31 批，选项 a）：docs/authority/WIRING-REGISTRY.yaml 纯追加 1 条
 #   —— CI 步骤 ①e 的 R1.1 要求新增能力件在 WIRING-REGISTRY 登记（硬阻断，非"只报不拦"）。
+# 写集再 +1（创始人 2026-10-31 第 2 次批）：tests/contract/triviality-manifest.yaml 纯追加 1 行
+#   —— CI 步骤 ①g 的 M1 存量棘轮（新增 src 件使 legacy 471 > baseline 470）要求登记该模块。
 writeset:
   - .claude/claims/1209.yaml
   - docs/authority/WIRING-REGISTRY.yaml
+  - tests/contract/triviality-manifest.yaml
   - src/security/subprocess-env.ts
   - src/providers/python-bridge.ts
   - src/mcp/bridge.ts
