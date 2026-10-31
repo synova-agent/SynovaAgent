@@ -12,6 +12,7 @@
 # 🔴 capability pattern 说明：规格 §2.3-D2 示例 pattern 为 ^[a-z]...（纯小写），但其自身样例
 #    （content.initContentTypes / audit.verifyChain）含大写 ⇒ 本表按真实 capability 命名
 #    用 [A-Za-z] 起始（规则 R4 本身不变；差异登记在 quality-baseline.py 的 limitations L8）。
+# 🔴 owner token 对照：R = R 运行时线（运行时/进程/会话/工具面；原误记 K10 —— K10 是「平台交付与运行时(DSH)」块，非本线）
 schema_version: 1
 row_key: capability
 fields:
@@ -361,5 +362,5 @@ entries:
     consumer: "src/mcp/bridge.ts:128"
     test: "tests/security/subprocess-env.test.ts:350"
     status: wired
-    owner: K10
+    owner: R
     notes: "#1209 S0-2a：buildSubprocessEnv 收口三处子进程 env 构造（mcp/bridge.ts:128 / providers/python-bridge.ts:26 / routes/cockpit.ts:53）；敏感名单一后缀规则＋declared 显式放行优先；改坏必红＝bridge env 改回全量继承 ⇒ U-5 红"
