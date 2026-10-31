@@ -286,7 +286,7 @@ PY
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
 Q_HIT=0
 printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=35/30（超编 5） total=37/45 bypass=2/8' && Q_HIT=$((Q_HIT+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=39 doc=2 non_doc=35 bypass=2 rows=122' && Q_HIT=$((Q_HIT+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=39 doc=2 non_doc=35 bypass=2 rows=123' && Q_HIT=$((Q_HIT+1))
 Q_OVER=$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: non-doc ')
 # 独立交叉核对（不读被测命令输出）：gate_meta 段 39 ／ run_by 段 39 ／ 注释 1 ／ 整文件 79
 GM_TRUE=$(sed -n '/^gate_meta:/,/^retired:/p' "$INV" | grep -c '^      quota: true')
@@ -302,7 +302,7 @@ fi
 
 # ⑫b --quota --json：机器行含三桶 / rows / 全部超编条目
 OUT="$(bash "$GEN" --quota --json --root "$REPO" --inv "$INV" 2>&1)"; RC=$?
-printf '%s\n' "$OUT" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["non_doc"],d["doc"],d["total"],d["bypass"],d["quota_true"],d["rows"])==(35,2,37,2,39,122) and len(d["over"])==35 and all(o["bucket"]=="non-doc" for o in d["over"])' 2>/dev/null \
+printf '%s\n' "$OUT" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["non_doc"],d["doc"],d["total"],d["bypass"],d["quota_true"],d["rows"])==(35,2,37,2,39,123) and len(d["over"])==35 and all(o["bucket"]=="non-doc" for o in d["over"])' 2>/dev/null \
   && ok "⑫b --quota --json：三桶/rows/超编条目齐全（35 条非文档）" || no "⑫b --quota --json 异常（rc=$RC）"
 
 # ── ⑬ 手改 artifact 的 quota（true→false）：--check 点名 B3；--quota 变小 ────────
@@ -312,7 +312,7 @@ C13=0
 [ "$RC" -eq 1 ] && printf '%s\n' "$OUT" | grep -q '\[B3\]' && C13=$((C13+1))
 OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv13-quota.yaml" 2>&1)"; RC=$?
 printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=34/30（超编 4） total=36/45 bypass=2/8' && C13=$((C13+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=38 doc=2 non_doc=34 bypass=2 rows=122' && C13=$((C13+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=38 doc=2 non_doc=34 bypass=2 rows=123' && C13=$((C13+1))
 if [ "$RC" -eq 1 ] && [ "$C13" -eq 3 ]; then
   ok "⑬ 手改 artifact quota=true→false：--check rc=1 点名 B3；--quota 计数 38/34（数字来自 artifact）"
 else
@@ -472,7 +472,7 @@ OUT="$(bash "$GEN" --quota --root "$REPO" --inv "$TMPD/inv17b-non30.yaml" 2>&1)"
 C17B=0
 [ "$RC" -eq 0 ] && C17B=$((C17B+1))
 printf '%s\n' "$OUT" | grep -q '^QUOTA: non_doc=30/30（超编 0） total=32/45 bypass=2/8' && C17B=$((C17B+1))
-printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=34 doc=2 non_doc=30 bypass=2 rows=122' && C17B=$((C17B+1))
+printf '%s\n' "$OUT" | grep -q '^QUOTA-SRC: quota_true=34 doc=2 non_doc=30 bypass=2 rows=123' && C17B=$((C17B+1))
 [ "$(printf '%s\n' "$OUT" | grep -c '^QUOTA-OVER: ')" -eq 0 ] && C17B=$((C17B+1))
 if [ "$C17B" -eq 4 ]; then
   ok "⑰b 边界绿：non_doc=30 ⇒ rc=0 且无 QUOTA-OVER（未超不得误红）"

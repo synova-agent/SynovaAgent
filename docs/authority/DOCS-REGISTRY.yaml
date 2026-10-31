@@ -1581,3 +1581,11 @@ documents:
     status: active
     owner: P4
     note: "#1205 W0-A（GATE-INVENTORY 定态/39-2 固化/bypass 回填/verify-governance G11 核账）的受保护路径豁免；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+
+  # ---- P4 2026-10-31：#1210 W0 附通道 B 豁免登记（DOC-1210；R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1210
+    type: decision
+    path: gate-exemptions/2026-10-31-w06-1210.md
+    status: active
+    owner: P4
+    note: "#1210 W0-附（sealed-tests 扩面 + check-gate-budget）的受保护路径豁免；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
