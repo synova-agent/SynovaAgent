@@ -1,0 +1,73 @@
+writeset:
+  - .claude/claims/1227.yaml
+  - .claude/task-briefs/2026-10-31-1227-W3.md
+  - AGENTS.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-31-w3-1227.md
+  - memory/notes/proposed/2026-10-31-w3-skill-converge.md
+  - scripts/ci/verify-d703.sh
+  - scripts/pre-commit-check.sh
+  - scripts/workflow/sync-dsh-skills.sh
+  - tests/control-tower/sync-dsh-skills.test.sh
+  - .synova/skills/dev-doc-spec/SKILL.md
+  - .synova/skills/dev-doc-spec/template/编码指令模板.md
+  - .synova/skills/cto-handover/SKILL.md
+  - .synova/skills/line-audit-and-cards/SKILL.md
+  - .synova/skills/dsh-code-standards/SKILL.md
+  - .synova/skills/devdoc-gate-a/SKILL.md
+  - .synova/skills/squad-discipline/SKILL.md
+  - .synova/skills/pre-dispatch-check/SKILL.md
+  - .synova/skills/ctrl-tower-change/SKILL.md
+  - .synova/skills/brief-compose/SKILL.md
+  - .synova/skills/contract-template/SKILL.md
+  - .synova/skills/cto-bookkeeping/SKILL.md
+  - .synova/skills/dev-doc-delivery/SKILL.md
+  - .synova/skills/dev-doc-delivery/template/编码指令模板.md
+  - .synova/skills/dsh-decision-lens/SKILL.md
+  - .synova/skills/edge-gap-audit/SKILL.md
+  - .synova/skills/git-sync-pr/SKILL.md
+  - .synova/skills/line-fork-dispatch/SKILL.md
+  - .synova/skills/north-star-guard/SKILL.md
+  - .synova/skills/package-selfsufficiency-audit/SKILL.md
+  - .synova/skills/pre-plan-thinking/SKILL.md
+  - .synova/skills/windows-compat/SKILL.md
+  - .synova/skills/synova-verify/SKILL.md
+  - .dsh/skills/dev-doc-spec/SKILL.md
+  - .dsh/skills/dev-doc-spec/template/编码指令模板.md
+  - .dsh/skills/cto-handover/SKILL.md
+  - .dsh/skills/line-audit-and-cards/SKILL.md
+  - .dsh/skills/dsh-code-standards/SKILL.md
+  - .dsh/skills/devdoc-gate-a/SKILL.md
+  - .dsh/skills/squad-discipline/SKILL.md
+  - .dsh/skills/pre-dispatch-check/SKILL.md
+  - .dsh/skills/ctrl-tower-change/SKILL.md
+  - .dsh/skills/brief-compose/SKILL.md
+  - .dsh/skills/contract-template/SKILL.md
+  - .dsh/skills/cto-bookkeeping/SKILL.md
+  - .dsh/skills/dev-doc-delivery/SKILL.md
+  - .dsh/skills/dev-doc-delivery/template/编码指令模板.md
+  - .dsh/skills/dsh-decision-lens/SKILL.md
+  - .dsh/skills/edge-gap-audit/SKILL.md
+  - .dsh/skills/git-sync-pr/SKILL.md
+  - .dsh/skills/line-fork-dispatch/SKILL.md
+  - .dsh/skills/north-star-guard/SKILL.md
+  - .dsh/skills/package-selfsufficiency-audit/SKILL.md
+  - .dsh/skills/pre-plan-thinking/SKILL.md
+  - .dsh/skills/windows-compat/SKILL.md
+  - .dsh/skills/synova-verify/SKILL.md
+  - .synova/skills/sentinel-lifecycle/
+  - .synova/skills/sentinel-lifecycle/SKILL.md
+  - .dsh/skills/sentinel-lifecycle/SKILL.md
+  - D:\synova-handbook\包\sentinel-lifecycle-完整正文-2026-10-31.md
+done:
+  - verify: grep -q GATE-STANDARD AGENTS.md
+  - verify: bash -c "! grep -q '12 组' AGENTS.md"
+  - verify: bash -c "sed -n '93,94p' scripts/ci/verify-d703.sh | grep -q dev-doc-spec"
+  - verify: cmp -s .synova/skills/dev-doc-spec/template/编码指令模板.md .dsh/skills/dev-doc-spec/template/编码指令模板.md
+  - verify: bash -n scripts/ci/verify-d703.sh
+  - verify: grep -q 'id: DOC-1227' docs/authority/DOCS-REGISTRY.yaml
+  - verify: python3 scripts/control-tower/claim_store.py --check 1227 --root .
+  - verify: grep -q sentinel-lifecycle gate-exemptions/2026-10-31-w3-1227.md
+  - verify: grep -q 'sentinel-lifecycle' .claude/task-briefs/2026-10-31-1227-W3.md
+  - verify: python3 -c "s=open(r'D:\synova-handbook\包\sentinel-lifecycle-完整正文-2026-10-31.md',encoding='utf-8').read();raise SystemExit(0 if len(s)>=8000 else 1)"
+note: W3 载体（#1227 task-6/task-9）：AGENTS.md V7.2 三项（判据中枢指 GATE-STANDARD、组数改指针、预算留头部一处）＋ cto-bookkeeping 引用同批改指 cto-handover ＋ verify-d703 模板引用改 dev-doc-spec ＋ 编码指令模板原样迁移 ＋ 豁免件/卡/claim/四态 Note/DOCS-REGISTRY 登记 ＋ handbook cto-handover 全文；裁定 A（2026-10-31）落地：sentinel-lifecycle 正文全文迁 handbook 包/sentinel-lifecycle-完整正文-2026-10-31.md（本批删除、换载体 D3 另卡；删除已由 task-7 执行，2026-10-31）；writeset 按整批 #1227 声明（精确文件路径；含 task-7 已删除件与 .dsh 镜像路径）。
