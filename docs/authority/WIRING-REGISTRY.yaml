@@ -373,3 +373,12 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1210 W0-6：pre-commit 墙钟 <=90s 三态机检（旁路，不接主路径）；无数据 => exit 2；改坏即红由配对测试覆盖。"
+  # ---- P4 2026-10-31：#1210 invariant 伴生件（declared-only 显式豁免 R1.2）----
+  - capability: gate-inventory.invariant
+    defined_at: "scripts/control-tower/gate-inventory.invariant.sh:1"
+    provider: "scripts/control-tower/gate-inventory.invariant.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-inventory.invariant.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "#1210：GATE-INVENTORY 不变式伴生件（39=35+2+2／id 唯一／workflows 账外=0／disk↔registry）；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 显式豁免 R1.2 登记（接线另批）。"
