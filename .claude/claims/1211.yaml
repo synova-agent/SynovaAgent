@@ -7,10 +7,10 @@ writeset:
   - src/l2/graph-scope.ts
   - src/routes/data.ts
   - tests/agent/data-ingest-service.test.ts
-  - tests/l4/graph-scope.test.ts
+  - tests/l2/graph-scope.test.ts
   - tests/l4/graph-scope-wiring.test.ts
 done:
-  - verify: npx vitest run --pool=threads tests/l4/graph-scope.test.ts tests/l4/graph-scope-wiring.test.ts
+  - verify: npx vitest run --pool=threads tests/l2/graph-scope.test.ts tests/l4/graph-scope-wiring.test.ts
   - verify: npx vitest run --pool=threads tests/agent/data-ingest-service.test.ts
   - verify: npx tsc --noEmit --pretty false
   - verify: bash scripts/check-architecture.sh

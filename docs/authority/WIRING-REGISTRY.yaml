@@ -387,7 +387,7 @@ entries:
     defined_at: "src/l2/graph-scope.ts:68"
     provider: "src/l2/graph-scope.ts:68"
     consumer: "src/routes/data.ts:38"
-    test: "tests/l4/graph-scope.test.ts:1"
+    test: "tests/l2/graph-scope.test.ts:1"
     status: wired
     owner: R
     notes: "#1211：resolveGraph/assertGraphName 唯一口径来源（一客户一实例，#1202）；生产消费点 4 处（routes/data.ts:38 派生、data-exporter.ts:107 导出、data-ingest-service.ts:169/:245 入口 assert）；status 用 wired 而非规格骨架的 active —— 本表 R6 枚举只认 wired/partial/declared-only/retired。"
