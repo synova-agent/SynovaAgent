@@ -1,0 +1,24 @@
+# .claude/claims/1209.yaml — #1209 R-S0-2a 子进程 env 白名单（R 运行时线 · Phase A 骨架 S0-2）
+# 纪律：只列本 PR 真正改动的文件，不预授权。
+# 判据源：.handbook/派单件/2026-10-31-规格-1209-S0-2a-子进程env白名单.md §2.4（3 改 + 3 新建 = 6 件）。
+# 写集 +1（创始人 2026-10-31 批，选项 a）：docs/authority/WIRING-REGISTRY.yaml 纯追加 1 条
+#   —— CI 步骤 ①e 的 R1.1 要求新增能力件在 WIRING-REGISTRY 登记（硬阻断，非"只报不拦"）。
+# 写集再 +1（创始人 2026-10-31 第 2 次批）：tests/contract/triviality-manifest.yaml 纯追加 1 行
+#   —— CI 步骤 ①g 的 M1 存量棘轮（新增 src 件使 legacy 471 > baseline 470）要求登记该模块。
+writeset:
+  - .claude/claims/1209.yaml
+  - memory/notes/implemented/2026-10-31-1209-subprocess-env.md
+  - docs/authority/WIRING-REGISTRY.yaml
+  - tests/contract/triviality-manifest.yaml
+  - src/security/subprocess-env.ts
+  - src/providers/python-bridge.ts
+  - src/mcp/bridge.ts
+  - src/routes/cockpit.ts
+  - tests/security/subprocess-env.test.ts
+done:
+  - verify: npx vitest run tests/security/subprocess-env.test.ts # U-1..U-5 纯函数＋真 spawn 全绿（16 passed）
+  - verify: npx tsc --noEmit --pretty false # 类型零错（rc=0）
+  - verify: bash scripts/check-architecture.sh # 分层门禁 rc=0
+  - verify: npx vitest run tests/security/ tests/mcp/  # 回归实跑两组 0 failed（tests/providers/ 不存在，不得列——K3 观察项①）
+  - verify: python3 scripts/control-tower/claim_store.py --check 1209 --root . # 认领件结构合规（rc=0）
+note: "#1209：buildSubprocessEnv 纯函数（单一后缀敏感名规则 ＋ declared 显式放行优先）收口三处 env 构造（python-bridge / mcp bridge / cockpit）；MCPBridge 新增可选构造注入 serverConfigs（仅为 U-5 真 spawn 可测性，默认路径零行为变化；形参刻意不叫 servers，避免与运行中进程表同名）。已知限制（规格 §4）：名单法非白名单（无敏感后缀的机密名拦不住，列 T1-10）／JIRA_PROJECT_KEY 一类 *_KEY 非机密配置会被误删（可用 declared 救回）／declared 内容不受审。U-6 改坏必红由独立自验员在 /tmp 副本执行，本 PR 不自判通过。"
