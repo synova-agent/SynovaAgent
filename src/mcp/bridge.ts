@@ -16,6 +16,7 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { createLogger } from '@synova/logger';
 import { createInterface } from 'readline';
+import { buildSubprocessEnv } from '../security/subprocess-env';
 
 const log = createLogger('mcp/bridge');
 
@@ -93,6 +94,20 @@ const MCP_SERVERS: Record<string, MCPServerConfig> = {
 export class MCPBridge {
   private servers = new Map<string, { process: ChildProcess; tools: MCPToolDef[]; idSeq: number }>();
   private pendingRequests = new Map<number, { resolve: (r: unknown) => void; reject: (e: Error) => void }>();
+  /**
+   * 可选的 server 配置表覆盖（#1209 U-5 的唯一动机：让判据能挂一个**假 server** 真跑 spawn，
+   * 否则只能 grep 源码，属假判据）。
+   *
+   * 语义＝**替换不是合并**：传了就**只用**它（此时 `connect('<未声明的 server>')` 抛
+   * `未知 MCP Server`，与不传时行为不同）；不传 ⇒ 逐字等价于 `MCP_SERVERS`（默认路径零变化）。
+   *
+   * 🔴 形参不得叫 `servers`：上面的 `private servers` 是**运行中进程表**，同名会让 tsc 直接红。
+   */
+  private serverConfigs?: Record<string, MCPServerConfig>;
+
+  constructor(serverConfigs?: Record<string, MCPServerConfig>) {
+    this.serverConfigs = serverConfigs;
+  }
 
   /** Launch an MCP server and discover its tools */
   async connect(serverName: string): Promise<MCPToolDef[]> {
@@ -100,14 +115,17 @@ export class MCPBridge {
       return this.servers.get(serverName)!.tools;
     }
 
-    const config = MCP_SERVERS[serverName];
+    const config = (this.serverConfigs ?? MCP_SERVERS)[serverName];
     if (!config) throw new Error(`未知 MCP Server: ${serverName}`);
 
     log.info({ server: serverName }, '启动 MCP Server');
 
     const proc = spawn(resolveCommand(config.command), config.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, ...config.env },
+      // #1209：不再把父进程 env 与 config.env 全量合并 —— 第三方 MCP server 不得继承
+      // JWT_SECRET / CREDENTIAL_MASTER_KEY 等机密；`config.env`（server 自己声明的键）显式放行。
+      // 见 src/security/subprocess-env.ts（declared 优先 ⇒ BRAVE_API_KEY 等仍可用）。
+      env: buildSubprocessEnv({ parent: process.env, declared: config.env }),
       cwd: 'vendor/mcp-servers',
       shell: process.platform === 'win32', // Windows 需要 shell 来解析 .cmd
     });

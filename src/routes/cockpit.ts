@@ -20,6 +20,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { writeFileSync, unlinkSync, mkdtempSync } from 'fs';
 import { createLogger } from '@synova/logger';
+import { buildSubprocessEnv } from '../security/subprocess-env';
 
 const log = createLogger('routes/cockpit');
 const router = Router();
@@ -49,7 +50,7 @@ function execPython(scriptBody: string): string {
       encoding: 'utf-8',
       timeout: 30000,
       cwd: process.cwd(),
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+      env: buildSubprocessEnv({ parent: process.env, declared: { PYTHONIOENCODING: 'utf-8' } }),
     }).trim();
   } finally {
     try { unlinkSync(runner); } catch { /* ignore */ }
