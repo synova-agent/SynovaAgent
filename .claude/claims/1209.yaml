@@ -1,8 +1,11 @@
 # .claude/claims/1209.yaml — #1209 R-S0-2a 子进程 env 白名单（R 运行时线 · Phase A 骨架 S0-2）
 # 纪律：只列本 PR 真正改动的文件，不预授权。
 # 判据源：.handbook/派单件/2026-10-31-规格-1209-S0-2a-子进程env白名单.md §2.4（3 改 + 3 新建 = 6 件）。
+# 写集 +1（创始人 2026-10-31 批，选项 a）：docs/authority/WIRING-REGISTRY.yaml 纯追加 1 条
+#   —— CI 步骤 ①e 的 R1.1 要求新增能力件在 WIRING-REGISTRY 登记（硬阻断，非"只报不拦"）。
 writeset:
   - .claude/claims/1209.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
   - src/security/subprocess-env.ts
   - src/providers/python-bridge.ts
   - src/mcp/bridge.ts
