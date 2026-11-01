@@ -3,8 +3,11 @@ writeset:
   - .claude/task-briefs/2026-10-31-1227-W3.md
   - AGENTS.md
   - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-STANDARD.md
   - gate-exemptions/2026-10-31-w3-1227.md
+  - gate-exemptions/2026-11-01-1227-t6-skill-retire.md
   - memory/notes/proposed/2026-10-31-w3-skill-converge.md
+  - memory/notes/proposed/2026-11-01-1227-t6-skill-retire.md
   - scripts/ci/verify-d703.sh
   - scripts/pre-commit-check.sh
   - scripts/workflow/sync-dsh-skills.sh
@@ -70,4 +73,7 @@ done:
   - verify: grep -q sentinel-lifecycle gate-exemptions/2026-10-31-w3-1227.md
   - verify: grep -q 'sentinel-lifecycle' .claude/task-briefs/2026-10-31-1227-W3.md
   - verify: python3 -c "s=open(r'D:\synova-handbook\包\sentinel-lifecycle-完整正文-2026-10-31.md',encoding='utf-8').read();raise SystemExit(0 if len(s)>=8000 else 1)"
-note: W3 载体（#1227 task-6/task-9）：AGENTS.md V7.2 三项（判据中枢指 GATE-STANDARD、组数改指针、预算留头部一处）＋ cto-bookkeeping 引用同批改指 cto-handover ＋ verify-d703 模板引用改 dev-doc-spec ＋ 编码指令模板原样迁移 ＋ 豁免件/卡/claim/四态 Note/DOCS-REGISTRY 登记 ＋ handbook cto-handover 全文；裁定 A（2026-10-31）落地：sentinel-lifecycle 正文全文迁 handbook 包/sentinel-lifecycle-完整正文-2026-10-31.md（本批删除、换载体 D3 另卡；删除已由 task-7 执行，2026-10-31）；writeset 按整批 #1227 声明（精确文件路径；含 task-7 已删除件与 .dsh 镜像路径）。
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: bash -c "test $(ls .dsh/skills | wc -l) -eq 11"
+  - verify: bash -c "! grep -rq line-audit-and-cards scripts tests AGENTS.md"
+note: W3 载体（#1227 task-6/task-9）：AGENTS.md V7.2 三项（判据中枢指 GATE-STANDARD、组数改指针、预算留头部一处）＋ cto-bookkeeping 引用同批改指 cto-handover ＋ verify-d703 模板引用改 dev-doc-spec ＋ 编码指令模板原样迁移 ＋ 豁免件/卡/claim/四态 Note/DOCS-REGISTRY 登记 ＋ handbook cto-handover 全文；裁定 A（2026-10-31）落地：sentinel-lifecycle 正文全文迁 handbook 包/sentinel-lifecycle-完整正文-2026-10-31.md（本批删除、换载体 D3 另卡；删除已由 task-7 执行，2026-10-31）；writeset 按整批 #1227 声明（精确文件路径；含 task-7 已删除件与 .dsh 镜像路径）。【2026-11-01 #1255-T6】口径更正为「自研 ≤40，产品自带 48 不计入」；按活面审计退役 .dsh/.synova 双轨的 `line-audit-and-cards`（活面引用 0）⇒ 自研 12→11，SYNC-OK(11)，产品自带 41/6/1 未动。

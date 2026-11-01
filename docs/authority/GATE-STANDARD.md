@@ -94,7 +94,7 @@ docs/plans/codex/implementation/SYNOVA-IMPL-595-gate-count-20261019.md
 |---|---|---|---|---|---|
 | **D0** | **预设 Preset** | Agent 启动即带身份/边界/工具 | 零 | 3（cto／audit／devdoc）；全仓 `preset.yml` 共 7 | ≤6 |
 | **D1** | **模板／脚手架** | 建文件即自带契约，构造即满足 | 零 | 3 模板 ＋ `new-file.sh`（`package.json:14 "new"`） | ≤8 |
-| **D2** | **skill** | 语义／评审／决策方法 | 低（读） | **全树 100**（`.dsh` 26／`.synova` 26／`extensions` 41／`skills/` 6／`vendor` 1） | **全树 ≤40**（`.dsh` 根 ≤12） |
+| **D2** | **skill** | 语义／评审／决策方法 | 低（读） | **自研 12**（`.dsh` 12／`.synova` 12＝同一套双轨副本；**产品自带 48＝`extensions/skills` 41＋`skills/` 6＋`vendor/` 1 不计入**） | **自研 ≤40**（`.dsh` 根 ≤12；产品自带不计入） |
 | **D3** | **门禁 Gate** | 对照事实才能判 | 高（每次提交都付） | **39** | 总 **≤45** |
 
 **立门禁的唯一判据（三问）**：① 能构造即满足 ⇒ D0/D1；② 只能对照事实判 ⇒ **D3（占 45）**；③ 只能靠人/评审判 ⇒ D2 skill（**禁止机检**，必假绿）。
@@ -131,7 +131,7 @@ docs/plans/codex/implementation/SYNOVA-IMPL-595-gate-count-20261019.md
 | ├ 非文档 | **37** ＝ 39 − 2（留 GitHub 不占配额：`check-fixture-requires.sh`、`check-integration.sh`） | **≤30** | 是 |
 | ├ 文档 | **2** | **≤15** | 是 |
 | └ bypass | **0**（待回填 3 件） | ≤8（独立机检） | 否，但单独封顶 |
-| **skill** | **全树 100**（`.dsh` 26） | 全树 ≤40（`.dsh` ≤12） | 否 |
+| **skill** | **自研 12**（`.dsh` 12 ／产品自带 48 不计入） | 自研 ≤40（`.dsh` ≤12） | 否 |
 | **模板** | 3 | ≤8 | 否 |
 | **预设** | 3（全仓 `preset.yml` 7） | ≤6 | 否 |
 | ORPHAN | **82 块／76 唯一文件**（A53 漏接／B15 可退／C13 安全禁退／误标 1） | B 退、A/C 接线 | 否 |
@@ -200,7 +200,12 @@ ORPHAN B 类 **13** 件（原 15：剔除已在 retired:8 内的 `workflow/hook-
 **留 GitHub 不占配额**：`check-fixture-requires.sh`（工装）／`check-integration.sh`（集成）。
 **去 `\|\| true`** 须给逐条 `file:line` 清单（ci.yml 实测 **35 处**）+ `grep -c` 阈值作为出口。
 
-### 批 D｜skill 全树 100 → ≤40（`.dsh` 根 26 → 12）
+### 批 D｜skill 收敛（口径已改：**自研** ≤40，产品自带不计入 —— 2026-11-01 裁定）
+> 🔴 **口径更正（2026-11-01 · CTO 裁定，创始人当日口令「减少我们自己写的 skill，产品自带的那些不要清理」）**：
+> 本节及 §十二 ④ 的「全树」**一律改判「自研」**（`.dsh`/`.synova` 双轨同一套，按**去重后的一套**计）；
+> **产品自带 48（`extensions/skills` 41＋`skills/` 6＋`vendor/` 1）不计入上限、不得清理**。
+> 依据：原「全树 ≤40」把产品内容面算进研发上限 ⇒ 无论怎么砍自研都判红（现测 72 > 40），判据失去指向。
+> 现状：**自研 12 → 11**（本轮退役 `line-audit-and-cards`：活面引用 0，卡片格式半部描述的是**已退役**的 legacy brief 规范）。
 退 `brief-compose`；合并 13 组（见 v3 表）。**四个硬引用归因更正**：`pr-review`←`check-merge-conditions.sh:836-840`／`cto-handover`←`weekly-selfcheck.sh:119-123`／`dev-doc-delivery`←`verify-d703.sh:88-96`／**`AGENTS.md:342-350`（`devdoc-gate-a`／`dev-doc-spec`／`claim-verifier`）与 `:360`（`cto-bookkeeping`）**。
 **先改 `.synova/skills`（真源）再 `sync-dsh-skills.sh` 同步**；`verify-d703.sh` 的引用修改**并入 W3 同批**（不随 W4）。
 
@@ -272,7 +277,7 @@ C-1 frontmatter ＋ 结论／证据指针／状态／归属四列 ｜ C-2 清单
 1. non-doc `quota_scope=non-doc ∧ quota:true` **≤30**；总 ≤45；**`bypass ≥2`**（防恒 0 假绿）
 2. retired **≥26**（口径：**只计退、不计降旁路**；已去重 `hook-block-write`）
 3. ORPHAN：**B 类 13 清零**、**`grep -c 'safety: yes' ∧ orphan: true` ＝ 0**、A 类接线率＝**P0 件 100%（n/N）**并附 awk 命令
-4. 全树 skill **≤40**（`.dsh` ≤12）；四条硬引用 `path:line@anchor` 无断链
+4. **自研** skill **≤40**（`.dsh` ≤12；**产品自带 `extensions/skills`／`skills/`／`vendor/` 不计入**）；四条硬引用 `path:line@anchor` 无断链
 5. `required-checks-baseline.txt` 每行标 `category`，**`category≠integration` 行数＝0**
 6. 台账 **≤800 行** ＋ 跨段无重复 ＋ `measured_at` ＝ 当前基准
 7. 新增仅 A1–A3（W0 前置 3 件单列）
