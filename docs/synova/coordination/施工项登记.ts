@@ -1894,7 +1894,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     title: '知识一致：分层权限的数据面（四层＝企业/部门/岗位/个人）',
     paths: ['extensions/knowledge-scope/**', 'src/init/file-driven-loaders.ts', 'tests/knowledge-scope/layering.test.ts', 'scripts/control-tower/probe-knowledge-scope.ts'],
     dependsOn: ['RB-01', 'RB-02'],
-    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-knowledge-scope.ts', expectExit: 0 }],
+    // K12-ENG P0-4（#1271 / 14 项批准 K12-05）：裸跑只做结构面（exit 2=VERIFIED 环境缺），
+    //   行为面（V2/V3/V4）由夹具提供真服务＋临时库＋repo 形临时根 ⇒ 验收命令改用夹具。
+    acceptance: [{ run: 'bash scripts/control-tower/fixtures/k12-05-behavioral.sh', expectExit: 0 }],
     status: 'todo',
     source: '宪章 §2.7 第①层 / 02-一致性 §三机制2（四层不是"一个统一知识库"）',
   },

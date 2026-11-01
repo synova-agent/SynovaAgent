@@ -42,6 +42,14 @@ fields:
   - name: retired_reason
     required: false
 entries:
+  - capability: k12.knowledgeScopeBehavioralFixture
+    defined_at: "scripts/control-tower/fixtures/k12-05-behavioral.sh:1"
+    provider: "scripts/control-tower/fixtures/k12-05-behavioral.sh:1"
+    consumer: null
+    test: null
+    status: declared-only
+    owner: K12
+    notes: "K12-05 行为面夹具（#1271 P0-4）：起真服务＋临时库＋repo 形临时根，供 probe-knowledge-scope 的 V2/V3/V4；由 施工项登记.ts K12-05 acceptance 调用，非生产能力"
   - capability: content.initContentTypes
     defined_at: "src/deploy/content-registry.ts:632"
     provider: "src/deploy/content-registry.ts:632"
