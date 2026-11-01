@@ -29,6 +29,29 @@ writeset:
   - src/onboarding/config-pack-generator.ts
   - tests/onboarding/config-pack-generator.test.ts
   - tests/l4/goal-alignment.test.ts
+  - gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p0-3-output-contract-probe.md
+  - gate-exemptions/2026-11-02-1271-1275-output-contract-probe.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p0-4-knowledge-scope-v3.md
+  - docs/authority/WIRING-REGISTRY.yaml
+  - tests/control-tower/k12-05-behavioral.test.sh
+  - gate-exemptions/2026-11-02-1271-1276-v3-approval-fixture.md
+  - gate-exemptions/2026-11-02-1271-1277-content-registry-probe.md
+  - tests/control-tower/probe-content-registry.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-1-content-registry-probe.md
+  - gate-exemptions/2026-11-02-1271-1278-content-layering-probe.md
+  - tests/control-tower/probe-content-layering.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-2-content-layering-probe.md
+  - gate-exemptions/2026-11-02-1271-1279-ladder-ci.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-3-ladder-ci.md
+  - gate-exemptions/2026-11-02-1271-1280-exile-baseline.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-1b-exile-baseline.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-1-content-layer-boot.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-2a-grants-preserve.md
+  - gate-exemptions/2026-11-02-1271-1283-role-config-target.md
+  - tests/control-tower/probe-role-config.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-2b-role-config-target.md
+
 done:
   - verify: bash scripts/check-integrity-startup.sh
   - verify: bash scripts/check-content-coupling.sh
