@@ -1190,7 +1190,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     worker: 'win', batch: '第3批', block: 'K12',
     title: '角色预设包（Role Pack）',
     paths: [
-      'docs/synova/presets/roles/',
+      // K12-ENG P2-3（#1271）：裁 423 归一后角色包真源 = extensions/presets/roles/**；
+      //   原 `docs/synova/presets/roles/` 是文档镜像（会漂移），不再作为施工写集。
+      'extensions/presets/roles/**',
       'scripts/control-tower/probe-role-pack.ts',  // 判据交付物（本卡创建）
     ],
     // ✅ 落点已裁（选项③）：用 docs/synova/presets/** 既有规则（=mac）
@@ -1892,7 +1894,9 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     issue: 188, id: 'K12-05', worker: 'win', batch: '第12批', block: 'K12',
     title: '知识一致：分层权限的数据面（四层＝企业/部门/岗位/个人）',
-    paths: ['extensions/knowledge-scope/**', 'src/init/file-driven-loaders.ts', 'tests/knowledge-scope/layering.test.ts', 'scripts/control-tower/probe-knowledge-scope.ts'],
+    // K12-ENG P2-3（#1271）：删已废 `extensions/knowledge-scope/**`／不存在的 `tests/knowledge-scope/layering.test.ts`；
+    //   真载体 = 角色包 knowledge-scope.yaml ＋ role-pack-knowledge-filter ＋ 探针/夹具。
+    paths: ['extensions/presets/roles/**', 'src/init/role-pack-knowledge-filter.ts', 'src/init/file-driven-loaders.ts', 'scripts/control-tower/probe-knowledge-scope.ts', 'scripts/control-tower/fixtures/k12-05-behavioral.sh', 'tests/control-tower/k12-05-behavioral.test.sh'],
     dependsOn: ['RB-01', 'RB-02'],
     // K12-ENG P0-4（#1271 / 14 项批准 K12-05）：裸跑只做结构面（exit 2=VERIFIED 环境缺），
     //   行为面（V2/V3/V4）由夹具提供真服务＋临时库＋repo 形临时根 ⇒ 验收命令改用夹具。
