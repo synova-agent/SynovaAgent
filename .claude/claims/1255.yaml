@@ -5,6 +5,7 @@ writeset:
   - gate-exemptions/2026-11-01-1255-category-gate.md
   - memory/notes/proposed/2026-11-01-1255-category-gate.md
   - .claude/claims/1255.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: python3 scripts/control-tower/check-required-contexts.py --category-gate
   - verify: python3 scripts/control-tower/check-required-contexts.py

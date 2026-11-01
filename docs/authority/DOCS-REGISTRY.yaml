@@ -1691,3 +1691,10 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1255 ⑤ category 标注与机检 受保护路径豁免（DOC-1255）----
+  - id: DOC-1255
+    type: decision
+    path: gate-exemptions/2026-11-01-1255-category-gate.md
+    status: active
+    owner: P4
+    note: "#1255（T5）：⑤ 基线 9 行补 category ＋ check-required-contexts.py 新增 --category-gate（0/1/2 三态，缺失也计入待清）与 --category-advisory；实测 total=9 integration=1 non_integration=8 ⇒ GitHub 分支保护 9 条必需 context 里 8 条是纪律/质量，清理归 W8（admin）。配对测试 51/0。"
