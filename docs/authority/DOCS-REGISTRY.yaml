@@ -1698,54 +1698,10 @@ documents:
     status: active
     owner: P4
     note: "#1253（T1 P0）：notes 生命周期门禁逐文件 spawn（219 note ≈1300 进程、>90s 未跑完）→ 单进程解析（1.11s）；补 timeout⇒exit2+E_TIMEOUT 与缺 python⇒E_NO_PYTHON；契约 0/1/2 与四态输出不变；配对测试 23/0（含性能回归与超时两态）。"
-
   # ---- K12-ENG (#1271) 门禁豁免文件登记（D2 登记门禁；2026-11-02）----
-  - id: DOC-1254
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
-    status: active
-    owner: K12
-    note: "#1274 P0-2：integrity 接线＋entryPoint 归位"
-  - id: DOC-1255
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1275-output-contract-probe.md
-    status: active
-    owner: K12
-    note: "#1275 P0-3：输出契约探针改靶（落账＋声明核验）"
-  - id: DOC-1256
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1276-v3-approval-fixture.md
-    status: active
-    owner: K12
-    note: "#1276 P0-4：知识 scope V3 审批感知＋行为面夹具"
-  - id: DOC-1257
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1277-content-registry-probe.md
-    status: active
-    owner: K12
-    note: "#1277 P1-1：content-registry 探针去硬编码"
   - id: DOC-1258
     type: governance
     path: gate-exemptions/2026-11-02-1271-1278-content-layering-probe.md
     status: active
     owner: K12
     note: "#1278 P1-2：内容分层探针防恒真"
-  - id: DOC-1259
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1279-ladder-ci.md
-    status: active
-    owner: K12
-    note: "#1279 P1-3：测量梯子入 CI（CI-only）"
-  - id: DOC-1260
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1280-exile-baseline.md
-    status: active
-    owner: K12
-    note: "#1280 P2-1b：content-exile 类型基线注册表派生"
-  - id: DOC-1261
-    type: governance
-    path: gate-exemptions/2026-11-02-1271-1283-role-config-target.md
-    status: active
-    owner: K12
-    note: "#1283 P2-2b：role-config 探针靶归一角色包"
-
