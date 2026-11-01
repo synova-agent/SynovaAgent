@@ -8,3 +8,4 @@ done:
   - verify: bash -c 'grep -q "R9 DSH 纪律" .synova/skills/devdoc-gate-a/SKILL.md'
   - verify: bash scripts/workflow/sync-dsh-skills.sh --check
 note: gate-A 第七镜头（DSH 纪律）＋R9；A 类提案（裁 429 ⑥）
+  - verify: bash -c 'grep -q "七镜头（逐个跑；每个都出 verdict" .synova/skills/devdoc-gate-a/SKILL.md'

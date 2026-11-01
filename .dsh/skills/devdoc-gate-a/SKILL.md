@@ -52,7 +52,7 @@ description: 关卡 A —— L1 交来的 dev doc／派单件在派给 L2 之前
 **输出**：**对齐** ⇒ 放行，写明"对齐北星 §X ＋ 终态推进点"｜**偏离** ⇒ 打回，附理由＋PRODUCT-BRIEF 引用行号＋改哪里。裁决是**物理判断**，非感觉。
 **红线**：❌ 这是方向裁决，不是技术 review｜❌ 无北星 front-matter ⇒ 直接打回（锚定块是硬前提）｜拿不准方向 = **升级创始人**（产品方向是创始人的领域）。
 
-## 3. 六镜头（逐个跑；每个都出 verdict ＋ blocking_gaps）
+## 3. 七镜头（逐个跑；每个都出 verdict ＋ blocking_gaps）
 
 ### 镜头 1 · 卡面审计（复用 `line-audit-and-cards`）
 ```
