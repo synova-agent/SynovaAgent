@@ -1,0 +1,38 @@
+# .claude/claims/1271.yaml — #1271（K12-ENG 长程整改批）写集声明
+#   卡面：Gitea #1271 ｜ 台账 #1270 ｜ 规格 `.handbook/派单件/2026-11-02-规格-1271-K12-ENG-整改.md`
+#   口径：14 项批准（2026-11-02）；本 claim 覆盖 P0–P2 判据件/内容面/门禁接线与本批 brief
+writeset:
+  - .claude/claims/1271.yaml
+  - .claude/task-briefs/2026-11-02-1271-K12-ENG-整改.md
+  - extensions/adapters/feishu/adapter.ts
+  - extensions/adapters/nemoclaw/adapter.ts
+  - extensions/adapters/feishu/manifest.json
+  - extensions/adapters/nemoclaw/manifest.json
+  - extensions/notifications/email/manifest.json
+  - extensions/notifications/jira/manifest.json
+  - extensions/notifications/linear/manifest.json
+  - extensions/notifications/feishu-approval/manifest.json
+  - scripts/check-integrity-startup.sh
+  - scripts/pre-commit-check.sh
+  - .gitea/workflows/local-gates.yml
+  - scripts/control-tower/probe-output-contract.ts
+  - scripts/control-tower/probe-knowledge-scope.ts
+  - scripts/control-tower/fixtures/k12-05-behavioral.sh
+  - docs/synova/coordination/施工项登记.ts
+  - scripts/control-tower/probe-content-registry.ts
+  - scripts/control-tower/probe-content-layering.ts
+  - scripts/control-tower/probe-ladder.ts
+  - tests/control-tower/probe-contract.test.sh
+  - src/deploy/content-registry.ts
+  - tests/deploy/content-registry.test.ts
+  - scripts/control-tower/probe-role-config.ts
+  - src/onboarding/config-pack-generator.ts
+  - tests/onboarding/config-pack-generator.test.ts
+  - tests/l4/goal-alignment.test.ts
+  - tests/control-tower/probe-content-layering.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-2-content-layering-probe.md
+done:
+  - verify: bash scripts/check-integrity-startup.sh
+  - verify: bash scripts/check-content-coupling.sh
+  - verify: npx tsx scripts/control-tower/probe-ladder.ts --all
+note: "K12-ENG 长程整改批（#1271）；P0 判据面/内容面，P1 归一/恒真/梯子入 CI，P2 产品面（K12-20/12）。"
