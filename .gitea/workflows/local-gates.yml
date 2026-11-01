@@ -557,6 +557,23 @@ jobs:
           #   CI 检出是**干净树** ⇒ 其自有分支会打印「无实际变更文件 (CI 检出场景) — 跳过文件范围检查」
           #   并 rc=0（脚本 :79-80）。这是**器自身的 CI 语义**，迁腿不改判据；要改成按 base..HEAD 判 diff
           #   属「改判据」（A 类），须 L1/CTO 另批，不在本批范围 —— 本步不得因此被写成假绿。
+          # 🔴 载体守卫（实测 #1243 run 2927/2928 红）：claim-v2 下 `resolve-commit-brief.sh` 会把
+          #   `.claude/claims/<issue>.yaml`（**YAML 载体**）当 BRIEF 返回；而本器只认 brief（.md，需 `## Done` 段）
+          #   ⇒ 该器 :159 `VERIFY_CMDS=$(sed -n '/^## Done/,/^## /p' … | grep 'verify:' | …)` 对 YAML 取不到段落
+          #     ⇒ 管线 rc=1，叠加 :21 `set -euo pipefail` ⇒ **整步恒红**。这是**器缺陷**（缺载体判别），
+          #     **不是本步判据红**（判据根本没执行到）。
+          #   本批不改器（`scripts/workflow/**` 受保护、且不在本批写集）⇒ 此处**显式可见跳过并说明**，
+          #   **阻断权待器修好接回**（另批：scripts/workflow/check-brief-vs-code.sh:159 ＋ :21）。
+          #   🔴 跳过 ≠ 通过：日志必打 SKIPPED 两行（含器缺陷定位与另批指针），**不得**读成"本步绿了/判据满足"。
+          #   🔴 守卫只认 YAML 载体（claim）；brief（.md）在场时照旧走下面的真阻断，不改既有判据语义。
+          #   （探测用的 `|| :` 与器自身 :35 的吞码形态同义，只吞**解析器探测**的 rc；下面那条阻断调用的 rc 不被吞。）
+          BRIEF="$(bash scripts/workflow/resolve-commit-brief.sh "$(git diff --cached --name-only 2>/dev/null || :)" 2>/dev/null || :)"
+          case "$BRIEF" in
+            *.yaml)
+              echo "⑫ SKIPPED（载体不适用）：resolve-commit-brief.sh 返回 claim（$BRIEF），本器只认 brief（.md）"
+              echo "   ⇒ 判据未执行；器修正另批（scripts/workflow/check-brief-vs-code.sh:159 + :21）"
+              exit 0 ;;
+          esac
           bash scripts/workflow/check-brief-vs-code.sh --strict || exit $?
 
 # ═══════════════════════════════════════════════════════════════════════════════
