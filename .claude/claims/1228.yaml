@@ -1,0 +1,37 @@
+writeset:
+  - tests/l4/decision-capture-single-entry.test.ts
+  - src/routes/conversations.ts
+  - src/routes/sentinel.ts
+  - src/routes/sessions.ts
+  - src/routes/ontology.ts
+  - src/routes/chat.ts
+  - src/routes/admin-knowledge.ts
+  - src/server.ts
+  - src/middleware/auth.ts
+  - tests/acceptance/mvp1-m2-ingest-entry.test.ts
+  - tests/acceptance/mvp1-m9-one-pass.test.ts
+  - tests/smoke.test.ts
+  - tests/sessions-api.test.ts
+  - tests/routes/chat-feedback.test.ts
+  - tests/routes/admin-knowledge.test.ts
+  - tests/security/org-source-http.test.ts
+  - tests/middleware/request-org-id.test.ts
+  - tests/routes/conversations.test.ts
+  - tests/routes/diagnosis-report-persistence.test.ts
+  - tests/acceptance/mvp1-m3-domain-chain.test.ts
+  - tests/acceptance/mvp1-m4-output-face.test.ts
+  - .claude/claims/1228.yaml
+  - memory/notes/proposed/2026-10-31-1228-s0-2b-v5.md
+done:
+  - verify: npx tsc --noEmit --pretty false
+  - verify: SYNO_CI=1 bash scripts/check-architecture.sh
+  - verify: npx vitest run --pool=forks tests/middleware/request-org-id.test.ts
+  - verify: npx vitest run --pool=forks tests/security/org-source-http.test.ts
+  - verify: npx vitest run --pool=forks tests/acceptance/mvp1-m2-ingest-entry.test.ts tests/acceptance/mvp1-m9-one-pass.test.ts
+  - verify: npx vitest run --pool=forks tests/security/ tests/routes/ tests/middleware/ tests/acceptance/
+  - verify: test "$(git diff --name-only $BASE..HEAD | wc -l | tr -d ' ')" -eq 23
+  - verify: test "$(git diff --name-only $BASE..HEAD -- tests/ | wc -l | tr -d ' ')" -eq 23
+  - verify: bash -c 'n=$(git diff -U0 $BASE..HEAD -- src/ | grep "^+" | grep -c ORG_MISMATCH || true); test "$n" -eq 23'
+  - verify: bash -c 'm=$(git diff -U0 $BASE..HEAD -- src/ | grep "^+" | grep -cE "process\.env(\.SYNOVA_ORG_ID|\[.SYNOVA_ORG_ID.\])" || true); test "$m" -eq 23'
+note: #1228 PR-A 路由面；册数 14 点（台账口径B 58 点/74 行）；写集 22 件（8 src＋12 tests＋2 记录）；必动测试 10 件（原 6＋新增 4）；判据 U-1..U-8
+# DOC-1228：登记本批豁免件自身，闭合 D782 D2（文件集合 → claim 1228 唯一覆盖）

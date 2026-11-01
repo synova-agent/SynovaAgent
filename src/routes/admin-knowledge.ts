@@ -12,8 +12,10 @@
  *   POST /api/admin/knowledge/federated/:id/approve — GA 审批联邦
  *   GET  /api/admin/knowledge/federated/degraded  — 降级联邦列表
  */
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { createLogger } from '@synova/logger';
+import { loadConfig } from '../config';
+import { resolveRequestOrgId, type JwtPayload } from '../middleware/auth';
 // 铁律 39: L1 不直接触 L4/L5 — KnowledgeStore 类型与构造均经 L2 桥接服务（knowledge.ts 同款先例）
 // D603 跨层修复（簇3）: 构造下沉 createSystemKnowledgeStore，getDatabase 从 L1 清零
 import { createSystemKnowledgeStore, type KnowledgeStore } from '../agent/knowledge-bridge-service';
@@ -119,7 +121,21 @@ router.post('/api/admin/knowledge/:id/mark-shareable', (req, res) => {
       res.status(400).json({ ok: false, code: 'VALIDATION_ERROR', message: 'text and orgId required' });
       return;
     }
-    const entry = getPipeline().markShareable(req.params.id, text, orgId);
+    // #1228 S0-2b 点 11：必填 400（形状）之后才做归属闸；共享作用域用来源，不用请求值
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+      return;
+    }
+    const entry = getPipeline().markShareable(req.params.id, text, requestOrg.orgId);
     res.status(201).json({ ok: true, data: entry });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

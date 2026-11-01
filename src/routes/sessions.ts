@@ -9,6 +9,8 @@
  */
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
+import { loadConfig } from '../config';
+import { resolveRequestOrgId, type JwtPayload } from '../middleware/auth';
 // D603 跨层修复（簇4）: SessionStore 构造/句柄直取下沉 L2——注入优先（server.ts
 // app.locals.sessionStore ← Bootstrap Phase 0 单例），未注入环境兜底装配（行为同前）。
 import { createSystemSessionStore, type SessionStore } from '../agent/session-storage-service';
@@ -42,8 +44,21 @@ router.post('/api/sessions', (req: Request, res: Response) => {
     if (!orgId) {
       return res.status(400).json({ ok: false, error: 'orgId 必填', code: 'VALIDATION_ERROR' });
     }
+    // #1228 S0-2b 点 5：必填 400（形状）之后才做归属闸；请求值只作声明，落库用来源
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
     const store = getStore(req);
-    const session = store.createSession(orgId);
+    const session = store.createSession(requestOrg.orgId);
     res.status(201).json({ ok: true, session });
   } catch (err: any) {
     log.error({ err }, '创建会话失败');

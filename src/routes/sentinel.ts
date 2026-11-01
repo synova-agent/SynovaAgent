@@ -28,6 +28,8 @@ import type { TicketRow } from '../sentinel/runner'; // 类型经 L3 出口（�
 import { getDecisionRecordingSeam, getDecisionLedgerReader } from '../agent/conversation-engine';
 import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
 import { createLogger } from '@synova/logger';
+import { loadConfig } from '../config';
+import { resolveRequestOrgId, type JwtPayload } from '../middleware/auth';
 
 const log = createLogger('routes/sentinel');
 const router = Router();
@@ -144,15 +146,29 @@ router.get('/metrics/readings', (req: Request, res: Response) => {
       res.status(400).json({ ok: false, code: 'INVALID_DAYS', error: 'days 必须是 1..3650 的整数', received: daysRaw });
       return;
     }
-    const orgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
-    if ((req.query.orgId !== undefined && req.query.orgId !== '' && typeof req.query.orgId !== 'string') || (orgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(orgId))) {
+    const declaredOrgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
+    if ((req.query.orgId !== undefined && req.query.orgId !== '' && typeof req.query.orgId !== 'string') || (declaredOrgId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_.-]{1,63}$/.test(declaredOrgId))) {
       res.status(400).json({ ok: false, code: 'INVALID_ORG_ID', error: 'orgId 形态不合法', received: req.query.orgId });
+      return;
+    }
+    // #1228 S0-2b 点 2：形状校验（400）之后才做归属闸；请求值只作声明，取值用来源
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      declaredOrgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
       return;
     }
     const limit = typeof req.query.limit === 'string' && req.query.limit !== '' ? parseInt(req.query.limit, 10) : undefined;
     const metricId = typeof req.query.metricId === 'string' && req.query.metricId !== '' ? req.query.metricId : undefined;
     const includeRound = req.query.includeRound === '1' || req.query.includeRound === 'true';
-    const query = { days, orgId, limit: Number.isFinite(limit) ? limit : undefined, metricId, includeRound };
+    const query = { days, orgId: requestOrg.orgId, limit: Number.isFinite(limit) ? limit : undefined, metricId, includeRound };
     if (req.query.view === 'trends') {
       const result = getMetricTrends(db, query);
       if (!result.ok) { res.json({ ok: false, degraded: true, count: 0, summary: result.summary, errors: result.errors }); return; }
@@ -256,6 +272,21 @@ router.get('/tickets', (req: Request, res: Response) => {
 router.get('/tickets/:id/decisions', (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
+    // #1228 S0-2b 点 3：归属闸**先于**工单查找（跨组织请求不得靠 404 兜底；形态判定沿用原类型判定）
+    const declaredOrgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      declaredOrgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+      return;
+    }
     const tickets = getSentinelTickets().tickets;
     const ticket = tickets.find((t) => t.id === id);
     if (!ticket) {
@@ -264,14 +295,13 @@ router.get('/tickets/:id/decisions', (req: Request, res: Response) => {
     }
     // nodeId 口径与写侧 recordTicketResolution 完全一致（signal_id 优先，工单 id 兜底）
     const nodeId = ticket.signalId !== undefined && ticket.signalId !== '' ? ticket.signalId : ticket.id;
-    const orgId = typeof req.query.orgId === 'string' && req.query.orgId !== '' ? req.query.orgId : undefined;
     const reader = getDecisionLedgerReader();
     if (!reader) {
       log.warn({ ticketId: id }, '[sentinel] 台账读回未装配（LEDGER_READER_NOT_WIRED）— 503 显式降级');
       res.status(503).json({ ok: false, code: 'LEDGER_READER_NOT_WIRED', error: '决策台账读回端口未装配（bootstrap 未注册）' });
       return;
     }
-    const result = reader(orgId)({ nodeId });
+    const result = reader(requestOrg.orgId)({ nodeId });
     if (!result.ok) {
       res.json({ ok: false, degraded: true, ticketId: id, nodeId, count: result.entries.length, decisions: result.entries, errors: result.errors });
       return;
@@ -305,6 +335,21 @@ router.post('/tickets/:id/transition', async (req: Request, res: Response) => {
       res.status(400).json({ ok: false, error: '缺少 to 字段（可选值: acknowledged | resolved | dismissed）' });
       return;
     }
+    // #1228 S0-2b 点 4：归属闸放在 `transitionSentinelTicket` **之前**（不得先改状态再拒）
+    const declaredOrgId = typeof body.orgId === 'string' && body.orgId !== '' ? body.orgId : undefined;
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      declaredOrgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+      return;
+    }
     const result: SentinelTicketTransitionResult = transitionSentinelTicket(id, body.to);
     if (result.ok) {
       // 人工裁决落账（仅关闭动作；acknowledged/dismissed 不是「关单裁决」，不落账）
@@ -314,7 +359,7 @@ router.post('/tickets/:id/transition', async (req: Request, res: Response) => {
           ticket: result.ticket,
           operatorId: typeof body.operatorId === 'string' && body.operatorId !== '' ? body.operatorId : undefined,
           role: typeof body.role === 'string' && body.role !== '' ? body.role : undefined,
-          orgId: typeof body.orgId === 'string' && body.orgId !== '' ? body.orgId : undefined,
+          orgId: requestOrg.orgId,
         });
         ledgerRecorded = outcome.recorded;
         if (!outcome.recorded) {

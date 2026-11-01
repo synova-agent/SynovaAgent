@@ -84,6 +84,7 @@ vi.mock('../../src/config', async (importOriginal) => {
       llmModel: 'test-model',
       dbPath: ':memory:',
       devMode: true,
+      orgId: 'default', // #1228 resolveRequestOrgId 的实例兜底（fail-loud 必需）
     }),
   };
 });
@@ -126,6 +127,7 @@ async function POST(
   try {
     parsed = JSON.parse(text) as Record<string, unknown>;
   } catch {
+    // swallow-ok: 非 JSON 响应体 ⇒ 保留原文（判据看 status/ledgerHeader，不看解析结果）
     parsed = { raw: text };
   }
   return { status: res.status, body: parsed, ledgerHeader: res.headers.get('X-Ledger-Recorded') };

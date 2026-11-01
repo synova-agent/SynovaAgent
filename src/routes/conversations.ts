@@ -105,6 +105,7 @@
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { loadConfig } from '../config';
+import { resolveRequestOrgId, type JwtPayload } from '../middleware/auth';
 import { createProvider } from '../providers';
 import { detectProvider } from '../providers/detect';
 import {
@@ -576,8 +577,32 @@ async function handleConversationMessage(req: Request, res: Response, pathSessio
   }
   const bodySessionId = typeof body.sessionId === 'string' && body.sessionId.length > 0 ? body.sessionId : undefined;
   const sessionIdInput = pathSessionId ?? bodySessionId;
-  const orgIdCandidate = (typeof body.orgId === 'string' && body.orgId) || process.env.SYNOVA_ORG_ID;
-  const orgId = typeof orgIdCandidate === 'string' && orgIdCandidate !== '' ? orgIdCandidate : 'default';
+  // #1228 S0-2b 点 1：组织来源 = 验签身份 ＞ 实例配置（`loadConfig().orgId`）；
+  //   请求体 orgId **只作一致性声明**，永不作取值来源。拒绝发生在任何 SSE/落库之前。
+  let instanceOrgId: string;
+  try {
+    instanceOrgId = loadConfig().orgId;
+  } catch (err: unknown) {
+    // 实例配置读取失败（生产 `loadConfig()` 自带兜底、不会抛；此处只覆盖 mock／异常启动）。
+    // 沿用 ④ 段**既有** LLM_NOT_CONFIGURED 契约（400 + 同码），不让新闸把该既有错误变成未捕获 rejection。
+    log.warn({ err }, 'LLM 配置缺失 — 400 LLM_NOT_CONFIGURED（D575 向导未完成）');
+    res.status(400).json({ ok: false, code: 'LLM_NOT_CONFIGURED', message: '请先完成 LLM 配置（D575 向导）' });
+    return;
+  }
+  const requestOrg = resolveRequestOrgId(
+    req as Request & { auth?: JwtPayload },
+    body.orgId,
+    instanceOrgId,
+  );
+  if (!requestOrg.ok) {
+    log.warn(
+      { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+      '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+    );
+    res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    return;
+  }
+  const orgId = requestOrg.orgId;
 
   // ①-b `/ingest` 资料入口分支（#656 M2 判据①；**零 LLM 依赖**：先于 ②store 与 ④loadConfig）。
   //      回执一律 JSON（非 SSE）；普通消息不进本分支 ⇒ 既有 SSE 语义零改动。

@@ -11,6 +11,8 @@ import { createLogger } from '@synova/logger';
 // 注入，getStoreFromLocals 同前）；getDatabase 直取已删除——铁律 39
 import type { SqliteGraphStore } from '../agent/graph-store-service';
 import { ALL_NODE_TYPES } from '@synova/ontology';
+import { loadConfig } from '../config';
+import { resolveRequestOrgId, type JwtPayload } from '../middleware/auth';
 
 const router = Router();
 const log = createLogger('routes/ontology');
@@ -48,6 +50,19 @@ router.post('/api/ontology/ingest', (req: Request, res: Response) => {
     if (orgIdErr) {
       return res.status(400).json({ ok: false, error: orgIdErr, code: 'VALIDATION_ERROR' });
     }
+    // #1228 S0-2b 点 6：必填 400／形态 400（形状）之后才做归属闸；写入作用域用来源，不用请求值
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
 
     let store;
     try {
@@ -60,7 +75,7 @@ router.post('/api/ontology/ingest', (req: Request, res: Response) => {
     const nodeId = store.createNode(type, {
       name, content, source: 'user_upload',
       author, authorEmail, teamId,
-    }, orgId || 'default');
+    }, requestOrg.orgId);
     log.info({ nodeId, type }, '文档节点已创建');
 
     res.json({ ok: true, nodeId, edges: [] });
@@ -81,12 +96,25 @@ router.get('/api/ontology/graph/:orgId.html', (req: Request, res: Response) => {
     if (orgIdErr) {
       return res.status(400).json({ ok: false, error: orgIdErr, code: 'VALIDATION_ERROR' });
     }
+    // #1228 S0-2b 点 7：形态校验（400）之后才做归属闸；查询作用域用来源
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
     const store = getStoreFromLocals(req);
 
     const types: string[] = ['Person', 'Team', 'Agent', 'Tool', 'Client', 'Process', 'Event', 'Document', 'Financial'];
     const nodes: Array<{ id?: unknown; type?: unknown; props?: unknown }> = [];
-    for (const t of types) nodes.push(...store.queryNodes(t as unknown as Parameters<typeof store.queryNodes>[0], undefined, orgId as string));
-    const edges = store.queryEdges(undefined, undefined, undefined, orgId as string);
+    for (const t of types) nodes.push(...store.queryNodes(t as Parameters<typeof store.queryNodes>[0], undefined, requestOrg.orgId));
+    const edges = store.queryEdges(undefined, undefined, undefined, requestOrg.orgId);
 
     const nodeRows = nodes.map(n =>
       `<tr><td><span class="badge badge-${String(n.type ?? '')}">${String(n.type ?? '')}</span></td><td>${String(n.id ?? '').slice(0, 16)}</td><td>${JSON.stringify(n.props ?? {}).slice(0, 120)}</td></tr>`
@@ -141,6 +169,19 @@ router.get('/api/ontology/graph/:orgId', (req: Request, res: Response) => {
     if (orgIdErr) {
       return res.status(400).json({ ok: false, error: orgIdErr, code: 'VALIDATION_ERROR' });
     }
+    // #1228 S0-2b 点 8：形态校验（400）之后才做归属闸；查询作用域用来源
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
     const store = getStoreFromLocals(req);
 
     const nodes: Array<{ id?: unknown; type?: unknown; props?: unknown }> = [];
@@ -148,12 +189,12 @@ router.get('/api/ontology/graph/:orgId', (req: Request, res: Response) => {
     const queryTypes = [...ALL_NODE_TYPES, 'Document', 'Person', 'Team', 'Agent', 'Tool', 'Client', 'Process', 'Event', 'Financial'];
     const seen = new Set<string>();
     for (const t of queryTypes) {
-      const found = store.queryNodes(t as unknown as Parameters<typeof store.queryNodes>[0], undefined, orgId as string);
+      const found = store.queryNodes(t as Parameters<typeof store.queryNodes>[0], undefined, requestOrg.orgId);
       for (const n of found) {
         if (!seen.has(n.id as string)) { seen.add(n.id as string); nodes.push(n); }
       }
     }
-    const edges = store.queryEdges(undefined, undefined, undefined, orgId as string);
+    const edges = store.queryEdges(undefined, undefined, undefined, requestOrg.orgId);
 
     res.json({
       ok: true, orgId,
@@ -175,9 +216,22 @@ router.get('/api/ontology/graph/:orgId/summary', (req: Request, res: Response) =
     const rootId = req.query.root as string;
     const orgIdErr = validateOrgId(orgId);
     if (orgIdErr) return res.status(400).json({ ok: false, error: orgIdErr, code: 'VALIDATION_ERROR' });
+    // #1228 S0-2b 点 9：形态校验（400）之后才做归属闸；查询作用域用来源
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
 
     const store = getStoreFromLocals(req);
-    const g = (orgId || 'default') as string;
+    const g = requestOrg.orgId;
 
     const summary = {
       nodes: store.queryNodes('', undefined, g).length,
@@ -198,6 +252,19 @@ router.get('/api/ontology/graph/:orgId/brokers', (req: Request, res: Response) =
     const { orgId } = req.params;
     const orgIdErr = validateOrgId(orgId);
     if (orgIdErr) return res.status(400).json({ ok: false, error: orgIdErr, code: 'VALIDATION_ERROR' });
+    // #1228 S0-2b 点 13：声明点，预防性一致化 —— 只上闸、不加点、不改返回体
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
 
     const store = getStoreFromLocals(req);
     // 跨维度桥接节点查找已从 engine-core 迁移 — 当前返回空列表
@@ -217,6 +284,19 @@ router.get('/api/ontology/graph/:orgId/diff', (req: Request, res: Response) => {
     const toDate = req.query.to as string;
     const orgIdErr = validateOrgId(orgId);
     if (orgIdErr) return res.status(400).json({ ok: false, error: orgIdErr, code: 'VALIDATION_ERROR' });
+    // #1228 S0-2b 点 14：声明点，预防性一致化 —— 只上闸、不加点、不改返回体
+    const requestOrg = resolveRequestOrgId(
+      req as Request & { auth?: JwtPayload },
+      orgId,
+      loadConfig().orgId,
+    );
+    if (!requestOrg.ok) {
+      log.warn(
+        { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+        '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+      );
+      return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+    }
 
     const store = getStoreFromLocals(req);
     // 图差异比较已从 engine-core 迁移 — 当前返回空 diff
