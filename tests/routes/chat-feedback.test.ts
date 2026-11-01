@@ -51,8 +51,11 @@ describe('#981 — POST /api/proposal/:id/resolve 反馈持久化', () => {
   let server: Server;
   let base: string;
   let db: Database.Database;
+  /** #1228：本件裸挂 chatRouter（无 jwtAuthMiddleware）⇒ 无 req.auth ⇒ 回落实例组织；测试声明 'org-1' */
+  const SAVED_ORG_ID = process.env.SYNOVA_ORG_ID;
 
   beforeAll(async () => {
+    process.env.SYNOVA_ORG_ID = 'org-1';
     const app = express();
     app.use(express.json());
     app.use(chatRouter);
@@ -64,6 +67,8 @@ describe('#981 — POST /api/proposal/:id/resolve 反馈持久化', () => {
 
   afterAll(async () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (SAVED_ORG_ID === undefined) delete process.env.SYNOVA_ORG_ID;
+    else process.env.SYNOVA_ORG_ID = SAVED_ORG_ID;
   });
 
   beforeEach(() => {

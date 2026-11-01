@@ -289,7 +289,7 @@ describe('T6 federated 兜底 — 注入/不注入均可用（不再 503）', ()
     const get = findHandler(mod.default as unknown as RouterLike, '/api/admin/knowledge/federated/pending', 'get');
 
     const resPost = makeRes();
-    post({ params: { id: 'k1' }, headers: {}, body: { text: 'hello', orgId: 'org1' } }, resPost);
+    post({ params: { id: 'k1' }, headers: {}, auth: { orgId: 'org1' }, body: { text: 'hello', orgId: 'org1' } }, resPost);
     expect(resPost.status).toHaveBeenCalledWith(201); // 写入成功（不再假性成功）
 
     const resGet = makeRes();
@@ -307,8 +307,8 @@ describe('T6 federated 兜底 — 注入/不注入均可用（不再 503）', ()
     const post = findHandler(mod.default as unknown as RouterLike, '/api/admin/knowledge/:id/mark-shareable', 'post');
     const get = findHandler(mod.default as unknown as RouterLike, '/api/admin/knowledge/federated/pending', 'get');
 
-    post({ params: { id: 'k1' }, headers: {}, body: { text: 'a', orgId: 'org1' } }, makeRes());
-    post({ params: { id: 'k2' }, headers: {}, body: { text: 'b', orgId: 'org2' } }, makeRes());
+    post({ params: { id: 'k1' }, headers: {}, auth: { orgId: 'org1' }, body: { text: 'a', orgId: 'org1' } }, makeRes());
+    post({ params: { id: 'k2' }, headers: {}, auth: { orgId: 'org1' }, body: { text: 'b', orgId: 'org1' } }, makeRes());
 
     const resGet = makeRes();
     get({ headers: {} }, resGet);
@@ -325,7 +325,7 @@ describe('T6 federated 兜底 — 注入/不注入均可用（不再 503）', ()
 
     const handler = findHandler(mod.default as unknown as RouterLike, '/api/admin/knowledge/:id/mark-shareable', 'post');
     const res = makeRes();
-    handler({ params: { id: 'k1' }, headers: {}, body: { text: 'hello', orgId: 'org1' } }, res);
+    handler({ params: { id: 'k1' }, headers: {}, auth: { orgId: 'org1' }, body: { text: 'hello', orgId: 'org1' } }, res);
 
     expect(markShareable).toHaveBeenCalledWith('k1', 'hello', 'org1');
     expect(res.status).toHaveBeenCalledWith(201);

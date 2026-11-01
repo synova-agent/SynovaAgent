@@ -82,8 +82,6 @@ const ROUTE_FILE = join(WORKTREE_ROOT, 'src', 'routes', 'conversations.ts');
 /** 组织（租户）夹具 —— orgId 须匹配 ontology 路由的 ORG_ID_PATTERN */
 const ORG_A = 'm2-org-a';
 const ORG_B = 'm2-org-b';
-const ORG_E = 'm2-org-e';
-const ORG_U = 'm2-org-u';
 
 /** 本次运行标签：资料串与锚点唯一性都以它为熵源（防历史节点冒充） */
 const RUN_TAG = `${Date.now()}-${process.pid}`;
@@ -330,9 +328,12 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     previousEnv.SYNOVA_DB_PATH = process.env.SYNOVA_DB_PATH;
     previousEnv.SYNOVA_DATA_DIR = process.env.SYNOVA_DATA_DIR;
     previousEnv.DEV_MODE = process.env.DEV_MODE;
+    // #1228 S0-2b：本件是"匿名带 body orgId"的验收面 ⇒ 实例组织 = ORG_A（必须进 previousEnv 才能 afterAll 还原）
+    previousEnv.SYNOVA_ORG_ID = process.env.SYNOVA_ORG_ID;
     process.env.SYNOVA_DB_PATH = dbFile;
     process.env.SYNOVA_DATA_DIR = tmpRoot; // 凭证文件隔离缝（llm-credential-store:74）
     process.env.DEV_MODE = 'true';
+    process.env.SYNOVA_ORG_ID = ORG_A;
     for (const key of LLM_ENV_KEYS) {
       previousEnv[key] = process.env[key];
       delete process.env[key];
@@ -414,7 +415,8 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     }
 
     // 读回端点已挂载 + graphStore 注入生效
-    const graphProbe = await readGraph(baseUrl, 'm2-env-probe');
+    // #1228：归属闸后，声明 orgId 必须 = 实例组织（ORG_A）——原 'm2-env-probe' 会 403（探针不是跨租户判据）
+    const graphProbe = await readGraph(baseUrl, ORG_A);
     if (graphProbe.status !== 200 || !isRecord(graphProbe.body) || graphProbe.body.ok !== true) {
       envFail(`ontology 路由未正确挂载/graphStore 未注入：${graphProbe.status} ${graphProbe.rawText.slice(0, 120)}`);
     }
@@ -487,20 +489,21 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
   });
 
   it('①-c 唯一锚点：name 含当天日期＋pid；同进程两次不同资料 ⇒ 两锚点不同且各自 content 对应', async () => {
+    // #1228：实例组织 = ORG_A ⇒ 声明也必须是 ORG_A（声明不再决定组织，只作一致性声明）
     const first = await postJson(baseUrl, '/api/conversations', {
       message: `/ingest ${MATERIAL_U1}`,
-      orgId: ORG_U,
+      orgId: ORG_A,
     });
     const second = await postJson(baseUrl, '/api/conversations', {
       message: `/ingest ${MATERIAL_U2}`,
-      orgId: ORG_U,
+      orgId: ORG_A,
     });
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
     expect(isIngestSuccessReceipt(first.body)).toBe(true);
     expect(isIngestSuccessReceipt(second.body)).toBe(true);
 
-    const res = await readGraph(baseUrl, ORG_U);
+    const res = await readGraph(baseUrl, ORG_A);
     expect(res.status).toBe(200);
     const docs = documentsOf(parseNodes(res.body));
 
@@ -534,21 +537,30 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     );
   });
 
-  it('①-d 跨租户：org-B 的锚点在 org-A 读回不存在（同租户读回必须存在——防负例空转）', async () => {
+  // 🔴 #1228 断言变更交代（规格 owner 要求逐条，不是放宽）：
+  //   ① `posted.status 200 → 403` ＋ 新增 `code==='CROSS_ORG_DENIED'`
+  //      原期望「匿名带 orgId=ORG_B 能 200 并落 org-B」**在本批规则下不可达**（正是要堵的洞）；
+  //      替换后**断言更强**：不仅断言 403，还断言具体错误码。
+  //   ② `ownReadback(ORG_B) 200 → 403`：同理（声明 ≠ 来源）。
+  //      原 `expect(ownDoc).toBeDefined()` / `expect(isUniqueAnchorShape(anchorB,…))` 以"已落库"为前提，
+  //      该前提被本批删除 ⇒ 不可保留；改为断言 403＋code。
+  //   ③ `readbackBody.nodeCount===0` → `readbackDocs.some(content 含 MATERIAL_B)===false`
+  //      **非空转**：同测试内 `foreignReadback(ORG_A)` 断言 200 且 `nodeCount>0` 作为正例对照，
+  //      因此"ORG_A 内查不到 MATERIAL_B"是真负断言（若写入串租户，此处必红）。
+  it('①-d 跨租户自选组织已收口：org-B 声明 ⇒ 403 CROSS_ORG_DENIED；ORG_A 内无 MATERIAL_B（非空转正例）', async () => {
+    // #1228：请求值只作声明，声明 ≠ 来源（实例 ORG_A）⇒ 403（改前是 200 且真落 org-B）
     const posted = await postJson(baseUrl, '/api/conversations', {
       message: `/ingest ${MATERIAL_B}`,
       orgId: ORG_B,
     });
-    expect(posted.status).toBe(200);
-    expect(isIngestSuccessReceipt(posted.body)).toBe(true);
+    expect(posted.status).toBe(403);
+    const postedBody = isRecord(posted.body) ? posted.body : {};
+    expect(postedBody.code).toBe('CROSS_ORG_DENIED');
 
     const ownReadback = await readGraph(baseUrl, ORG_B);
-    expect(ownReadback.status).toBe(200);
-    const ownDocs = documentsOf(parseNodes(ownReadback.body));
-    const ownDoc = ownDocs.find(d => String(d.props.content ?? '').includes(MATERIAL_B));
-    expect(ownDoc).toBeDefined();
-    const anchorB = ownDoc === undefined ? null : nameOf(ownDoc);
-    expect(isUniqueAnchorShape(anchorB, todayIsoDate(), process.pid)).toBe(true);
+    expect(ownReadback.status).toBe(403);
+    const ownBody = isRecord(ownReadback.body) ? ownReadback.body : {};
+    expect(ownBody.code).toBe('CROSS_ORG_DENIED');
 
     const foreignReadback = await readGraph(baseUrl, ORG_A);
     expect(foreignReadback.status).toBe(200);
@@ -556,17 +568,18 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     expect(typeof foreignBody.nodeCount).toBe('number');
     expect(Number(foreignBody.nodeCount)).toBeGreaterThan(0); // 非空租户才不是空转负例
     const foreignNodes = parseNodes(foreignReadback.body);
-    expect(foreignNodes.some(n => nameOf(n) === anchorB)).toBe(false);
+    // ORG_A 内不得出现 MATERIAL_B（跨租户写入确实没落地；:540 已 403 ⇒ anchorB 恒 null，原 anchorB 断言删除）
     expect(foreignNodes.some(n => String(n.props.content ?? '').includes(MATERIAL_B))).toBe(false);
 
     console.log(
-      `[M2][READBACK] 跨租户 anchorB=${String(anchorB)} ∈ ${ORG_B}=true ∈ ${ORG_A}=false ` +
-      `${ORG_A}.nodeCount=${String(foreignBody.nodeCount)}`,
+      `[M2][READBACK] 跨租户自选组织⇒403 ORG_A.nodeCount=${String(foreignBody.nodeCount)} ` +
+      `ORG_A含MATERIAL_B=false`,
     );
   });
 
   it('①-e 边界："/ingest" 无资料 ⇒ 400 INGEST_EMPTY；非 /ingest 普通消息不创建 Document', async () => {
-    const bare = await postJson(baseUrl, '/api/conversations', { message: '/ingest', orgId: ORG_E });
+    // #1228：实例组织 = ORG_A ⇒ 声明必须 ORG_A（归属闸在 ingest 分支之前；声明不匹配会先 403）
+    const bare = await postJson(baseUrl, '/api/conversations', { message: '/ingest', orgId: ORG_A });
     expect(bare.contentType).toContain('application/json');
     expect(bare.status).toBe(400);
     const bareBody: Record<string, unknown> = isRecord(bare.body) ? bare.body : {};
@@ -576,7 +589,7 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     expect(bareBody.degraded).toBe(false);
 
     // 纯空白资料同样不得静默摄取（`/ingest` + 空白 ⇒ trim 后为空）
-    const blank = await postJson(baseUrl, '/api/conversations', { message: '/ingest    ', orgId: ORG_E });
+    const blank = await postJson(baseUrl, '/api/conversations', { message: '/ingest    ', orgId: ORG_A });
     expect(blank.status).toBe(400);
     const blankBody: Record<string, unknown> = isRecord(blank.body) ? blank.body : {};
     expect(blankBody.code).toBe('INGEST_EMPTY');
@@ -586,7 +599,7 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     // 故不在本件触发真模型调用——用确定性前置短路证明"非 /ingest 不摄取"）。
     const ordinary = await postJson(baseUrl, '/api/conversations', {
       message: '我们是一家 30 人的 SaaS 公司，想请教增长诊断。',
-      orgId: ORG_E,
+      orgId: ORG_A,
       sessionId: 'm2-absent-session',
     });
     expect(ordinary.status).toBe(404);
@@ -595,16 +608,16 @@ describe('M2 入口面验收（真 HTTP ＋ 真库 ＋ 唯一锚点 ＋ 软件�
     expect(ordinaryBody.ingested).toBeUndefined();
     expect(isIngestSuccessReceipt(ordinary.body)).toBe(false);
 
-    const readback = await readGraph(baseUrl, ORG_E);
+    // #1228：ORG_A 此时已非空（①-a/①-c 已写）⇒ 原 `nodeCount===0` 恒假；判据改为"无任何 Document 含该普通消息"
+    const readback = await readGraph(baseUrl, ORG_A);
     expect(readback.status).toBe(200);
-    const readbackBody: Record<string, unknown> = isRecord(readback.body) ? readback.body : {};
-    expect(readbackBody.nodeCount).toBe(0);
-    expect(documentsOf(parseNodes(readback.body)).length).toBe(0);
+    const readbackDocs = documentsOf(parseNodes(readback.body));
+    expect(readbackDocs.some(d => String(d.props.content ?? '').includes('我们是一家 30 人的 SaaS 公司'))).toBe(false);
 
     console.log(
       `[M2][HTTP] 边界 '/ingest'=${bare.status}/${String(bareBody.code)} ` +
       `'/ingest   '=${blank.status}/${String(blankBody.code)} ` +
-      `普通消息=${ordinary.status}（非 ingest）org=${ORG_E} nodeCount=${String(readbackBody.nodeCount)}`,
+      `普通消息=${ordinary.status}（非 ingest）org=${ORG_A} documents=${String(readbackDocs.length)}`,
     );
   });
 

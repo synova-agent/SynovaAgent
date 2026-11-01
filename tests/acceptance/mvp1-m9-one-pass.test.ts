@@ -603,6 +603,8 @@ beforeAll(async () => {
   process.env.SYNOVA_DATA_DIR = DB_DIR; // 凭证文件隔离缝（同 M2 先例）
   process.env.PORT = '0';
   process.env.DEV_MODE = 'true';
+  // #1228 S0-2b：本件匿名带 body orgId ⇒ 实例组织 = ORG（声明必须与实例一致；SYNOVA_ORG_ID 已在 ENV_KEYS 内 ⇒ afterAll 自动还原）
+  process.env.SYNOVA_ORG_ID = ORG;
 
   // M5 已收口；M9 不验证 M5 ⇒ **保留** vitest 全局 `SYNOVA_SKIP_MCP=1`（不删、不改、不宣称真实 MCP）
   if (process.env.SYNOVA_SKIP_MCP !== '1') {
