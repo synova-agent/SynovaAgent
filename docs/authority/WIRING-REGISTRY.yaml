@@ -383,3 +383,21 @@ entries:
     status: declared-only
     owner: P4
     notes: "#1210：GATE-INVENTORY 不变式伴生件（39=35+2+2／id 唯一／workflows 账外=0／disk↔registry）；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 显式豁免 R1.2 登记（接线另批）。"
+  # ---- P4 2026-10-31：#1238 W0-1 G-DOC-1 体积预算校验器（declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc1Budgets
+    defined_at: "scripts/doc-system/verify-doc-budgets.sh:1"
+    provider: "scripts/doc-system/verify-doc-budgets.sh:1"
+    consumer: null
+    test: "tests/doc-system/verify-doc-budgets.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-1 体积预算校验器（#1238 W0-1）：指令面 14 件合计 <=65536 B、单份域守则 <=3584 B 判红，docs 全量只报不判；三态退出码 0/1/2 与判别力自检。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"
+  # ---- P4 2026-10-31：#1238 W0-1 G-DOC-2 六规则生效性校验器（declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc2Effectiveness
+    defined_at: "scripts/doc-system/verify-doc-gate-effectiveness.sh:1"
+    provider: "scripts/doc-system/verify-doc-gate-effectiveness.sh:1"
+    consumer: null
+    test: "tests/doc-system/verify-doc-gate-effectiveness.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-2 生效性校验器（#1238 W0-1）：解析 docs/authority/DOC-STANDARD.md 的 G-DOC-1..6 规则行与内嵌 MAP 行做双向对齐，缺实现或缺调用点 ⇒ exit 1 逐条点名。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"

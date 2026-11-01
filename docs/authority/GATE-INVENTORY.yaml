@@ -1591,6 +1591,12 @@ run_by:
   - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
     run_by: "无"
     quota: false
+  - entrypoint: scripts/doc-system/verify-doc-budgets.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
+    run_by: "无"
+    quota: false
   - entrypoint: scripts/doc-system/check-doc-truth.sh
     run_by: pre-commit
     quota: true
@@ -1768,6 +1774,10 @@ run_by_candidates:
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
   - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
+  - entrypoint: scripts/doc-system/verify-doc-budgets.sh
+    why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡；接前核 §七 ≤90 s）"
+  - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
+    why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
 
 gate_meta:
   measured_at: 9842b5163
@@ -2491,6 +2501,20 @@ gate_meta:
       run_by: pre-commit
       orphan: false
       quota: true
+      quota_scope: doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/verify-doc-budgets.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
       quota_scope: doc
       nature: mechanical
     - entrypoint: scripts/workflow/check-boundaries-incremental.sh

@@ -8,6 +8,37 @@
 
 ---
 
+## §0.5 本件取代的历史草稿（2026-10-31）
+
+**一句话**：上表所列门禁类历史草稿**一律为过程件，已作废，不得作为施工或引用依据**；凡与它们冲突，**数字一律以本件为准**（引用它们 ＝ 引用过期口径）。
+
+下表逐条登记本件取代的历史草稿（完整路径 ＋ 被本件哪一节取代）：
+
+| # | 历史草稿（完整路径） | 原任务 | 被本件哪一节取代 |
+|---|---|---|---|
+| 1 | `docs/plans/codex/implementation/SYNOVA-IMPL-586-gate-protection-20261018.md` | #586 门禁本体保护：仓内清单 ＋ `check-gate-protection.sh` ＋ ①d | **§六「批 C｜C 类 13 件」**（该脚本体实测已接线 ⇒ 归「已接线仅复核 4」）＋ **§三** 四载体通盘账（清单/盘点口径） |
+| 2 | `docs/plans/codex/implementation/SYNOVA-IMPL-595-gate-count-20261019.md` | #595 门禁组数口径纠偏（真值 12 组） | **§五「文档治理」** AGENTS.md V7.1→V7.2 条目 (b)「pre-commit 组数由字面"12 组"改为**指针引用台账**」＋ **§七「改」**「pre-commit 软腿，组数引 `GROUP_DONE`」 |
+
+**枚举命令（可复跑，`gitea/main` 树）**：
+
+```bash
+git ls-tree -r --name-only gitea/main docs/plans | grep -iE 'gate|governance|门禁'
+```
+
+实测输出（2 条，2026-10-31 @ `gitea/main` ＝ `a025fc47e`）：
+
+```
+docs/plans/codex/implementation/SYNOVA-IMPL-586-gate-protection-20261018.md
+docs/plans/codex/implementation/SYNOVA-IMPL-595-gate-count-20261019.md
+```
+
+**本节已知限制**：
+- 只覆盖**文件名**命中 `gate|governance|门禁` 的草稿；内容相涉但文件名不含上述词的件不在册内 —— 下游要全量须另跑内容级检索并单独登记。
+- 不做**内容级语义比对**：草稿与 v3.1 的实质冲突仍须人工逐句核；本节只切断"作为引用依据"这一条路。
+- 枚举以 `gitea/main` 树为准：**未进仓的本地草稿不在册内**（如 §五-3 所列 `docs/founder/` 历史件，另按该条处置）。
+
+---
+
 ## 〇、v3 → v3.1 自我更正（五路独立复核，先读）
 
 **复核方式**：5 个零上下文子代理并行独立审计（内部一致性／事实核验／退役安全性／遗漏角落／可执行性），全部回仓 `git cat-file` 实测，不采信本件自述。

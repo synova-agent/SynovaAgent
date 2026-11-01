@@ -1,0 +1,22 @@
+writeset:
+  - docs/authority/DOC-STANDARD.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/GATE-STANDARD.md
+  - scripts/doc-system/verify-doc-budgets.sh
+  - scripts/doc-system/verify-doc-gate-effectiveness.sh
+  - tests/doc-system/verify-doc-budgets.test.sh
+  - tests/doc-system/verify-doc-gate-effectiveness.test.sh
+  - gate-exemptions/2026-10-31-w01-1238.md
+  - .claude/task-briefs/2026-10-31-1238-W01.md
+  - .claude/claims/1238.yaml
+done:
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base a025fc47e
+  - verify: python3 scripts/control-tower/claim_store.py --check 1238 --root .
+  - verify: bash scripts/doc-system/verify-doc-budgets.sh --root . --check
+  - verify: bash tests/doc-system/verify-doc-budgets.test.sh
+  - verify: bash tests/doc-system/verify-doc-gate-effectiveness.test.sh
+note: "#1238 W0-1 载体补齐：DOC-STANDARD（G-DOC-1..6 六条规则，≤3584 B）＋ 体积预算与生效性两支校验器＋配对测试；占位 id 按 R1 口径回填 DOC-1238-01..04（含豁免件登记）；GATE-INVENTORY 纯追加两脚本三处 run_by 入账（合计 6 块，run_by 记「无」）；两脚本按裁决②③只登记 declared-only（不接 pre-commit/CI）；受保护面豁免 8 行含自覆盖；GATE-STANDARD §0.5 历史草稿取代节在 ct/w01-p3-history-1031 树。"
