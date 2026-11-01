@@ -1,0 +1,12 @@
+writeset:
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-10-31-1221-d331.md
+  - .claude/task-briefs/2026-10-31-1221-D331.md
+  - .claude/claims/1221.yaml
+  - memory/notes/proposed/2026-10-31-1221-D331.md
+done:
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --quota
+note: D331 事实降级：required_ci 保留 true（本仓语义=被任一腿引用），新增 local_only 与 required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。
