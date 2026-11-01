@@ -125,5 +125,59 @@ else
 fi
 
 echo ""
+echo "── #1255-T3 接线面: pre-commit 的 gate_budget_report() 行为（复核挑出「零断言」）──"
+# 做法：从**真实** pre-commit-check.sh 里抽出函数体（不复制逻辑），用桩替换判定器与计时起点，
+#       断言三条关键语义：①落盘 wall_ms ②超预算仍 return 0（只告警）③判定器缺失时「判不了」。
+PCS="$REPO/scripts/pre-commit-check.sh"
+FX="$TMPD/fn.sh"
+{
+  sed -n '/^_now_ms() {/,/^}/p' "$PCS"
+  sed -n '/^gate_budget_report() {/,/^}/p' "$PCS"
+} > "$FX"
+if grep -q 'gate_budget_report' "$FX"; then
+  ok "接线面: 成功从 pre-commit-check.sh 抽出 gate_budget_report()（不是复制品）"
+else
+  no "接线面: 抽不出 gate_budget_report()（函数被改名/删除？）"
+fi
+
+# 桩 root：<tmp>/scripts/control-tower/check-gate-budget.sh 可切换返回码
+FROOT="$TMPD/fakeroot"; mkdir -p "$FROOT/scripts/control-tower"
+STUB="$FROOT/scripts/control-tower/check-gate-budget.sh"
+printf '#!/usr/bin/env bash\necho "wall_ms=1"; echo "BUDGET: PASS"; exit 0\n' > "$STUB"; chmod +x "$STUB"
+
+run_fn() { # $1=log path
+  bash -c '
+    set +e
+    ROOT="$1"; _GATE_T0_MS="$(( $(date +%s%3N) - 500 ))"
+    . "$2" >/dev/null 2>&1   # 只取函数定义（_now_ms/gate_budget_report）
+    gate_budget_report
+    echo "RC=$?"
+  ' _ "$FROOT" "$FX" 2>&1
+}
+
+OUT1="$(SYNO_GATE_BUDGET_LOG="$TMPD/t3a.log" run_fn x)"
+if [ -s "$TMPD/t3a.log" ] && grep -q '^wall_ms=' "$TMPD/t3a.log"; then
+  ok "接线面①: 结果段把 wall_ms=<n> 落盘（实测 $(head -1 "$TMPD/t3a.log" | cut -c1-24)…）"
+else
+  no "接线面①: 未落盘 wall_ms（$OUT1）"
+fi
+
+printf '#!/usr/bin/env bash\necho "wall_ms=999999"; echo "BUDGET: FAIL（>90000ms）"; exit 1\n' > "$STUB"
+OUT2="$(SYNO_GATE_BUDGET_LOG="$TMPD/t3b.log" run_fn x)"
+if printf '%s' "$OUT2" | grep -q '墙钟预算' && printf '%s' "$OUT2" | grep -q '告警不阻断' && printf '%s' "$OUT2" | grep -q 'RC=0'; then
+  ok "接线面②: 超预算 ⇒ 打印「告警不阻断」且 return 0（不改提交结果）"
+else
+  no "接线面②: 超预算语义不对（$OUT2）"
+fi
+
+rm -f "$STUB"
+OUT3="$(SYNO_GATE_BUDGET_LOG="$TMPD/t3c.log" run_fn x)"
+if printf '%s' "$OUT3" | grep -q '判不了' && printf '%s' "$OUT3" | grep -q 'RC=0'; then
+  ok "接线面③: 判定器缺失 ⇒ 显式「判不了」且 return 0（不静默、不阻断）"
+else
+  no "接线面③: 判定器缺失时未显式判不了（$OUT3）"
+fi
+
+echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
