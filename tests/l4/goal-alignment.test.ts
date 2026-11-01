@@ -22,8 +22,9 @@
  *   析构器会在 **vitest worker 关闭期的 GC** 里调 `node::RemoveEnvironmentCleanupHook`，env 已拆
  *   ⇒ 断言失败 ⇒ **原生 abort（`Worker exited unexpectedly`，本文件 20 例全丢）**。
  *   实测: 真库写法 **3/6 崩**（补 `db.close()` 后仍 3/6；改共享句柄后 7/8）；内存实现 **0/8 崩**。
- *   代价（如实）: 存储层真实性下沉到探针 `scripts/control-tower/probe-goal-alignment.ts`
- *   （真 SqliteGraphStore ＋ 真 createGoal ＋ 真建档岗位，端到端跑一遍并打印逐跳链路）。
+ *   代价（如实）: 本件**不含**真库端到端用例；此前头注引用的
+ *   `scripts/control-tower/probe-goal-alignment.ts` **实测不存在**（K12-ENG P2-3 更正，2026-11-02）。
+ *   若需真 SqliteGraphStore 的端到端覆盖，须另立 `*.integration.test.ts`（当前不存在，不在本件冒充）。
  */
 import { describe, it, expect } from 'vitest';
 import { readdirSync } from 'node:fs';
