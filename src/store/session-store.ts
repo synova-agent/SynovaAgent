@@ -8,6 +8,10 @@
  *
  * 设计决策: 独立的 SessionStore 实例，不与 engine-core 共享 DB 连接。
  * 会话数据属于 Agent 进程层，本体数据属于 engine-core 层。
+ *
+ * #1257 P0-2a（本批增量）: 事件词表加 `tool_call`、行格式版本 1→2、新增 `source_event_seq` 列
+ * （call/result 配对；**列不是 payload 字段**）与只读查询 `listUnclosedToolCalls`；
+ * 迁移门条件改 `tool_call`、迁移 catch 改 fail-closed（只对 CHECK/完整性上抛）。已知限制见 §4-3/§4-6/§4-7。
  */
 import Database from 'better-sqlite3';
 import { createLogger } from '@synova/logger';
@@ -141,11 +145,14 @@ export interface ConversationState {
 // ═══ D500: 事件溯源类型 ═══
 
 /**
- * 事件词表（**v1 单一真源**，#964 Q-7）。
+ * 事件词表（**v2 单一真源**，#964 Q-7；#1257 P0-2a 扩一类）。
  *
  * 事件类型（surface 事件 = 投影到消息历史的；log-only 事件 = 仅审计）。
  * D487: 新增诊断事件三类——GA 诊断过程落 session_events 可回放；
  * deriveMessages 投影跳过（log-only，不污染消息历史）。
+ * #1257 P0-2a: 新增 `tool_call`（**log-only**）——工具调用在**事实层**留痕，
+ *   与 `tool_result.source_event_seq` 组成 call/result 配对，使「有 call 无 result」的
+ *   悬空调用可被只读查询检出（`listUnclosedToolCalls`）。投影仍只认 `message`/`tool_result`。
  *
  * 🔴 新增/删除类目必须同批 bump `SESSION_EVENT_FORMAT_VERSION`，否则
  * `tests/store/session-event-log.test.ts` 的词表冻结用例先红（禁悄悄扩词表）。
@@ -153,6 +160,7 @@ export interface ConversationState {
 export const SESSION_EVENT_TYPES = [
   'message',
   'tool_result',
+  'tool_call',
   'system',
   'diagnosis_phase',
   'diagnosis_module',
@@ -166,8 +174,29 @@ export type SessionEventType = (typeof SESSION_EVENT_TYPES)[number];
  * 事件行格式版本（**读侧 fail-closed**，#964 Q-7）。
  * 写侧恒写当前版本；读侧遇更高版本（旧构建读新库）⇒ `EVENT_FORMAT_TOO_NEW`，
  * 绝不按旧格式猜测解码（对齐 DSH storage-contract 的 version gate）。
+ *
+ * #1257 P0-2a: **1 → 2** —— 两处变化改变了行语义（旧构建不可按 v1 解码）：
+ *   ① 词表新增 `tool_call`；② 新增 `source_event_seq` 列（call/result 配对，**列不是 payload 字段**）。
+ * 🔴 已知限制（有意 fail-closed）：旧构建读到任一行 v2 ⇒ `getEvents` 抛 `EVENT_FORMAT_TOO_NEW`
+ *   ⇒ 该会话连 `message` 行都读不了。逃生阀 `SYNO_SESSION_EVENT_STRICT=0`（旧构建同样有）。
  */
-export const SESSION_EVENT_FORMAT_VERSION = 1;
+export const SESSION_EVENT_FORMAT_VERSION = 2;
+
+/**
+ * #1257 P0-2a: **保留传输键** —— `tool_result` 回指其 `tool_call` 时，来源 seq 经 payload 的这个
+ * **自有数值键**传入，落库时写进 `source_event_seq` **列**，并在**序列化前剥离**（`payload_json` 里不残留）。
+ *
+ * 🔴 为什么不是第 4 个参数（实现取法偏差，已在 R2/已知限制披露）：
+ *   `src/store/session-projection.ts` 的原型级订阅缝以**三参签名**包装 `SessionStore.prototype.appendEvent`
+ *   且只转发 `(sessionId, eventType, payload)`；该缝由 `src/deploy/bootstrap.ts` **副作用导入即安装**
+ *   ⇒ 任何第 4 实参在**生产**路径被丢弃（而单测直连 SessionStore 不会 ⇒ 单测绿 / 生产列恒 NULL 的假绿）。
+ *   改那 1 行需扩写集（CTO 批准）⇒ 本批用保留键传输：经既有 3 参缝、投影照常驱动、列照常落值。
+ *
+ * 边界：① 仅当 payload 是**非 null 对象**（非数组）且**自有**该键时生效；② 值必须是**正安全整数**，
+ * 否则**照样剥离**该键并按未配对（NULL）落库 + `log.warn({degraded:true})` 留痕（不静默）；
+ * ③ **业务 payload 禁复用该键**（它是保留键，不是业务字段）。
+ */
+export const SOURCE_EVENT_SEQ_KEY = 'sourceEventSeq';
 
 /** 事件流 typed error 码（铁律 32：code/phase/retryable 可分类） */
 export type SessionEventErrorCode = 'UNKNOWN_EVENT_TYPE' | 'EVENT_FORMAT_TOO_NEW' | 'SESSION_EVENT_LIMIT';
@@ -269,6 +298,12 @@ export interface SessionEvent {
   payloadJson: string;
   /** 行格式版本（老库升级后历史行 = 1） */
   formatVersion: number;
+  /**
+   * #1257 P0-2a: 来源事件 seq（**列**，不是 payload 字段）——`tool_result` 回指其 `tool_call` 的 seq；
+   * `tool_call` 本身与其它事件类型为 `null`。call/result 配对判据：`result.source_event_seq = call.seq`。
+   * 老库/未配对行 = `null`（可空列，DDL 级 DEFAULT 缺省）。
+   */
+  sourceEventSeq: number | null;
   createdAt: string;
 }
 
@@ -376,6 +411,72 @@ function isRetryableSeqError(err: unknown): boolean {
   return /UNIQUE constraint failed/i.test(msg) || /database is locked|SQLITE_BUSY/i.test(msg);
 }
 
+// ═══ #1257 P0-2a: session_events 迁移（表重建）错误分类 ═══
+
+/**
+ * #1257 P0-2a: 迁移错误分类 —— **fail-closed 只对 CHECK/数据完整性上抛**。
+ *
+ * 判据（规格 §1.3）：① `CHECK`/`NOT NULL`/`UNIQUE` 约束或数据完整性（`SQLITE_CONSTRAINT*`、
+ * `SQLITE_CORRUPT`、`SQLITE_MISMATCH`）⇒ **rethrow**（迁移失败被吞 = 事件静默缺失，P0-2a 要治的形态）；
+ * ② 瞬态（`SQLITE_BUSY`／`SQLITE_LOCKED`／`database is locked`，多进程共库常见）⇒ **不上抛**
+ * （initSchema 抛错 = Phase 0 `fatal:true` ⇒ 启动中止，规格 §4-6；busy_timeout 已尽力等待）。
+ * ③ 其余未知错误 ⇒ 按瞬态处理（degraded + warn，保持老库可用），本分支**不是**静默吞错（必留痕）。
+ *
+ * @input  err — 迁移块抛出的 unknown
+ * @output true = 必须上抛（fail-closed）；false = 降级留痕继续
+ * @error  永不抛（纯判别）
+ */
+function isSessionEventMigrationIntegrityError(err: unknown): boolean {
+  const code = errorCodeOf(err);
+  // SQLITE_CONSTRAINT 家族 = CHECK / NOT NULL / UNIQUE / FOREIGN KEY / PRIMARY KEY
+  if (code.startsWith('SQLITE_CONSTRAINT')) return true;
+  if (code === 'SQLITE_CORRUPT' || code === 'SQLITE_MISMATCH') return true;
+  // better-sqlite3 部分路径只给 message（无 code）
+  const msg = err instanceof Error ? err.message : String(err);
+  return /CHECK constraint failed|NOT NULL constraint failed|datatype mismatch|database disk image is malformed/i.test(msg);
+}
+
+/** #1257 P0-2a: 迁移降级日志的稳定码（铁律 32：可分类；不新增 error class —— 这里只打日志） */
+function sessionEventMigrationErrorCode(err: unknown): string {
+  const code = errorCodeOf(err);
+  if (code.length > 0) return code;
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/database is locked|SQLITE_BUSY/i.test(msg)) return 'SQLITE_BUSY';
+  return 'SESSION_EVENT_MIGRATION_DEGRADED';
+}
+
+// ═══ #1257 P0-2a: 保留键提取（来源 seq 传输 → 落列 → 剥离）═══
+
+/** 保留键提取结果（`null` = payload 无保留键 ⇒ 普通事件，零行为变化） */
+interface ExtractedSourceEventSeq {
+  /** 已剥离保留键的 payload（要序列化的那个） */
+  payloadWithoutLink: unknown;
+  /** 来源事件 seq；非法值 ⇒ null（未配对） */
+  linkedSeq: number | null;
+  /** 保留键存在但值非法（调用方据此 log.warn 留痕，不静默） */
+  invalid: boolean;
+}
+
+/**
+ * #1257 P0-2a: 从 payload 提取保留键 `SOURCE_EVENT_SEQ_KEY`（自有、可枚举）并剥离。
+ *
+ * @input  payload — appendEvent 的原始 payload（任意 JSON 值）
+ * @output null（无保留键）｜{ payloadWithoutLink, linkedSeq, invalid }
+ * @degraded 保留键存在但值不是**正安全整数** ⇒ linkedSeq=null、invalid=true（调用方留痕，不抛）
+ * @error  永不抛（纯形状判别；不做深拷贝，只浅拷贝顶层自有可枚举键）
+ */
+function extractSourceEventSeq(payload: unknown): ExtractedSourceEventSeq | null {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return null;
+  const record: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) record[key] = value;
+  if (!Object.prototype.hasOwnProperty.call(record, SOURCE_EVENT_SEQ_KEY)) return null;
+  const raw = record[SOURCE_EVENT_SEQ_KEY];
+  delete record[SOURCE_EVENT_SEQ_KEY];
+  const linkedSeq =
+    typeof raw === 'number' && Number.isSafeInteger(raw) && raw > 0 ? raw : null;
+  return { payloadWithoutLink: record, linkedSeq, invalid: linkedSeq === null };
+}
+
 /**
  * R-E1 ②: 「事件数上限」typed error（消息保留既有 `SYNO_MAX_SESSION_EVENTS`／`新开一个会话`
  * 子串 —— `tests/store/session-events-limit.test.ts` 据此断言可执行指引，禁改文案骨架）。
@@ -456,13 +557,15 @@ export class SessionStore {
       -- seq 单调 + UNIQUE(session_id, seq) 物理防并发 seq 重复（2026-08-22 缺陷①防线）
       -- D487: CHECK 扩展诊断事件三类（旧库经下方表重建迁移升级，CREATE IF NOT EXISTS 不更新已有约束）
       -- #964 Q-7: format_version 行格式版本（老库经下方 PRAGMA 判缺 + ALTER 幂等升级）
+      -- #1257 P0-2a: CHECK 再加 tool_call；source_event_seq 可空列（call/result 配对；老库同经下方 PRAGMA+ALTER 升级）
       CREATE TABLE IF NOT EXISTS session_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
         seq INTEGER NOT NULL,
-        event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','system','diagnosis_phase','diagnosis_module','diagnosis_report')),
+        event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','tool_call','system','diagnosis_phase','diagnosis_module','diagnosis_report')),
         payload_json TEXT NOT NULL,
         format_version INTEGER NOT NULL DEFAULT 1,
+        source_event_seq INTEGER,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(session_id, seq)
       );
@@ -477,14 +580,22 @@ export class SessionStore {
       this.db.exec('ALTER TABLE session_events ADD COLUMN format_version INTEGER NOT NULL DEFAULT 1');
       log.info('session_events 补 format_version 列（老库升级；历史行按 DEFAULT 1 视作 v1）');
     }
+    // #1257 P0-2a: source_event_seq 列（可空）——**两路都做**：① 上方基础 CREATE TABLE 已含；
+    // ② 这里 PRAGMA 判缺 + ALTER（覆盖老库），**顺序必须在表重建之前**：重建体内的 INSERT SELECT
+    //    要读该列，列不存在则重建必败（旧行按 NULL 视作未配对）。
+    if (!eventColumns.some((column) => column.name === 'source_event_seq')) {
+      this.db.exec('ALTER TABLE session_events ADD COLUMN source_event_seq INTEGER');
+      log.info('session_events 补 source_event_seq 列（老库升级；历史行 = NULL 未配对）');
+    }
 
-    // D487: 旧库 session_events CHECK 约束升级 — ALTER 不支持修改 CHECK，
-    // 幂等表重建（仅当现有建表 SQL 缺 diagnosis_phase 时执行；BEGIN/COMMIT 保证原子）
+    // D487/#1257: 旧库 session_events CHECK 约束升级 — ALTER 不支持修改 CHECK，
+    // 幂等表重建（仅当现有建表 SQL 缺 tool_call 时执行；BEGIN/COMMIT 保证原子）。
+    // 门条件演进：diagnosis_phase（D487）→ **tool_call**（#1257 P0-2a，含前者 ⇒ 一并覆盖）。
     try {
       const tpl = this.db.prepare(
         "SELECT sql FROM sqlite_master WHERE type='table' AND name='session_events'"
       ).get() as { sql?: string } | undefined;
-      if (tpl?.sql && !tpl.sql.includes('diagnosis_phase')) {
+      if (tpl?.sql && !tpl.sql.includes('tool_call')) {
         this.db.exec('BEGIN');
         try {
           this.db.exec(`
@@ -492,27 +603,38 @@ export class SessionStore {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
               seq INTEGER NOT NULL,
-              event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','system','diagnosis_phase','diagnosis_module','diagnosis_report')),
+              event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','tool_call','system','diagnosis_phase','diagnosis_module','diagnosis_report')),
               payload_json TEXT NOT NULL,
               format_version INTEGER NOT NULL DEFAULT 1,
+              source_event_seq INTEGER,
               created_at TEXT NOT NULL DEFAULT (datetime('now')),
               UNIQUE(session_id, seq)
             );
-            INSERT INTO session_events_new (id, session_id, seq, event_type, payload_json, format_version, created_at)
-              SELECT id, session_id, seq, event_type, payload_json, format_version, created_at FROM session_events;
+            INSERT INTO session_events_new (id, session_id, seq, event_type, payload_json, format_version, source_event_seq, created_at)
+              SELECT id, session_id, seq, event_type, payload_json, format_version, source_event_seq, created_at FROM session_events;
             DROP TABLE session_events;
             ALTER TABLE session_events_new RENAME TO session_events;
             CREATE INDEX IF NOT EXISTS idx_session_events_sess ON session_events(session_id, seq);
           `);
           this.db.exec('COMMIT');
-          log.info('session_events CHECK 约束已升级 — 诊断事件类型启用 (D487)');
+          log.info('session_events CHECK 约束已升级 — tool_call/诊断事件类型启用 (D487 + #1257)');
         } catch (migErr) {
           this.db.exec('ROLLBACK');
           throw migErr;
         }
       }
     } catch (err) {
-      log.warn({ err }, 'session_events 诊断事件约束迁移失败 — degraded（旧库继续用三事件类型）');
+      // #1257 P0-2a: fail-closed —— CHECK/数据完整性错误**必须上抛**（吞掉 = 事件静默缺失，
+      // 正是本批要治的形态）。🔴 但 BUSY/LOCKED（多进程共库常见，busy_timeout 已尽力等待）
+      // 不得上抛：initSchema 抛错 = Phase 0 fatal ⇒ 直接启动中止（§4-6）。逐类分流见下。
+      if (isSessionEventMigrationIntegrityError(err)) {
+        log.error({ err, degraded: true }, 'session_events 迁移遇 CHECK/完整性错误 — fail-closed 上抛');
+        throw err;
+      }
+      log.warn(
+        { err, degraded: true, code: sessionEventMigrationErrorCode(err) },
+        'session_events CHECK 约束迁移失败 — degraded（旧库继续用旧词表；BUSY/LOCKED 等瞬态不中止启动）',
+      );
     }
 
     // 诊断检查点表
@@ -743,6 +865,14 @@ export class SessionStore {
    *   回滚开关 `SYNO_SESSION_SEQ_ATOMIC=0` ⇒ 回旧"SELECT MAX 后 INSERT"（逐调用读取）。
    *   已知限制：`RETURNING` 需 SQLite ≥ 3.35（本仓实测 3.53.2）；cap 拒单时多一次只读
    *   `SELECT MAX(seq)` 仅用于错误文案报真实 nextSeq（不进热路径）。
+   *
+   * #1257 P0-2a 契约追加（**签名保持 3 参不变**）:
+   *   `tool_result` 的来源 seq 经 payload 的**保留键** `SOURCE_EVENT_SEQ_KEY` 传入
+   *   （为什么不是第 4 参：生产原型级订阅缝三参转发会丢参 ⇒ 见该常量 JSDoc）；
+   *   落库写 `source_event_seq` **列**，序列化前**剥离**该键（payload_json 无残留）。
+   *   非对象 payload／无保留键 ⇒ 行为与改造前**逐字一致**（linkedSeq=null）。
+   *   @known-limitations — ① 保留键是**约定**不是类型系统强制的：业务 payload 若复用该键会被剥离
+   *     （故导出常量供调用方引用，禁字面量重复）；② 缝若日后改为转发第 4 参，可移除本机制（改回形参）。
    */
   appendEvent(sessionId: string, eventType: SessionEventType, payload: unknown): AppendEventResult {
     // 词表 fail-closed：必须在 try 之前（否则会被下面的 catch 折成 degraded = 旧病复发）
@@ -751,7 +881,7 @@ export class SessionStore {
         throw new SessionEventError(
           'UNKNOWN_EVENT_TYPE',
           'validate',
-          `未知事件类型 ${JSON.stringify(eventType)}；合法词表 v1 = ${SESSION_EVENT_TYPES.join('|')}`,
+          `未知事件类型 ${JSON.stringify(eventType)}；合法词表 v2 = ${SESSION_EVENT_TYPES.join('|')}`,
         );
       }
       warnStrictDisabled('appendEvent');
@@ -759,10 +889,20 @@ export class SessionStore {
       return { ok: false, degraded: true, error: `unknown event type: ${String(eventType)}` };
     }
     try {
-      const payloadJson = JSON.stringify(payload);
+      const extracted = extractSourceEventSeq(payload);
+      const payloadJson = JSON.stringify(extracted === null ? payload : extracted.payloadWithoutLink);
+      if (extracted?.invalid) {
+        // 保留键值非法：仍剥离（防脏键落库），按未配对落列，显式留痕（铁律 11/24，不静默）
+        this.lastDegraded = true;
+        log.warn(
+          { sessionId, eventType, key: SOURCE_EVENT_SEQ_KEY, degraded: true, code: 'SESSION_EVENT_LINK_INVALID' },
+          '保留键 sourceEventSeq 非正安全整数 — 按未配对（NULL）落库',
+        );
+      }
+      const linkedSeq = extracted === null ? null : extracted.linkedSeq;
       const seq = isSessionSeqAtomicEnabled()
-        ? this.insertEventAtomic(sessionId, eventType, payloadJson)
-        : this.insertEventReadThenWrite(sessionId, eventType, payloadJson);
+        ? this.insertEventAtomic(sessionId, eventType, payloadJson, linkedSeq)
+        : this.insertEventReadThenWrite(sessionId, eventType, payloadJson, linkedSeq);
       return { ok: true, seq };
     } catch (err) {
       // typed error 必须原样抛：折成 degraded 就等于「静默丢事件」，正是 Q-12 要治的形态
@@ -784,15 +924,20 @@ export class SessionStore {
    *   ⇒ 抛 `SESSION_EVENT_LIMIT`（写库前拒，Q-12 语义不变；错误文案报真实 nextSeq）。
    * 冲突/BUSY ⇒ 重试 1 次（第二次的 `MAX(seq)` 会重新求值，天然幂等恢复）。
    *
-   * @input   sessionId, eventType, payloadJson（已序列化）
+   * @input   sessionId, eventType, payloadJson（已序列化）, linkedSeq（来源事件 seq；无则 null）
    * @output  成功写入的 seq（≥1）
    * @error   `SESSION_EVENT_LIMIT`（cap 超限）｜ 两次仍冲突/BUSY 的原生 SQLite 错（交外层折 degraded）
    */
-  private insertEventAtomic(sessionId: string, eventType: SessionEventType, payloadJson: string): number {
+  private insertEventAtomic(
+    sessionId: string,
+    eventType: SessionEventType,
+    payloadJson: string,
+    linkedSeq: number | null,
+  ): number {
     const cap = maxSessionEvents();
     const stmt = this.db.prepare(
-      `INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version)
-       SELECT ?, COALESCE(MAX(seq),0)+1, ?, ?, ? FROM session_events WHERE session_id=?
+      `INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version, source_event_seq)
+       SELECT ?, COALESCE(MAX(seq),0)+1, ?, ?, ?, ? FROM session_events WHERE session_id=?
        HAVING COALESCE(MAX(seq),0)+1 <= ?
        RETURNING seq`,
     );
@@ -805,6 +950,7 @@ export class SessionStore {
           eventType,
           payloadJson,
           SESSION_EVENT_FORMAT_VERSION,
+          linkedSeq,
           sessionId,
           cap,
         ) as { seq?: number } | undefined;
@@ -832,6 +978,7 @@ export class SessionStore {
     sessionId: string,
     eventType: SessionEventType,
     payloadJson: string,
+    linkedSeq: number | null,
   ): number {
     // 持久化 lastSeq: 基于 MAX(seq) 续写，禁止内存回退（缺陷②防线）
     const nextSeq = this.readMaxSeq(sessionId) + 1;
@@ -839,8 +986,8 @@ export class SessionStore {
     const cap = maxSessionEvents();
     if (nextSeq > cap) throw sessionEventLimitError(cap, nextSeq);
     this.db.prepare(
-      'INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version) VALUES (?,?,?,?,?)',
-    ).run(sessionId, nextSeq, eventType, payloadJson, SESSION_EVENT_FORMAT_VERSION);
+      'INSERT INTO session_events (session_id, seq, event_type, payload_json, format_version, source_event_seq) VALUES (?,?,?,?,?,?)',
+    ).run(sessionId, nextSeq, eventType, payloadJson, SESSION_EVENT_FORMAT_VERSION, linkedSeq);
     return nextSeq;
   }
 
@@ -856,7 +1003,7 @@ export class SessionStore {
    * 读取某会话全部事件（按 seq 升序）。
    *
    * #964 Q-7 读侧 fail-closed（裁 395）:
-   *   ① 行 `event_type` 不在 v1 词表（旧库/直连 SQL 可绕过 DB CHECK）⇒ 抛 `UNKNOWN_EVENT_TYPE`；
+   *   ① 行 `event_type` 不在当前词表（旧库/直连 SQL 可绕过 DB CHECK）⇒ 抛 `UNKNOWN_EVENT_TYPE`；
    *   ② 行 `format_version` 高于本构建 ⇒ 抛 `EVENT_FORMAT_TOO_NEW`（旧构建拒按旧格式解码新行）；
    *   `SYNO_SESSION_EVENT_STRICT=0` ⇒ 两条守卫退回旧行为（照读 + warn 一次 + lastDegraded）。
    */
@@ -896,9 +1043,69 @@ export class SessionStore {
         eventType: rawType as SessionEventType,
         payloadJson: r.payload_json as string,
         formatVersion,
+        // #1257 P0-2a: 可空列 —— 老库行/未配对行 = null（列可能不存在于极端旧夹具 ⇒ undefined 也归 null）
+        sourceEventSeq: typeof r.source_event_seq === 'number' ? r.source_event_seq : null,
         createdAt: r.created_at as string,
       };
     });
+  }
+
+  /**
+   * #1257 P0-2a: **只读**查询 —— 未闭合的工具调用（有 `tool_call` 无 `tool_result`）。
+   *
+   * 配对判据（**列**级，不看 payload 字段）：`result.source_event_seq = call.seq`
+   * `LEFT JOIN` 后取 `result.id IS NULL` ⇒ 悬空调用。`seq` 升序返回，调用方拿到的是
+   * **callId 列表**（payload 里的 `toolCallId`；模型/provider 侧的身份，与 assistant.tool_calls 同源）。
+   *
+   * 契约（铁律 47）:
+   *   @input    — sessionId
+   *   @output   — `string[]`：未闭合 `tool_call` 的 callId（按 call 的 seq 升序；空数组 = 全部闭合）
+   *   @degraded — 单行 payload 解析失败/缺 `toolCallId` ⇒ `log.warn({degraded:true})` + `lastDegraded=true`
+   *               + **跳过该行**（只读诊断查询不因一行坏数据整批失败；坏行仍在，可用 SQL 复查）
+   *   @error    — SQL 执行失败按**异常上抛**（只读查询无写入，无 rollback 语义；调用方自兜）
+   *   @authority — 只读；不写库、不修配对、不补 result（只报事实，「只报不猜」对齐 deriveMessages）
+   *   @known-limitations — 仅同会话内配对；`source_event_seq` 指向**别的会话**的 seq 不会误配
+   *               （JOIN 条件带 `res.session_id = call.session_id`），但跨会话悬空本身不被本查询跨会话聚合。
+   */
+  listUnclosedToolCalls(sessionId: string): string[] {
+    const rows = this.db.prepare(
+      `SELECT call.payload_json AS payload_json, call.seq AS seq
+         FROM session_events call
+         LEFT JOIN session_events res
+                ON res.session_id = call.session_id
+               AND res.event_type = 'tool_result'
+               AND res.source_event_seq = call.seq
+        WHERE call.session_id = ?
+          AND call.event_type = 'tool_call'
+          AND res.id IS NULL
+        ORDER BY call.seq ASC`,
+    ).all(sessionId) as SqliteRow[];
+    const unclosed: string[] = [];
+    for (const row of rows) {
+      try {
+        const parsed: unknown = JSON.parse(row.payload_json as string);
+        const toolCallId =
+          typeof parsed === 'object' && parsed !== null && 'toolCallId' in parsed
+            ? (parsed as { toolCallId?: unknown }).toolCallId
+            : undefined;
+        if (typeof toolCallId !== 'string' || toolCallId.length === 0) {
+          this.lastDegraded = true;
+          log.warn(
+            { sessionId, seq: row.seq, degraded: true, code: 'TOOL_CALL_PAYLOAD_INVALID' },
+            '未闭合 tool_call 的 payload 缺 toolCallId — 跳过该行（未闭合事实仍成立）',
+          );
+          continue;
+        }
+        unclosed.push(toolCallId);
+      } catch (err) {
+        this.lastDegraded = true;
+        log.warn(
+          { sessionId, seq: row.seq, err, degraded: true, code: 'TOOL_CALL_PAYLOAD_UNPARSABLE' },
+          '未闭合 tool_call 的 payload 非法 JSON — 跳过该行（未闭合事实仍成立）',
+        );
+      }
+    }
+    return unclosed;
   }
 
   /**
@@ -941,7 +1148,8 @@ export class SessionStore {
       try {
         const payload = JSON.parse(ev.payloadJson) as { role?: string; content?: string };
         // 事实源口径（C6 注释改正）: `message` 与 `tool_result` 是 surface 事件；其余
-        // （`system`/`diagnosis_*`）是 log-only —— 这里跳过的**是后者**，不是 `tool_result`。
+        // （`system`/`diagnosis_*`/#1257 新增的 `tool_call`）是 log-only —— 这里跳过的**是后者**，
+        // 不是 `tool_result`。
         if (ev.eventType !== 'message' && ev.eventType !== 'tool_result') continue; // log-only（system/diagnosis_*）跳过
         // C6（spec §9.2）: 无 `content` 的 `tool_result` = log-only 工具结果事件（E1 写入侧
         // payload 不含 content）⇒ **显式跳过**，不投影成空 assistant 消息（否则 parity 必破）。
