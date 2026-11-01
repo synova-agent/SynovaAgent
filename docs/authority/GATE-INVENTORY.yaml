@@ -1328,6 +1328,14 @@ classification:
     entrypoint: scripts/control-tower/check-gate-budget.sh
     required_ci: false
     confirmed_by: pending-cto
+  - id: CT-check-ledger-budget
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-ledger-budget.sh
+    required_ci: false
+    confirmed_by: pending-cto
+    note: "#1254 T4：台账三判据（行数 <=800／跨段无重复／measured_at=当前基准）出数与点名；本批不接线，W5 收口后再接"
 
 run_by:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）
@@ -1720,6 +1728,9 @@ run_by:
   - entrypoint: scripts/control-tower/check-gate-budget.sh
     run_by: "无"
     quota: false
+  - entrypoint: scripts/control-tower/check-ledger-budget.sh
+    run_by: "无"
+    quota: false
 run_by_candidates:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）（20 件）
   - entrypoint: scripts/control-tower/check-gate-budget.sh
@@ -1815,9 +1826,11 @@ run_by_candidates:
     why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡；接前核 §七 ≤90 s）"
   - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
     why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
+  - entrypoint: scripts/control-tower/check-ledger-budget.sh
+    why: "#1254 T4 判据工具（台账三判据：行数/跨段重复/measured_at）；本批只出数不接线 —— W5 收口（台账 ≤800 与去重）后再接 pre-commit/CI ⇒ 记 无"
 
 gate_meta:
-  measured_at: 9842b5163
+  measured_at: 4c50e4574
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
   legacy_sections:
     - name: meta
@@ -2136,6 +2149,13 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-k3-report.py
       class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-ledger-budget.sh
+      class: P2
       run_by: 无
       orphan: true
       quota: false
