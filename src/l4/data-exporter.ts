@@ -13,6 +13,7 @@ import { ALL_NODE_TYPES, ALL_EDGE_TYPES } from '@synova/ontology';
 import type { GraphStore } from './graph-bridge';
 import type { SessionStore, SessionRow, MessageRow } from '../store/session-store';
 import type { AgentMemoryStore, MemoryEntry } from './agent-memory-store';
+import { assertGraphName } from '../l2/graph-scope';
 
 const log = createLogger('l4/data-exporter');
 
@@ -29,6 +30,16 @@ export interface ExportManifest {
     sessions: number;
     messages: number;
     memories: number;
+  };
+  /**
+   * 图覆盖（#1211 · U-5）：让"导出到底覆盖了哪些图"成为**可断言产物**，
+   * 而不是读代码才知道。历史 `default` 图的存量节点**显式计数**，不静默丢。
+   */
+  graphCoverage: {
+    /** 本次实际查询过的图名（去重） */
+    graphs: string[];
+    /** 历史 default 图里未随本次导出的节点数；`graph === 'default'` 时恒为 0（见实现） */
+    defaultGraphCount: number;
   };
 }
 
@@ -101,10 +112,14 @@ export class DataExporter {
    */
   async export(tenantId: string): Promise<{ archive: Buffer; manifest: ExportManifest }> {
     try {
-      const nodes = this.exportGraphNodes(tenantId);
-      const edges = this.exportGraphEdges(tenantId);
+      // #1211：业务层图名必须显式且过白名单 —— 非法 tenantId 当场拒绝（fail loud），
+      // 不得落到介质层 `graph = "default"` 的兜底（口径在业务层，不在介质层）。
+      const graph = assertGraphName(tenantId);
+      const nodes = this.exportGraphNodes(tenantId, graph);
+      const edges = this.exportGraphEdges(graph);
       const sessions = this.exportSessions(tenantId);
       const memories = this.exportMemories(tenantId);
+      const defaultGraphCount = this.countDefaultGraphNodes(graph);
 
       const archiveData: ExportArchive = {
         tenantId,
@@ -130,6 +145,10 @@ export class DataExporter {
           messages: sessions.reduce((sum, s) => sum + s.messages.length, 0),
           memories: memories.length,
         },
+        graphCoverage: {
+          graphs: [...new Set([graph])],
+          defaultGraphCount,
+        },
       };
 
       log.info({ tenantId, summary: manifest.summary }, '数据导出完成');
@@ -140,24 +159,48 @@ export class DataExporter {
     }
   }
 
-  /** 导出 GraphStore 中所有节点（按类型遍历） */
-  private exportGraphNodes(tenantId: string): ExportedNode[] {
+  /** 遍历用的节点类型清单（唯一来源：`ALL_NODE_TYPES`，含离线回退） */
+  private allNodeTypes(): string[] {
+    return (ALL_NODE_TYPES as string[]) || [
+      'activity/production', 'activity/acquisition', 'activity/innovation',
+      'activity/coordination', 'activity/learning', 'activity/governance',
+      'activity/maintenance', 'activity/compliance',
+      'outcome/financial', 'outcome/market', 'outcome/operational', 'outcome/people',
+      'outcome/innovation', 'outcome/risk', 'outcome/competitive', 'outcome/external',
+      'resource/money', 'resource/person', 'resource/team', 'resource/agent',
+      'resource/tool', 'resource/knowledge', 'resource/client', 'resource/brand',
+      'resource/data', 'resource/ip', 'resource/location', 'resource/channel', 'resource/supplier',
+    ];
+  }
+
+  /**
+   * 历史 `default` 图里**未随本次导出**的节点数（#1211 · U-5 显式计数，不静默丢）。
+   *
+   * 🔴 语义兜底：当本次导出的图**就是** `default`（`SYNOVA_ORG_ID` 未设的默认装机）时，
+   * 这些节点**已经导出**了 ⇒ 必须返回 0，否则把"已导出"重复计成"未导出"（语义反转、数字错）。
+   */
+  private countDefaultGraphNodes(graph: string): number {
+    if (graph === 'default') return 0;
+    let count = 0;
+    for (const type of this.allNodeTypes()) {
+      try {
+        count += this.graphStore.queryNodes(type, {}, 'default').length;
+      } catch (err) {
+        log.warn({ err: err instanceof Error ? err.message : String(err) }, 'default 图计数查询降级');
+      }
+    }
+    return count;
+  }
+
+  /** 导出 GraphStore 中该图的所有节点（按类型遍历） */
+  private exportGraphNodes(tenantId: string, graph: string): ExportedNode[] {
     try {
       const results: ExportedNode[] = [];
-      const nodeTypes: string[] = (ALL_NODE_TYPES as string[]) || [
-        'activity/production', 'activity/acquisition', 'activity/innovation',
-        'activity/coordination', 'activity/learning', 'activity/governance',
-        'activity/maintenance', 'activity/compliance',
-        'outcome/financial', 'outcome/market', 'outcome/operational', 'outcome/people',
-        'outcome/innovation', 'outcome/risk', 'outcome/competitive', 'outcome/external',
-        'resource/money', 'resource/person', 'resource/team', 'resource/agent',
-        'resource/tool', 'resource/knowledge', 'resource/client', 'resource/brand',
-        'resource/data', 'resource/ip', 'resource/location', 'resource/channel', 'resource/supplier',
-      ];
+      const nodeTypes: string[] = this.allNodeTypes();
 
       for (const type of nodeTypes) {
         try {
-          const nodes = this.graphStore.queryNodes(type, {}, undefined);
+          const nodes = this.graphStore.queryNodes(type, {}, graph);
           for (const n of nodes) {
             if (this.matchesTenant(n.props, tenantId)) {
               results.push({ id: n.id, type: n.type, props: n.props, graph: '' });
@@ -176,15 +219,15 @@ export class DataExporter {
     }
   }
 
-  /** 导出 GraphStore 中所有边 */
-  private exportGraphEdges(_tenantId: string): ExportedEdge[] {
+  /** 导出 GraphStore 中该图的所有边 */
+  private exportGraphEdges(graph: string): ExportedEdge[] {
     try {
       const results: ExportedEdge[] = [];
       const edgeTypes: string[] = (ALL_EDGE_TYPES as string[]) || [];
 
       for (const type of edgeTypes) {
         try {
-          const edges = this.graphStore.queryEdges(type);
+          const edges = this.graphStore.queryEdges(type, undefined, undefined, graph);
           for (const e of edges) {
             results.push({
               id: e.id,

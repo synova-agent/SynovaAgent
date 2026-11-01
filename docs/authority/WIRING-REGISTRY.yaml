@@ -12,6 +12,7 @@
 # 🔴 capability pattern 说明：规格 §2.3-D2 示例 pattern 为 ^[a-z]...（纯小写），但其自身样例
 #    （content.initContentTypes / audit.verifyChain）含大写 ⇒ 本表按真实 capability 命名
 #    用 [A-Za-z] 起始（规则 R4 本身不变；差异登记在 quality-baseline.py 的 limitations L8）。
+# 🔴 owner token 对照：R = R 运行时线（运行时/进程/会话/工具面；原误记 K10 —— K10 是「平台交付与运行时(DSH)」块，非本线）
 schema_version: 1
 row_key: capability
 fields:
@@ -142,9 +143,10 @@ entries:
     provider: "scripts/control-tower/check-acceptance-matrix.py:1"
     consumer: null
     test: "tests/control-tower/check-acceptance-matrix.test.sh"
-    status: declared-only
+    status: retired
     owner: P4
     notes: "#1054 验收矩阵机制 P0：P0 明确不接 CI/pre-commit（规格 §3 非目标）⇒ 无生产消费者；矩阵载体＋三态校验器，手动运行。"
+    retired_reason: "W1 #1219 退役（absorbed_by scripts/control-tower/verify-governance.sh）：三态机制归总闸；四腿零引用、无生产消费者；观察期至 2026-11-30"
   - capability: content.rolePackSchema
     defined_at: "src/init/role-pack-schema.ts:59"
     provider: "src/init/role-pack-schema.ts:578"
@@ -241,7 +243,7 @@ entries:
     test: "tests/control-tower/verify-governance.test.sh"
     status: declared-only
     owner: P4
-    notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/y PASS`，判不了 exit 2。**本批未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
+    notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/4 PASS（y 判不了）`，判不了 exit 2。#1234（v3）起 G2 改分腿证据源（evidence: telemetry|ci-step|none；--ci-evidence 注入缝），末行固定带「y 判不了」。#1122 批**未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
   - capability: content.rolePackPersona
     defined_at: "src/init/role-pack-persona.ts:1"
     provider: "src/init/role-pack-persona.ts:442"
@@ -354,3 +356,58 @@ entries:
     status: declared-only
     owner: P4
     notes: "G-DOC-5 裸文件名检查器（#1148 B3 批1）：内联代码 span 裸文件名须带路径；三态 0/1/2 与每文件计数基线棘轮；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批）。"
+  # ---- R 运行时线 2026-10-31：#1209 S0-2a 子进程 env 白名单（新增能力件，R1.1 登记）----
+  - capability: security.subprocessEnvAllowlist
+    defined_at: "src/security/subprocess-env.ts:106"
+    provider: "src/security/subprocess-env.ts:106"
+    consumer: "src/mcp/bridge.ts:128"
+    test: "tests/security/subprocess-env.test.ts:350"
+    status: wired
+    owner: R
+    notes: "#1209 S0-2a：buildSubprocessEnv 收口三处子进程 env 构造（mcp/bridge.ts:128 / providers/python-bridge.ts:26 / routes/cockpit.ts:53）；敏感名单一后缀规则＋declared 显式放行优先；改坏必红＝bridge env 改回全量继承 ⇒ U-5 红"
+  # ---- P4 2026-10-31：#1210 W0-6 耗时预算机检（旁路；declared-only 显式豁免 R1.2）----
+  - capability: check-gate-budget
+    defined_at: "scripts/control-tower/check-gate-budget.sh:1"
+    provider: "scripts/control-tower/check-gate-budget.sh:1"
+    consumer: null
+    test: "tests/control-tower/check-gate-budget.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "#1210 W0-6：pre-commit 墙钟 <=90s 三态机检（旁路，不接主路径）；无数据 => exit 2；改坏即红由配对测试覆盖。"
+  # ---- P4 2026-10-31：#1210 invariant 伴生件（declared-only 显式豁免 R1.2）----
+  - capability: gate-inventory.invariant
+    defined_at: "scripts/control-tower/gate-inventory.invariant.sh:1"
+    provider: "scripts/control-tower/gate-inventory.invariant.sh:1"
+    consumer: null
+    test: "tests/control-tower/gate-inventory.invariant.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "#1210：GATE-INVENTORY 不变式伴生件（39=35+2+2／id 唯一／workflows 账外=0／disk↔registry）；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 显式豁免 R1.2 登记（接线另批）。"
+  # ---- R 2026-10-31：#1211 S0-2c 图命名空间口径统一（唯一来源；4 个业务消费点）----
+  - capability: graph-scope
+    defined_at: "src/l2/graph-scope.ts:68"
+    provider: "src/l2/graph-scope.ts:68"
+    consumer: "src/routes/data.ts:38"
+    test: "tests/l2/graph-scope.test.ts:1"
+    status: wired
+    owner: R
+    notes: "#1211：resolveGraph/assertGraphName 唯一口径来源（一客户一实例，#1202）；生产消费点 4 处（routes/data.ts:38 派生、data-exporter.ts:117 导出、data-ingest-service.ts:172/:246 入口 assert）；status 用 wired 而非规格骨架的 active —— 本表 R6 枚举只认 wired/partial/declared-only/retired。"
+
+  # ---- P4 2026-10-31：#1238 W0-1 G-DOC-1 体积预算校验器（declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc1Budgets
+    defined_at: "scripts/doc-system/verify-doc-budgets.sh:1"
+    provider: "scripts/doc-system/verify-doc-budgets.sh:1"
+    consumer: null
+    test: "tests/doc-system/verify-doc-budgets.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-1 体积预算校验器（#1238 W0-1）：指令面 14 件合计 <=65536 B、单份域守则 <=3584 B 判红，docs 全量只报不判；三态退出码 0/1/2 与判别力自检。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"
+  # ---- P4 2026-10-31：#1238 W0-1 G-DOC-2 六规则生效性校验器（declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc2Effectiveness
+    defined_at: "scripts/doc-system/verify-doc-gate-effectiveness.sh:1"
+    provider: "scripts/doc-system/verify-doc-gate-effectiveness.sh:1"
+    consumer: null
+    test: "tests/doc-system/verify-doc-gate-effectiveness.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-2 生效性校验器（#1238 W0-1）：解析 docs/authority/DOC-STANDARD.md 的 G-DOC-1..6 规则行与内嵌 MAP 行做双向对齐，缺实现或缺调用点 ⇒ exit 1 逐条点名。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"

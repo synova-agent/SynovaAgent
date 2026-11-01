@@ -6,6 +6,7 @@
 # 用法: bash scripts/workflow/checkpoint-runtime.sh [base_url]
 #
 # 检查: 错误率 / 降级状态 / 内存 / 磁盘 / 调度任务
+# W1 #1219：转运维资产，不记退役（线上 cron 监控，非门禁）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 # D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8

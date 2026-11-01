@@ -25,7 +25,9 @@
 #   @输入    注入缝（生产有默认值；测试必需）:
 #              SYNO_GATE_SCAN_SCRIPTS  空格分隔脚本清单（默认 scripts/pre-commit-check.sh + scripts/control-tower/*.sh）
 #              SYNO_TESTS_DIR          测试根（默认 tests/）
-#              SYNO_CI_YML             CI 清单（默认 .github/workflows/ci.yml）
+#              SYNO_CI_YML             CI 清单（默认 .github/workflows/ci.yml）；B 模式登记面 + C 段旧解析的**测试注入缝**
+#              SYNO_CT_SCOPE_CIYML     C 段参与集 ci.yml 注入缝（**仅测试**；优先级高于 SYNO_CI_YML）
+#              SYNO_CT_SCOPE_BASELINE  C 段参与集基线（D1219 生产默认源；默认 scripts/control-tower/required-checks-baseline.txt）
 #              SYNO_GATE_BASELINE      未登记测试 ratchet 基线（默认 scripts/control-tower/gate-integrity-baseline.txt）
 #              SYNO_CI_RED_BASELINE    既有 CI 红基线（默认 scripts/control-tower/ci-red-baseline.txt）
 #              SYNO_GATE_DEGRADED_LOG  降级事件日志（默认 .codex/control-tower/logs/degraded-events.log）
@@ -88,6 +90,9 @@
 #     [R] REGISTRY-BASELINE 段 = 未登记测试存量（本模式读）；[P] PATTERN-BASELINE 段 = 既有非法模式（A 模式读）。
 #
 # C 既有红对账（仅 --ci-reds 时执行；**必须同时给 --base-ref**，见上方 D954 段）:
+#   · 参与集（对账范围）**生产单源 = scripts/control-tower/required-checks-baseline.txt**（D1219，W1 #1219）:
+#     SYNO_CI_YML / SYNO_CT_SCOPE_CIYML **显式给出**时才走 ci.yml `all-checks-passed.needs` 旧解析（仅测试注入）；
+#     baseline 缺失/不可读/0 名 → 既有 degrade C_SCOPE_UNRESOLVED（exit 2，fail-closed）。
 #   读 GitHub check-runs JSON（.check_runs[].name/.conclusion）；conclusion=="failure" 的 name
 #   必须在 $SYNO_CI_RED_BASELINE 内且 expires 未过期，否则违规。红基线每行格式（冻结）:
 #     <check-run name> | first_seen=YYYY-MM-DD | owner=<D#/角色> | expires=YYYY-MM-DD | evidence=<引用>
@@ -706,10 +711,19 @@ run_registry() {
 run_ci_reds() { # $1 = check-runs JSON
   local json="$1"
   local red_base="${SYNO_CI_RED_BASELINE:-$ROOT/scripts/control-tower/ci-red-baseline.txt}"
-  # D1198: 参与集来源 = 本仓 ci.yml（单一真值源；SYNO_CT_SCOPE_CIYML 为夹具注入缝）
-  #   ⚠️ 优先沿用既有的 SYNO_CI_YML 注入缝（测试夹具经它传沙箱 ci.yml）；
-  #     否则用本仓 .github/workflows/ci.yml。两者皆无 ⇒ 参与集解析不出 ⇒ fail-closed degrade。
-  local CIYML_FOR_SCOPE="${SYNO_CT_SCOPE_CIYML:-${SYNO_CI_YML:-$ROOT/.github/workflows/ci.yml}}"
+  # D1219（W1 #1219）: 参与集**生产单源** = required-checks-baseline.txt（main required_status_checks 的 context 落盘）。
+  #   理由: W1 退役 all-checks-passed 聚合 job 后，派生源会消失/漂移；P0 不得在中间窗口 fail-closed 失明
+  #   （GATE-STANDARD v3.1 §六 R2）。
+  #   · 默认（两注入缝皆未给）→ 读 $SYNO_CT_SCOPE_BASELINE（缺省 $ROOT/scripts/control-tower/required-checks-baseline.txt）
+  #   · SYNO_CT_SCOPE_CIYML / SYNO_CI_YML **显式给出** → 仍走 D1198 的 ci.yml/all-checks-passed.needs 解析
+  #     （既有夹具经 SYNO_CI_YML 传沙箱 ci.yml；旧解析保留不删，**仅**测试注入路径）
+  local SCOPE_SRC="baseline"
+  local CIYML_FOR_SCOPE=""
+  local BASELINE_FOR_SCOPE="${SYNO_CT_SCOPE_BASELINE:-$ROOT/scripts/control-tower/required-checks-baseline.txt}"
+  if [ -n "${SYNO_CT_SCOPE_CIYML:-}" ] || [ -n "${SYNO_CI_YML:-}" ]; then
+    SCOPE_SRC="ciyml"
+    CIYML_FOR_SCOPE="${SYNO_CT_SCOPE_CIYML:-${SYNO_CI_YML:-$ROOT/.github/workflows/ci.yml}}"
+  fi
   info ""
   info "── C 既有红基线对账（ratchet）──"
   # D954: 对账对象不可确定 → 不判定（显式 SKIPPED，可见；ratchet 未行使 ≠ 通过）
@@ -731,16 +745,16 @@ run_ci_reds() { # $1 = check-runs JSON
 
   local failing="$TMPD/failing_names.txt"
   [ -n "$PYBIN" ] || degrade "C_NO_PYTHON" "ci-reds" "python 不可用（PYBIN 三级探测失败）——check-runs JSON 解析无法执行"
-  # ── D1198: 对账**范围**收紧 —— 只计「参与 PR 判定」的检查 ─────────────────────
+  # ── 对账**范围**收紧 —— 只计「参与 PR 判定」的检查（D1198 立；D1219 换单源）──────────
   #   依据（DSH 同构，2026-10-07 CTO 裁定）: DSH 的 `all-checks-passed` 注释原文
   #     「Wine and the deferred Python runtime targets **live in ci-master.yml and do not
   #       participate in this PR verdict**. `needs` cannot cross workflow files.」
   #     ⇒ **非参与型失败不进 PR 判定**，且**不靠登记表**——靠结构边界。
-  #   本法（不新建登记表，派生自 ci.yml 单一真值源）:
-  #     参与集 = `.github/workflows/ci.yml` 中 `all-checks-passed` 的 `needs:` 所列 job 的
-  #              **`name:` 展开名**（`${{ matrix.X }}` 用同 job 块内 strategy.matrix 取值展开）。
+  #   D1219（W1 #1219）: **生产单源 = required-checks-baseline.txt**（不再派生自 ci.yml needs）；
+  #     D1198 的 ci.yml/all-checks-passed.needs 解析**保留但仅测试注入**
+  #     （SYNO_CT_SCOPE_CIYML / SYNO_CI_YML 显式给出时才走）——旧解析不删，既有夹具行为不变。
   #   非参与型失败（如 issues 事件触发的工作流）→ **advisory**：打印可见，**不判 violation**。
-  #   ⚠️ 取不到参与集 ⇒ **fail-closed degrade**（不静默放行）。
+  #   ⚠️ 取不到参与集（baseline 缺失/不可读/0 名，或注入的 ci.yml 解析不出）⇒ **fail-closed degrade**。
   local part_names="$TMPD/participating_names.txt"
   # #662: 排除清单落文件（--exclude-check 可重复；空数组在 bash 3.2 下用 + 展开）
   local excl_file="$TMPD/exclude_checks.txt"
@@ -752,6 +766,33 @@ run_ci_reds() { # $1 = check-runs JSON
   if [ -s "$excl_file" ]; then
     info "CI-RED-EXCLUDE: 对账时排除 ${#EXCLUDE_CHECKS[@]} 个检查（自身/声明排除）: $(tr '\n' ' ' < "$excl_file")"
   fi
+  # ── D1219 生产单源: required-checks-baseline.txt（每行 `<check name> | owner=… | …`）──
+  #   跳过 `#` 注释与空行；取首个 ` | ` 前的 name；去 CR（CRLF 克隆安全）+ 两侧 trim。
+  #   文件缺失/不可读/0 名 ⇒ 既有 C_SCOPE_UNRESOLVED（degrade，exit 2；不静默放行）。
+  local n_part
+  if [ "$SCOPE_SRC" = "baseline" ]; then
+    if [ ! -f "$BASELINE_FOR_SCOPE" ] || [ ! -r "$BASELINE_FOR_SCOPE" ]; then
+      degrade "C_SCOPE_UNRESOLVED" "ci-reds" "参与集基线缺失/不可读: ${BASELINE_FOR_SCOPE}（required-checks-baseline.txt）——范围不明，fail-closed 不判绿"
+    fi
+    local _bl _nm
+    while IFS= read -r _bl || [ -n "$_bl" ]; do
+      _bl="${_bl%$'\r'}"
+      case "$_bl" in ''|'#'*) continue ;; esac
+      _nm="${_bl%% | *}"
+      _nm="${_nm#"${_nm%%[![:space:]]*}"}"
+      _nm="${_nm%"${_nm##*[![:space:]]}"}"
+      [ -n "$_nm" ] && printf '%s\n' "$_nm"
+    done < "$BASELINE_FOR_SCOPE" > "$part_names"
+    n_part="$(wc -l < "$part_names" 2>/dev/null | tr -d ' \r' || echo 0)"
+    if [ "${n_part:-0}" -eq 0 ]; then
+      degrade "C_SCOPE_UNRESOLVED" "ci-reds" "参与集基线 0 名（全为注释/空行）: ${BASELINE_FOR_SCOPE}——范围不明，fail-closed 不判绿"
+    fi
+    vprint "  参与集（required-checks-baseline.txt）: ${n_part} 名"
+  fi
+
+  # ── D1198 旧解析（ci.yml `all-checks-passed.needs`）——**仅**注入缝显式给出时执行 ──
+  #   旧解析保留不删（既有夹具经 SYNO_CI_YML 传沙箱 ci.yml）；本块缩进保持原样以减少无谓 diff。
+  if [ "$SCOPE_SRC" = "ciyml" ]; then
   if [ -n "$PYBIN" ] && [ -f "$CIYML_FOR_SCOPE" ]; then
     "$PYBIN" - "$CIYML_FOR_SCOPE" > "$part_names" 2>"$TMPD/scope.err" <<'PYSCOPE' || true
 import re
@@ -813,12 +854,12 @@ for key in needs:
         print(x)
 PYSCOPE
   fi
-  local n_part
   n_part="$(wc -l < "$part_names" 2>/dev/null | tr -d ' \r' || echo 0)"
   if [ "${n_part:-0}" -eq 0 ]; then
     degrade "C_SCOPE_UNRESOLVED" "ci-reds" "参与集不可解析（$CIYML_FOR_SCOPE 的 all-checks-passed.needs）——范围不明，fail-closed 不判绿"
   fi
   vprint "  参与集（ci.yml all-checks-passed.needs 展开）: ${n_part} 名"
+  fi
 
   if ! "$PYBIN" - "$json" "$part_names" "$excl_file" > "$failing" 2>"$TMPD/json.err" <<'PYEOF'
 import json

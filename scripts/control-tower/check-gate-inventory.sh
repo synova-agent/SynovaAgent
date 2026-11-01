@@ -29,7 +29,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #                            ∪ <root>/scripts/{ci,workflow,doc-system,golden-scenarios}/**
 #                              中 basename（小写）含 check|verify|gate|hook 者；
 #           required_ci 真值面 = .gitea/workflows/*.yml ＋ scripts/pre-commit-check.sh
-#                                ＋ scripts/pre-push-check.sh
+#                                ＋ scripts/pre-push-check.sh（**去注释后判**：整行注释与
+#                                行内 ` #` 之后的文本不算引用 —— #1234 / W3 R4 修复）
 #           run_by 真值面 = scripts/pre-commit-check.sh ／ .gitea/workflows/*.yml ／
 #                            .github/workflows/*.yml ／ package.json（四腿均**去注释**后判）
 #           环境: SYNO_P0_FLOOR（P0 棘轮下限，默认 8）
@@ -52,7 +53,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ① 逐件有分类 ≥1；id/class/owner/review_after/entrypoint/required_ci 六字段齐全
 #   ② class ∈ {P0,P1,P2}；review_after = YYYY-MM-DD；entrypoint 在盘
 #   ③ 双向对齐：盘上件全部入册（防漂移）＋ 在册 entrypoint 全部在盘（防幽灵）
-#   ④ required_ci 与真值一致：true ⇔ 三条强制腿里有引用；false ⇔ 一处都没有（防自相矛盾）
+#   ④ required_ci 与真值一致：true ⇔ 三条强制腿里**去注释后**有引用；false ⇔ 一处都没有
+#      （防自相矛盾；注释里出现不算引用 —— 否则一句 `# 以前: …check-x.sh` 就能造出假绿）
 #   ⑤ P0 棘轮：P0 计数 < SYNO_P0_FLOOR ⇒ 红（**降级需裁定号改这行，禁静默下调**）
 #   ⑥ run_by 覆盖双向对齐：枚举面每件一行（少 = 缺账，多 = 幽灵）；entrypoint 不重复
 #   ⑦ 取值校验：run_by ∈ {pre-commit,pre-push,gitea-ci,github-ci,npm,无}；quota ∈ {true,false}
@@ -181,6 +183,26 @@ for pat in ("check-*.sh", "check-*.py", "check-*.ts", "check-*.js",
 if not disk:
     print("E_EMPTY: 盘上无 check/verify 件（枚举面为空 ⇒ 判不了）"); sys.exit(2)
 
+# ── 注释剥离（#1234 / W3：R4 与 R9 **共用一份**，禁两处漂移）──────────────────
+#   为什么: 注释里出现的检查名/入口名**不是执法事实**。旧实现 R4 读原文 ⇒ 一句
+#   `# 以前: bash scripts/control-tower/check-xxx.sh` 就能把 required_ci=true 判成
+#   "已接线"（**假绿**）；反向也会把 required_ci=false 误判成"账实不符"（假红）。
+#   规则: ① 整行注释（lstrip 后以 # 开头）⇒ 整行作废；
+#         ② 行内注释（空白后的 #）⇒ 剥掉其后（shell / YAML / JSON 同一规则）。
+#   已知限制: 字符串字面量里的 " #" 也会被剥（本器只做子串匹配，不解析语法）⇒ 只会让
+#   判定**更严**（可能多判 R4/R9 红），不会放宽；出现该形状时按点名改文本即可。
+def strip_comments(text):
+    out = []
+    for ln in text.splitlines():
+        if ln.lstrip().startswith("#"):
+            out.append("")
+            continue
+        m = re.search(r"(^|\s)#", ln)
+        if m:
+            ln = ln[:m.start()]
+        out.append(ln)
+    return "\n".join(out)
+
 # ── required_ci 真值面 ────────────────────────────────────────────────────
 truth_src = []
 for p in glob.glob(os.path.join(root, ".gitea", "workflows", "*.yml")) + [
@@ -191,7 +213,7 @@ for p in glob.glob(os.path.join(root, ".gitea", "workflows", "*.yml")) + [
             truth_src.append(f.read())
     except OSError:
         perr.append(p)
-truth = "\n".join(truth_src)
+truth = strip_comments("\n".join(truth_src))
 
 seen_id, seen_ep, p0 = set(), set(), 0
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -269,9 +291,6 @@ def take_section(name):
 RUN_BY_VALS = ("pre-commit", "pre-push", "gitea-ci", "github-ci", "npm", "无")
 SUBDOMAINS = ("ci", "workflow", "doc-system", "golden-scenarios")
 GATE_KW = ("check", "verify", "gate", "hook")
-
-def strip_comments(text):  # 只判代码路径：注释里出现的名字不算"在跑"
-    return "\n".join("" if ln.lstrip().startswith("#") else ln for ln in text.splitlines())
 
 def leg_text(paths):
     src, miss = [], []

@@ -11,11 +11,14 @@ import type { Server } from 'http';
 
 let server: Server;
 let BASE: string;
+/** #1228：本件匿名带 body orgId ⇒ 实例组织必须 = 'test-org'（用后还原，防泄漏到同 worker 其它件） */
+const SAVED_ORG_ID = process.env.SYNOVA_ORG_ID;
 
 beforeAll(async () => {
   // port 0 = OS 分配随机端口, 避免 EADDRINUSE
   process.env.PORT = '0';
   process.env.SYNOVA_DB_PATH = ':memory:';
+  process.env.SYNOVA_ORG_ID = 'test-org';
   server = await createServer();
   const addr = server.address();
   const port = typeof addr === 'object' && addr ? addr.port : 3000;
@@ -24,6 +27,8 @@ beforeAll(async () => {
 
 afterAll(() => {
   if (server) { server.close(); }
+  if (SAVED_ORG_ID === undefined) delete process.env.SYNOVA_ORG_ID;
+  else process.env.SYNOVA_ORG_ID = SAVED_ORG_ID;
 });
 
 // ═══ Slice 1: Health ═══

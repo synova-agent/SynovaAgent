@@ -478,4 +478,139 @@ jobs:
           { printf '### ⑥ W10 Unicode 同形字分级门禁（A/B/C 阻断 · D 仅提醒）\n\n```\n%s\n```\n\n' "$_UNI_OUT" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; } 2>/dev/null || true  # swallow-ok: step summary 写失败不改判定（stdout 已留证）
           exit "$_UNI_RC"
 
+      # ═══════════════════════════════════════════════════════════════════════════════
+      # W2 批C（#1239）：6 道 github-ci 纪律／质量门禁**迁 Gitea 权威腿**（唯一阻断腿）。
+      #   判据源：docs/authority/GATE-STANDARD.md §二（两仓分工）＋§六 批 C（6 条 entrypoint 逐字）。
+      #   口径：**迁腿 ≠ 改判据** —— 命令面沿用 `.github/workflows/ci.yml` 的调用（同一脚本、同一参数），
+      #     只把「谁阻断」从 GitHub 腿换到本腿；**不新增判据、不改阈值、不改退出码语义**。
+      #   位置＝**文件末尾**（CI-S<n> 是位置派生的 id ⇒ 只追加、不重编号；与 ①e/①i/⑤/⑥ 同规）。
+      #   代价（与 ①e/①i 同）：① 若先红，后续步不执行（**不做 always**，链语义不变）。
+      #   真阻断：**无** continue-on-error、**无**「`||` ＋ `true`」吞 rc；跳过必须自带可见理由行（禁静默跳过）。
+      #   三态：逐条 `|| exit $?` 原样保留 rc（0 通过 ｜ 1 真红 ｜ 2 判不了），禁 `|| exit 1` 折叠。
+      #   回滚：本批不设开关 —— 判据迁移属治理面，回滚 = revert 本次 PR（无 SYNO_* 软开关，避免"静默绿"）。
+      # ═══════════════════════════════════════════════════════════════════════════════
+      - name: ⑦ 门禁完整性 check-gate-integrity.sh（patterns 哨兵 ＋ 登记 ratchet；C 段 --ci-reds 显式不跑 · #1239）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源：scripts/control-tower/check-gate-integrity.sh 头部 @exit（0 通过／1 违规／2 判不了）
+          #   与「C 既有红对账（仅 --ci-reds 时执行）」段。
+          # 🔴 GitHub-only 证据门的**显式选择**（本批验收判据 (c)：禁恒绿／禁静默降级）：
+          #   C 段（--ci-reds）的对账对象是 **GitHub check-runs JSON**
+          #   （`https://api.github.com/repos/<owner>/<repo>/commits/<base sha>/check-runs`，
+          #    见该脚本头「K3 端到端复核」段）；Gitea 腿既无该数据源、也无读它的凭据。
+          #   ⇒ 本腿**只跑 A 模式（grep 方言哨兵）＋ B 模式（测试登记 ratchet）**，**不传** `--ci-reds`：
+          #     契约头明载「未给 --ci-reds 时 C 显式 SKIPPED（不参与 OK/违规判定）」
+          #     ⇒ 输出必含可见的 SKIPPED 行，**不是**假绿、**不是**静默跳过。
+          #   ⇒ 代价（写明，禁当"已核"）：既有 CI 红基线（ci-red-baseline.txt）在这条腿上**不参与判定**；
+          #     该面对账仍归 GitHub 腿的 gate-integrity job（本批降只报，回传 Gitea）。
+          bash scripts/control-tower/check-gate-integrity.sh || exit $?
+      - name: ⑧ 必需 context ⇄ job name 一致性（check-required-contexts.py 静态面阻断；--api-check 显式不跑 · #1239）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源：scripts/control-tower/check-required-contexts.py 头部 @exit / @degraded / `--api-check` 段。
+          # 🔴 GitHub-only 证据门的**显式选择**：
+          #   · 静态面（基线 9 条 ⊆ `.github/workflows/*.yml` job `name:` 展开出的 check-run 名全集）
+          #     ＝**阻断判据**、零网络、零凭据 ⇒ 本腿照跑（改坏一个 `name:` 字符即 exit 1 并点名）。
+          #   · `--api-check`（`gh api …/branches/main/protection` 读 live branch protection）＝**GitHub-only**：
+          #     branch protection 是 GitHub 侧对象，Gitea runner 无 GH_TOKEN／无 admin 读权限
+          #     （ci.yml:1122-1127 已记该事实：CI 的 github.token 无 admin ⇒ 首版恒 exit 2）。
+          #   ⇒ 本腿**不传** `--api-check`（也**不**拿 `--allow-degraded` 把它糊成绿）：live 双向对账仍归
+          #     GitHub 腿该步（本批降只报，不得当"已核"）；其真落点见 GATE-STANDARD §十一 W8。
+          python3 scripts/control-tower/check-required-contexts.py --verbose || exit $?
+      - name: ⑨ 并行写集声明物理验证（verify-parallel.sh --ci-pr · #1239）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源：scripts/control-tower/verify-parallel.sh 头部「退出码 (CT-28 三态化)」段：
+          #   0 = pass/skip ｜ 1 = 写集有交集（业务阻断）｜ 2 = degraded（内核异常/基准不可解析）。
+          # 语义与 GitHub 腿逐字一致（ci.yml:190 `--ci-pr origin/main`），仅把 base 名改为**单源**：
+          #   trunk 名由 SYNO_TRUNK_REF 注入（缺省 main），与本文件 ③/④ 步同一解析链
+          #   ⇒ 不在本文件写死镜像远端的分支名（该镜像已断且陈旧，见 ①d 段注）。
+          # 不可解析 ⇒ resolve-ci-base.sh 的 rc 原样透传（exit 2，fail-closed：不猜、不降级）。
+          CHANGED_BASE="origin/${SYNO_TRUNK_REF:-main}"
+          if ! git rev-parse --verify -q "$CHANGED_BASE" >/dev/null 2>&1; then
+            CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          fi
+          echo "⑨ base = $CHANGED_BASE"
+          bash scripts/control-tower/verify-parallel.sh --ci-pr "$CHANGED_BASE" || exit $?
+      - name: ⑩ 诊断质量 7 项结构检查（diagnosis-quality-check.sh · #1239）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源：scripts/ci/diagnosis-quality-check.sh 头部（7 项结构质量检查）＋ 末行 `exit $ERRORS`
+          #   ⇒ rc = 0 全过 / >0 失败项数（该器以"失败计数"为退出码，属其自身契约：迁腿不改）。
+          # 🔴 禁 `| tee`、禁用「`||` ＋ `true`」吞 rc：完整输出必须进本步日志，rc 必须原样传出。
+          bash scripts/ci/diagnosis-quality-check.sh || exit $?
+      - name: ⑪ 黄金案例 F1 门禁（golden-case-checker.ts · #1239）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源：scripts/ci/golden-case-checker.ts 头部「退出码: 0 = 通过(三者均100%), 1 = 不通过」。
+          # node 与 GitHub 腿同源（本文件既有约定：nvm v24.19.0 bin 前置；tsx 走仓内 node_modules）。
+          PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
+            node_modules/.bin/tsx scripts/ci/golden-case-checker.ts || exit $?
+      - name: ⑫ Brief 声明 vs 代码变更（check-brief-vs-code.sh --strict · #1239）
+        run: |
+          cd /Users/wane/.ci-work/SynovaAgent
+          # 判据源：scripts/workflow/check-brief-vs-code.sh 头部
+          #   「用法: … [--strict]   --strict: 文件范围不匹配 = 硬阻断」。
+          # GitHub 腿此步用「`||` ＋ `true`」吞 rc（ci.yml:944 ⇒ 只报）；本批把它移回**真阻断**：
+          #   无该吞码形态、无 continue-on-error，rc 原样传出。
+          # 已知限制（如实登记，不静默）：该器判据面 = `git diff --cached` ＋ `git diff`（暂存／工作树）。
+          #   CI 检出是**干净树** ⇒ 其自有分支会打印「无实际变更文件 (CI 检出场景) — 跳过文件范围检查」
+          #   并 rc=0（脚本 :79-80）。这是**器自身的 CI 语义**，迁腿不改判据；要改成按 base..HEAD 判 diff
+          #   属「改判据」（A 类），须 L1/CTO 另批，不在本批范围 —— 本步不得因此被写成假绿。
+          #   ⚠️ 更正（实测 #1243 run 2934）：上面「CI 检出是干净树」在本 job **不成立** —— 前面的步骤会写生成物，
+          #     到本步时工作树已脏 ⇒ 本器把生成物误判成"未声明变更"。真正的环境前提见下方「环境前提」块。
+          # 🔴 环境前提（实测 #1243 run 2934；红因＝工作树脏，**与载体无关**）：本器判据对象＝`git diff` ＋
+          #   `git diff --cached`（器 :40-41），而本 job 前面的步骤会写生成物 ——
+          #   `docs/synova/product-lines/evidence/D817-capture-20260918.json`、
+          #   `docs/synova/product-lines/evidence/D819-capture-20260919.json`、
+          #   `tests/output/expert-quality-cross-industry.json` ⇒ 到本步时工作树已脏 ⇒ 被当成"未声明变更" ⇒ HARD_FAIL。
+          #   ⇒ **先把工作树恢复成检出态再跑**：让判据对象回到本器自身假设的「CI 干净检出」语义（:79-80），
+          #     **不改任何阈值、不改判据**（这是让环境符合器已声明的假设，不是放宽器）。
+          #   🔴 已知限制（如实登记）：干净树上本器**判据对象为空** ⇒ 只会打
+          #     「无实际变更文件 (CI 检出场景) — 跳过文件范围检查」⇒ **本步在 CI 腿不具阻断力**
+          #     （其阻断力在 pre-commit／pre-push 的工作树＋暂存面）。要让它在 CI 真阻断＝改成按 base..HEAD 判 diff
+          #     ＝**改判据（A 类）**，须 L1/CTO 另批。**禁**把本步写成"已阻断"/"判据通过"。
+          #   🔴 `checkout -f` 只还原**已跟踪**文件、不动未跟踪物（如 `.gate-step1-ran`）；⑫ 是本 job 末步 ⇒ 无后续依赖。
+          #      ⚠️ 本机复现须知：它会**丢弃未提交的改动**（含本工作流文件本身）⇒ 只在一次性副本树里跑。
+          git checkout -q -f HEAD || exit $?
+          # 🔴 载体守卫（实测 #1243 run 2927/2928 红）：claim-v2 下 `resolve-commit-brief.sh` 会把
+          #   `.claude/claims/<issue>.yaml`（**YAML 载体**）当 BRIEF 返回；而本器只认 brief（.md，需 `## Done` 段）
+          #   ⇒ 该器 :159 `VERIFY_CMDS=$(sed -n '/^## Done/,/^## /p' … | grep 'verify:' | …)` 对 YAML 取不到段落
+          #     ⇒ 管线 rc=1，叠加 :21 `set -euo pipefail` ⇒ **整步恒红**。这是**器缺陷**（缺载体判别），
+          #     **不是本步判据红**（判据根本没执行到）。
+          #   本批不改器（`scripts/workflow/**` 受保护、且不在本批写集）⇒ 此处**显式可见跳过并说明**，
+          #   **阻断权待器修好接回**（另批：scripts/workflow/check-brief-vs-code.sh:159 ＋ :21）。
+          #   🔴 跳过 ≠ 通过：日志必打 SKIPPED 两行（含器缺陷定位与另批指针），**不得**读成"本步绿了/判据满足"。
+          #   🔴 守卫只认 YAML 载体（claim）；brief（.md）在场时照旧走下面的真阻断，不改既有判据语义。
+          #   （探测用的 `|| :` 与器自身 :35 的吞码形态同义，只吞**解析器探测**的 rc；下面那条阻断调用的 rc 不被吞。）
+          BRIEF="$(bash scripts/workflow/resolve-commit-brief.sh "$(git diff --cached --name-only 2>/dev/null || :)" 2>/dev/null || :)"
+          case "$BRIEF" in
+            *.yaml)
+              echo "⑫ SKIPPED（载体不适用）：resolve-commit-brief.sh 返回 claim（$BRIEF），本器只认 brief（.md）"
+              echo "   ⇒ 判据未执行；器修正另批（scripts/workflow/check-brief-vs-code.sh:159 + :21）"
+              exit 0 ;;
+          esac
+          bash scripts/workflow/check-brief-vs-code.sh --strict || exit $?
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# #1234 · ci-step 证据映射（**仅登记注释；不改本文件任何逻辑、不建日志回流通道**）
+#   用途：总闸 G2 的分腿证据里，`evidence: ci-step` 的闸「跑过没」只能由 CI step 结局回答。
+#         本表把 GATE-INVENTORY.yaml 的 entrypoint 映射到本文件的 step 名；将来写方
+#         （CI 侧／后续卡）按此产出 JSONL：
+#           {"entrypoint":"<GATE-INVENTORY 的 entrypoint 全路径>","ran":true|false,
+#            "at":"<ISO-8601>","step":"<本文件 step 名原文>"}
+#         再由总闸的 `--ci-evidence <file>` 注入判定（本文件本批**不产**该文件）。
+#   口径：entrypoint＝GATE-INVENTORY.yaml classification 的 entrypoint（逐字，禁别名）；
+#         step＝本文件 `- name:` 原文（逐字；改名即等于改映射，须同 PR 同步本注释）；
+#         行号＝基线 a025fc47e 上的**调用点**行号（仅供定位，**禁当判据**）。
+#   · scripts/control-tower/check-registry-invariants.ts → step「① 12 组门禁（唯一的阻断门）」（step L57；调用 L73）
+#   · scripts/control-tower/check-gate-protection.sh   → step「①d 门禁本体自检（清单 ＋ diff 豁免）」（step L89；调用 L110）
+#   · scripts/control-tower/check-board-truth.ts       → step「①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）」（step L111；调用 L118）
+#   · scripts/control-tower/check-test-obligations.py  → step「①g 测试义务闸（新模块缺 expected/snapshot ⇒ 红 · 只判变更集）」（step L399；调用 L407）
+#   · scripts/control-tower/check-ci-empty-green.sh    → step「⑤ CI 空绿 step 级判据（test_count / skipped · 只判本 job 记录）」（step L436；调用 L442）
+#     ↳ 派单/Note 简写「④/442」指的就是本调用点：step 名原文为 ⑤（④ 是「门禁复现器自检」，
+#       它跑的是 ci-emptygreen-sim.sh 模拟器，不是本闸）。映射以本文件 step 名原文为准。
+#   已知限制：本批不产 JSONL（无写方）⇒ 真仓这 5 项恒「判不了」（exit 2）；这是如实，不是 CI 没跑。
+# ═══════════════════════════════════════════════════════════════════════════════
+
 

@@ -101,6 +101,8 @@ vi.mock('../../src/config', async (importOriginal) => {
       llmModel: 'test-model',
       dbPath: ':memory:',
       devMode: false,
+      // #1228 S0-2b：config 契约必含 orgId（生产 = `src/config.ts:110`）；原 mock 漏字段 ⇒ 补成契约形态
+      orgId: 'default',
       diagnosis: { maxToolRounds: 2, gateDataCompleteness: 0.3, gateMinHypothesisConfidence: 0.5 },
     }),
   };

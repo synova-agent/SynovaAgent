@@ -3,53 +3,75 @@
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上不改判定（本件输出为 UTF-8 字面量，非本地化文本）
 # ═══════════════════════════════════════════════════════════════════════════════
-# verify-governance.sh — 门禁治理一键验收「总闸」：G2 遥测 ／ G6 退出码归一 ／ G10 同形字 ／ G11 配额双闸（#1122 · #1147 余项 B2）
+# verify-governance.sh — 门禁治理一键验收「总闸」：G2 分腿证据源 ／ G6 退出码归一 ／ G10 同形字 ／ G11 配额双闸
+#   （#1122 · #1147 余项 B2 · #1234 G2 分腿证据源）
 #
 # 设计哲学（一句）: **判不了就说判不了，绝不显示 PASS** —— 每道判据只有三种结论
-#   PASS ／ FAIL ／ SKIP；「看不见」（遥测日志缺失、清单缺失、子判据自身坏）一律 SKIP
-#   或 exit 2，禁把"没跑/没数据/看不懂"洗成绿。
+#   PASS ／ FAIL ／ SKIP（判不了）；「看不见」（无证据通道、清单缺失、子判据自身坏）一律
+#   SKIP 或 exit 2，禁把"没跑/没数据/看不懂"洗成绿。
 #
-# 背景（#1122 / 规格 §4「一键验收（机器判据）」· Step 1 ＋ #1147 余项 B2）:
+# 背景（#1122 / 规格 §4「一键验收（机器判据）」· Step 1 ＋ #1147 余项 B2 ＋ #1234）:
 #   规格 §4 列 G1–G10 十项；#1122 只做三项（G2/G6/G10），其余留后续卡；#1147 余项 B2 补 G11（配额双闸）——
 #   G11 是**旁路项**（只在总闸内判，不进 pre-commit 主路径）。
+#   #1234 把 G2 从「只有遥测一条腿」改成「**按证据源分腿**」：classification 新增 `evidence`
+#   （telemetry ／ ci-step ／ none），有通道按通道判、无通道判不了 ⇒ exit 2，不再拿
+#   "遥测名对不上"把 18 条全判成「未运行」。
 #   不做"数表全绿"式空转（长青块分型：回归锁＋缺口面板，见 scripts/control-tower/AGENTS.md 红线）。
 #
 # 契约（铁律 47）:
-#   @usage  bash scripts/control-tower/verify-governance.sh [--telemetry <path>] [--days N] [--root <dir>]
+#   @usage  bash scripts/control-tower/verify-governance.sh [--telemetry <path>] [--ci-evidence <path>] [--days N] [--root <dir>]
 #           bash scripts/control-tower/verify-governance.sh --help
 #   @input  --telemetry <path>  遥测 JSONL 路径（默认 `<root>/.claude/gate-hits.log`；相对路径按 cwd 解析）
+#           --ci-evidence <path> CI 步骤级证据 JSONL（默认取 env `SYNO_G2_CI_EVIDENCE`；两者皆缺 ⇒
+#                               `evidence: ci-step` 的 required 项判不了 ⇒ G2=SKIP ⇒ 整体 exit 2）
 #           --days N            判定窗口天数（默认 7；**正整数**，非法 ⇒ E_USAGE）
 #           --root <dir>        仓库根（默认 `git rev-parse --show-toplevel`；显式注入缝供配对测试）
 #           必读件（缺任一件 ⇒ 判不了 ⇒ exit 2，禁当通过）:
-#             <root>/docs/authority/GATE-INVENTORY.yaml   的 `classification:` 段（required 集合真源）
+#             <root>/docs/authority/GATE-INVENTORY.yaml   的 `classification:` 段（required 集合真源；
+#               #1234 起逐条带 `evidence`，可选 `telemetry_key`）
 #             <root>/scripts/control-tower/gate-assert.sh （G6 归一的**唯一真源**，本件不自造第二套归还一）
 #             <root>/scripts/control-tower/check-unicode-confusable.py（G10 扫描器）
 #             <root>/scripts/control-tower/gen-gate-meta.sh（G11 配额的**唯一真源**；缺失 ⇒
 #               G11 DEGRADED（E_GEN_MISSING）＋ 整体 exit 2 —— 在 G11 项内报，不做全局提前退出）
 #           遥测行格式（唯一写入器 `gate-telemetry.sh`）:
 #             {"time":"<ISO-8601>","gate":"<检查点名>","result":"hit|miss|warn|degraded",...}
+#           CI 步骤级证据行格式（JSONL，**本批只读不写**；写方 = CI 侧/后续卡）:
+#             {"entrypoint":"<GATE-INVENTORY 的 entrypoint 全路径>","ran":true|false,
+#              "at":"<ISO-8601>","step":"<CI step 名>"}
 #   @output stdout 逐项 `<G2|G6|G10|G11> <名称>: PASS|FAIL|SKIP`，逐项后跟证据行；
+#           G2 的证据行 = 逐条 `· <id> <entrypoint>（未运行/判不了：<原因>）`；
 #           G11 的证据行 = 生成器 `--quota` 的 `QUOTA:` / `QUOTA-SRC:` / `QUOTA-OVER:` 原样转印（缩进）；
-#           **末行恒为** `GOVERNANCE: x/4 PASS`（x = PASS 计数；总数恒为 4；SKIP/FAIL/判不了 不计入 x）。
+#           **末行恒为** `GOVERNANCE: x/4 PASS（y 判不了）`（分母恒为 4；x = PASS 计数；
+#           y = 判不了项数（DEGRADED 项）；SKIP/FAIL 不计入 x，非判不了也不计入 y）。
 #           stderr = 降级行 `degraded: <code> — <原因>`（只在 exit 2 前出现）
 #   @exit   0 = 四项全 PASS
-#           1 = **非全 PASS**（有 FAIL 或 SKIP；含"遥测未运行"这种真实缺口）
-#           2 = **判不了／自身失败**（参数错／python 不可用／清单缺失或空／required 集合为空／
-#               子判据脚本缺失（含 G11 生成器缺失 E_GEN_MISSING）／子判据自身返回"判不了"）
+#           1 = **非全 PASS**（有 FAIL 或 SKIP，且无「判不了」项；含"required 项未运行"这种真实缺口）
+#           2 = **判不了／自身失败**（**优先于 1**：只要有一项判不了即 2）—— 参数错／python 不可用／
+#               清单缺失或空／required 集合为空／子判据脚本缺失（含 G11 生成器缺失 E_GEN_MISSING）／
+#               G2 的 ci-step 证据缺失或不可读／G2 的 evidence=none ／子判据自身返回"判不了"
 #               —— 🔴 2 绝不等于通过
 #   @degraded 任何 exit 2 一律先打 stderr `degraded: <code> — <原因>`（铁律 11/32，不静默降级）；
-#           G11 的 E_GEN_MISSING / E_QUOTA_SCOPE 等在 G11 项内以 `判不了:` 行点名，并计入「判不了」⇒ 整体 exit 2；
+#           G2/G11 项内的 E_* 在项内以 `判不了:` 行点名，并计入「判不了」⇒ 整体 exit 2；
 #           不写任何降级日志文件（本件**只读仓库**，不新增运行期落盘）
 #   @error  code ∈ {E_USAGE, E_NO_PYTHON, E_INV_MISSING, E_INV_SECTION, E_INV_EMPTY, E_NO_REQUIRED,
 #                   E_GA_MISSING, E_UNI_MISSING, E_GEN_MISSING, E_G10_UNJUDGED, E_INTERNAL}
+#           G2 项内 code（以 `判不了:`/`未运行:` 行点名，不改变退出码形态）:
+#             E_CI_UNSET（--ci-evidence 与 SYNO_G2_CI_EVIDENCE 皆缺）／E_CI_MISSING（证据文件不存在）／
+#             E_CI_UNREADABLE（不可读）／E_CI_NO_ENTRY（文件无该 entrypoint）／E_CI_AT（at 不可解析）／
+#             E_CI_RAN_FALSE（CI 报告 ran=false）／E_CI_WINDOW（ran=true 但 at 在窗口外）／
+#             E_EVIDENCE_NONE（evidence=none：无任何可读证据通道）
 #
 # 四道判据（判据语义以本段为准；改判据须引卡号）:
-#   G2  遥测 ran=true（规格 §4 G2）
-#       对 `classification:` 段里 `required_ci: true` 的**每个** `entrypoint`，判近 N 天是否
-#       ≥1 条"真跑过"的记录。gate 名取 entrypoint 的确定性别名集：完整路径 ／ 文件名（含扩展名）／
-#       去扩展名 stem（精确相等，大小写敏感）。result ∈ {hit,miss,warn,degraded} 视为 ran。
-#       · 日志不存在 / 为空 / 全为损坏行  ⇒ **SKIP**，且 required 全部计入「未运行」（**不得显示 PASS**）
-#       · 有数据但某些 required 一条记录都没有 ⇒ **FAIL**（并逐条点名「未运行」）
+#   G2  分腿证据源（规格 §4 G2 · #1234）
+#       对 `classification:` 段里 `required_ci: true` 的**每个** `entrypoint`，按该条 `evidence` 分腿判：
+#       · telemetry：gate 名取 entrypoint 的确定性别名集（完整路径 ／ 文件名（含扩展名）／ 去扩展名
+#         stem，精确相等，大小写敏感）∪ `telemetry_key`（若声明）；result ∈ {hit,miss,warn,degraded}
+#         视为 ran。窗口内 ≥1 条记录 ⇒ PASS；零记录 ⇒ **FAIL** 并逐条点名「未运行」。
+#       · ci-step：读 `--ci-evidence <file>` 或 `SYNO_G2_CI_EVIDENCE`（JSONL，见 @input）。文件缺失／
+#         不可读／无该 entrypoint ⇒ **判不了**；`ran=false` ⇒ **FAIL**；`ran=true` 且 `at` 在窗口内 ⇒ PASS
+#         （`ran=true` 但 `at` 在窗口外 ⇒ FAIL：窗口内没跑）。
+#       · none：**判不了**（该件无任何可读证据通道），点名叫原因。
+#       · 三项混杂时：有 FAIL 也有判不了 ⇒ **DEGRADED**（判不了优先，整体 exit 2），FAIL 项照旧点名。
 #       · required_ci: true 条目为 0（信号量 0）⇒ 判不了 ⇒ exit 2
 #   G6  退出码归一（规格 §4 G6；复用 gate-assert.sh 的 `ga_run`，禁自造第二套归一）
 #       用 `ga_run` 跑一个**注入判据**，本项结论 **= 该判据经 ga_run 归一后的结论**（0 通过 ⇒ PASS；
@@ -73,63 +95,72 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #   （EXIT trap 清理）。
 #
 # 已知限制（做不到什么 —— 禁读成"已检测"）:
-#   1. **G2 的 gate 名是"确定性别名"，不是语义映射**：现网遥测的 `gate` 是**检查点散文名**
-#      （如 `Notes 迁移门禁 (D472)`），而 inventory 的 entrypoint 是脚本文件名 ⇒ 现网大多数
-#      required 项会落「未运行」。这是**如实的方向**（遥测名与 inventory id 的对齐属 #1112 接线批次），
-#      不是本件的漏判 —— 它宁可报"未运行"，也不把名字像的当跑过。
+#   1. **G2 的 telemetry 名是"确定性别名"，不是语义映射**：现网遥测的 `gate` 是**检查点散文名**
+#      （如 `Notes 迁移门禁 (D472)`）。#1234 起由 pre-commit 的 `log_gate <显示名> <result> <gate_key>`
+#      在 10 个 required 调用点写 entrypoint stem 作为稳定键（显示名不变）；**其它闸（散文名）仍不会**
+#      自动对上 → 它们本就不在 telemetry 面（按 evidence 分腿登记为 ci-step／none）。名字像 ≠ 跑过。
 #   2. **G2 只证"跑过"，不证"有判别力"**：一条 miss 记录也只说明它执行了。判别力由各判据自己的
 #      配对测试的改坏即红证明（CT-40），不由本件证明。
-#   3. **G6 只证归一链路，不证业务判据的判别力**：本项结论 = 注入判据经 `ga_run` 的结论。
+#   3. **ci-step 证据的写方不在本批**：本件只给 `--ci-evidence` 注入缝与 JSONL 格式契约；
+#      真正的 CI 步骤→证据回流由后续卡实现。故真仓（无 `--ci-evidence`）恒有 5 项 ci-step
+#      ＋ 2 项 none 判不了 ⇒ G2=SKIP ⇒ 整体 exit 2。这是**如实**，禁读成"CI 没跑"。
+#   4. **ci-step 的 entrypoint 只认全路径精确匹配**（反斜杠归一）：不做 basename/stem 别名回退，
+#      写方必须用 GATE-INVENTORY 的 entrypoint 原文；对不上 ⇒ 判不了（禁猜）。
+#   5. **G6 只证归一链路，不证业务判据的判别力**：本项结论 = 注入判据经 `ga_run` 的结论。
 #      默认注入 `exit 0`（证链路可跑、码透传）；**故障注入（exit 128）由配对测试每次跑**，
 #      它证明"非白名单码不被洗成通过"，不证明任何业务判据能发现它该发现的问题。
-#   4. **G10 只验两态，不是全档**：乙夹具只证明"注释内全角标点不阻断"（D 档不误伤），
+#   6. **G10 只验两态，不是全档**：乙夹具只证明"注释内全角标点不阻断"（D 档不误伤），
 #      不覆盖 B 档（双向控制符）/ C 档（U+FFFD）；那两档由 check-unicode-confusable 的
 #      `--selfcheck` 与配对测试证明。
-#   5. **`--days` 窗口按 UTC 当前时刻截断**：日志时间戳无时区时按 UTC 解释（与 gate-stats 同口径）；
+#   7. **`--days` 窗口按 UTC 当前时刻截断**：日志时间戳无时区时按 UTC 解释（与 gate-stats 同口径）；
 #      跨时区主机上"边界那一天"可能差一条，属可接受的窗口抖动。
-#   6. **不判遥测日志是否被 .gitignore 忽略**（规格 §4 G2 的该子句留给后续卡）：本批最小可跑，
-#      只判"required 项是否真跑过"。
-#   7. **SYNO_GOV_G6_RC 注入缝只在沙箱可用**：需同时置 `SYNO_TEST_ARM=1`（仓内既有沙箱标记，
+#   8. **不判遥测日志是否被 .gitignore 忽略**（规格 §4 G2 的该子句留给后续卡）：本批最小可跑，
+#      只判"required 项是否真跑过"。遥测日志缺失／为空 ⇒ telemetry 项**计未运行（FAIL）**，
+#      不因"文件没写"而判不了 —— 遥测是本件唯一的本地证据源，缺失就是没证据。
+#   9. **SYNO_GOV_G6_RC 注入缝只在沙箱可用**：需同时置 `SYNO_TEST_ARM=1`（仓内既有沙箱标记，
 #      见 scripts/pre-commit-check.sh 的 `_SANDBOX`）；否则一律按 `exit 0` 注入 ⇒
 #      "改一个环境变量就跳过 G6"不成立。若真的只改本件不跑测试，G6 仍恒绿 ——
 #      这正是"改坏即红"必须靠配对测试承重的原因（T4/T5/T6 三个用例）。
-#   8. **G11 只报生成物数字**：`--quota` 读 `gate_meta:` 段（artifact 快照），不重算 run_by；
+#   10. **G11 只报生成物数字**：`--quota` 读 `gate_meta:` 段（artifact 快照），不重算 run_by；
 #      手改 artifact 的对账防伪由 `gen-gate-meta.sh --check`（B3 同源比对）与
 #      `check-gate-inventory.sh` 的 R10 承担，**不是本件**。G11 不进 pre-commit 主路径（旁路项）。
-#   9. **G11 的 bypass 桶当前无标记源**：生成器只统计 artifact 已标 `quota_scope: bypass` 的行，
+#   11. **G11 的 bypass 桶当前无标记源**：生成器只统计 artifact 已标 `quota_scope: bypass` 的行，
 #      现网为 0 ⇒ bypass=0 只能读成"artifact 未标旁路"，**禁读成"没有旁路"**（前向能力）。
+#   12. **末行分母恒 4**（不随项数变化）：四项固定 G2/G6/G10/G11；新增判据必须显式改分母并同步测试。
 #
 # 结构（Source map）:
 #   段                职责
 #   ────────────────  ───────────────────────────────────────────────────────────
 #   ① 头部契约        本段（@usage/@input/@output/@exit/@degraded/@error/已知限制）
-#   ② 参数与注入缝    --telemetry/--days/--root/--help；非法 ⇒ exit 2
+#   ② 参数与注入缝    --telemetry/--ci-evidence/--days/--root/--help；非法 ⇒ exit 2
 #   ③ 解释器与必读件  PYBIN 三级探测；三件全局必读件缺失 ⇒ exit 2（判不了）；G11 生成器在 G11 项内判
-#   ④ G2 遥测         python 单进程解析 inventory ＋ JSONL（别名匹配 ＋ 窗口过滤 ＋ 坏行计数）
+#   ④ G2 分腿证据     python 单进程解析 inventory ＋ 遥测 JSONL ＋ ci 证据 JSONL（分腿判定 ＋ 坏行计数）
 #   ⑤ G6 归一          source gate-assert.sh ＋ `ga_run` 注入判据（默认 exit 0；沙箱可注入 128）
 #   ⑥ G10 同形字      两个临时 git 仓夹具 ＋ 扫描器两态判定
 #   ⑦ G11 配额双闸    gen-gate-meta.sh --quota 三态 → PASS/FAIL/DEGRADED（证据行原样转印，缺生成器 ⇒ SKIP）
-#   ⑧ 汇总与退出口    末行 `GOVERNANCE: x/4 PASS` ＋ 三态退出码
+#   ⑧ 汇总与退出口    末行 `GOVERNANCE: x/4 PASS（y 判不了）` ＋ 三态退出码（判不了优先成 2）
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
 # ── ② 参数与注入缝 ────────────────────────────────────────────────────────────
 GOV_ROOT_ARG=""
 GOV_TEL_ARG=""
+GOV_CI_ARG=""
 GOV_DAYS_ARG=""
 GOV_USAGE_ERR=""
 
 _gov_usage() {
   cat <<'USAGE'
-用法: bash scripts/control-tower/verify-governance.sh [--telemetry <path>] [--days N] [--root <dir>]
+用法: bash scripts/control-tower/verify-governance.sh [--telemetry <path>] [--ci-evidence <path>] [--days N] [--root <dir>]
 
-  --telemetry <path>  遥测 JSONL 路径（默认 <root>/.claude/gate-hits.log）
-  --days N            判定窗口天数（默认 7；正整数）
-  --root <dir>        仓库根（默认 git rev-parse --show-toplevel；显式注入缝供配对测试）
-  --help              打印本契约
+  --telemetry <path>   遥测 JSONL 路径（默认 <root>/.claude/gate-hits.log）
+  --ci-evidence <path> CI 步骤级证据 JSONL（默认 env SYNO_G2_CI_EVIDENCE；皆缺 ⇒ ci-step 项判不了）
+  --days N             判定窗口天数（默认 7；正整数）
+  --root <dir>         仓库根（默认 git rev-parse --show-toplevel；显式注入缝供配对测试）
+  --help               打印本契约
 
-输出: 逐项 <G2|G6|G10|G11> <名称>: PASS|FAIL|SKIP ＋ 末行 `GOVERNANCE: x/4 PASS`
-退出码: 0 = 四项全 PASS ｜ 1 = 非全 PASS（有 FAIL 或 SKIP）｜ 2 = 判不了（禁当通过）
+输出: 逐项 <G2|G6|G10|G11> <名称>: PASS|FAIL|SKIP ＋ 末行 `GOVERNANCE: x/4 PASS（y 判不了）`
+退出码: 0 = 四项全 PASS ｜ 1 = 有 FAIL 或 SKIP（无判不了）｜ 2 = 有判不了（优先；禁当通过）
 USAGE
 }
 
@@ -138,6 +169,9 @@ while [ $# -gt 0 ]; do
     --telemetry)
       if [ $# -lt 2 ]; then GOV_USAGE_ERR="--telemetry 需要参数 <path>"; break; fi
       GOV_TEL_ARG="$2"; shift 2 ;;
+    --ci-evidence)
+      if [ $# -lt 2 ]; then GOV_USAGE_ERR="--ci-evidence 需要参数 <path>"; break; fi
+      GOV_CI_ARG="$2"; shift 2 ;;
     --days)
       if [ $# -lt 2 ]; then GOV_USAGE_ERR="--days 需要参数 N"; break; fi
       GOV_DAYS_ARG="$2"; shift 2 ;;
@@ -160,10 +194,11 @@ else
 fi
 
 # 降级出口：stderr 一行 ＋ exit 2（本件不写仓库，故不落降级日志文件）
+# 行序：degraded(stderr) → 判不了 → GOVERNANCE（**末行恒为 GOVERNANCE**，见 @output 契约）
 _gov_degrade() { # $1=code $2=原因
   printf 'degraded: %s — %s\n' "$1" "$2" >&2
-  printf 'GOVERNANCE: 0/4 PASS\n'
   printf '判不了: %s — %s\n' "$1" "$2"
+  printf 'GOVERNANCE: 0/4 PASS（4 判不了）\n'
   exit 2
 }
 
@@ -189,6 +224,15 @@ if [ -n "$GOV_TEL_ARG" ]; then
   GOV_TEL="$GOV_TEL_ARG"
 else
   GOV_TEL="$GOV_ROOT/.claude/gate-hits.log"
+fi
+
+# ci 步骤级证据文件（#1234）：显式参数优先，其次 env 注入缝；皆缺 ⇒ 传空串（ci-step 项判不了）
+if [ -n "$GOV_CI_ARG" ]; then
+  GOV_CI_EVIDENCE="$GOV_CI_ARG"
+elif [ -n "${SYNO_G2_CI_EVIDENCE:-}" ]; then
+  GOV_CI_EVIDENCE="${SYNO_G2_CI_EVIDENCE}"
+else
+  GOV_CI_EVIDENCE=""
 fi
 
 # D520/PLATFORM-CHECKLIST #1: 禁裸 python3（只做 command -v 探测 = bash 内建，不 spawn；
@@ -218,22 +262,24 @@ GOV_TMPD="$(mktemp -d)"
 # shellcheck disable=SC2064
 trap 'rm -rf "$GOV_TMPD"' EXIT
 
-# ── ④ G2 遥测 ran=true ────────────────────────────────────────────────────────
-_gov_g2() {
-  local inv="$1" tel="$2" days="$3" out="" rc=0
-  out="$("$PYBIN" - "$inv" "$tel" "$days" <<'PYEOF'
+# ── ④ G2 分腿证据源（#1234：telemetry ／ ci-step ／ none）─────────────────────
+_gov_g2() { # $1=inventory $2=遥测日志 $3=窗口天数 $4=ci 证据文件（空 = 无）
+  local inv="$1" tel="$2" days="$3" cievid="$4" out="" rc=0
+  out="$("$PYBIN" - "$inv" "$tel" "$days" "$cievid" <<'PYEOF'
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 
-inv_path, tel_path, days_s = sys.argv[1], sys.argv[2], int(sys.argv[3])
+inv_path, tel_path, days_s, ci_path = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
 cutoff = datetime.now(timezone.utc) - timedelta(days=days_s)
 RAN = ("hit", "miss", "warn", "degraded")
+EVIDENCE = ("telemetry", "ci-step", "none")
 
 
-def emit(state, detail, unrun=(), warn=""):
-    """统一出口：state ∈ PASS|FAIL|SKIP|DEGRADED；DEGRADED 由 bash 侧折成 exit 2。
+def emit(state, detail, unrun=(), unjudged=(), warn=""):
+    """统一出口：state ∈ PASS|FAIL|SKIP|DEGRADED；DEGRADED 由 bash 侧折成 exit 2（判不了）。
 
     行尾强制 LF：Windows 上 text 模式 stdout 会把 \\n 翻成 \\r\\n，调用方按行前缀解析时
     `state` 会尾随一个 \\r（实测：G2 被误判 DEGRADED）。这是 D313/D732 同类平台坑。
@@ -246,6 +292,8 @@ def emit(state, detail, unrun=(), warn=""):
     print("G2-DETAIL: %s" % detail)
     for item in unrun:
         print("G2-UNRUN: %s" % item)
+    for item in unjudged:
+        print("G2-UNJUDGED: %s" % item)
     if warn:
         print("G2-WARN: %s" % warn)
     sys.exit(0)
@@ -287,12 +335,26 @@ if not required:
     emit("DEGRADED", "E_NO_REQUIRED required_ci: true 条目为 0（信号量 0 ⇒ 判不了）")
 
 
-def aliases(entrypoint):
-    """entrypoint → 确定性 gate 名别名集（完整路径／文件名／去扩展名 stem）。"""
+def aliases(entrypoint, telemetry_key=""):
+    """entrypoint → 确定性 gate 名别名集（完整路径／文件名／去扩展名 stem）∪ telemetry_key。"""
     ep = entrypoint.replace("\\", "/")
     base = ep.rsplit("/", 1)[-1]
     stem = base.rsplit(".", 1)[0] if "." in base else base
-    return {ep, base, stem}
+    names = {ep, base, stem}
+    if telemetry_key:
+        names.add(telemetry_key)
+    return names
+
+
+def parse_iso(value):
+    """ISO8601（可带 Z / 时区偏移）→ aware datetime(UTC)；不可解析 ⇒ None。"""
+    try:
+        stamp = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=timezone.utc)
+    return stamp
 
 
 # ── 遥测 JSONL（坏行只跳过并计数，绝不中断、绝不静默）──
@@ -311,79 +373,180 @@ else:
                 continue
             try:
                 rec = json.loads(line)
-                stamp = datetime.fromisoformat(str(rec["time"]).replace("Z", "+00:00"))
-                if stamp.tzinfo is None:
-                    stamp = stamp.replace(tzinfo=timezone.utc)
+                stamp = parse_iso(rec["time"])
                 gate = str(rec.get("gate", "")).strip()
                 result = str(rec.get("result", "")).strip().lower()
-                if not gate or result not in RAN:
+                if stamp is None or not gate or result not in RAN:
                     raise ValueError("字段不合规")
                 records.append((stamp, gate))
             except (ValueError, KeyError, TypeError, json.JSONDecodeError):
                 bad += 1
-
-warn = ""
-if bad:
-    warn = "遥测坏行 %d 条已跳过并计数（不中断判定）" % bad
-
-if log_state == "missing":
-    emit("SKIP", "遥测日志不存在: %s（required %d 项全部计入未运行）" % (tel_path, len(required)),
-         ["%s %s（未运行）" % (e["id"], e["entrypoint"]) for e in required], warn)
-
-if not records:
-    emit("SKIP", "遥测日志无有效记录（损坏行 %d；required %d 项全部计入未运行）" % (bad, len(required)),
-         ["%s %s（未运行）" % (e["id"], e["entrypoint"]) for e in required], "")
 
 in_window = [(t, g) for (t, g) in records if t >= cutoff]
 by_gate = {}
 for _t, g in in_window:
     by_gate[g] = by_gate.get(g, 0) + 1
 
-unrun = []
+# ── ci 步骤级证据 JSONL（#1234 契约：全路径精确匹配；坏行跳过并计数）──
+ci_by_ep = {}
+ci_bad = 0
+ci_state = "unset"
+ci_reason = ""
+if ci_path:
+    if not os.path.isfile(ci_path):
+        ci_state = "missing"
+    else:
+        try:
+            cfh = open(ci_path, encoding="utf-8", errors="replace")
+        except OSError as exc:
+            ci_state = "unreadable"
+            ci_reason = str(exc)
+        else:
+            ci_state = "ok"
+            with cfh:
+                for raw in cfh:
+                    line = raw.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                        ep = str(rec.get("entrypoint", "")).strip().replace("\\", "/")
+                        ran = rec.get("ran")
+                        if isinstance(ran, str):
+                            ran = ran.strip().lower() == "true"
+                        if not ep or not isinstance(ran, bool):
+                            raise ValueError("字段不合规")
+                        at_raw = rec.get("at", "")
+                        ci_by_ep[ep] = {
+                            "ran": ran,
+                            "at": parse_iso(at_raw) if at_raw else None,
+                            "at_raw": at_raw,
+                            "step": str(rec.get("step", "")).strip(),
+                        }
+                    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+                        ci_bad += 1
+
+# ── 分腿判定（telemetry ／ ci-step ／ none）──
+fail_items, unjudged_items = [], []
+n_telemetry = n_cistep = n_other = 0
 for e in required:
-    if not any(g in aliases(e["entrypoint"]) for g in by_gate):
-        unrun.append("%s %s（未运行）" % (e["id"], e["entrypoint"]))
+    eid, ep = e.get("id", "<无 id>"), e["entrypoint"]
+    ev = str(e.get("evidence", "")).strip()
+    if ev not in EVIDENCE:
+        n_other += 1
+        unjudged_items.append(
+            "%s %s（判不了: E_EVIDENCE_NONE evidence=%r 未声明/非法；只许 telemetry|ci-step|none）"
+            % (eid, ep, ev))
+        continue
+    if ev == "none":
+        n_other += 1
+        unjudged_items.append(
+            "%s %s（判不了: E_EVIDENCE_NONE 该件无任何可读证据通道 ⇒ 判不了）" % (eid, ep))
+        continue
+    if ev == "telemetry":
+        n_telemetry += 1
+        names = aliases(ep, str(e.get("telemetry_key", "")).strip())
+        if not any(g in names for g in by_gate):
+            if log_state == "missing":
+                reason = "E_TELEMETRY_MISSING 遥测日志不存在"
+            elif not records:
+                reason = "E_TELEMETRY_EMPTY 无有效记录"
+            else:
+                reason = "E_TELEMETRY_NO_RECORD 窗口 %d 天内零记录" % days_s
+            fail_items.append("%s %s（未运行: %s；别名=%s）"
+                              % (eid, ep, reason, "/".join(sorted(names))))
+        continue
+    # ci-step
+    n_cistep += 1
+    if ci_state == "unset":
+        unjudged_items.append(
+            "%s %s（判不了: E_CI_UNSET 缺 --ci-evidence / SYNO_G2_CI_EVIDENCE）" % (eid, ep))
+        continue
+    if ci_state == "missing":
+        unjudged_items.append(
+            "%s %s（判不了: E_CI_MISSING 证据文件不存在: %s）" % (eid, ep, ci_path))
+        continue
+    if ci_state == "unreadable":
+        unjudged_items.append(
+            "%s %s（判不了: E_CI_UNREADABLE 证据文件不可读: %s (%s)）" % (eid, ep, ci_path, ci_reason))
+        continue
+    rec = ci_by_ep.get(ep.replace("\\", "/"))
+    if rec is None:
+        unjudged_items.append(
+            "%s %s（判不了: E_CI_NO_ENTRY 证据文件无该 entrypoint 记录）" % (eid, ep))
+        continue
+    if rec["ran"] is False:
+        fail_items.append("%s %s（未运行: E_CI_RAN_FALSE CI 步骤 ran=false；step=%s）"
+                          % (eid, ep, rec["step"] or "<未给>"))
+        continue
+    if rec["at"] is None:
+        unjudged_items.append(
+            "%s %s（判不了: E_CI_AT ran=true 但 at 缺失/不可解析（%r））"
+            % (eid, ep, rec["at_raw"]))
+        continue
+    if rec["at"] < cutoff:
+        fail_items.append("%s %s（未运行: E_CI_WINDOW ran=true 但 at=%s 在窗口 %d 天外）"
+                          % (eid, ep, rec["at"].isoformat(), days_s))
 
-if unrun:
-    emit("FAIL", "required %d 项中 %d 项在窗口 %d 天内零记录（有效记录 %d 条／窗口内 %d 条）"
-         % (len(required), len(unrun), days_s, len(records), len(in_window)), unrun, warn)
+warn = ""
+if bad or ci_bad:
+    parts = []
+    if bad:
+        parts.append("遥测坏行 %d 条" % bad)
+    if ci_bad:
+        parts.append("ci 证据坏行 %d 条" % ci_bad)
+    warn = "、".join(parts) + " 已跳过并计数（不中断判定）"
 
-emit("PASS", "required %d 项全部 ≥1 条 ran 记录（窗口 %d 天，有效记录 %d 条／窗口内 %d 条）"
-     % (len(required), days_s, len(records), len(in_window)), (), warn)
+head = ("required %d 项 = telemetry %d ／ ci-step %d ／ none(含未声明) %d（窗口 %d 天；"
+        "遥测有效 %d 条／窗口内 %d 条；ci 证据有效 %d 条）"
+        % (len(required), n_telemetry, n_cistep, n_other, days_s,
+           len(records), len(in_window), len(ci_by_ep)))
+if fail_items and unjudged_items:
+    emit("DEGRADED", "%s；%d 项未运行 ＋ %d 项判不了（判不了优先 ⇒ exit 2）"
+         % (head, len(fail_items), len(unjudged_items)), fail_items, unjudged_items, warn)
+if fail_items:
+    emit("FAIL", "%s；%d 项未运行" % (head, len(fail_items)), fail_items, (), warn)
+if unjudged_items:
+    emit("DEGRADED", "%s；%d 项判不了" % (head, len(unjudged_items)), (), unjudged_items, warn)
+emit("PASS", "%s；全部证据成立" % head, (), (), warn)
 PYEOF
 )"
   rc=$?
   if [ "$rc" -ne 0 ]; then
-    printf 'G2 遥测 ran=true: SKIP\n'
-    printf '    判不了: G2 解析器异常（rc=%d）\n' "$rc"
+    printf 'G2 分腿证据: SKIP\n'
+    printf '    判不了: E_G2_PARSER G2 解析器异常（rc=%d）\n' "$rc"
     GOV_G2_STATE="DEGRADED"
     return 0
   fi
 
-  local state="" detail="" unrun_lines="" warn_line="" line
+  local state="" detail="" unrun_lines="" unj_lines="" warn_line="" disp="" line
   # 行尾归一（防御侧）：子进程在 Windows 上可能吐 CRLF ⇒ 逐行解析前先剥 CR（D313/D732 同类平台坑）
   out="${out//$'\r'/}"
   # bash 内建解析（禁 sed/cut 子进程：Windows 上每次 spawn 数十毫秒，本件一次运行要跑十几遍）
   while IFS= read -r line; do
     case "$line" in
-      "G2-STATE: "*)  state="${line#G2-STATE: }" ;;
-      "G2-DETAIL: "*) detail="${line#G2-DETAIL: }" ;;
-      "G2-UNRUN: "*)  unrun_lines="${unrun_lines}    · ${line#G2-UNRUN: }
+      "G2-STATE: "*)    state="${line#G2-STATE: }" ;;
+      "G2-DETAIL: "*)   detail="${line#G2-DETAIL: }" ;;
+      "G2-UNRUN: "*)    unrun_lines="${unrun_lines}    · ${line#G2-UNRUN: }
 " ;;
-      "G2-WARN: "*)   warn_line="${line#G2-WARN: }" ;;
+      "G2-UNJUDGED: "*) unj_lines="${unj_lines}    · ${line#G2-UNJUDGED: }
+" ;;
+      "G2-WARN: "*)     warn_line="${line#G2-WARN: }" ;;
     esac
   done <<< "$out"
 
+  # 显示词与内部状态分离：判不了 = SKIP（与 G11 同形），内部记 DEGRADED 供汇总计「判不了」
   case "$state" in
-    PASS|FAIL|SKIP) : ;;
-    DEGRADED)      state="DEGRADED" ;;
-    *)             state="DEGRADED"; detail="G2 解析器输出不可识别（state=${state:-<空>}）" ;;
+    PASS)     disp="PASS"; GOV_G2_STATE="PASS" ;;
+    FAIL)     disp="FAIL"; GOV_G2_STATE="FAIL" ;;
+    DEGRADED) disp="SKIP"; GOV_G2_STATE="DEGRADED" ;;
+    *)        disp="SKIP"; GOV_G2_STATE="DEGRADED"; detail="G2 解析器输出不可识别（state=${state:-<空>}）" ;;
   esac
 
-  GOV_G2_STATE="$state"
-  printf 'G2 遥测 ran=true: %s\n' "$state"
+  printf 'G2 分腿证据: %s\n' "$disp"
   printf '    %s\n' "$detail"
   [ -n "$unrun_lines" ] && printf '%s\n' "$unrun_lines"
+  [ -n "$unj_lines" ] && printf '%s\n' "$unj_lines"
   [ -n "$warn_line" ] && printf '    %s\n' "$warn_line"
   return 0
 }
@@ -535,13 +698,18 @@ _gov_g11() { # $1=生成器路径 $2=root $3=inventory
 }
 
 # ── ⑧ 执行与汇总 ─────────────────────────────────────────────────────────────
-printf '门禁治理一键验收（G2/G6/G10/G11 · 规格 §4 · #1122 / #1147 余项 B2）\n'
+printf '门禁治理一键验收（G2/G6/G10/G11 · 规格 §4 · #1122 / #1147 余项 B2 / #1234）\n'
 printf 'root: %s\n' "$GOV_ROOT"
 printf '遥测: %s（窗口 %s 天）\n' "$GOV_TEL" "$GOV_DAYS"
+if [ -n "$GOV_CI_EVIDENCE" ]; then
+  printf 'ci 证据: %s（G2 的 ci-step 腿）\n' "$GOV_CI_EVIDENCE"
+else
+  printf 'ci 证据: <未提供>（G2 的 ci-step 腿判不了；--ci-evidence 或 SYNO_G2_CI_EVIDENCE）\n'
+fi
 printf '\n'
 
 GOV_G2_STATE=""; GOV_G6_STATE=""; GOV_G10_STATE=""; GOV_G11_STATE=""
-_gov_g2 "$GOV_INV" "$GOV_TEL" "$GOV_DAYS"
+_gov_g2 "$GOV_INV" "$GOV_TEL" "$GOV_DAYS" "$GOV_CI_EVIDENCE"
 printf '\n'
 _gov_g6 "$GOV_GA"
 printf '\n'
@@ -563,10 +731,14 @@ done
 GOV_TOTAL=$((GOV_PASS + GOV_FAIL + GOV_SKIP + GOV_DEGRADED))
 printf '小结: PASS %d ／ FAIL %d ／ SKIP %d ／ 判不了 %d（共 %d 项）\n' \
   "$GOV_PASS" "$GOV_FAIL" "$GOV_SKIP" "$GOV_DEGRADED" "$GOV_TOTAL"
-printf 'GOVERNANCE: %d/%d PASS\n' "$GOV_PASS" "$GOV_TOTAL"
-
+# 降级行先于末行（stderr 与 stdout 同 fd 时也保证 **末行恒 GOVERNANCE**，见 @output 契约）
 if [ "$GOV_DEGRADED" -gt 0 ]; then
   printf 'degraded: 有 %d 项判不了（禁当通过）\n' "$GOV_DEGRADED" >&2
+fi
+# 末行契约（#1234）：分母**恒 4**；y = 判不了项数（DEGRADED）；SKIP/FAIL 不计入 x。
+printf 'GOVERNANCE: %d/4 PASS（%d 判不了）\n' "$GOV_PASS" "$GOV_DEGRADED"
+
+if [ "$GOV_DEGRADED" -gt 0 ]; then
   exit 2
 fi
 if [ "$GOV_PASS" -eq "$GOV_TOTAL" ]; then

@@ -40,6 +40,33 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ═══ W2-C（#1239）· GATE-STANDARD §二/§六批C: GitHub 腿对 6 道门禁降为「只报」 ═══════════
+# 四态登记（GATE-STANDARD §二）: Gitea = 权威腿／唯一阻断；GitHub = 集成测试腿／**只报不拦**。
+# 下列 6 道门禁的**阻断权在 Gitea 腿**（.gitea/workflows/local-gates.yml），本文件的调用一律
+#   `continue-on-error: true`（**step 级**）:
+#   ① scripts/control-tower/verify-parallel.sh
+#        → job quality / step「Verify parallel declaration (D540…)」
+#   ② scripts/workflow/check-brief-vs-code.sh
+#        → job checker-review / step「Brief vs Code consistency」
+#   ③ scripts/ci/golden-case-checker.ts
+#        → job golden-case / step「Run golden case F1 gate」
+#   ④ scripts/ci/diagnosis-quality-check.sh
+#        → job golden-case / step「Run diagnosis quality check」
+#   ⑤ scripts/control-tower/check-gate-integrity.sh
+#        → job gate-integrity / pattern sentinel 步 + C 段 ci-reds 步 + 证据发布步
+#   ⑥ scripts/control-tower/check-required-contexts.py
+#        → job gate-integrity / step「Required contexts ⇄ job name consistency」
+# 三条不可让渡约束（本批判据 d）:
+#   · **job 数不减**（12 个业务 job 全在）、**step 不删**、判据语义不改（迁腿 ≠ 改判据）；
+#   · **仍然真跑、真出日志** —— continue-on-error 只吸收失败对 workflow 结论的影响，
+#     命令照执行、原始输出与 ::error 注解照出（不是 `if: false` 式空转）；
+#   · 用 **step 级**而非 job 级: job 内其余判定（docs-only 检测、写集对账等）保持真阻断。
+# all-checks-passed 一致性（判据 b）: 该聚合 job 判据 = needs.*.result 含 failure/cancelled/skipped。
+#   GitHub 语义: step 级 continue-on-error 下失败 step 的 outcome=failure、**conclusion=success**，
+#   job 结论仍 success ⇒ needs.<job>.result = success ⇒ 本批**不改**聚合 job 也恒不因只报而红
+#   （同机制在文件内已有先例: D1147 顾问腿段注释，见 windows-advisory 段头）。
+# 已知限制: GitHub 腿无法在本机触发/观测（本机无 GitHub 凭据）⇒ 本腿"绿"须队外/合并后核。
+
 jobs:
   quality:
     # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
@@ -183,8 +210,10 @@ jobs:
       # D540: verify-parallel 已从本地 pre-push 移 CI/PR —— CI 权威物理拦截写集重叠
       #   base..HEAD write set vs origin/main 已合 dev doc write set（fetch-depth:0 需完整历史，已确认）
       #   纯文档 PR 跳过；混合 PR 正常跑。
-      - name: Verify parallel declaration (D540, moved from local pre-push)
+      - name: Verify parallel declaration (D540, moved from local pre-push) [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
+        # W2-C（#1239）: 门禁 ① —— 阻断权在 Gitea 腿；本腿只报（判据语义不变，命令照跑）。
+        continue-on-error: true
         run: |
           # base..head 写集 × 已合 PR 写集 —— CI 权威物理拦截写集重叠
           bash scripts/control-tower/verify-parallel.sh --ci-pr origin/main
@@ -939,9 +968,13 @@ jobs:
       - name: Run checker review
         if: steps.docsonly.outputs.docs_only != 'true'
         run: bash scripts/checker-review.sh
-      - name: Brief vs Code consistency
+      # W2-C（#1239）: 门禁 ② —— 阻断权在 Gitea 腿，本腿只报。
+      #   原行尾的吞错后缀已删: 它把门禁 rc 一并吞掉 ⇒ 日志里分不出"通过/失败"；改由
+      #   continue-on-error 吸收（rc 可见、命令照跑、失败在 step 详情与注解可见，只是不拿阻断权）。
+      - name: Brief vs Code consistency [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
-        run: bash scripts/workflow/check-brief-vs-code.sh --strict || true
+        continue-on-error: true
+        run: bash scripts/workflow/check-brief-vs-code.sh --strict
 
   # ═══ D-E/③（创始人 2026-10-07 批准）: npm audit job 退役 ═══
   # 退役依据: continue-on-error + 2026-08-16 创始人裁决豁免（33 漏洞在 node-gyp 编译链，
@@ -1013,11 +1046,14 @@ jobs:
         with: { node-version: '22', cache: 'npm' }
       - run: bash scripts/control-tower/install-deps.sh
         if: steps.docsonly.outputs.docs_only != 'true'
-      - name: Run golden case F1 gate
+      # W2-C（#1239）: 门禁 ③④ —— 阻断权在 Gitea 腿，本腿只报（两 step 各自吸收，命令照跑）。
+      - name: Run golden case F1 gate [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
+        continue-on-error: true
         run: npx tsx scripts/ci/golden-case-checker.ts
-      - name: Run diagnosis quality check
+      - name: Run diagnosis quality check [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
+        continue-on-error: true
         run: bash scripts/ci/diagnosis-quality-check.sh
 
   # ── M9 门禁完整性：三件套接线（task-5 检查器 + task-6 夹具/基线表；本 job 由 task-6 登记）──
@@ -1086,8 +1122,10 @@ jobs:
               echo "docs_only=true" >> "$GITHUB_OUTPUT"
             fi
           fi
-      - name: Gate integrity pattern sentinel + registration gate
+      # W2-C（#1239）: 门禁 ⑤(A/B 段) —— 阻断权在 Gitea 腿，本腿只报（命令照跑，失败出 ::error/step 详情）。
+      - name: Gate integrity pattern sentinel + registration gate [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
+        continue-on-error: true
         run: bash scripts/control-tower/check-gate-integrity.sh
       # 抽检即注册（B 模式口径）——该行同时是"夹具在 CI 里无人执行"的反证。
       # #665e: 夹具跑完整 pre-commit（含组 13 块级 paths 快照对账）需要 tsx；本 job 无依赖安装步骤
@@ -1125,8 +1163,10 @@ jobs:
       #   改坏 job 名 = 必红），live 双向对账降为**显式 warning**（`--allow-degraded`：打印 degraded 原因
       #   + warning 行、exit 0）。判定不被降级削弱：静态面违规仍 exit 1。
       #   live 对账的真落点 = 本地/带 PAT 的定期任务（见 D1 §2-A1 与 D2 §6）。
-      - name: Required contexts ⇄ job name consistency (A1-①, read-only)
+      - name: Required contexts ⇄ job name consistency (A1-①, read-only) [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
+        # W2-C（#1239）: 门禁 ⑥ —— 阻断权在 Gitea 腿，本腿只报（判据与 --allow-degraded 语义不变）。
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -1143,8 +1183,11 @@ jobs:
           printf '%s\n' "$OUT" > /tmp/required-contexts-check.out
           exit "$rc"
       # 取数失败必须让 step 失败（fail-closed，不静默放行）：豁免台账核对不到 = 既有红基线不可核。
-      - name: CI red baseline reconciliation (--ci-reds, fail-closed fetch)
+      - name: CI red baseline reconciliation (--ci-reds, fail-closed fetch) [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true'
+        # W2-C（#1239）: 门禁 ⑤(C 段) —— 阻断权在 Gitea 腿，本腿只报。
+        #   步内判定不动（取数失败仍 exit 1 的 fail-closed 语义保留，只是不再拿阻断权）。
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -1197,9 +1240,13 @@ jobs:
       # 证据步（M9 task-11）：判定已由前面 step 完成，本步只把关键行发布为 **可公开检索的注解**——
       #   GitHub job logs 端点匿名 404/403（CTO 证据要求 ③ 的 CI GNU 侧原始输出取不回，K3 也核不了），
       #   而注解有公开 API：GET /repos/{owner}/{repo}/check-runs/{id}/annotations（无需 token）。
-      #   `|| true` 仅限本步（判定归前一步）；`if: always()` 保证失败时同样出证据；注解 ≤10 行（GitHub 上限）。
-      - name: Publish gate-integrity summary (public evidence via annotations)
+      #   本步只取数、判定归前一步；`if: always()` 保证失败时同样出证据；注解 ≤10 行（GitHub 上限）。
+      #   ⚠️ W2-C（#1239）: 检查器调用行的吞错后缀已删（删后行为等价: 本步 `set -uo pipefail` 无 -e，
+      #     赋值失败不中止；取不到行时走下方 ::warning 分支，不伪造判定），
+      #     本 step 一并 report-only ⇒ 本文件内**门禁调用行零吞错后缀**（出口阈值见 PR/回执）。
+      - name: Publish gate-integrity summary (public evidence via annotations) [report-only #1239]
         if: steps.docsonly.outputs.docs_only != 'true' && (always())
+        continue-on-error: true
         run: |
           set -uo pipefail
           # 证据步：判定已由前面 step 完成；此处只把关键行发布为可公开检索的注解
@@ -1211,7 +1258,7 @@ jobs:
           if [ -f /tmp/ci-reds-base-ref.txt ]; then
             ARGS="$ARGS --base-ref $(cat /tmp/ci-reds-base-ref.txt)"
           fi
-          OUT="$(bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" $ARGS 2>&1 || true)"
+          OUT="$(bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" $ARGS 2>&1)"
           # 取不到关键行时**可见但不断**（发布者不判红；真实判定见 step 1）——见下方 ::warning 分支
           # D954: 「对账对象」行**优先占一个注解位**（注解 ≤10 条上限）——保证对账对象身份必然可公开检索，
           #   不被 PATTERN/REGISTRY 等行的条数挤出（原实现 head -10 有被挤掉的风险）。

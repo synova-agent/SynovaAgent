@@ -1,0 +1,22 @@
+writeset:
+  - .claude/claims/1211.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - memory/notes/proposed/2026-10-31-1211-graph-scope.md
+  - src/agent/data-ingest-service.ts
+  - src/l4/data-exporter.ts
+  - src/l2/graph-scope.ts
+  - src/routes/data.ts
+  - tests/agent/data-ingest-service.test.ts
+  - tests/contract/triviality-manifest.yaml
+  - tests/l2/graph-scope.test.ts
+  - tests/l4/graph-scope-wiring.test.ts
+  - tests/security/boundary-identity.test.ts
+done:
+  - verify: npx vitest run --pool=threads tests/l2/graph-scope.test.ts tests/l4/graph-scope-wiring.test.ts
+  - verify: npx vitest run --pool=threads tests/agent/data-ingest-service.test.ts
+  - verify: npx vitest run --pool=threads tests/security/
+  - verify: npx tsc --noEmit --pretty false
+  - verify: bash scripts/check-architecture.sh
+  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
+  - verify: python3 scripts/control-tower/check-test-obligations.py --base gitea/main
+note: "#1211 S0-2c 图命名空间口径统一：新增 src/l2/graph-scope.ts 为唯一口径来源（resolveGraph/assertGraphName）；4 个业务消费点同口径；删 data-ingest 的 'default' 默认值＋入口 assert（fail loud）；export manifest 增 graphCoverage（含 graph==='default' ⇒ defaultGraphCount=0 的语义兜底）。decision-capture.ts 不在写集：main:437 自 2026-06-03 已带第 6 参（blame 24f1c959a1），#1207 未合入不影响此处。写集 12 件 = 9 变更件 ＋ 2 登记件（WIRING-REGISTRY／triviality-manifest）＋ 1 Note ＋ 本 claim。两处 CTO 裁定：① 模块落 src/l2/（铁律 39 原文，非未被扫描）；② tests/security/boundary-identity.test.ts 夹具改三节点（org-a→org-a 图 / org-b→org-b 图 / org-b-impostor→org-a 图且 props.orgId=org-b），U-1c 补 (c) 断言令 matchesTenant 仍被真覆盖。三条新增件必付登记见规格 §十四。"

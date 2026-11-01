@@ -963,6 +963,11 @@ candidates:
 # 口径①：owner 默认=治理线 P4；域专属件归属以 CTO 确认为准（confirmed_by: pending-cto，本批不编造归属）
 # 口径②：required_ci=true ⇔ 在 .gitea/workflows/*.yml ／ scripts/pre-commit-check.sh ／ scripts/pre-push-check.sh 任一被引用（合并/提交/推送一条强制腿）
 # 口径③：review_after 默认 +30d；P0 计数棘轮下限 = SYNO_P0_FLOOR（check-gate-inventory.sh 内，默认 8）
+# 口径④（#1234 G2 分腿证据源）：required 条目新增 `evidence` ∈ {telemetry, ci-step, none} ——
+#   telemetry=pre-commit 遥测有稳定键记录（可带 `telemetry_key`，缺省用 entrypoint 的确定性别名：
+#   全路径／文件名／去扩展名 stem）；ci-step=只在 CI 步骤里跑（证据经 verify-governance 的
+#   `--ci-evidence` JSONL 注入，本批无写方 ⇒ 一律判不了）；none=无任何可读证据通道（判不了）。
+#   非 required 条目可不写（不影响判定）；required 条目缺 `evidence` ⇒ 按 none 判不了（fail-closed）。
 # 生成：逐件从盘上枚举（禁手写），与 check-gate-inventory.sh 双向对齐判据配套
 classification:
   - id: CT-check-acceptance-matrix
@@ -978,6 +983,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-block-paths.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-block-paths
     confirmed_by: pending-cto
   - id: CT-check-block-paths.ts
     class: P0
@@ -999,6 +1006,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-board-truth.ts
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-bypass-log
     class: P1
@@ -1006,9 +1014,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-bypass-log.sh
     required_ci: true
-    local_only: true
-    required_ci_scope: pre-push
-    confirmed_by: founder-2026-10-31
+    evidence: none
+    confirmed_by: pending-cto
     note: "evidence=self-written-local-logbook; auditable=no; retired_after=W9-branch-protection; reason=#1134"
   - id: CT-check-canary-drift
     class: P1
@@ -1044,6 +1051,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-doc-contract.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-doc-contract
     confirmed_by: pending-cto
   - id: CT-check-dsh-anchor
     class: P2
@@ -1051,6 +1060,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-dsh-anchor.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-dsh-anchor
     confirmed_by: pending-cto
   - id: CT-check-dual-repo-sync
     class: P1
@@ -1071,7 +1082,7 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-integrity.sh
-    required_ci: false
+    required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-gate-inventory
     class: P1
@@ -1079,6 +1090,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-inventory.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-gate-inventory
     confirmed_by: pending-cto
   - id: CT-check-gate-protection
     class: P0
@@ -1086,6 +1099,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-protection.sh
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-gitlinks
     class: P1
@@ -1121,6 +1135,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-notes-lifecycle.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-notes-lifecycle
     confirmed_by: pending-cto
   - id: CT-check-ontology-fields
     class: P1
@@ -1156,6 +1172,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-pr-budget.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-pr-budget
     confirmed_by: pending-cto
   - id: CT-check-preset-bundles
     class: P1
@@ -1177,6 +1195,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-quality-delta.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-quality-delta
     confirmed_by: pending-cto
   - id: CT-check-registry-invariants
     class: P1
@@ -1184,13 +1204,14 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-registry-invariants.ts
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-required-contexts
     class: P0
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-required-contexts.py
-    required_ci: false
+    required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-sentinel-type-net
     class: P1
@@ -1205,6 +1226,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-test-obligations.py
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-tool-args-delta
     class: P1
@@ -1212,13 +1234,18 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-tool-args-delta.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-tool-args-delta
     confirmed_by: pending-cto
   - id: CT-verify-claims-table
     class: P1
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/verify-claims-table.sh
-    required_ci: true
+    required_ci: false
+    evidence: none
+    na_cmd: "sed 's/#.*//' scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows/*.yml 2>/dev/null | grep -c 'verify-claims-table' || true"
+    note: "na_cmd 输出 0 = 四腿去注释后零引用（负证据）；grep -c 无命中时 rc=1 属预期 ⇒ || true 只兜该码，不改「输出 0」这条证据"
     confirmed_by: pending-cto
   - id: CT-verify-parallel
     class: P2
@@ -1226,6 +1253,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/verify-parallel.sh
     required_ci: true
+    evidence: none
     confirmed_by: pending-cto
 
 
@@ -1235,6 +1263,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-mirror-freshness.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-mirror-freshness
     confirmed_by: pending-cto
   - id: CT-check-ci-empty-green
     class: P1
@@ -1242,6 +1272,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-ci-empty-green.sh
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   # ---- P4 2026-10-28：#1108 W10 Unicode 同形字分级门禁（纯追加；class P0 ＝ 视觉冒充/编码损坏类）----
   - id: CT-check-unicode-confusable
@@ -1250,6 +1281,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-unicode-confusable.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-unicode-confusable
     confirmed_by: pending-cto
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1285,6 +1318,15 @@ classification:
     required_ci: false
     confirmed_by: pending-cto
 
+  # ---- P4 2026-10-31：#1210 W0 附通道 B 耗时预算机检（纯追加；旁路未接线故 required_ci: false）----
+  - id: CT-check-gate-budget
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gate-budget.sh
+    required_ci: false
+    confirmed_by: pending-cto
+
 run_by:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
@@ -1308,7 +1350,7 @@ run_by:
     quota_scope: bypass
   - entrypoint: scripts/control-tower/check-canary-drift.sh
     run_by: github-ci
-    quota: true
+    quota: false
   - entrypoint: scripts/control-tower/check-ci-stale-red.sh
     run_by: "无"
     quota: false
@@ -1333,7 +1375,7 @@ run_by:
     scope: github-only-integration
     na_cmd: "grep -rl 'check-fixture-requires.sh' .gitea/workflows 2>/dev/null | wc -l | grep -qx 0"
   - entrypoint: scripts/control-tower/check-gate-integrity.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-gate-inventory.sh
     run_by: pre-commit
@@ -1370,7 +1412,7 @@ run_by:
     quota: false
   - entrypoint: scripts/control-tower/check-pr-budget.sh
     run_by: pre-commit
-    quota: true
+    quota: false
   - entrypoint: scripts/control-tower/check-preset-bundles.sh
     run_by: "无"
     quota: false
@@ -1384,7 +1426,7 @@ run_by:
     run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-required-contexts.py
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-sentinel-type-net.sh
     run_by: "无"
@@ -1399,7 +1441,7 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/verify-parallel.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-mirror-freshness.sh
     run_by: pre-commit
@@ -1510,7 +1552,7 @@ run_by:
 #   根级 scripts/check-*.sh（18 件；此前完全在册外）
   - entrypoint: scripts/check-acceptance-ci.sh
     run_by: pre-commit
-    quota: true
+    quota: false
   - entrypoint: scripts/check-architecture.sh
     run_by: gitea-ci
     quota: true
@@ -1522,13 +1564,13 @@ run_by:
     quota: false
   - entrypoint: scripts/check-brief-vs-code.sh
     run_by: github-ci
-    quota: true
+    quota: false
   - entrypoint: scripts/check-content-coupling.sh
     run_by: pre-commit
     quota: true
   - entrypoint: scripts/check-deprecated-mapping.sh
     run_by: pre-commit
-    quota: true
+    quota: false
   - entrypoint: scripts/check-fde-terms.sh
     run_by: npm
     quota: false
@@ -1537,7 +1579,7 @@ run_by:
     quota: true
   - entrypoint: scripts/check-hardcoded.sh
     run_by: pre-commit
-    quota: true
+    quota: false
   - entrypoint: scripts/check-integrity-startup.sh
     run_by: "无"
     quota: false
@@ -1567,10 +1609,10 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/ci/diagnosis-quality-check.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/ci/golden-case-checker.ts
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/ci/verify-d703.sh
     run_by: "无"
@@ -1582,6 +1624,12 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/doc-system/verify-doc-budgets.sh
+    run_by: "无"
+    quota: false
+  - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
     run_by: "无"
     quota: false
   - entrypoint: scripts/doc-system/check-doc-truth.sh
@@ -1597,7 +1645,7 @@ run_by:
     run_by: pre-commit
     quota: true
   - entrypoint: scripts/workflow/check-brief-vs-code.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/workflow/check-dataflow-alignment.sh
     run_by: "无"
@@ -1618,7 +1666,7 @@ run_by:
     quota: false
   - entrypoint: scripts/workflow/check-silent-swallow.sh
     run_by: pre-commit
-    quota: true
+    quota: false
   - entrypoint: scripts/workflow/check-spec.sh
     run_by: "无"
     quota: false
@@ -1667,8 +1715,12 @@ run_by:
   - entrypoint: scripts/control-tower/verify-governance.sh
     run_by: "无"
     quota: false
+  - entrypoint: scripts/control-tower/check-gate-budget.sh
+    run_by: "无"
+    quota: false
 run_by_candidates:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）（20 件）
+  - entrypoint: scripts/control-tower/check-gate-budget.sh
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
   - entrypoint: scripts/control-tower/check-block-paths.ts
   - entrypoint: scripts/control-tower/check-board-metrics.ts
@@ -1757,6 +1809,10 @@ run_by_candidates:
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
   - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
+  - entrypoint: scripts/doc-system/verify-doc-budgets.sh
+    why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡；接前核 §七 ≤90 s）"
+  - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
+    why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
 
 gate_meta:
   measured_at: 9842b5163
@@ -1779,7 +1835,7 @@ gate_meta:
       class: P2
       run_by: pre-commit
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/check-architecture.sh
@@ -1805,9 +1861,9 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/check-brief-vs-code.sh
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/check-content-coupling.sh
@@ -1821,7 +1877,7 @@ gate_meta:
       class: P2
       run_by: pre-commit
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/check-fde-terms.sh
@@ -1842,7 +1898,7 @@ gate_meta:
       class: P2
       run_by: pre-commit
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/check-integrity-startup.sh
@@ -1910,14 +1966,14 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/ci/diagnosis-quality-check.sh
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/ci/golden-case-checker.ts
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -1982,7 +2038,7 @@ gate_meta:
       class: P1
       run_by: github-ci
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/check-ci-empty-green.sh
@@ -2041,9 +2097,16 @@ gate_meta:
       quota: false
       quota_scope: non-doc
       nature: mechanical
+    - entrypoint: scripts/control-tower/check-gate-budget.sh
+      class: P1
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: non-doc
+      nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-integrity.sh
       class: P0
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -2136,7 +2199,7 @@ gate_meta:
       class: P1
       run_by: pre-commit
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/check-preset-bundles.sh
@@ -2169,7 +2232,7 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-required-contexts.py
       class: P0
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -2475,6 +2538,20 @@ gate_meta:
       quota: true
       quota_scope: doc
       nature: mechanical
+    - entrypoint: scripts/doc-system/verify-doc-budgets.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: doc
+      nature: mechanical
+    - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
+      class: P2
+      run_by: 无
+      orphan: true
+      quota: false
+      quota_scope: doc
+      nature: mechanical
     - entrypoint: scripts/workflow/check-boundaries-incremental.sh
       class: P2
       run_by: 无
@@ -2491,7 +2568,7 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/workflow/check-brief-vs-code.sh
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -2535,7 +2612,7 @@ gate_meta:
       class: P2
       run_by: pre-commit
       orphan: false
-      quota: true
+      quota: false
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/workflow/check-spec.sh
@@ -2698,6 +2775,188 @@ retired:
     evidence: "git cat-file 实测该路径不存在；无载体故无任何钩子被挂载"
     observation_until: 2026-11-28
 
+#   批2 W1 退役（#1219 · GATE-STANDARD v3.1 §六批 A／批 B）；不删文件，观察期 30 天（至 2026-11-30）。
+#   replacement: none 的条目必须带 na_cmd（可复跑负证据：四腿过滤注释行后零引用／零出红路径）。
+#   判据：tests/control-tower/gate-retirement-batch1.test.sh（W1 扩面后含 batch=2 字段校验，改坏即红）。
+  - id: RET-w1-check-lessons-learned
+    path: scripts/check-lessons-learned.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿（pre-commit／pre-push／.gitea/workflows／.github/workflows）过滤注释行后命中 0（na_cmd rc=0）；实路径为 scripts/ 根级（仓内无 workflow 同名件）"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-lessons-learned.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-check-tech-debt
+    path: scripts/check-tech-debt.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；实路径为 scripts/ 根级（仓内无 workflow 同名件）"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-tech-debt.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-ci-contract-gaps
+    path: scripts/ci/check-contract-gaps.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-contract-gaps.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-check-boundaries-incremental
+    path: scripts/workflow/check-boundaries-incremental.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-boundaries-incremental.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-check-dataflow-alignment
+    path: scripts/workflow/check-dataflow-alignment.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-dataflow-alignment.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-check-golden-regression
+    path: scripts/workflow/check-golden-regression.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-golden-regression.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-check-self-diagnosis
+    path: scripts/workflow/check-self-diagnosis.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- check-self-diagnosis.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-hook-check-task-scope
+    path: scripts/workflow/hook-check-task-scope.sh
+    batch: 2
+    reason: "四腿零引用；仓内 .claude/settings.json 存在但无 hooks 键（grep -c hooks 实测 0）；settings.local.json 被 .gitignore 忽略故本机侧不可核，按开工令计入本批，观察期复核"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；.gitignore:57 忽略 .claude/settings.local.json；仓内 settings.json 顶层键 env/permissions/model，无 hooks 键"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- hook-check-task-scope.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-log-no-verify
+    path: scripts/workflow/log-no-verify.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- log-no-verify.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-scope-check
+    path: scripts/workflow/scope-check.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- scope-check.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-sop-gate
+    path: scripts/workflow/sop-gate.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- sop-gate.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-verify-incremental
+    path: scripts/workflow/verify-incremental.sh
+    batch: 2
+    reason: "ORPHAN B 类零风险退役（GATE-STANDARD v3.1 §六批 A）：四腿零引用、无调用点、不产生任何拦截判定；不删文件，观察期 30 天"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "四腿过滤注释行后命中 0（na_cmd rc=0）；pre-push 的 2 处为注释行，已被过滤；文件保留不删"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn -- verify-incremental.sh scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-w1-all-checks-passed
+    path: ".github/workflows/ci.yml#all-checks-passed"
+    batch: 2
+    reason: "聚合 job 的参与集判定已由 check-gate-integrity.sh ci-reds 单源（required-checks-baseline.txt）接管；job 保留在 ci.yml，required 绑定清理归 W8/admin，不在本批"
+    date: 2026-10-31
+    replacement: scripts/control-tower/check-gate-integrity.sh
+    absorbed_by: scripts/control-tower/check-gate-integrity.sh
+    evidence: "ci.yml:1549 job 仍在；check-gate-integrity.sh:769-790 生产单源读 required-checks-baseline.txt（9 名）；本批不动 required 绑定"
+    observation_until: 2026-11-30
+  - id: RET-w1-check-deprecated-mapping
+    path: scripts/check-deprecated-mapping.sh
+    batch: 2
+    reason: "末行恒 exit 0（17 行脚本）；pre-commit-check.sh:648 并行调用后仅 par_collect_quiet 收集，判定不阻断"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "grep -c 'exit 1' = 0；tail -1 = exit 0；调用点 pre-commit-check.sh:648 无出红路径（na_cmd rc=0）"
+    observation_until: 2026-11-30
+    na_cmd: "grep -c 'exit 1' scripts/check-deprecated-mapping.sh | grep -qx 0"
+  - id: RET-w1-root-check-brief-vs-code
+    path: scripts/check-brief-vs-code.sh
+    batch: 2
+    reason: "根级同名件为重复实现：真实被调用的是 scripts/workflow/check-brief-vs-code.sh（ci.yml:944），根级件四腿零引用"
+    date: 2026-10-31
+    replacement: scripts/workflow/check-brief-vs-code.sh
+    absorbed_by: scripts/workflow/check-brief-vs-code.sh
+    evidence: "ci.yml:944 调 workflow 版（带 || true）；根级件四腿过滤注释后命中 0；两件并存实测（18528B／9597B）"
+    observation_until: 2026-11-30
+  - id: RET-w1-check-canary-drift
+    path: scripts/control-tower/check-canary-drift.sh
+    batch: 2
+    reason: "头契约 @exit 恒 0（告警不阻断）；ci.yml:808/:1514 调用均带 || true，rc 被丢弃"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "脚本头 :12 @exit 恒 0；grep -c 'exit 1' = 0；ci.yml:808、:1514 均 || true（na_cmd rc=0）"
+    observation_until: 2026-11-30
+    na_cmd: "grep -c 'exit 1' scripts/control-tower/check-canary-drift.sh | grep -qx 0"
+  - id: RET-w1-check-silent-swallow
+    path: scripts/workflow/check-silent-swallow.sh
+    batch: 2
+    reason: "pre-commit-check.sh:812 调用带 || true，rc 被丢弃，判定退化为只打印；新增行 2>/dev/null 双静默的承接面列入观察期确认"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: none
+    evidence: "pre-commit-check.sh:812 实测含 || true（na_cmd rc=0）；调用点丢弃 rc"
+    observation_until: 2026-11-30
+    na_cmd: "grep -n 'check-silent-swallow.sh' scripts/pre-commit-check.sh | grep -q '|| true'"
+  - id: RET-w1-check-acceptance-matrix
+    path: scripts/control-tower/check-acceptance-matrix.py
+    batch: 2
+    reason: "三态机制已由总闸 verify-governance.sh 承接（G11 配额双闸＋退出码归一已存在）；本器四腿零引用、无生产消费者"
+    date: 2026-10-31
+    replacement: none
+    absorbed_by: scripts/control-tower/verify-governance.sh
+    evidence: "四腿过滤注释后命中 0（na_cmd rc=0）；verify-governance.sh:6/:13-14 载 G11 三桶；WIRING 该行原 status=declared-only、consumer=null"
+    observation_until: 2026-11-30
+    na_cmd: "grep -rn check-acceptance-matrix scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # workflows: 两仓 workflow 全量定态（W0-5 · GATE-STANDARD v3.1 §二 · #1205）
 # 四态：阻断（仅 Gitea 权威腿）／只报（GitHub 回传、不阻断）／advisory（只参考，不阻断
@@ -2773,7 +3032,7 @@ workflows:
       - id: all-checks-passed
         category: discipline
         state: 只报
-        reason: "聚合 job；批 A 计划退（硬前置：先给 check-gate-integrity.sh 换 ci-reds 参与集单源）"
+        reason: "聚合 job；已按 W1 #1219 台账退役（job 保留在 ci.yml，state 只报）；参与集判定归 check-gate-integrity.sh ci-reds 单源（required-checks-baseline.txt）；required 绑定清理归 W8/admin"
   - id: github/dashboard-auto
     repo: github
     trigger: "push[main] / workflow_dispatch"
