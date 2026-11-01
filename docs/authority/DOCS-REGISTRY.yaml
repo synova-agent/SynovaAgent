@@ -1699,6 +1699,13 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1252 ⑦ 接线修复 受保护路径豁免（DOC-1252）----
+  - id: DOC-1252
+    type: decision
+    path: gate-exemptions/2026-11-01-1252-gate7-wiring.md
+    status: active
+    owner: P4
+    note: "#1252（T2）：⑦ 两处缺陷——Windows 盘符冒号打断 grep -nHE 行解析（本机违规2/rc=1 vs CI 违规0/OK，两腿相反）⇒ _fp_split_line 贪心取最后 :<num>: ＋只读单测缝 --fixture-power-parse；⑦ 步补注入 SYNO_BASE_REF 使『越线者付账』判据真正行使。判据阈值一字未动；配对测试 74/0。"
   # ---- P4 2026-11-01：#1210 判据 7 遗留项（W6 墙钟接线）豁免登记（DOC-1210-01；R1 口径 id = DOC-<Issue#>-NN）----
   - id: DOC-1210-01
     type: decision
