@@ -1,0 +1,11 @@
+# .claude/claims/1240.yaml — #1240 K3 P1-① 三处失效行号修正（docs-only）
+writeset:
+  - .claude/claims/1240.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - tests/contract/triviality-manifest.yaml
+done:
+  - verify: grep -c "data-exporter.ts:107\|data-ingest-service.ts:169\|data-ingest-service.ts:245" docs/authority/WIRING-REGISTRY.yaml tests/contract/triviality-manifest.yaml
+  - verify: grep -c "data-exporter.ts:117" docs/authority/WIRING-REGISTRY.yaml
+  - verify: sed -n '117p' src/l4/data-exporter.ts
+  - verify: sed -n '172p;246p' src/agent/data-ingest-service.ts
+note: K3 终审 #1211 的 P1-①：登记件 reason 里三处生产消费点行号失效，改为实测值（107→117、169→172、245→246）。门禁不消费行号、不产生假绿，只提升可核性。
