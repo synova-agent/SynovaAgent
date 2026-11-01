@@ -1493,6 +1493,16 @@ if [ -n "$STAGED_ROUTES" ]; then
 fi
 soft_check "数据流: 路由文件须含 API 调用证据" "${DATA_FLOW_FAIL:-}"
 
+# 7e. 启动完整性（K12-ENG P0-2 / 14 项批准 K12-18）— manifest entryPoint 引用闭合
+#   为什么：K12-18 原判据（coupling CC3）已把 entryPoint 降为纯文档 ⇒ 死指针漏网；
+#   check-integrity-startup.sh 有牙齿（逐个 manifest 判 entryPoint 存在），此前未接 runner。
+#   本地软提示 / CI strict 硬阻断（v5_soft 语义；CI 由 local-gates.yml 注入 SYNO_CI=1）。
+INTEGRITY_OUT="$(bash "$ROOT/scripts/check-integrity-startup.sh" 2>&1)"; INTEGRITY_RC=$?
+if [ "$INTEGRITY_RC" -ne 0 ]; then
+  printf '%s\n' "$INTEGRITY_OUT" | grep -E '❌|失败' | head -8 | sed 's/^/     /'
+  v5_soft "启动完整性 (K12-18: manifest entryPoint 引用闭合)"
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # 组 8: 🆕 文件驱动架构完整性 (v3.6 新增 — 调用 check-file-driven.sh)
 #
