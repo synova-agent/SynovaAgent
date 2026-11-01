@@ -685,6 +685,15 @@ def run(args):
     #   与 ⑧（静态面一致性）**同一基线、同一解析器**，只多一个判据维度；不另建脚本（避免"新增能力件
     #   五道登记税"再次发生）。判据自足：不需要 workflows，不需要网络。
     if getattr(args, "category_gate", False):
+        # 🔴 #1255-T5 复核修正：`--category-gate` 与 `--api-check`/`--reverse` 是**互斥模式**。
+        #   旧实现到这里直接 return ⇒ 后者被**静默丢弃**（与文件头"与 --api-check 同给时以其为准"相反）。
+        #   互斥就显式报错（fail loud），不许静默——这是 DSH「bounds that fail loud」的要求。
+        _conflict = [n for n, v in (("--api-check", getattr(args, "api_check", False)),
+                                    ("--reverse", getattr(args, "reverse", False))) if v]
+        if _conflict:
+            print("degraded: E_USAGE — %s 与 --category-gate 互斥（二者判的是不同对象，不能同给）"
+                  % "/".join(_conflict), file=sys.stderr)
+            return 2
         base_entries = read_baseline(baseline_path)
         def _cat(e):
             return (e.fields.get("category") or "").strip()
