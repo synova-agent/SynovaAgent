@@ -2416,6 +2416,9 @@ fi
 # #1255-T3: 墙钟预算（GATE-STANDARD §七 ≤90 s ／ §十二 ⑨）
 #   落盘 `wall_ms=<n>` → 交给 check-gate-budget.sh 判定（0/1/2 三态），本层**只告警不阻断**。
 #   为什么必须先落盘再判：check-gate-budget.sh 的契约是"读日志最后一条 wall_ms"，不在本脚本里另造算法。
+#   @authority: 本函数只由 pre-commit-check.sh 自身在**结果段**调用（两条出口：失败/通过各一次）；
+#     任何本地会话与 CI job 都会经过它；**只读计时 + 追加一行日志**，不改提交结果、不写仓库受版本管理文件
+#     （日志落在 ignored 的 .claude/ 下）。已知限制：计时不含 git hook 派发前的耗时（只量"脚本内"）。
 # ═══════════════════════════════════════════════════════════════════
 gate_budget_report() {
   local now_ms elapsed log out rc
