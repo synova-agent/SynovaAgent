@@ -9,6 +9,14 @@
 
 documents:
 
+    # ---- CTO 2026-11-02：#1266 gate-A 镜头 7 受保护路径豁免（D2 登记）----
+    - id: DOC-1240
+      type: decision
+      path: gate-exemptions/2026-11-02-1266-gate-a-dsh-lens.md
+      status: active
+      owner: CTO
+      note: "gate-A 新增镜头 7（DSH 纪律与代码品味）＋R9 角色卡的受保护路径豁免（含 gate-exemptions 自覆盖；裁定号 裁 429）。"
+
   # ---- CTO 2026-10-12：CLAUDE.md 退役（裁定 059/061）----
   - id: DOC-0193
     type: decision
@@ -1698,3 +1706,10 @@ documents:
     status: active
     owner: P4
     note: "#1254（T4 台账三判据机检）：新增 check-ledger-budget.sh（行数/跨段重复/measured_at 三态出数）＋配对测试＋台账重锚与三处入册；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-11-01：#1253 notes 门禁性能修复 受保护路径豁免（DOC-1253）----
+  - id: DOC-1253
+    type: decision
+    path: gate-exemptions/2026-11-01-1253-notes-lifecycle-perf.md
+    status: active
+    owner: P4
+    note: "#1253（T1 P0）：notes 生命周期门禁逐文件 spawn（219 note ≈1300 进程、>90s 未跑完）→ 单进程解析（1.11s）；补 timeout⇒exit2+E_TIMEOUT 与缺 python⇒E_NO_PYTHON；契约 0/1/2 与四态输出不变；配对测试 23/0（含性能回归与超时两态）。"

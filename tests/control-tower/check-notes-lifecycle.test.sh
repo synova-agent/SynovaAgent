@@ -214,6 +214,65 @@ else
 fi
 echo ""
 
+# ── 11. #1253 性能回归: 禁「逐文件 spawn」——用进程启动次数断言（跨平台确定）──
+echo "── 11. #1253 性能回归: 200 条 note 不得逐文件 spawn ──"
+PERF_DIR="$TMP_DIR/perf-200"
+rm -rf "$PERF_DIR" 2>/dev/null || true
+mkdir -p "$PERF_DIR/memory/notes/proposed" "$PERF_DIR/task-state"
+i=0
+while [ "$i" -lt 200 ]; do
+  printf -- '---\n状态: proposed\n---\n任务: D900%d\n' "$i" > "$PERF_DIR/memory/notes/proposed/2026-01-01-perf-$i.md"
+  i=$((i + 1))
+done
+# 记录 grep 启动次数：旧实现 = 每文件 3 次（≥600）；新实现 = 0 次（python 单进程解析）
+REAL_GREP="$(command -v grep)"
+FAKE_GREP_DIR="$TMP_DIR/fakegrep"
+rm -rf "$FAKE_GREP_DIR" 2>/dev/null || true
+mkdir -p "$FAKE_GREP_DIR"
+cat > "$FAKE_GREP_DIR/grep" <<EOF
+#!/bin/bash
+echo x >> "\${SPAWN_LOG:-/dev/null}"
+exec "$REAL_GREP" "\$@"
+EOF
+chmod +x "$FAKE_GREP_DIR/grep"
+SPAWN_LOG="$TMP_DIR/grep-spawns.log"
+: > "$SPAWN_LOG"
+set +e
+_T0=$(date +%s%N)
+OUT=$(SPAWN_LOG="$SPAWN_LOG" PATH="$FAKE_GREP_DIR:$PATH" ROOT="$PERF_DIR" bash "$GATE" 2>&1)
+CODE=$?
+_T1=$(date +%s%N)
+set -e
+_MS=$(( (_T1 - _T0) / 1000000 ))
+_SPAWNS=$(wc -l < "$SPAWN_LOG" 2>/dev/null | tr -d ' \r\n')
+[ -n "$_SPAWNS" ] || _SPAWNS=0
+assert_exit 0 "$CODE" "200 条无卡 note → exit 0（迁移期放行）"
+if [ "$_SPAWNS" -le 5 ]; then
+  pass "grep 启动 ${_SPAWNS} 次 ≤ 5（#1253：一次进程解析；耗时 ${_MS}ms）"
+else
+  fail "grep 启动 ${_SPAWNS} 次 > 5 — 退化为逐文件 spawn（#1253 回归；旧实现 ≥600 次）"
+fi
+echo ""
+
+# ── 12. #1253 超时降级: timeout 返回 124 ⇒ exit 2 + degraded E_TIMEOUT ──
+echo "── 12. #1253 超时降级: timeout=124 ⇒ exit 2 + E_TIMEOUT ──"
+FAKE_BIN="$TMP_DIR/fakebin"
+rm -rf "$FAKE_BIN" 2>/dev/null || true
+mkdir -p "$FAKE_BIN"
+cat > "$FAKE_BIN/timeout" <<'EOF'
+#!/bin/bash
+exit 124
+EOF
+chmod +x "$FAKE_BIN/timeout"
+set +e
+OUT=$(PATH="$FAKE_BIN:$PATH" ROOT="$PERF_DIR" bash "$GATE" 2>&1)
+CODE=$?
+set -e
+assert_exit 2 "$CODE" "timeout=124 → exit 2（判不了≠通过）"
+assert_contains "$OUT" "degraded" "超时显式降级输出"
+assert_contains "$OUT" "E_TIMEOUT" "降级 code = E_TIMEOUT"
+echo ""
+
 # ═══ 结果 ═══
 echo "═══════════════════════════════════════════════════════════"
 echo "  结果: $PASS 通过, $FAIL 失败"
