@@ -33,6 +33,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   F2 降级日志 JSON 五字段齐全（time/component/code/phase/retryable）
 #
 # 沙箱: 夹具全在 mktemp -d 内；`SYNO_GATE_DEGRADED_LOG` 全局指向临时目录 ⇒ 降级日志绝不进仓库。
+#       被测脚本**开工时取一次快照**再跑（平台共享 cwd 无隔离，避免读到别的成员正在写的半截文件）。
 #       变异体只 sed 两行判据点，不碰其它逻辑（sed 未命中 ⇒ 断言直接判红，防"夹具与实现脱节")。
 # 依赖: bash（3.2+）＋ sed/grep/awk ＋ python（仅 JSON 断言；缺失 ⇒ 判红不 skip）。
 # 规模: 直接调用被测脚本 13 次（本机 Git Bash 每起一次 ≈ 10 s，故不把用例铺更多）。
@@ -71,6 +72,15 @@ TMPD="$(mktemp -d)" || fatal "mktemp -d 失败"
 trap 'rm -rf "$TMPD"' EXIT
 LAST="$TMPD/last.out"
 export SYNO_GATE_DEGRADED_LOG="$TMPD/degraded-events.log"
+
+# 平台是**共享 cwd、无隔离**：被测件可能在别的成员写入的瞬间被读到半截
+# （2026-10-31 实测一次：A1 拿到空文件 ⇒ rc=0、输出为空；随后直跑同一文件 rc=1 正常，文件 490 行、hash 与 index 一致）。
+# ⇒ 测试开始时取**一次快照**，之后所有调用都打在快照上；`--root` 仍指向真实仓，
+#   所以"真实根"用例的语义不变（判的是仓，不是脚本位置），只是不再受并发写干扰。
+S0="$S"
+cp "$S0" "$TMPD/subject.sh" || fatal "被测脚本快照失败: $S0"
+S="$TMPD/subject.sh"
+[ -s "$S" ] || fatal "被测脚本快照为空（源文件此刻正在被写？稍后重跑本测试）"
 
 rc_of() { # $1=脚本 $2=root [额外参数…] → 输出落 $LAST，回显 rc
   local _s="$1" _r="$2"; shift 2
