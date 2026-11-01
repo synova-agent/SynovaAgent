@@ -393,3 +393,21 @@ entries:
     owner: R
     notes: "#1211：resolveGraph/assertGraphName 唯一口径来源（一客户一实例，#1202）；生产消费点 4 处（routes/data.ts:38 派生、data-exporter.ts:117 导出、data-ingest-service.ts:172/:246 入口 assert）；status 用 wired 而非规格骨架的 active —— 本表 R6 枚举只认 wired/partial/declared-only/retired。"
 
+  # ---- P4 2026-10-31：#1238 W0-1 G-DOC-1 体积预算校验器（declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc1Budgets
+    defined_at: "scripts/doc-system/verify-doc-budgets.sh:1"
+    provider: "scripts/doc-system/verify-doc-budgets.sh:1"
+    consumer: null
+    test: "tests/doc-system/verify-doc-budgets.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-1 体积预算校验器（#1238 W0-1）：指令面 14 件合计 <=65536 B、单份域守则 <=3584 B 判红，docs 全量只报不判；三态退出码 0/1/2 与判别力自检。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"
+  # ---- P4 2026-10-31：#1238 W0-1 G-DOC-2 六规则生效性校验器（declared-only 显式豁免 R1.2）----
+  - capability: doc.gDoc2Effectiveness
+    defined_at: "scripts/doc-system/verify-doc-gate-effectiveness.sh:1"
+    provider: "scripts/doc-system/verify-doc-gate-effectiveness.sh:1"
+    consumer: null
+    test: "tests/doc-system/verify-doc-gate-effectiveness.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "G-DOC-2 生效性校验器（#1238 W0-1）：解析 docs/authority/DOC-STANDARD.md 的 G-DOC-1..6 规则行与内嵌 MAP 行做双向对齐，缺实现或缺调用点 ⇒ exit 1 逐条点名。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"
