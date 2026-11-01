@@ -30,6 +30,7 @@ writeset:
   - src/onboarding/config-pack-generator.ts
   - tests/onboarding/config-pack-generator.test.ts
   - tests/l4/goal-alignment.test.ts
+  - gate-exemptions/2026-11-02-1271-1275-output-contract-probe.md
 done:
   - verify: bash scripts/check-integrity-startup.sh
   - verify: bash scripts/check-content-coupling.sh
