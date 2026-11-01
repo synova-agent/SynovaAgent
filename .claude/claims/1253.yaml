@@ -1,6 +1,8 @@
 writeset:
   - scripts/control-tower/check-notes-lifecycle.sh
   - tests/control-tower/check-notes-lifecycle.test.sh
+  - gate-exemptions/2026-11-01-1253-notes-lifecycle-perf.md
+  - memory/notes/proposed/2026-11-01-1253-notes-lifecycle-perf.md
   - .claude/claims/1253.yaml
 done:
   - verify: bash tests/control-tower/check-notes-lifecycle.test.sh
