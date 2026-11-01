@@ -4,6 +4,7 @@ writeset:
   - src/store/session-store.ts
   - src/agent/tool-loop-executor.ts
   - src/agent/diagnosis-launcher.ts        # CTO 批准扩张（2026-11-02，仅内联联合 +'tool_call' 1 行）
+  - docs/authority/quality-delta-whitelist.yaml  # CTO 批准治理豁免（#1257：R4.2 命中 :72 存量行，闸扫整文件所致）
   - src/services/db-encryption.ts
   - tests/cron/scheduler.test.ts
   - tests/store/session-event-log.test.ts
@@ -21,5 +22,5 @@ done:
   - verify: npx vitest run --pool=forks tests/cron/s1-5-single-flight.test.ts
   - verify: npx vitest run --pool=forks tests/store/tool-call-pairing.test.ts
   - verify: npx vitest run --pool=forks tests/cron/ tests/store/ tests/agent/ tests/deploy/ tests/contract/
-  - verify: bash -c 'test "$(git diff --name-only 5550eb95b..HEAD | wc -l | tr -d " ")" -le 16'   # 15 规格 + 1 CTO 批准扩张
+  - verify: bash -c 'test "$(git diff --name-only 5550eb95b..HEAD | wc -l | tr -d " ")" -le 17'   # 15 规格 + 1 CTO 批准扩张
 note: "#1257 S1.5 P0；写集 15 件（time-injection 收缩不改）+ 1 件 CTO 批准扩张（diagnosis-launcher.ts）；与 #1258 重叠 4 件、与 #1249 2 件；「本批先合」串行；PR base = main"
