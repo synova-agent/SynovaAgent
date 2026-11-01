@@ -1028,3 +1028,85 @@ export function extractAuthFromRequest(req: {
 
   return null;
 }
+
+// ════════════════════════════════════════════════════════════════
+// #1228 S0-2b · 请求侧 orgId 解析（唯一入口；本段为**追加**，不改上方既有函数/导出）
+// ════════════════════════════════════════════════════════════════
+
+/** 请求侧 orgId 解析结果（判别联合：`ok:false` 时 `code`/`reason` 必在场） */
+export type RequestOrgResult =
+  | { ok: true; orgId: string; source: 'identity' | 'instance' }
+  | { ok: false; code: 'CROSS_ORG_DENIED'; reason: 'org_mismatch' | 'auth_org_missing' };
+
+/**
+ * 新增：实例组织配置缺失（fail loud，**绝不静默兜底**）。
+ *
+ * 触发面：调用方把非法 `instanceOrgId`（undefined／空串／非字符串）传给 `resolveRequestOrgId`。
+ * 生产恒不触发（`loadConfig().orgId` 自带 'default' 兜底）；触发即配置契约被破坏（如 mock 漏字段），
+ * 必须显式报错而不是用空组织继续读写。
+ */
+export class RequestOrgConfigError extends Error {
+  readonly code = 'ORG_INSTANCE_MISSING';
+  readonly phase = 'request';
+  readonly retryable = false;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'RequestOrgConfigError';
+  }
+}
+
+/**
+ * 请求侧 orgId 解析 —— 「组织来源 = 验签身份 ＞ 实例配置；请求值只作一致性声明」。
+ *
+ * 设计哲学（一句）：**一个来源 ＋ 一条声明** —— 请求里的 `orgId` **永不作为取值来源**，只参与比对；
+ * 取值的唯一来源是 `req.auth.orgId`（验签身份）或调用方显式传入的实例配置。
+ *
+ * 契约（铁律 47）:
+ *   @input  req           — 只需 `req.auth`（**不读** headers / body / query；头族声明面归
+ *                           `jwtAuthMiddleware` 的 `evaluateCrossOrgAccess`，二者判据不同面）
+ *   @input  declared      — 请求体/查询串/路径参数里的 orgId 原值（`unknown`）。
+ *                           **非字符串 / 空串 / 纯空白 ⇒ 视为未声明**（trim 后比对，不做 `String()` 强转）
+ *   @input  instanceOrgId — **必须**由调用方传 `loadConfig().orgId`（`src/config.ts:110`）；
+ *                           禁止传请求路径上的实例 env 直读值（本卡要消灭的形态；实例权威只经 loadConfig）
+ *   @output ok:true  ⇒ `orgId` = 来源（identity 优先，identity 缺失回落实例配置），`source` 标注来源
+ *           ok:false ⇒ `code:'CROSS_ORG_DENIED'` ＋ `reason`：
+ *                       `'org_mismatch'`（身份在场且声明 ≠ 身份）/
+ *                       `'auth_org_missing'`（身份缺失且声明 ≠ 实例组织）
+ *   @degraded **无**。身份缺失回落实例配置**不是降级**（单机信任模型常态，见 #1228 规格 §〇.8-5）；
+ *             拒绝路径由调用方 `log.warn({ code, reason, path })` ＋ HTTP 403 显式留痕（不吞错、不降级放行）。
+ *   @authority 仅 **L1 路由 / 服务器级 app 路由**可调；L3 不得 import（L3 取租户只用 `loadConfig`）。
+ *
+ * @not-here — 不做形态校验/必填校验（各路由既有校验在调用本函数**之前**，先形状后归属）；
+ *             不写 HTTP 响应（403 归调用方）；不统一存量 org 码族（`CROSS_ORG_FORBIDDEN` 与
+ *             既有 20 行/5 文件的旧码族，统一另卡，见 #1228 规格 §1.5-⑦）。
+ */
+export function resolveRequestOrgId(
+  req: { auth?: JwtPayload },
+  declared: unknown,
+  instanceOrgId: string,
+): RequestOrgResult {
+  // fail loud：实例组织是配置契约（`loadConfig().orgId` 恒为非空，`src/config.ts:110` 自带 'default' 兜底）。
+  // 契约被破坏（undefined／空串——典型如测试 mock 漏字段）⇒ **显式报错**，绝不静默兜底成空组织继续。
+  if (typeof instanceOrgId !== 'string' || instanceOrgId.trim() === '') {
+    throw new RequestOrgConfigError(
+      'resolveRequestOrgId: instanceOrgId 必须是非空字符串（应传 loadConfig().orgId；见 src/config.ts:110）'
+      + ' [code=ORG_INSTANCE_MISSING phase=request retryable=false]',
+    );
+  }
+  const identityOrgId = typeof req.auth?.orgId === 'string' ? req.auth.orgId.trim() : '';
+  const sourceOrgId = identityOrgId !== '' ? identityOrgId : instanceOrgId.trim();
+  const declaredOrgId = typeof declared === 'string' ? declared.trim() : '';
+  if (declaredOrgId !== '' && declaredOrgId !== sourceOrgId) {
+    return {
+      ok: false,
+      code: 'CROSS_ORG_DENIED',
+      reason: identityOrgId !== '' ? 'org_mismatch' : 'auth_org_missing',
+    };
+  }
+  return {
+    ok: true,
+    orgId: sourceOrgId,
+    source: identityOrgId !== '' ? 'identity' : 'instance',
+  };
+}

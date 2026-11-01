@@ -9,15 +9,18 @@ import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@synova/logger';
 import { getPIIScrubber } from '../security/pii-scrubber';
 import { getPipelineMonitor, type PipelineMonitor } from '../monitoring/pipeline-monitor';
+import { extractAuthFromRequest } from '../middleware/auth';
+import { loadConfig } from '../config';
+import { assertGraphName, resolveGraph, GraphScopeError } from '../l2/graph-scope';
 
 const log = createLogger('routes/data');
 const router = Router();
 
 router.post('/api/data/upload', async (req: Request, res: Response) => {
-  const { mapping, rows, graph } = req.body as {
+  // #1211：**不再**从 body 解构 graph —— 图名统一在 try 内由 graph-scope 派生并过白名单
+  const { mapping, rows } = req.body as {
     mapping?: string;
     rows?: Array<Record<string, unknown>>;
-    graph?: string;
   };
 
   if (!mapping) {
@@ -28,6 +31,14 @@ router.post('/api/data/upload', async (req: Request, res: Response) => {
   }
 
   try {
+    // #1211 图名口径（唯一来源 src/l2/graph-scope.ts）：
+    //   显式入参 ?? 实例级组织身份（JWT 身份优先，其次 loadConfig().orgId）
+    // 🔴 必须在 try 内：express ^4 不捕获 async 拒绝 ⇒ 放到 try 外，非法 graph 会挂起而不是 400。
+    const auth = extractAuthFromRequest(req);
+    const graph = assertGraphName(
+      (req.body as { graph?: unknown })?.graph
+        ?? resolveGraph({ orgId: auth?.orgId ?? loadConfig().orgId }),
+    );
     const { loadFieldMapping, ingestBatch } = await import('../agent/data-ingest-service');
     const config = loadFieldMapping(mapping);
     if (!config) {
@@ -63,7 +74,7 @@ router.post('/api/data/upload', async (req: Request, res: Response) => {
       graphStore as { createNode(type: string, props: Record<string, unknown>, graph: string): string },
       config,
       rows,
-      graph || 'default',
+      graph,
     );
 
     // D35: 管道可观测性 — 记录成功
@@ -72,6 +83,11 @@ router.post('/api/data/upload', async (req: Request, res: Response) => {
     log.info({ mapping, rows: rows.length, created: result.nodesCreated }, '数据上传完成');
     res.json(result);
   } catch (err: unknown) {
+    // #1211：图名非法是**可捕获的业务拒绝** ⇒ 400（含稳定 code），不是 500
+    if (err instanceof GraphScopeError) {
+      log.warn({ err }, 'graph 命名空间非法');
+      return res.status(400).json({ ok: false, error: '图命名空间非法', code: 'GRAPH_NAME_INVALID' });
+    }
     log.warn({ err: err instanceof Error ? err.message : String(err) }, "D35: 管道可观测性 — 记录成功");
     const msg = err instanceof Error ? err.message : String(err);
     // D35: 管道可观测性 — 记录失败

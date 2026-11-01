@@ -13,6 +13,7 @@
 import { Router, type Request, type Response } from 'express';
 import { loadConfig } from '../config';
 import { createLogger } from '@synova/logger';
+import { resolveRequestOrgId, type JwtPayload } from '../middleware/auth';
 import { getProposalManager } from '../l2/proposal-manager';
 
 const log = createLogger('routes/chat');
@@ -69,6 +70,19 @@ router.post('/api/proposal/:id/resolve', async (req: Request, res: Response) => 
   if (!action || !['confirm', 'reject', 'opinion'].includes(action)) {
     return res.status(400).json({ ok: false, error: 'action 必须是 confirm/reject/opinion' });
   }
+  // #1228 S0-2b 点 10：动作形状校验（400）之后才做归属闸；反馈入账组织用来源，不用请求值
+  const requestOrg = resolveRequestOrgId(
+    req as Request & { auth?: JwtPayload },
+    (req.body as Record<string, unknown> | undefined)?.orgId,
+    loadConfig().orgId,
+  );
+  if (!requestOrg.ok) {
+    log.warn(
+      { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+      '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+    );
+    return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+  }
   const mgr = getProposalManager();
   const result = mgr.resolve(id, action as 'confirm' | 'reject' | 'opinion', feedback);
   if (!result.ok) {
@@ -90,7 +104,7 @@ router.post('/api/proposal/:id/resolve', async (req: Request, res: Response) => 
     // GA 的正向值（confirm）在增长侧永远不可见（两通道分裂）。sink 永不抛（内部降级 + log.warn）。
     const { createEvolutionChannelSink } = await import('../growth/feedback-collector');
     const fb = await collectFeedback({
-      orgId: (req.body as Record<string, unknown>)?.orgId as string || 'default',
+      orgId: requestOrg.orgId,
       actionId: id,
       decision: action === 'confirm' ? 'confirm' : action === 'reject' ? 'reject' : 'modify',
       reason: feedback || undefined,
@@ -321,13 +335,13 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 async function init() {
   try {
     // GNS v2.0: 检测用户状态 — Phase 0 已完成/有数据源/新手
-    const stateRes = await fetch(API + '/api/user-state');
+    const stateRes = await fetch(API + '/api/user-state', { signal: AbortSignal.timeout(30_000) });
     const state = await stateRes.json().catch((err) => {
       console.warn('用户状态解析失败 — 降级空对象', { err });
       return {};
     });
 
-    const r = await fetch(API + '/api/status');
+    const r = await fetch(API + '/api/status', { signal: AbortSignal.timeout(30_000) });
     const s = await r.json();
     if (s.llmConfigured) {
       dot.className = 'dot';
@@ -518,6 +532,7 @@ function confirmJudgment(cardId) {
   try {
     fetch(API + '/api/proposal/' + encodeURIComponent(cardId) + '/resolve', {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000), // R4.3：出站调用须可取消
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'confirm', feedback: '用户采纳了判断卡片方案' }),
     }).catch(function(err) { console.warn('方案确认通知失败 — degraded, 本地状态已更新', err); });
@@ -706,6 +721,7 @@ async function send() {
   try {
     const res = await fetch(API + '/api/diagnosis/consult', {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000), // R4.3：出站调用须可取消
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         teamId: text.replace(/\\s+/g, '-').toLowerCase(),
@@ -803,7 +819,7 @@ async function loadGraphView() {
 
   // Fetch ontology graph data from REST API
   try {
-    const res = await fetch('/api/ontology/graph/default');
+    const res = await fetch('/api/ontology/graph/default', { signal: AbortSignal.timeout(30_000) });
     if (!res.ok) throw new Error('Graph API unavailable');
     const data = await res.json();
 

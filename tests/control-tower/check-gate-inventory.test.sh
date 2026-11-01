@@ -17,6 +17,10 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #       ⑯ quota 非布尔 ⇒ 1 ⑰ 盘上新件未入 run_by ⇒ 1
 #       ⑱ 现实一致性：run_by=pre-commit 但 pre-commit 源零命中 ⇒ 1（"名义在跑"即红）
 #       ⑲ 改坏必红: 把 run_by 五值校验改成恒假 ⇒ ⑭ 用例变绿（证明判别力）
+#       ㉓ R4 剥注释两态（#1234 / W3）: 检查名只在**行内注释**里出现 ⇒ required_ci=true 判红
+#          （点名「自相矛盾」，旧实现读原文会把它当成"已接线"= 假绿）；真引用 ⇒ true 通过。
+#       ㉔ R4 反向: required_ci=false 只在行内注释出现 ⇒ 不算「账实不符」（旧实现会假红）。
+#       ㉕ 改坏必红: 把行内注释剥离改成恒等（/tmp 副本）⇒ ㉔ 用例变红（证明剥离承重）。
 # 口径: 三态 0/1/2；零失败 ⇒ exit 0
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -256,6 +260,43 @@ grep -q "mutant-rb" "$MUT2" && ok "⑲ 变异点已注入" || no "⑲ 变异点�
 OUT="$(SYNO_P0_FLOOR=1 bash "$MUT2" --root "$D14" 2>&1)"; RC_MUT2=$?
 [ "$RC_MUT2" -eq 0 ] && ok "⑲ 变异后 ⑭ 用例变绿 ⇒ 若有人如此改坏，⑭ 必红" \
   || no "⑲ 期望变异体 exit 0 实得 $RC_MUT2（$OUT）"
+
+echo "── ㉓ R4 剥注释两态（#1234 / W3）：只在注释出现 ⇒ 不得判 required_ci=true ──"
+# 甲态: check-a.sh（required_ci=true）的真引用被改成**行内注释里的旧引用**
+D23="$TMPD/r4-comment-only"; mkfix "$D23"
+printf 'jobs:\n  gates:\n    steps:\n      - run: echo noop  # 以前: bash scripts/control-tower/check-a.sh\n' \
+  > "$D23/.gitea/workflows/local-gates.yml"
+run "$D23"
+[ "$RC" -eq 1 ] && ok "㉓a 行内注释里的名字不算引用 ⇒ exit 1" || no "㉓a 期望 1 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "自相矛盾" && ok "㉓a 点名「自相矛盾」（required_ci=true 被证伪，禁假绿）" \
+  || no "㉓a 未点名自相矛盾（旧实现读原文会把注释当接线）（$OUT）"
+# 乙态: 同一夹具改回**真引用**（并挂一条提到别家的行内注释）⇒ required_ci=true 通过
+D24="$TMPD/r4-real-ref"; mkfix "$D24"
+printf 'jobs:\n  gates:\n    steps:\n      - run: bash scripts/control-tower/check-a.sh  # 行内注释提到的名字不算引用\n' \
+  > "$D24/.gitea/workflows/local-gates.yml"
+run "$D24"
+[ "$RC" -eq 0 ] && ok "㉓b 真引用 ⇒ exit 0（required_ci=true 通过；剥注释不误伤真接线）" \
+  || no "㉓b 期望 0 实得 $RC（$OUT）"
+
+echo "── ㉔ R4 反向：required_ci=false 只在行内注释出现 ⇒ 不算「账实不符」（旧实现假红）──"
+D25="$TMPD/r4-false-comment"; mkfix "$D25"
+# check-a.sh 真引用保留（R4 通过）＋ check-b.py（required_ci=false）只出现在行内注释
+printf 'jobs:\n  gates:\n    steps:\n      - run: bash scripts/control-tower/check-a.sh  # 以前: bash scripts/control-tower/check-b.py\n' \
+  > "$D25/.gitea/workflows/local-gates.yml"
+run "$D25"
+[ "$RC" -eq 0 ] && ok "㉔ 注释里的 check-b.py 不算引用 ⇒ exit 0" \
+  || no "㉔ 期望 0 实得 $RC（旧实现：原文命中 ⇒ 假判「账实不符」）（$OUT）"
+
+echo "── ㉕ 改坏必红：行内注释剥离改成恒等（/tmp 副本）⇒ ㉔ 用例变红（判别力）──"
+MUT3="$TMPD/mutant3.sh"
+# 变异点 = strip_comments 里唯一的行内剥离行（把 m 置 None ⇒ 退回"只剥整行注释"旧行为）
+sed 's|^        m = re.search|        m = None;  # mutant-inline|' "$S" > "$MUT3"
+grep -q "mutant-inline" "$MUT3" && ok "㉕ 变异点已注入（行内剥离 ⇒ 恒不匹配）" || no "㉕ 变异点未命中"
+OUT="$(SYNO_P0_FLOOR=1 bash "$MUT3" --root "$D25" 2>&1)"; RC_MUT3=$?
+[ "$RC_MUT3" -eq 1 ] && ok "㉕ 变异后 ㉔ 变红（注释被当引用 ⇒ 账实不符）⇒ 若有人如此改坏，㉔ 必红" \
+  || no "㉕ 期望变异体 exit 1 实得 $RC_MUT3（$OUT）—— ㉔ 对该变异无判别力"
+printf '%s' "$OUT" | grep -q "账实不符" && ok "㉕ 变异体点名「账实不符」（错因可见）" \
+  || no "㉕ 变异体未点名账实不符（$OUT）"
 
 echo ""
 echo "  结果: $PASS 通过, $FAIL 失败"

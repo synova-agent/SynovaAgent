@@ -5,39 +5,46 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 # ═══════════════════════════════════════════════════════════════════════════════
 # verify-governance.test.sh — 配对测试（CT-40/U7：「控制塔脚本须有配对测试」）
 #
-# 被测对象：`scripts/control-tower/verify-governance.sh`（#1122 · 总闸 ＋ #1147 余项 B2 · G11 配额双闸）
+# 被测对象：`scripts/control-tower/verify-governance.sh`
+#   （#1122 · 总闸 ＋ #1147 余项 B2 · G11 配额双闸 ＋ #1234 · G2 分腿证据源/三态末行）
 #
 # 判什么（不是"跑一遍看看"）:
 #   T0  自身约束：UTF-8／纯 LF（\r=0）／无「组 N」横幅／`2>/dev/null`·`|| true` 必带 `# swallow-ok:`／
 #       python 一律经 PYBIN（禁裸 python3）
-#   T1  干净夹具 ⇒ `GOVERNANCE: 4/4 PASS` ＋ exit 0（规格 §4 判据①；G11 证据行断言见 T17）
-#   T2  遥测日志缺失 ⇒ G2=SKIP（**不得显示 PASS**）＋ 末行 `3/4` ＋ exit 1（判据②）
-#   T3  遥测日志为空 ⇒ 同 T2
-#   T4  注入 exit 128（沙箱）⇒ G6=FAIL ＋ 整体非 0 ＋ 末行 `3/4`（判据③／规格 M-6）
-#   T5  0/1/2 透传：注入 0 ⇒ 结论 0 且 G6=PASS（整体 `4/4`）；注入 1 ⇒ 结论 1；注入 2 由 T4（128 ⇒ 结论 2）覆盖
-#      （禁"一律归 2"的假归一：若本件把一切归 2，注入 0/1 的用例立刻红）
+#   T1  干净夹具（telemetry 两态都有记录）⇒ `GOVERNANCE: 4/4 PASS（0 判不了）` ＋ exit 0
+#   T2  遥测日志缺失 ⇒ G2=FAIL（telemetry 项「未运行」，**不得 SKIP/不得 PASS**）＋ 末行 `3/4 PASS（0 判不了）` ＋ exit 1
+#   T3  遥测日志为空 ⇒ 同 T2（空日志 = 没证据 ⇒ 未运行，不是判不了）
+#   T4  注入 exit 128（沙箱）⇒ G6=FAIL ＋ 整体非 0 ＋ 末行 `3/4 PASS（0 判不了）`（判据③／规格 M-6）
+#   T5  0/1/2 透传：注入 0 ⇒ 结论 0 且 G6=PASS（整体 `4/4（0 判不了）`）；注入 1 ⇒ 结论 1；注入 2 由 T4 覆盖
 #   T6  改坏即红：把 gate-assert 的 `128) printf '2'` 改成 `'0'` ⇒ T4 的断言必须失效
-#      （即"128 被洗成通过"确实可被本套用例抓到；原脚本仍判红）
 #   T7  G10 甲态错（扫描器 A 档判据恒假）⇒ G10=FAIL ＋ 整体非 0（判据④）
 #   T8  G10 乙态错（扫描器把所有变更判红）⇒ G10=FAIL（两态都对才 PASS）
 #   T9  `--days` 边界：8 天前记录在 7 天窗口外（G2 红）、在 10 天窗口内（G2 绿）
-#   T10 日志坏行：跳过并计数，不崩、不改判定（整体 `4/4`）
-#   T11 日志全坏行：SKIP ＋ 报「损坏行」，不得当 PASS
-#   T12 判不了 ⇒ exit 2：清单缺失／无 classification 段／required 集合为空
+#   T10 日志坏行：跳过并计数，不崩、不改判定（整体 `4/4（0 判不了）`）
+#   T11 日志全坏行：G2=FAIL（telemetry 项未运行）＋ 报「坏行」，不得当 PASS
+#   T12 判不了 ⇒ exit 2：清单缺失／无 classification 段／required 集合为空（末行 `0/4 PASS（4 判不了）`）
 #   T13 判不了 ⇒ exit 2：子判据缺失（gate-assert.sh／check-unicode-confusable.py）
-#   T14 判不了 ⇒ exit 2：参数错（未知参数／--days 非数字／--days 0／--telemetry 缺值）
+#   T14 判不了 ⇒ exit 2：参数错（未知参数／--days 非数字／--days 0／--telemetry 缺值／--ci-evidence 缺值）
 #   T15 只读＋注入缝边界：跑前跑后**四件**真件 sha256 不变；非沙箱下 `SYNO_GOV_G6_RC=1` **不生效**
 #   T16 记账自洽：WIRING-REGISTRY 的 `governance.verifyGovernance` 与"零生产调用点"一致（declared-only）
 #   T17（A）G11 正常绿：干净夹具 ⇒ G11 PASS ＋ 三桶证据行原样（2 non-doc ＋ 1 doc ⇒ total=3/45）
-#   T18（B）non_doc=31 ⇒ G11 FAIL ＋ `non_doc=31/30` ＋ 31 条 QUOTA-OVER 逐条点名 ＋ 末行 `3/4` ＋ exit 1
+#   T18（B）non_doc=31 ⇒ G11 FAIL ＋ `non_doc=31/30` ＋ 31 条 QUOTA-OVER 逐条点名 ＋ 末行 `3/4（0 判不了）` ＋ exit 1
 #   T19（C）total=46（30 non-doc ＋ 16 doc）⇒ G11 FAIL ＋ `total=46/45` ＋ 点名 ＋ exit 1
 #   T20（D）bypass=9 ⇒ G11 FAIL ＋ `bypass=9/8` ＋ 点名 ＋ exit 1
 #   T21（E）判不了 ⇒ G11=SKIP ＋ 整体 exit 2：① quota_scope 非法 ② quota_scope 缺失 ③ 生成器缺失（E_GEN_MISSING）
 #   T22（F）改坏即红：生成器 non-doc 超编判断恒假 ⇒ T18 的 31 条夹具变 G11=PASS（原 FAIL 断言必失效）
+#   T23（#1234）telemetry 两态：同一夹具「有记录 ⇒ PASS／无记录 ⇒ FAIL 并点名」；`telemetry_key` 承重
+#   T24（#1234）ci-step 两态：缺证据 ⇒ G2=SKIP＋exit 2（`3/4（1 判不了）`）／给证据 ran=true 窗口内 ⇒ `4/4（0 判不了）`；
+#       ran=false ⇒ FAIL＋exit 1；at 窗口外 ⇒ FAIL；文件无该 entry ⇒ 判不了 exit 2；env `SYNO_G2_CI_EVIDENCE` 生效；
+#       混合（1 未运行 ＋ 1 判不了）⇒ 判不了优先 exit 2
+#   T25（#1234）none 证据源（真仓的 pre-push 件）⇒ G2=SKIP ＋ exit 2 ＋ 点名 E_EVIDENCE_NONE
+#   T26（#1234）改坏即红：「无记录⇒FAIL」的判据改恒真（副本）⇒ 有记录仍 FAIL ⇒ T1/T23 的 PASS 断言必失效
 #
 # 沙箱隔离（判据纪律 ⑨-②）: 全部夹具在 `mktemp -d` 下自建（复制真件 ＋ 临时清单），
-#   不写仓库、不改真件、不依赖真仓的 `.claude/gate-hits.log`。
-#   G11 夹具的 `gate_meta:` 段**全部自包含**（条数由夹具生成，不依赖真树 117/120 行数）。
+#   不写仓库、不改真件、不依赖真仓的 `.claude/gate-hits.log`（#1234：也不依赖真仓的 ci 证据文件）。
+#   G11 夹具的 `gate_meta:` 段**全部自包含**（条数由夹具生成，不依赖真树行数）。
+#   三种夹具清单：telemetry（默认）／ci（telemetry ＋ ci-step）／none（只有 none 与 telemetry）；
+#   由 `INV_KIND` 选择（见 mkroot）。
 # 危险字符一律用 `printf` 字节转义生成（**本文件不落同形字/全角字面**）。
 # 断言风格对齐 `tests/control-tower/check-unicode-confusable.test.sh`（ok/no 计数 ＋ 末行结果行）。
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -60,7 +67,7 @@ TMPD="$(mktemp -d)"
 trap 'rm -rf "$TMPD"' EXIT
 mkdir -p "$TMPD"
 
-echo "=== verify-governance 配对测试（#1122 · 总闸 ＋ #1147 余项 B2 · G11 配额双闸）==="
+echo "=== verify-governance 配对测试（#1122 · 总闸 ＋ #1147 余项 B2 · G11 ＋ #1234 · G2 分腿证据源）==="
 
 # ── 夹具工具 ────────────────────────────────────────────────────────────────
 iso_ago() { # $1 = 距今天数（可负）
@@ -102,7 +109,7 @@ write_gate_meta() { # $1 = root；$2/$3/$4 = non-doc/doc/bypass 条数（默认 
   } >> "$f"
 }
 
-write_inventory() { # $1 = root；内容固定为 2 个 required ＋ 1 个非 required；$2/$3/$4 透传给 gate_meta 三桶；$5 = 坏 scope
+write_inventory() { # 默认（telemetry）夹具：2 个 required telemetry ＋ 1 个非 required；$2/$3/$4 透传 gate_meta 三桶；$5 = 坏 scope
   local d="$1"
   cat > "$d/docs/authority/GATE-INVENTORY.yaml" <<'YAML'
 # fixture inventory（本测试专用；不改真清单）
@@ -113,30 +120,87 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-alpha.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: alpha-key
   - id: CT-beta
     class: P1
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-beta.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: beta-key
   - id: CT-gamma
     class: P2
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gamma.sh
     required_ci: false
+    evidence: none
 YAML
   write_gate_meta "$d" "${2:-2}" "${3:-1}" "${4:-0}" "${5:-}"
 }
 
-mkroot() { # $1 = root；其余参数透传给 write_inventory（G11 三桶条数／坏 scope）；GA_FOR_ROOT / UNI_FOR_ROOT / GEN_FOR_ROOT 可覆盖被复制的子判据（改坏用）
+write_inventory_ci() { # ci-step 夹具：alpha=telemetry（有 telemetry_key）、beta=ci-step；均 required（无 none ⇒ 给足证据可全绿）
+  local d="$1"
+  cat > "$d/docs/authority/GATE-INVENTORY.yaml" <<'YAML'
+# fixture inventory（ci-step 用例专用；不改真清单）
+classification:
+  - id: CT-alpha
+    class: P0
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-alpha.sh
+    required_ci: true
+    evidence: telemetry
+    telemetry_key: alpha-key
+  - id: CT-beta
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-beta.py
+    required_ci: true
+    evidence: ci-step
+YAML
+  write_gate_meta "$d" "${2:-2}" "${3:-1}" "${4:-0}" "${5:-}"
+}
+
+write_inventory_none() { # none 夹具：alpha=none（required，模拟真仓 pre-push 件）＋ gamma 非 required
+  local d="$1"
+  cat > "$d/docs/authority/GATE-INVENTORY.yaml" <<'YAML'
+# fixture inventory（evidence:none 用例专用；不改真清单）
+classification:
+  - id: CT-alpha
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-alpha.sh
+    required_ci: true
+    evidence: none
+  - id: CT-gamma
+    class: P2
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-gamma.sh
+    required_ci: false
+    evidence: none
+YAML
+  write_gate_meta "$d" "${2:-2}" "${3:-1}" "${4:-0}" "${5:-}"
+}
+
+mkroot() { # $1 = root；其余参数透传给清单 writer（G11 三桶条数／坏 scope）
+  #   GA_FOR_ROOT / UNI_FOR_ROOT / GEN_FOR_ROOT 可覆盖被复制的子判据（改坏用）；INV_KIND ∈ telemetry|ci|none
   local d="$1"
   [ $# -gt 0 ] && shift
   mkdir -p "$d/scripts/control-tower" "$d/docs/authority"
   cp "${GA_FOR_ROOT:-$GA_SRC}" "$d/scripts/control-tower/gate-assert.sh"
   cp "${UNI_FOR_ROOT:-$UNI_SRC}" "$d/scripts/control-tower/check-unicode-confusable.py"
   cp "${GEN_FOR_ROOT:-$GEN_SRC}" "$d/scripts/control-tower/gen-gate-meta.sh"
-  write_inventory "$d" "$@"
+  case "${INV_KIND:-telemetry}" in
+    ci)   write_inventory_ci "$d" "$@" ;;
+    none) write_inventory_none "$d" "$@" ;;
+    *)    write_inventory "$d" "$@" ;;
+  esac
 }
 
 write_log() { # $1 = 日志路径；其余 "gate|result|ISO时间戳"
@@ -149,6 +213,10 @@ write_log() { # $1 = 日志路径；其余 "gate|result|ISO时间戳"
       "$(printf '%s' "$spec" | cut -d'|' -f1)" \
       "$(printf '%s' "$spec" | cut -d'|' -f2)" >> "$p"
   done
+}
+
+write_ci_evidence() { # $1 = 文件；$2 = entrypoint；$3 = true|false；$4 = ISO 时间戳；$5 = step 名
+  printf '{"entrypoint":"%s","ran":%s,"at":"%s","step":"%s"}\n' "$2" "$3" "$4" "$5" > "$1"
 }
 
 OUT=""; RC=0
@@ -187,18 +255,19 @@ else
   no "T0 存在裸 python3 调用或未用 PYBIN"
 fi
 
-# ── T1 干净夹具 ⇒ 4/4 PASS ＋ exit 0 ────────────────────────────────────────
-echo "── T1 干净夹具"
+# ── T1 干净夹具 ⇒ 4/4 PASS（0 判不了）＋ exit 0 ──────────────────────────────
+echo "── T1 干净夹具（telemetry 两态都有记录）"
 R="$TMPD/root-clean"; mkroot "$R"
-L="$TMPD/clean.log"; write_log "$L" "check-alpha.sh|hit|${TS_NOW}" "check-beta|miss|${TS_NOW}"
+L="$TMPD/clean.log"; write_log "$L" "alpha-key|hit|${TS_NOW}" "beta-key|miss|${TS_NOW}"
 run_gov --root "$R" --telemetry "$L" --days 7
+T1_OUT="$OUT"   # 供 T26 复用（原脚本对同一夹具必须仍 PASS）
 if [ "$RC" -eq 0 ]; then ok "T1 exit=0"; else no "T1 exit=${RC}（期望 0）"; fi
-if [ "$(last_line)" = "GOVERNANCE: 4/4 PASS" ]; then
-  ok "T1 末行 'GOVERNANCE: 4/4 PASS'"
+if [ "$(last_line)" = "GOVERNANCE: 4/4 PASS（0 判不了）" ]; then
+  ok "T1 末行 'GOVERNANCE: 4/4 PASS（0 判不了）'"
 else
-  no "T1 末行=$(last_line)（期望 'GOVERNANCE: 4/4 PASS'）"
+  no "T1 末行=$(last_line)（期望 'GOVERNANCE: 4/4 PASS（0 判不了）'）"
 fi
-if has "G2 遥测 ran=true: PASS"; then ok "T1 G2 PASS"; else no "T1 G2 未 PASS"; fi
+if has "G2 分腿证据: PASS"; then ok "T1 G2 PASS（telemetry 两态有记录）"; else no "T1 G2 未 PASS"; fi
 if has "G6 退出码归一: PASS"; then ok "T1 G6 PASS"; else no "T1 G6 未 PASS"; fi
 if has "G10 同形字两态: PASS"; then ok "T1 G10 PASS"; else no "T1 G10 未 PASS"; fi
 if has "G11 配额双闸: PASS"; then ok "T1 G11 PASS（A：干净夹具正常绿）"; else no "T1 G11 未 PASS"; fi
@@ -208,43 +277,47 @@ else
   no "T1 G11 证据行 QUOTA 缺失或被改写"
 fi
 
-# ── T2 遥测缺失 ⇒ G2 SKIP（不得 PASS）＋ 末行不计它 ＋ exit 1 ────────────────
-echo "── T2 遥测日志缺失"
+# ── T2 遥测缺失 ⇒ G2 FAIL（未运行，不得 PASS/SKIP）＋ 末行 3/4（0 判不了）＋ exit 1 ──
+echo "── T2 遥测日志缺失 ⇒ telemetry 项未运行"
 R2="$TMPD/root-notel"; mkroot "$R2"
 run_gov --root "$R2" --telemetry "$TMPD/does-not-exist.log" --days 7
-if [ "$RC" -eq 1 ]; then ok "T2 exit=1（非全 PASS）"; else no "T2 exit=${RC}（期望 1）"; fi
-if has "G2 遥测 ran=true: SKIP"; then ok "T2 G2=SKIP"; else no "T2 G2 未标 SKIP"; fi
-if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS" ]; then
-  ok "T2 末行 'GOVERNANCE: 3/4 PASS'（SKIP 不计入 x）"
+if [ "$RC" -eq 1 ]; then ok "T2 exit=1（真红，不是判不了）"; else no "T2 exit=${RC}（期望 1）"; fi
+if has "G2 分腿证据: FAIL"; then ok "T2 G2=FAIL（缺证据 = 未运行）"; else no "T2 G2 未标 FAIL"; fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then
+  ok "T2 末行 'GOVERNANCE: 3/4 PASS（0 判不了）'（FAIL 不计入 x，也不计入判不了）"
 else
-  no "T2 末行=$(last_line)（期望 'GOVERNANCE: 3/4 PASS'）"
+  no "T2 末行=$(last_line)（期望 'GOVERNANCE: 3/4 PASS（0 判不了）'）"
 fi
-if has "CT-alpha scripts/control-tower/check-alpha.sh（未运行）"; then ok "T2 逐条点名未运行"; else no "T2 未点名未运行项"; fi
+if has "CT-alpha scripts/control-tower/check-alpha.sh（未运行: E_TELEMETRY_MISSING"; then
+  ok "T2 逐条点名未运行（telemetry 缺日志）"
+else
+  no "T2 未点名未运行项"
+fi
 
-# ── T3 遥测为空 ⇒ 同 T2 ────────────────────────────────────────────────────
+# ── T3 遥测为空 ⇒ 同 T2（空 ≠ 判不了）──────────────────────────────────────
 echo "── T3 遥测日志为空"
 R3="$TMPD/root-emptytel"; mkroot "$R3"
 : > "$TMPD/empty.log"
 run_gov --root "$R3" --telemetry "$TMPD/empty.log" --days 7
-if [ "$RC" -eq 1 ] && has "G2 遥测 ran=true: SKIP"; then
-  ok "T3 空日志 ⇒ G2=SKIP ＋ exit 1"
+if [ "$RC" -eq 1 ] && has "G2 分腿证据: FAIL" && has "E_TELEMETRY_EMPTY"; then
+  ok "T3 空日志 ⇒ G2=FAIL（E_TELEMETRY_EMPTY）＋ exit 1"
 else
-  no "T3 空日志应为 SKIP ＋ exit 1（实得 exit=${RC}）"
+  no "T3 空日志应为 FAIL ＋ exit 1（实得 exit=${RC}）"
 fi
 
 # ── T4 注入 exit 128（沙箱）⇒ G6=FAIL ＋ 整体非 0 ───────────────────────────
 echo "── T4 注入 exit 128 ⇒ 判据故障(2) 计 FAIL"
 R4="$TMPD/root-128"; mkroot "$R4"
-L4="$TMPD/clean4.log"; write_log "$L4" "check-alpha.sh|hit|${TS_NOW}" "check-beta|miss|${TS_NOW}"
+L4="$TMPD/clean4.log"; write_log "$L4" "alpha-key|hit|${TS_NOW}" "beta-key|miss|${TS_NOW}"
 OUT="$(SYNO_TEST_ARM=1 SYNO_GOV_G6_RC=128 bash "$S" --root "$R4" --telemetry "$L4" --days 7 2>&1)"; RC=$?
 if [ "$RC" -eq 1 ]; then ok "T4 exit=1（整体非 0）"; else no "T4 exit=${RC}（期望 1）"; fi
 if has "G6 退出码归一: FAIL"; then ok "T4 G6=FAIL"; else no "T4 G6 未 FAIL"; fi
 if has "结论 2（判据故障"; then ok "T4 归为判据故障(2)"; else no "T4 未归判据故障(2)"; fi
 if has "判据故障: 128"; then ok "T4 有 ga_run 点名行 '判据故障: 128'"; else no "T4 缺 ga_run 点名行"; fi
-if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS" ]; then
-  ok "T4 末行 'GOVERNANCE: 3/4 PASS'"
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then
+  ok "T4 末行 'GOVERNANCE: 3/4 PASS（0 判不了）'"
 else
-  no "T4 末行=$(last_line)（期望 'GOVERNANCE: 3/4 PASS'）"
+  no "T4 末行=$(last_line)（期望 'GOVERNANCE: 3/4 PASS（0 判不了）'）"
 fi
 T4_OUT="$OUT"   # 供 T6 复用（避免重跑一次真脚本，Windows 上单次约 3 秒）
 
@@ -259,8 +332,8 @@ for spec in "0|PASS|结论 0（通过）" "1|FAIL|结论 1（真红）"; do
   if has "$frag"; then ok "T5 注入 ${code} ⇒ 输出含 '${frag}'（码透传）"; else no "T5 注入 ${code} ⇒ 输出缺 '${frag}'"; fi
   # 注入 0 时整体应回到 4/4（证明 G6 绿不是因为"什么都红"，也证明默认干净路径可跑）
   if [ "$code" = "0" ]; then
-    if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS" ]; then
-      ok "T5 注入 0 ⇒ 4/4 PASS ＋ exit 0"
+    if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS（0 判不了）" ]; then
+      ok "T5 注入 0 ⇒ 4/4 PASS（0 判不了）＋ exit 0"
     else
       no "T5 注入 0 应为 4/4 PASS（实得 exit=${RC}／$(last_line)）"
     fi
@@ -336,40 +409,46 @@ if has "G10 同形字两态: FAIL"; then ok "T8 乙态被误判红 ⇒ G10=FAIL�
 # ── T9 --days 边界 ─────────────────────────────────────────────────────────
 echo "── T9 --days 边界"
 R9="$TMPD/root-days"; mkroot "$R9"
-L9="$TMPD/days.log"; write_log "$L9" "check-alpha.sh|hit|${TS_8D}" "check-beta|miss|${TS_8D}"
+L9="$TMPD/days.log"; write_log "$L9" "alpha-key|hit|${TS_8D}" "beta-key|miss|${TS_8D}"
 run_gov --root "$R9" --telemetry "$L9" --days 7
-if has "G2 遥测 ran=true: FAIL"; then ok "T9 8 天前记录在 7 天窗口外 ⇒ G2=FAIL"; else no "T9 7 天窗口未判红"; fi
+if has "G2 分腿证据: FAIL"; then ok "T9 8 天前记录在 7 天窗口外 ⇒ G2=FAIL"; else no "T9 7 天窗口未判红"; fi
 run_gov --root "$R9" --telemetry "$L9" --days 10
-if has "G2 遥测 ran=true: PASS"; then ok "T9 同记录在 10 天窗口内 ⇒ G2=PASS"; else no "T9 10 天窗口未判绿"; fi
+if has "G2 分腿证据: PASS"; then ok "T9 同记录在 10 天窗口内 ⇒ G2=PASS"; else no "T9 10 天窗口未判绿"; fi
 
 # ── T10 坏行不崩 ＋ 计数 ───────────────────────────────────────────────────
 echo "── T10 日志坏行"
 L10="$TMPD/badline.log"
 { cat "$L4"; printf '%s\n' '{"time": this-is-not-json'; printf '%s\n' '{"gate":"x","result":"hit"}'; } > "$L10"
 run_gov --root "$R4" --telemetry "$L10" --days 7
-if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS" ]; then
-  ok "T10 坏行不影响判决（仍 4/4 PASS）"
+if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS（0 判不了）" ]; then
+  ok "T10 坏行不影响判决（仍 4/4 PASS（0 判不了））"
 else
   no "T10 坏行改变了判决（exit=${RC}／$(last_line)）"
 fi
-if has "坏行 2 条已跳过"; then ok "T10 坏行计数=2 并上屏"; else no "T10 未报告坏行计数"; fi
+if has "遥测坏行 2 条"; then ok "T10 坏行计数=2 并上屏"; else no "T10 未报告坏行计数"; fi
 
-# ── T11 全坏行 ⇒ SKIP（不得当 PASS）─────────────────────────────────────────
+# ── T11 全坏行 ⇒ FAIL（不得当 PASS）────────────────────────────────────────
 echo "── T11 日志全坏行"
 L11="$TMPD/allbad.log"
 printf '%s\n' 'garbage-line' '{"time": 0' > "$L11"
 run_gov --root "$R4" --telemetry "$L11" --days 7
-if has "G2 遥测 ran=true: SKIP" && has "损坏行 2"; then
-  ok "T11 全坏行 ⇒ G2=SKIP ＋ 报损坏行 2"
+if has "G2 分腿证据: FAIL" && has "E_TELEMETRY_EMPTY" && has "遥测坏行 2 条"; then
+  ok "T11 全坏行 ⇒ G2=FAIL ＋ 报坏行 2（空 = 没证据，不是判不了）"
 else
-  no "T11 全坏行未按 SKIP 处理"
+  no "T11 全坏行未按 FAIL 处理"
 fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then ok "T11 末行 3/4（0 判不了）"; else no "T11 末行=$(last_line)"; fi
 
 # ── T12 判不了 ⇒ exit 2（清单侧）───────────────────────────────────────────
 echo "── T12 判不了：清单缺失／无段／required 为空"
 R12="$TMPD/root-noinv"; mkroot "$R12"; rm -f "$R12/docs/authority/GATE-INVENTORY.yaml"
 run_gov --root "$R12" --telemetry "$L4" --days 7
 if [ "$RC" -eq 2 ] && has "degraded: E_INV_MISSING"; then ok "T12 清单缺失 ⇒ exit 2（E_INV_MISSING）"; else no "T12 清单缺失未 exit 2"; fi
+if [ "$(last_line)" = "GOVERNANCE: 0/4 PASS（4 判不了）" ]; then
+  ok "T12 末行 'GOVERNANCE: 0/4 PASS（4 判不了）'（全局降级 = 四项全判不了）"
+else
+  no "T12 末行=$(last_line)（期望 'GOVERNANCE: 0/4 PASS（4 判不了）'）"
+fi
 
 R12b="$TMPD/root-nosec"; mkroot "$R12b"
 printf '%s\n' 'schema_version: 1' 'meta:' '  counts: 0' > "$R12b/docs/authority/GATE-INVENTORY.yaml"
@@ -377,7 +456,7 @@ run_gov --root "$R12b" --telemetry "$L4" --days 7
 if [ "$RC" -eq 2 ] && has "E_INV_SECTION"; then ok "T12 无 classification 段 ⇒ exit 2（E_INV_SECTION）"; else no "T12 无 classification 段未 exit 2"; fi
 
 R12c="$TMPD/root-noreq"; mkroot "$R12c"
-printf '%s\n' 'classification:' '  - id: CT-only' '    class: P2' '    entrypoint: scripts/control-tower/check-alpha.sh' '    required_ci: false' > "$R12c/docs/authority/GATE-INVENTORY.yaml"
+printf '%s\n' 'classification:' '  - id: CT-only' '    class: P2' '    entrypoint: scripts/control-tower/check-alpha.sh' '    required_ci: false' '    evidence: none' > "$R12c/docs/authority/GATE-INVENTORY.yaml"
 run_gov --root "$R12c" --telemetry "$L4" --days 7
 if [ "$RC" -eq 2 ] && has "E_NO_REQUIRED"; then ok "T12 required 集合为空 ⇒ exit 2（信号量 0）"; else no "T12 required 集合为空未 exit 2"; fi
 
@@ -401,6 +480,8 @@ run_gov --root "$R4" --days 0
 if [ "$RC" -eq 2 ] && has "E_USAGE"; then ok "T14 --days 0 ⇒ exit 2"; else no "T14 --days 0 未 exit 2"; fi
 run_gov --root "$R4" --telemetry
 if [ "$RC" -eq 2 ] && has "E_USAGE"; then ok "T14 --telemetry 缺值 ⇒ exit 2"; else no "T14 --telemetry 缺值未 exit 2"; fi
+run_gov --root "$R4" --ci-evidence
+if [ "$RC" -eq 2 ] && has "E_USAGE"; then ok "T14 --ci-evidence 缺值 ⇒ exit 2"; else no "T14 --ci-evidence 缺值未 exit 2"; fi
 
 # ── T15 只读 ＋ 注入缝边界 ─────────────────────────────────────────────────
 echo "── T15 只读／注入缝"
@@ -470,8 +551,8 @@ fi
 echo "── T17（A）G11 正常绿"
 R_T17="$TMPD/root-g11-green"; mkroot "$R_T17"
 OUT="$(bash "$S" --root "$R_T17" --telemetry "$L4" --days 7 2>&1)"; RC=$?
-if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS" ]; then
-  ok "T17 干净夹具 ⇒ 4/4 PASS ＋ exit 0"
+if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS（0 判不了）" ]; then
+  ok "T17 干净夹具 ⇒ 4/4 PASS（0 判不了）＋ exit 0"
 else
   no "T17 干净夹具应为 4/4 PASS（实得 exit=${RC}／$(last_line)）"
 fi
@@ -497,7 +578,7 @@ if has "QUOTA-OVER: non-doc scripts/control-tower/quota-nondoc-01.sh class=P2"; 
 else
   no "T18 未逐条点名超编 entrypoint"
 fi
-if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS" ]; then ok "T18 末行 3/4 PASS"; else no "T18 末行=$(last_line)（期望 3/4）"; fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then ok "T18 末行 3/4（0 判不了）"; else no "T18 末行=$(last_line)（期望 3/4（0 判不了））"; fi
 
 # ── T19（C）total=46（30 non-doc ＋ 16 doc）⇒ G11 FAIL ＋ total 点名 ────────
 echo "── T19（C）total=46 超编"
@@ -511,7 +592,7 @@ if has "QUOTA-OVER: total scripts/control-tower/quota-nondoc-01.sh class=P2"; th
 else
   no "T19 total 桶未逐条点名"
 fi
-if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS" ]; then ok "T19 末行 3/4 PASS"; else no "T19 末行=$(last_line)（期望 3/4）"; fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then ok "T19 末行 3/4（0 判不了）"; else no "T19 末行=$(last_line)（期望 3/4（0 判不了））"; fi
 
 # ── T20（D）bypass=9 ⇒ G11 FAIL ＋ bypass 点名 ──────────────────────────────
 echo "── T20（D）bypass=9 超编"
@@ -525,7 +606,7 @@ if has "QUOTA-OVER: bypass scripts/control-tower/quota-bypass-01.sh class=P2"; t
 else
   no "T20 bypass 桶未逐条点名"
 fi
-if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS" ]; then ok "T20 末行 3/4 PASS"; else no "T20 末行=$(last_line)（期望 3/4）"; fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then ok "T20 末行 3/4（0 判不了）"; else no "T20 末行=$(last_line)（期望 3/4（0 判不了））"; fi
 
 # ── T21（E）判不了 ⇒ G11=SKIP ＋ 整体 exit 2（且不得显示 PASS）───────────────
 echo "── T21（E）判不了：quota_scope 非法／缺失／生成器缺失"
@@ -604,14 +685,177 @@ else
   else
     no "T22 变异体下仍 FAIL ⇒ 超编判据不由该比较承重（判据可疑）"
   fi
-  if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS" ]; then
-    ok "T22 变异体下 exit=0 ＋ 4/4 PASS"
+  if [ "$RC" -eq 0 ] && [ "$(last_line)" = "GOVERNANCE: 4/4 PASS（0 判不了）" ]; then
+    ok "T22 变异体下 exit=0 ＋ 4/4 PASS（0 判不了）"
   else
     no "T22 变异体下应为 4/4（实得 exit=${RC}／$(last_line)）"
   fi
   case "$T18_OUT" in
     *"G11 配额双闸: FAIL"*) ok "T22 原生成器对同一夹具仍 FAIL（改坏只在副本）" ;;
     *) no "T22 原生成器对 31 条夹具不再 FAIL ⇒ 真件已被污染" ;;
+  esac
+fi
+
+# ── T23（#1234）telemetry 两态：有记录 ⇒ PASS／无记录 ⇒ FAIL 点名 ─────────────
+echo "── T23（#1234）telemetry 有/无记录两态"
+R_T23="$TMPD/root-g2-tel"; mkroot "$R_T23"
+# 态甲：只有 alpha 有记录（用 telemetry_key alpha-key）⇒ beta 必须点名未运行
+L_T23A="$TMPD/t23-alpha-only.log"; write_log "$L_T23A" "alpha-key|hit|${TS_NOW}"
+run_gov --root "$R_T23" --telemetry "$L_T23A" --days 7
+if has "G2 分腿证据: FAIL" && has "CT-beta scripts/control-tower/check-beta.py（未运行: E_TELEMETRY_NO_RECORD"; then
+  ok "T23 甲 有 alpha 记录、无 beta 记录 ⇒ G2=FAIL 并点名 beta"
+else
+  no "T23 甲 无记录项未被点名（实得 exit=${RC}）"
+fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（0 判不了）" ]; then ok "T23 甲 末行 3/4（0 判不了）"; else no "T23 甲 末行=$(last_line)"; fi
+# 态乙：两条记录都在（beta 记录用 telemetry_key beta-key —— 证明 telemetry_key 承重，不靠 stem 猜）
+L_T23B="$TMPD/t23-both.log"; write_log "$L_T23B" "alpha-key|warn|${TS_NOW}" "beta-key|degraded|${TS_NOW}"
+run_gov --root "$R_T23" --telemetry "$L_T23B" --days 7
+if [ "$RC" -eq 0 ] && has "G2 分腿证据: PASS"; then
+  ok "T23 乙 两条 telemetry_key 记录 ⇒ G2=PASS ＋ exit 0"
+else
+  no "T23 乙 有记录未判绿（exit=${RC}）"
+fi
+
+# ── T24（#1234）ci-step 两态：缺证据 ⇒ 判不了／给证据 ⇒ 可判 ─────────────────
+echo "── T24（#1234）ci-step：--ci-evidence 缺/给（含 ran=false／窗口外／无 entry／env）"
+T24_ROOT="$TMPD/root-g2-ci"
+INV_KIND=ci mkroot "$T24_ROOT"
+L_T24="$TMPD/t24-telemetry.log"; write_log "$L_T24" "alpha-key|hit|${TS_NOW}"
+CE="$TMPD/t24-ci.jsonl"
+
+# 甲：缺证据 ⇒ G2=SKIP ＋ exit 2 ＋ 3/4（1 判不了）
+run_gov --root "$T24_ROOT" --telemetry "$L_T24" --days 7
+if [ "$RC" -eq 2 ] && has "G2 分腿证据: SKIP" && has "E_CI_UNSET"; then
+  ok "T24 甲 缺 ci 证据 ⇒ G2=SKIP ＋ exit 2 ＋ E_CI_UNSET"
+else
+  no "T24 甲 缺 ci 证据未按判不了处理（exit=${RC}）"
+fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（1 判不了）" ]; then
+  ok "T24 甲 末行 'GOVERNANCE: 3/4 PASS（1 判不了）'"
+else
+  no "T24 甲 末行=$(last_line)（期望 3/4（1 判不了））"
+fi
+if has "CT-beta scripts/control-tower/check-beta.py（判不了: E_CI_UNSET"; then
+  ok "T24 甲 逐条点名判不了（ci-step 无证据通道）"
+else
+  no "T24 甲 未点名判不了项"
+fi
+# 甲·旁：混合（FAIL ＋ 判不了）⇒ 判不了优先 exit 2
+OUT="$(bash "$S" --root "$T24_ROOT" --telemetry "$TMPD/does-not-exist.log" --days 7 2>&1)"; RC=$?
+if [ "$RC" -eq 2 ] && has "判不了优先" && has "1 项未运行 ＋ 1 项判不了"; then
+  ok "T24 甲·旁 混合（1 未运行 ＋ 1 判不了）⇒ 判不了优先 exit 2"
+else
+  no "T24 甲·旁 混合态未按判不了优先（exit=${RC}）"
+fi
+
+# 乙：给证据 ran=true 且在窗口内 ⇒ G2=PASS ＋ 4/4（0 判不了）＋ exit 0
+write_ci_evidence "$CE" "scripts/control-tower/check-beta.py" "true" "$TS_NOW" "①g 测试义务闸"
+run_gov --root "$T24_ROOT" --telemetry "$L_T24" --ci-evidence "$CE" --days 7
+if [ "$RC" -eq 0 ] && has "G2 分腿证据: PASS"; then
+  ok "T24 乙 ci-step ran=true 窗口内 ⇒ G2=PASS ＋ exit 0"
+else
+  no "T24 乙 ci-step 证据未被采信（exit=${RC}）"
+fi
+if [ "$(last_line)" = "GOVERNANCE: 4/4 PASS（0 判不了）" ]; then
+  ok "T24 乙 末行 4/4（0 判不了）"
+else
+  no "T24 乙 末行=$(last_line)（期望 4/4（0 判不了））"
+fi
+
+# 丙：ran=false ⇒ FAIL（整体 exit 1，无判不了项）
+write_ci_evidence "$CE" "scripts/control-tower/check-beta.py" "false" "$TS_NOW" "①g 测试义务闸"
+run_gov --root "$T24_ROOT" --telemetry "$L_T24" --ci-evidence "$CE" --days 7
+if [ "$RC" -eq 1 ] && has "G2 分腿证据: FAIL" && has "E_CI_RAN_FALSE"; then
+  ok "T24 丙 ci-step ran=false ⇒ G2=FAIL ＋ exit 1（不是判不了）"
+else
+  no "T24 丙 ran=false 未按 FAIL 处理（exit=${RC}）"
+fi
+
+# 丁：ran=true 但 at 在窗口外 ⇒ FAIL（窗口内没跑）
+write_ci_evidence "$CE" "scripts/control-tower/check-beta.py" "true" "$TS_8D" "①g 测试义务闸"
+run_gov --root "$T24_ROOT" --telemetry "$L_T24" --ci-evidence "$CE" --days 7
+if [ "$RC" -eq 1 ] && has "G2 分腿证据: FAIL" && has "E_CI_WINDOW"; then
+  ok "T24 丁 at 在 7 天窗口外 ⇒ FAIL（E_CI_WINDOW，与 telemetry 窗口同口径）"
+else
+  no "T24 丁 窗口外证据未判红（exit=${RC}）"
+fi
+
+# 戊：证据文件无该 entrypoint ⇒ 判不了 exit 2
+write_ci_evidence "$CE" "scripts/control-tower/check-other.sh" "true" "$TS_NOW" "①g 测试义务闸"
+run_gov --root "$T24_ROOT" --telemetry "$L_T24" --ci-evidence "$CE" --days 7
+if [ "$RC" -eq 2 ] && has "E_CI_NO_ENTRY"; then
+  ok "T24 戊 证据文件无该 entrypoint ⇒ 判不了 exit 2（E_CI_NO_ENTRY）"
+else
+  no "T24 戊 无 entry 未按判不了处理（exit=${RC}）"
+fi
+
+# 己：证据文件不存在 ⇒ 判不了 exit 2
+run_gov --root "$T24_ROOT" --telemetry "$L_T24" --ci-evidence "$TMPD/no-such-ci.jsonl" --days 7
+if [ "$RC" -eq 2 ] && has "E_CI_MISSING"; then
+  ok "T24 己 证据文件不存在 ⇒ 判不了 exit 2（E_CI_MISSING）"
+else
+  no "T24 己 缺文件未按判不了处理（exit=${RC}）"
+fi
+
+# 庚：env SYNO_G2_CI_EVIDENCE 生效（与 --ci-evidence 同判）
+write_ci_evidence "$CE" "scripts/control-tower/check-beta.py" "true" "$TS_NOW" "①g 测试义务闸"
+OUT="$(SYNO_G2_CI_EVIDENCE="$CE" bash "$S" --root "$T24_ROOT" --telemetry "$L_T24" --days 7 2>&1)"; RC=$?
+if [ "$RC" -eq 0 ] && has "G2 分腿证据: PASS" && has "ci 证据: $CE"; then
+  ok "T24 庚 env SYNO_G2_CI_EVIDENCE 生效（G2=PASS）"
+else
+  no "T24 庚 env 注入缝未生效（exit=${RC}）"
+fi
+
+# ── T25（#1234）none 证据源 ⇒ G2=SKIP ＋ exit 2 ＋ 点名 E_EVIDENCE_NONE ─────────
+echo "── T25（#1234）evidence:none（真仓的 pre-push 件）⇒ 判不了"
+T25_ROOT="$TMPD/root-g2-none"
+INV_KIND=none mkroot "$T25_ROOT"
+L_T25="$TMPD/t25-telemetry.log"; write_log "$L_T25" "alpha-key|hit|${TS_NOW}"
+run_gov --root "$T25_ROOT" --telemetry "$L_T25" --days 7
+if [ "$RC" -eq 2 ] && has "G2 分腿证据: SKIP" && has "E_EVIDENCE_NONE"; then
+  ok "T25 none 证据源 ⇒ G2=SKIP ＋ exit 2 ＋ E_EVIDENCE_NONE"
+else
+  no "T25 none 证据源未按判不了处理（exit=${RC}）"
+fi
+if has "CT-alpha scripts/control-tower/check-alpha.sh（判不了: E_EVIDENCE_NONE"; then
+  ok "T25 逐条点名判不了（无任何可读证据通道）"
+else
+  no "T25 未点名 none 项"
+fi
+if [ "$(last_line)" = "GOVERNANCE: 3/4 PASS（1 判不了）" ]; then
+  ok "T25 末行 3/4（1 判不了）"
+else
+  no "T25 末行=$(last_line)（期望 3/4（1 判不了））"
+fi
+
+# ── T26（#1234）改坏即红：把「无记录 ⇒ FAIL」改恒真 ⇒ 有记录仍 FAIL ──────────
+echo "── T26（#1234）改坏即红（telemetry 无记录判据恒真）"
+S_MUT="$TMPD/verify-governance-mut.sh"
+"$PYBIN" - "$S" "$S_MUT" <<'PYEOF'
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+text = open(src, encoding="utf-8").read()
+needle = "        if not any(g in names for g in by_gate):"
+if needle not in text:
+    sys.exit(3)
+open(dst, "w", encoding="utf-8", newline="\n").write(
+    text.replace(needle, "        if True:  # @mutate: 无记录判据恒真（改坏）", 1))
+PYEOF
+MUT_RC=$?
+if [ "$MUT_RC" -ne 0 ] || cmp -s "$S" "$S_MUT"; then
+  no "T26 改坏即红：变异未命中 telemetry 无记录判据（判据位置变了 ⇒ 本用例需同步）"
+else
+  ok "T26 改坏即红：变异体已生成（无记录判据恒真）"
+  OUT="$(bash "$S_MUT" --root "$R" --telemetry "$L" --days 7 2>&1)"; RC=$?
+  if has "G2 分腿证据: FAIL" && has "E_TELEMETRY_NO_RECORD"; then
+    ok "T26 变异体下 telemetry 有记录仍判 FAIL（T1/T23 的 PASS 断言必红 ⇒ 改坏即红成立）"
+  else
+    no "T26 变异体下未判 FAIL（改坏未生效或判据不承重）"
+  fi
+  case "$T1_OUT" in
+    *"G2 分腿证据: PASS"*) ok "T26 原脚本对同一夹具仍 PASS（改坏只在副本）" ;;
+    *) no "T26 原脚本对同一夹具不再 PASS ⇒ 真件已被污染" ;;
   esac
 fi
 

@@ -108,14 +108,14 @@ GROUP_DONE=0
 #     `git grep` 判据"死码零残留"=0 命中、不被本注释自命中。
 GROUP_DOWN="${GROUP_DOWN:-0}"
 hard_check() {
-  local name="$1" matches="$2"
+  local name="$1" matches="$2" key="${3:-$1}"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -gt 0 ] && [ "$GROUP_DOWN" = "1" ] && [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then
     # 裁 409 + K3 根因：降级只摘「计数/阻断」，**❌ 与点名一律保留**（夹具只认 ❌）
     echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-    log_gate "$name" hit; return 0
+    log_gate "$name" hit "$key"; return 0
   fi
   if [ "$count" -gt 0 ]; then
     echo -e "  ${RED}❌ ${name}: ${count} 处  [硬阻断]${RESET}"
@@ -127,31 +127,40 @@ hard_check() {
       echo "::error title=IronLaws:${name}::${_first}"
     fi
     HARD_FAIL=$((HARD_FAIL + 1))
-    log_gate "$name" hit
+    log_gate "$name" hit "$key"
   else
     # D1148 降噪: 成功静默（缺省）——成功只登记 gate-hits miss，不占输出行。
     #   写成**自包含条件**（不调外部函数）: ci-strict-visible.test.sh 用 sed 提取本函数
     #   源码后单独 source，缺省 must-print 语义保 ✅（该夹具断言 miss → ✅）。
     #   组 7a 以 `QUIET_SUCCESS=0 hard_check|soft_check …` 前缀显式保留 ✅ 行。
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
-    log_gate "$name" miss
+    log_gate "$name" miss "$key"
   fi
 }
 
 # D1148: 成功静默缺省值（1=静默）。可在调用点以前缀赋值覆盖（组 7a 用 0）。
 #   注: 不在此处 export——保持"调用点展开"，供夹具提取函数片段独立 source 时仍打印 ✅。
 
+# #1234（W3）: soft_pass 可选 <gate_key>（本函数原本只有 1 个必填参 ⇒ 稳定键落在第 2 位）。
+#   给 key ⇒ 记一条 miss（gate 字段 = 稳定键）；不给 ⇒ 保持 D1148 静默、**零新增遥测**。
+#   为什么不做"缺省=显示名"兜底: ① 全仓 20+ 个 soft_pass 站点每次提交会各多起一个
+#   gate-telemetry 子进程（提交端超时史 = --no-verify 的根因，V4.5.1）；②「跳过」≠「真跑」，
+#   给跳过也记 "miss" 会让 G2 分腿证据源把"没判"读成"判过"。故只让**指定证据点**显式传键。
 soft_pass() {
-  local name="$1"
+  local name="$1" key="${2:-}"
   # D1148 降噪: 成功静默（同 hard_check）。soft_pass 只在成功路径被调用，无失败语义。
   [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
+  [ -n "$key" ] && log_gate "$name" miss "$key"
   return 0
 }
 
 # D515 项4 / D1094（W2 运行遥测）: 门禁命中统计 — 每次检查触发经 gate-telemetry.sh 追加 JSONL
 # 契约(铁律47):
-#   @input  $1=检查点名 $2=hit|miss|warn|degraded
-#   @output 追加 JSONL 行 {time,gate,result,branch,duration_ms,hits}
+#   @input  $1=检查点名（显示名） $2=hit|miss|warn|degraded [$3=gate_key（稳定键；缺省=显示名）]
+#           为什么显示名/稳定键分离（#1234 / W3）: 显示名是给人读的文案（含中文/上下文/卡号），
+#           随文案改而漂移；遥测要的是**稳定键** = 判据脚本 entrypoint stem（如 check-gate-inventory），
+#           否则 G2 分腿证据源无法把「某闸真跑过」与登记件对上（改名即断链）。
+#   @output 追加 JSONL 行 {time,gate,result,branch,duration_ms,hits}（gate 字段 = gate_key）
 #           **唯一写入器 = scripts/control-tower/gate-telemetry.sh**（本函数不再自拼 JSON）
 #   @exit   恒 0（遥测不是门禁：写失败**不改**本次提交结论，也不计 HARD_FAIL/SOFT_COUNT）
 #   @degraded 写失败 ⇒ gate-telemetry.sh 自行 stderr ＋ degraded-events.log ＋ exit 2；
@@ -164,7 +173,7 @@ soft_pass() {
 #     精确"命中条数"在 hard_check/soft_check 的局部变量 count 内；本批按写集约束不外传，
 #     故记 1/0 而非编造数字（gate-telemetry 接受任意非负整数，后续批次可传真实条数）。
 log_gate() {
-  local g="$1" r="$2"
+  local g="$1" r="$2" k="${3:-$1}"
   [ -z "$g" ] && return 0
   local _tel="$ROOT/scripts/control-tower/gate-telemetry.sh"
   local _now_us="${EPOCHREALTIME:-}" _dur=0 _hits=0 _rc=0
@@ -177,7 +186,7 @@ log_gate() {
     fi
   fi
   if [ -f "$_tel" ]; then
-    bash "$_tel" --emit "$g" "$r" "$_dur" "$_hits" --log "${GATE_HITS_LOG}" --branch "${_GATE_BRANCH}" || _rc=$?  # swallow-ok: 遥测非门禁；失败已由 gate-telemetry stderr＋degraded-events.log 留痕
+    bash "$_tel" --emit "$k" "$r" "$_dur" "$_hits" --log "${GATE_HITS_LOG}" --branch "${_GATE_BRANCH}" || _rc=$?  # swallow-ok: 遥测非门禁；失败已由 gate-telemetry stderr＋degraded-events.log 留痕
     [ "$_rc" -ne 0 ] && echo "  ⚠️  遥测降级: gate-telemetry rc=${_rc}（不阻断提交；详见 stderr / degraded-events.log）"
   else
     [ -z "${_GATE_TEL_WARNED:-}" ] && echo "  ⚠️  遥测降级: 缺 scripts/control-tower/gate-telemetry.sh（本进程不再重复提示；检查判定不受影响）"
@@ -212,7 +221,7 @@ decl_check() {
 }
 
 soft_check() {
-  local name="$1" matches="$2"
+  local name="$1" matches="$2" key="${3:-$1}"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -gt 0 ]; then
@@ -220,7 +229,7 @@ soft_check() {
     if [ "${SYNO_CI:-0}" = "1" ] && [ "${GROUP_DOWN:-0}" = "1" ] && [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级——只报不拦]${RESET}"
       echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-      log_gate "$name" hit
+      log_gate "$name" hit "$key"
     elif [ "${SYNO_CI:-0}" = "1" ]; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [CI strict——软提示在 CI 上为硬阻断]${RESET}"
       HARD_FAIL=$((HARD_FAIL + 1))  # D516 CI strict
@@ -229,11 +238,11 @@ soft_check() {
       SOFT_COUNT=$((SOFT_COUNT + 1))
     fi
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-    log_gate "$name" hit
+    log_gate "$name" hit "$key"
   else
     # D1148 降噪: 成功静默（同 hard_check；自包含条件见 hard_check 注释）
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
-    log_gate "$name" miss
+    log_gate "$name" miss "$key"
   fi
 }
 
@@ -288,6 +297,8 @@ self_fail_missing_script() {
 
 # D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
 v5_soft() {
+  # #1234（W3）: 可选 <gate_key>（本函数原本只有 1 个必填参 ⇒ 稳定键落在第 2 位；缺省=显示名）
+  local _v5_key="${2:-$1}"
   # D516/K3 P0-1: SYNO_CI strict 模式——CI 上（SYNO_CI=1）软提示转硬阻断。
   # 这才是"本地减负 + CI 权威"的物理落地：本地快速通过（软提示），CI 同一检查
   # 变硬（K3 D515 审计实证：无此转换则约 20 项检查本地+CI 双放行=门禁虚设，
@@ -296,12 +307,12 @@ v5_soft() {
     echo -e "  ${RED}❌ ${1}: 检查未过 [CI strict——本地软提示在 CI 上为硬阻断]${RESET}"
     echo "::error title=IronLaws:${1}::检查未过（CI strict 转硬）"
     HARD_FAIL=$((HARD_FAIL + 1))
-    log_gate "$1" hit
+    log_gate "$1" hit "$_v5_key"
     return
   fi
   echo -e "  ${YELLOW}⚠️  ${1}: 检查未过 [V5 软提示——CI 为权威(SYNO_CI)，本地不阻断]${RESET}"
   SOFT_COUNT=$((SOFT_COUNT + 1))
-  log_gate "$1" hit
+  log_gate "$1" hit "$_v5_key"
 }
 
 # D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
@@ -506,7 +517,7 @@ DOC_CONTRACT_TOUCHED=$(echo "$STAGED_ALL" | grep -E '\.(md|html?)$' || true)
 if [ -z "$DOC_CONTRACT_TOUCHED" ]; then
   soft_pass "D1193 文档契约三闸: 无文档变更（跳过）"
 elif [ ! -f "$ROOT/scripts/control-tower/check-doc-contract.sh" ]; then
-  soft_check "D1193 文档契约三闸: 执行体缺失（fail-closed）" "scripts/control-tower/check-doc-contract.sh"
+  soft_check "D1193 文档契约三闸: 执行体缺失（fail-closed）" "scripts/control-tower/check-doc-contract.sh" "check-doc-contract"
   [ "${SYNO_CI:-0}" = "1" ] && exit 1
 else
   # CI 空暂存 → 用 base...HEAD（与 GIT_CACHED_* 同源，D390 注入缝语义不变）
@@ -518,15 +529,16 @@ else
   DOC_CONTRACT_OUT=$(bash "$ROOT/scripts/control-tower/check-doc-contract.sh" "${_DC_ARGS[@]}" 2>&1) || DOC_CONTRACT_RC=$?
   DOC_CONTRACT_RC=${DOC_CONTRACT_RC:-0}
   if [ "$DOC_CONTRACT_RC" -eq 0 ]; then
-    soft_pass "D1193 文档契约三闸: 全过（md+html，判据源=契约 §3）"
+    # #1234: 成功路径补 miss 记录（稳定键=check-doc-contract）——此前只有 ✅/静默，G2 判不了"跑没跑"
+    soft_pass "D1193 文档契约三闸: 全过（md+html，判据源=契约 §3）" "check-doc-contract"
   elif [ "$DOC_CONTRACT_RC" -eq 1 ]; then
     soft_check "D1193 文档契约三闸: 有违规 — 修正后重试（自跑: bash scripts/control-tower/check-doc-contract.sh ${_DC_ARGS[*]}）" \
-      "$(echo "$DOC_CONTRACT_OUT" | grep -E '^\[FAIL\]|^       - ' | head -8)"
+      "$(echo "$DOC_CONTRACT_OUT" | grep -E '^\[FAIL\]|^       - ' | head -8)" "check-doc-contract"
     # 纯文档提交会走 CT-34 早退分支 exit 0 — 不在此处结算则 CI strict 下本闸等于未接（D1193 实测）
     [ "${SYNO_CI:-0}" = "1" ] && exit 1
   else
     # D328 三态: degraded（判据源读不到）不与通过混同
-    soft_check "D1193 文档契约三闸: 检查本身降级 (exit=$DOC_CONTRACT_RC)" "$(echo "$DOC_CONTRACT_OUT" | tail -3)"
+    soft_check "D1193 文档契约三闸: 检查本身降级 (exit=$DOC_CONTRACT_RC)" "$(echo "$DOC_CONTRACT_OUT" | tail -3)" "check-doc-contract"
     [ "${SYNO_CI:-0}" = "1" ] && exit 1
   fi
 fi
@@ -555,8 +567,11 @@ if [ "$DOC_ONLY" -eq 1 ]; then
     if [ -n "$NOTES_TOUCHED_DOC" ]; then
       if bash "$ROOT/scripts/control-tower/check-notes-lifecycle.sh"; then
         echo -e "  ${GREEN}✅ Notes 迁移门禁: proposed/ 无僵尸条目${RESET}"
+        # #1234: 本早退分支此前**零遥测**（只 echo）⇒ G2 判不了该闸跑没跑；成功=miss，失败=hit
+        log_gate "Notes 迁移门禁 (D472)" miss "check-notes-lifecycle"
       else
         echo -e "  ${RED}❌ Notes 迁移门禁: proposed/ 存在僵尸条目（实现已落地未迁移） [硬阻断]${RESET}"
+        log_gate "Notes 迁移门禁 (D472)" hit "check-notes-lifecycle"
         echo "  修复: git mv 到 implemented/ 或 rejected/，或删除测试残留"
         exit 1
       fi
@@ -1233,13 +1248,13 @@ fi
 NOTES_TOUCHED=$(echo "$STAGED_ALL" | grep -E '^memory/notes/proposed/' || true)
 if [ -n "$NOTES_TOUCHED" ]; then
   if bash "$ROOT/scripts/control-tower/check-notes-lifecycle.sh"; then
-    soft_pass "Notes 迁移门禁: proposed/ 无僵尸条目"
+    soft_pass "Notes 迁移门禁: proposed/ 无僵尸条目" "check-notes-lifecycle"
   else
     # D515 项3: Notes 迁移门禁降软提示（CI 为权威；K3 审计链路不受影响——报告照出）
     echo -e "  ${YELLOW}⚠️  Notes 迁移门禁: proposed/ 存在僵尸条目（实现已落地未迁移） [V5 软提示——CI 为权威，本地不阻断]${RESET}"
     echo "  修复: git mv 到 implemented/ 或 rejected/，或删除测试残留"
     SOFT_COUNT=$((SOFT_COUNT + 1))
-    log_gate "Notes 迁移门禁 (D472)" hit
+    log_gate "Notes 迁移门禁 (D472)" hit "check-notes-lifecycle"
   fi
 else
   soft_pass "Notes 迁移门禁: 无 proposed/ 变更（跳过）"
@@ -1593,11 +1608,11 @@ if [ "$_tsx_ok" = "yes" ]; then
   BP_OUT="$(cat /tmp/.syno-blockpaths.out 2>/dev/null || true)"
   rm -f /tmp/.syno-blockpaths.out
   case "$BP_RC" in
-    0) : ;;  # 一致 ⇒ 静默（D1148 成功静默）
-    1) soft_check "块级 paths 快照对账" "$(printf '%s' "$BP_OUT" | head -30)\n" ;;
+    0) log_gate "块级 paths 快照对账" miss "check-block-paths" ;;  # #1234: 一致 ⇒ 输出保持静默，但**记一条 miss**（此前完全无记录 ⇒ G2 判不了）
+    1) soft_check "块级 paths 快照对账" "$(printf '%s' "$BP_OUT" | head -30)\n" "check-block-paths" ;;
     *) # 🔴 非 0/1 = 判不了或超时 ⇒ **显式**报（不得与"通过"混同），且不吞原始输出
        printf '%s\n' "$BP_OUT" | head -10 | sed 's/^/     /'
-       soft_check "块级 paths 快照对账（🔴 判不了/超时 = fail-closed，非通过）" "  exit=${BP_RC} — 读不到真源/形状异常/超时\n" ;;
+       soft_check "块级 paths 快照对账（🔴 判不了/超时 = fail-closed，非通过）" "  exit=${BP_RC} — 读不到真源/形状异常/超时\n" "check-block-paths" ;;
   esac
 else
   # 无 node ⇒ 无法判定。显式降级登记（铁律 11：禁静默），**不判红**（判不了 ≠ 违规）。
@@ -2048,13 +2063,13 @@ else
   _QD_OUT="$(python3 "$ROOT/scripts/control-tower/check-quality-delta.py" "${_QD_ARGS[@]}" 2>&1)"
   _QD_RC=$?
   if [ "$_QD_RC" -eq 0 ]; then
-    soft_pass "#912 质量增量闸 (G1/G3/G4): $(printf '%s' "$_QD_OUT" | grep -E 'QUALITY-DELTA:' | tail -1)"
+    soft_pass "#912 质量增量闸 (G1/G3/G4): $(printf '%s' "$_QD_OUT" | grep -E 'QUALITY-DELTA:' | tail -1)" "check-quality-delta"
   elif [ "$_QD_RC" -eq 1 ]; then
     hard_check "#912 质量增量闸 (G1/G3/G4 · 只判变更集): 有违规" \
-      "$(printf '%s\n' "$_QD_OUT" | grep -E '^❌' | head -8)${_QD_OUT:+}"
+      "$(printf '%s\n' "$_QD_OUT" | grep -E '^❌' | head -8)${_QD_OUT:+}" "check-quality-delta"
   else
     hard_check "#912 质量增量闸: 检查自身失败 rc=${_QD_RC}（fail-closed，不等于通过）" \
-      "$(printf '%s' "${_QD_OUT:-<无输出>}" | grep -E 'ERROR|degraded' | head -3)"
+      "$(printf '%s' "${_QD_OUT:-<无输出>}" | grep -E 'ERROR|degraded' | head -3)" "check-quality-delta"
   fi
 fi
 GROUP_DOWN=0  # 质量增量闸降级范围结束（#1227 W3 保持原态）
@@ -2152,7 +2167,10 @@ if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/script
   _D734_OUT="$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)"; _D734_RC=$?
   if [ "$_D734_RC" -ne 0 ]; then
     printf '%s\n' "$_D734_OUT" | head -5 | sed 's/^/     /'
-    v5_soft "D734 PR 预算（D1171 撤旁路复执法）"
+    v5_soft "D734 PR 预算（D1171 撤旁路复执法）" "check-pr-budget"
+  else
+    # #1234: 限额内原本**零输出、零记录**（旁路语义）⇒ G2 无法证明该闸跑过 ⇒ 补一条 miss
+    log_gate "D734 PR 预算" miss "check-pr-budget"
   fi
 else
   # D1219（卡 #1225）: 存在性另有 check-pr-budget.test.sh 保证，但那不能替代**运行期** fail-closed。
@@ -2189,14 +2207,14 @@ for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1，
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _DSH_PYBIN="$_c"; break; fi
 done
 if [ -z "$_DSH_PYBIN" ]; then
-  soft_check "DSH 断面一致性 (D943): 无可用 python（fail-closed，不静默跳过）" "1"
+  soft_check "DSH 断面一致性 (D943): 无可用 python（fail-closed，不静默跳过）" "1" "check-dsh-anchor"
 elif [ ! -f "$ROOT/scripts/control-tower/check-dsh-anchor.py" ]; then
-  soft_check "DSH 断面一致性 (D943): 门禁脚本缺失 scripts/control-tower/check-dsh-anchor.py" "1"
+  soft_check "DSH 断面一致性 (D943): 门禁脚本缺失 scripts/control-tower/check-dsh-anchor.py" "1" "check-dsh-anchor"
 else
   _DSH_ANCHOR_OUT="$("$_DSH_PYBIN" "$ROOT/scripts/control-tower/check-dsh-anchor.py" --repo "$ROOT" --no-tree-check 2>&1)"
   _DSH_ANCHOR_RC=$?
   if [ "$_DSH_ANCHOR_RC" -eq 0 ]; then _DSH_ANCHOR_HITS=""; else _DSH_ANCHOR_HITS="$(printf '%s' "$_DSH_ANCHOR_OUT" | tail -8) (rc=$_DSH_ANCHOR_RC)"; fi
-  soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}"
+  soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}" "check-dsh-anchor"
 fi
 
 # ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 12 组编号——同 D782/D734 接入模式）──
@@ -2245,17 +2263,17 @@ else
   fi
   _TAD_OUT="$(python3 "$ROOT/scripts/control-tower/check-tool-args-delta.py" "${_TAD_ARGS[@]}" 2>&1)"; _TAD_RC=$?
   if [ "$_TAD_RC" -eq 0 ]; then
-    soft_pass "#915 工具入参校验增量闸: $(printf '%s' "$_TAD_OUT" | grep -E 'TOOL-ARGS-DELTA:' | tail -1)"
+    soft_pass "#915 工具入参校验增量闸: $(printf '%s' "$_TAD_OUT" | grep -E 'TOOL-ARGS-DELTA:' | tail -1)" "check-tool-args-delta"
   elif [ "$_TAD_RC" -eq 1 ]; then
     _TAD_MSG="$(printf '%s\n' "$_TAD_OUT" | grep -E '^❌' | head -8)"
     # 🔴 非空兜底：rc=1 但无 ❌ 行时，hard_check 空消息会打 ✅ 且不增 HARD_FAIL（实测）
     [ -z "$_TAD_MSG" ] && _TAD_MSG="rc=1 但无 ❌ 行 ⇒ 按红阻断（输出格式违约）"
-    hard_check "#915 工具入参校验增量闸 (只判变更集): 有违规" "$_TAD_MSG"
+    hard_check "#915 工具入参校验增量闸 (只判变更集): 有违规" "$_TAD_MSG" "check-tool-args-delta"
   elif [ "$_TAD_RC" -ge 2 ]; then
     _TAD_MSG="$(printf '%s' "${_TAD_OUT:-<无输出>}" | grep -E 'ERROR|degraded' | head -3)"
     # 🔴 同型兜底：rc≥2 且无 ERROR/degraded 行（如脚本缺失 ⇒ python3 报 can't open file）也不许打绿
     [ -z "$_TAD_MSG" ] && _TAD_MSG="rc=${_TAD_RC} 且无 ERROR/degraded 行 ⇒ 按检查自身失败阻断"
-    hard_check "#915 工具入参校验增量闸: 检查自身失败 rc=${_TAD_RC}（fail-closed，不等于通过）" "$_TAD_MSG"
+    hard_check "#915 工具入参校验增量闸: 检查自身失败 rc=${_TAD_RC}（fail-closed，不等于通过）" "$_TAD_MSG" "check-tool-args-delta"
   fi
 fi
 
@@ -2331,15 +2349,23 @@ if [ -x "$ROOT/scripts/control-tower/check-gate-inventory.sh" ]; then
   _GOV_RC=0; _GOV_OUT="$(bash "$ROOT/scripts/control-tower/check-gate-inventory.sh" --root "$ROOT" 2>&1)" || _GOV_RC=$?
   if [ "$_GOV_RC" -eq 0 ]; then
     echo "  ✅ 门禁三分类登记（37 件/P0 棘轮）"
+    # #1234: 成功路径此前**只 echo**（不进 gate-hits）⇒ G2 判不了；补一条 miss（稳定键）
+    log_gate "治理面自检·门禁三分类登记 (W1/#1089)" miss "check-gate-inventory"
   else
     _GOV_BAD="$(printf '%s\n' "$_GOV_OUT" | grep -E '❌|degraded|VIOLATION' || true)"  # swallow-ok: 无匹配即空 ⇒ 由 hard_check 判 0 处
-    hard_check "治理面自检·门禁三分类登记 (W1/#1089)" "$_GOV_BAD"
+    hard_check "治理面自检·门禁三分类登记 (W1/#1089)" "$_GOV_BAD" "check-gate-inventory"
   fi
 fi
 if [ -x "$ROOT/scripts/control-tower/check-mirror-freshness.sh" ]; then
   _FRC=0; _FRESH="$(bash "$ROOT/scripts/control-tower/check-mirror-freshness.sh" --canonical "${SYNO_CANONICAL_REF:-gitea/${SYNO_TRUNK_REF:-main}}" --mirror-ref origin/main 2>&1)" || _FRC=$?  # swallow-ok: 判不了由脚本自身打印；本处只报告不改判定
   printf '%s\n' "$_FRESH" | grep -E '结果:|degraded:' | sed 's/^/  ℹ️  /' || true  # swallow-ok: 无匹配即安静
   if [ "$_FRC" -ne 0 ]; then echo "  ⚠️ 镜象新鲜度 rc=$_FRC（0=新鲜 1=不新鲜 2=判不了）—— 只报告，不阻断（W5）"; fi
+  # #1234: 本块原**完全无 log_gate** ⇒ G2 判不了；三态各记一条（0 新鲜=miss ／ 2 判不了=degraded ／ 1 落后=warn）
+  case "$_FRC" in
+    0) log_gate "镜象新鲜度 (W5/#1087)" miss "check-mirror-freshness" ;;
+    2) log_gate "镜象新鲜度 (W5/#1087)" degraded "check-mirror-freshness" ;;
+    *) log_gate "镜象新鲜度 (W5/#1087)" warn "check-mirror-freshness" ;;
+  esac
 fi
 
 # ── W10/#1108：Unicode 同形字分级门禁（只判变更集新增行；A/B/C 阻断，D 只提醒）──
@@ -2355,7 +2381,7 @@ if [ -f "$_UNI_S" ]; then
     if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then _UNI_PYBIN="$_c"; break; fi
   done
   if [ -z "$_UNI_PYBIN" ]; then
-    hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "判不了：python3 不可用（按 W6 退出码白名单归 2，禁当通过）"
+    hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "判不了：python3 不可用（按 W6 退出码白名单归 2，禁当通过）" "check-unicode-confusable"
   else
     _UNI_RC=0
     if [ -n "${SYNO_DIFF_BASE:-}" ]; then
@@ -2366,12 +2392,12 @@ if [ -f "$_UNI_S" ]; then
     case "$_UNI_RC" in
       0)
         printf '%s\n' "$_UNI_OUT" | grep -E '⚠️  \[D\]|SKIP' | sed 's/^/  ℹ️  /' || true  # swallow-ok: 无 D 提示/SKIP 行时保持安静（rc=0 由 hard_check 记 miss）
-        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "" ;;
+        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "" "check-unicode-confusable" ;;
       1)
-        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "$(printf '%s\n' "$_UNI_OUT" | grep -E '❌|UNICODE-CONFUSABLE: VIOLATION' || true)"  # swallow-ok: rc=1 必有 ❌ 行；grep 落空则由 hard_check 判 0 处（不静默放行 rc）
+        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "$(printf '%s\n' "$_UNI_OUT" | grep -E '❌|UNICODE-CONFUSABLE: VIOLATION' || true)" "check-unicode-confusable"  # swallow-ok: rc=1 必有 ❌ 行；grep 落空则由 hard_check 判 0 处（不静默放行 rc）
         ;;
       *)
-        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "判不了（exit=${_UNI_RC}，按 W6 退出码白名单归 2，禁当通过）" ;;
+        hard_check "治理面自检·Unicode 同形字 (W10/#1108)" "判不了（exit=${_UNI_RC}，按 W6 退出码白名单归 2，禁当通过）" "check-unicode-confusable" ;;
     esac
   fi
 fi

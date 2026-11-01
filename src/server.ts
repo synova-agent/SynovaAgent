@@ -5,7 +5,7 @@
  * 初始化逻辑委托给 Bootstrap (src/deploy/bootstrap.ts)。
  * 不引入 Novis 的任何依赖。
  */
-import express, { Router } from 'express';
+import express, { Router, type Request } from 'express';
 import { wrapStandardKeyGuard } from './adapters/standard-key-guard';   // #1403：注入前包一次
 import * as path from 'path';
 import cors from 'cors';
@@ -18,7 +18,7 @@ import { ToolRegistry } from './agent/tools';
 import { KnowledgeInjector, KnowledgeConflictHandler, AtomicWriter } from './agent/index';
 import { BossMailbox } from './agent/boss-mailbox';
 import { rbacMiddleware } from './middleware/rbac'; // D947: 仅保留中间件；装配期空调用已删（见 244 区注释）
-import { jwtAuthMiddleware } from './middleware/auth';
+import { jwtAuthMiddleware, resolveRequestOrgId, type JwtPayload } from './middleware/auth';
 import authRoutes from './routes/auth';
 import { buildInheritedContext, detectConflicts } from './agent/workspace-service';
 // Code Review A1+A3: 凭证加密 + L5 事件总线初始化
@@ -588,13 +588,27 @@ export async function createServer(): Promise<Server> {
       if (!moduleName || !orgId) {
         return res.status(400).json({ ok: false, error: 'module 和 orgId 必填', code: 'VALIDATION_ERROR' });
       }
+      // #1228 S0-2b 点 12：必填 400（形状）之后才做归属闸；管线租户用来源，不用请求值。
+      // 实例权威 = createServer 内既有 `config.orgId`（:216），**不引第二份 env 读**。
+      const requestOrg = resolveRequestOrgId(
+        req as Request & { auth?: JwtPayload },
+        orgId,
+        config.orgId,
+      );
+      if (!requestOrg.ok) {
+        logger.warn(
+          { code: requestOrg.code, reason: requestOrg.reason, path: req.path },
+          '安全判据: 被拒绝 — 声明 orgId 与组织来源不一致（HTTP 403 fail-closed）',
+        );
+        return res.status(403).json({ ok: false, code: requestOrg.code, reason: requestOrg.reason });
+      }
       const { runConnectorPipeline } = await import('./l5/connector-pipeline');
       const vault = req.app.locals.credentialVault;
       const credentials = vault
         ? vault.decryptForSubprocess(moduleName) || '{}'
         : '{}';
       const creds: Record<string, string> = JSON.parse(credentials);
-      const result = await runConnectorPipeline(moduleName, orgId, creds);
+      const result = await runConnectorPipeline(moduleName, requestOrg.orgId, creds);
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

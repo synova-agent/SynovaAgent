@@ -82,6 +82,9 @@ vi.mock('../../src/config', async (importOriginal) => {
         llmModel: 'test-model',
         dbPath: process.env.SYNOVA_DB_PATH || ':memory:',
         devMode: false,
+        // #1228 S0-2b：config 契约必含 orgId（生产 = `src/config.ts:110` 的实例组织）。
+        // 原 mock 漏此字段 ⇒ 路由取实例组织时读到 undefined；补成契约形态（不是放宽判据）。
+        orgId: 'default',
       };
     },
   };

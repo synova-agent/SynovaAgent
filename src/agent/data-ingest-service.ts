@@ -10,6 +10,7 @@ import { join } from 'path';
 import { createLogger } from '@synova/logger';
 import { getPIIScrubber } from '../security/pii-scrubber';
 import { deriveValidFrom } from '../l3/period-utils';
+import { assertGraphName } from '../l2/graph-scope';
 import { AdapterRegistry } from './adapter-registry';
 import { scanFieldMappings } from './adapter-scanner';
 
@@ -155,7 +156,8 @@ export function loadNodeTypeSchema(targetNodeType: string): NodeTypeSchema | nul
  * @param store - GraphStore 实例（需有 createNode 方法）
  * @param mapping - 字段映射配置
  * @param row - 一行数据 (externalField → value)
- * @param graph - 图命名空间
+ * @param graph - 图命名空间（**必填**；#1211 起删掉 'default' 默认值 —— 漏传/非法值当场抛
+ *                GraphScopeError{code:'GRAPH_NAME_INVALID'}，不静默落到介质层默认分区）
  * @param validProps - 目标节点类型 schema 白名单；undefined = 跳过校验（fail-open）
  * @returns nodeId + errors + warnings（warnings 记录被白名单跳过的字段，非静默信号）
  */
@@ -163,9 +165,11 @@ export async function ingestRow(
   store: { createNode(type: string, props: Record<string, unknown>, graph: string): string },
   mapping: FieldMappingConfig,
   row: Record<string, unknown>,
-  graph = 'default',
+  graph: string,
   validProps?: Set<string>,
 ): Promise<{ nodeId: string; errors: string[]; warnings: string[] }> {
+  // #1211 入口白名单（fail loud）：默认值删除后，唯一合法来源 = src/l2/graph-scope.ts
+  graph = assertGraphName(graph);
   const props: Record<string, unknown> = { financialType: mapping.name };
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -236,8 +240,10 @@ export async function ingestBatch(
   store: { createNode(type: string, props: Record<string, unknown>, graph: string): string },
   mapping: FieldMappingConfig,
   rows: Array<Record<string, unknown>>,
-  graph = 'default',
+  graph: string,
 ): Promise<IngestResult> {
+  // #1211 入口白名单（fail loud）：与 ingestRow 同一口径来源，禁第二套校验
+  graph = assertGraphName(graph);
   // D470: 按目标节点类型加载 schema 做字段白名单校验（替代 financial-only）
   const schema = loadNodeTypeSchema(mapping.targetNodeType);
   const allWarnings: string[] = [];

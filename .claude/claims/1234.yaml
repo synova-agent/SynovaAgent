@@ -1,0 +1,27 @@
+# .claude/claims/1234.yaml — G2 分腿证据源（#1234 · v3）
+# #CRITERIA: A ｜ 架构层: 不属五层业务（治理脚本／门禁）
+# 声明载体 = 本件（writeset + done 两字段制）；可读说明见
+# .claude/task-briefs/2026-10-31-1234-G2.md（同批）。
+# 接线状态: 已接线（pre-commit-check.sh 埋点补齐；verify-governance.sh 为验收器；
+#   G2 分腿证据源是判定口径变更，不新增生产调用点；gitea-ci 通道本批只留 --ci-evidence 注入缝）。
+writeset:
+  - scripts/pre-commit-check.sh
+  - scripts/control-tower/check-gate-inventory.sh
+  - scripts/control-tower/verify-governance.sh
+  - docs/authority/GATE-INVENTORY.yaml
+  - .gitea/workflows/local-gates.yml
+  - tests/control-tower/check-gate-inventory.test.sh
+  - tests/control-tower/verify-governance.test.sh
+  - gate-exemptions/2026-10-31-g2-1234.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - .claude/task-briefs/2026-10-31-1234-G2.md
+  - .claude/claims/1234.yaml
+  - memory/notes/proposed/2026-10-31-g2-1234.md
+done:
+  - verify: bash tests/control-tower/check-gate-inventory.test.sh
+  - verify: bash tests/control-tower/verify-governance.test.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+  - verify: bash scripts/control-tower/verify-governance.sh --days 7
+note: "#1234（G2 分腿证据源 v3）：G2 改为按 evidence 分腿判定（telemetry/ci-step/none · 三态）；pre-commit 补 8 条静默成功路径的 log_gate 并给 log_gate 加可选稳定键（10 个 required 调用点传 entrypoint stem，显示名不变）；check-gate-inventory R4 改剥注释（整行＋行内）后判 required_ci；GATE-INVENTORY 新增 evidence 字段并修 CT-verify-claims-table 假阳性（required_ci:false/evidence:none/na_cmd）；local-gates.yml 只登记 5 个 ci-step 闸→step 名映射（不建回流）；两配对测试扩两态＋改坏即红。真仓期望 G2=判不了（ci-step 无通道），末行 GOVERNANCE: 3/4 PASS（1 判不了）。"

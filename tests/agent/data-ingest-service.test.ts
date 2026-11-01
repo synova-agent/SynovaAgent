@@ -13,6 +13,10 @@
  *   D477 red: 修复前用例6a 失败于中文键行 standardKey 缺失（row['period'] 英文键直读拿不到中文键值），
  *   用例6b 失败于行级英文 period 键绕过白名单注入 props.period + standardKey；
  *   修复后（standardKey 块消费 props.period）: 6a 生成 D29/D33 契约 standardKey、6b 旁路关闭，全绿。
+ *
+ * #1211（S0-2c）：`ingestRow`/`ingestBatch` 的 `graph = 'default'` 默认值已删除（fail loud）⇒
+ *   本文件 7 处调用**显式补** `'default'` 实参（行为不变；不补则入口 assertGraphName 抛
+ *   GRAPH_NAME_INVALID —— 那正是"删静默默认"要的失败形态，另见 tests/l4/graph-scope.test.ts）。
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -73,7 +77,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       期间: '2026-Q2',
     };
 
-    const result = await ingestBatch(fake.store, mapping, [row]);
+    const result = await ingestBatch(fake.store, mapping, [row], 'default');
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
@@ -158,7 +162,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       期间: '2026-H1',
     };
 
-    const result = await ingestBatch(fake.store, mapping, [row1, row2]);
+    const result = await ingestBatch(fake.store, mapping, [row1, row2], 'default');
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(2);
@@ -194,7 +198,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       mappings: [{ externalField: '神秘字段', prop: 'bogus_field', type: 'string' }],
     };
     const fakeA = fakeStore();
-    const resultA = await ingestBatch(fakeA.store, boundaryConfig, [{ 神秘字段: 'x' }]);
+    const resultA = await ingestBatch(fakeA.store, boundaryConfig, [{ 神秘字段: 'x' }], 'default');
 
     expect(resultA.ok).toBe(true);
     expect(resultA.nodesCreated).toBe(1);
@@ -212,7 +216,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       mappings: [{ externalField: 'X', prop: 'weird_prop', type: 'string' }],
     };
     const fakeB = fakeStore();
-    const resultB = await ingestBatch(fakeB.store, missingConfig, [{ X: 'y' }]);
+    const resultB = await ingestBatch(fakeB.store, missingConfig, [{ X: 'y' }], 'default');
 
     expect(resultB.ok).toBe(true);
     expect(resultB.nodesCreated).toBe(1);
@@ -251,7 +255,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       期间: '2026-Q2',
     };
 
-    const result = await ingestBatch(fake.store, mapping, [row]);
+    const result = await ingestBatch(fake.store, mapping, [row], 'default');
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
@@ -304,7 +308,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       期间: '2026-Q2',
     };
 
-    const result = await ingestBatch(fake.store, mapping, [row]);
+    const result = await ingestBatch(fake.store, mapping, [row], 'default');
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
@@ -326,7 +330,7 @@ describe('data-ingest-service — D470 目标 schema 校验', () => {
       period: '2026-Q2',
     };
 
-    const result = await ingestBatch(fake.store, mapping, [row]);
+    const result = await ingestBatch(fake.store, mapping, [row], 'default');
 
     expect(result.ok).toBe(true);
     expect(result.nodesCreated).toBe(1);
