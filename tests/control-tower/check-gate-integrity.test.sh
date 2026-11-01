@@ -944,6 +944,19 @@ rm -f "$FP_TESTS/gen.test.sh"
 
 : > "$FP_BASE"
 
+# ── M10-6（#1252）: 盘符冒号安全 —— `grep -nHE` 行拆分须取**最后** `:<数字>:` ──
+#   病根: Windows 路径 `D:/…` 含盘符冒号；按**首个**冒号切 ⇒ 路径变 `D`、key 变 `D:` ⇒
+#   白名单永不命中 ⇒ 本机恒红 / CI 绿（两腿结论相反）。mac 上无盘符故走不到 ⇒ 本条用**纯字符串**
+#   注入（不经文件系统），跨平台确定。
+echo "── M10-6（#1252）: Windows 盘符冒号不得打断 path:line 拆分 ──"
+OUT="$(printf 'D:/x/tests/control-tower/a.test.sh:59:grep -qv foo\n' \
+  | bash "$GATE" --root "D:/x" --fixture-power-parse 2>&1 || true)"
+if printf '%s' "$OUT" | grep -qx 'tests/control-tower/a.test.sh:59'; then
+  ok "M10-6 盘符冒号行 ⇒ key=tests/control-tower/a.test.sh:59（修前会切成 D:）"
+else
+  no "M10-6 盘符冒号解析错误（期望 tests/control-tower/a.test.sh:59）: ${OUT}"
+fi
+
 echo "=== 结果: PASS=${PASS} FAIL=${FAIL}${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}} ==="
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

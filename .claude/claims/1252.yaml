@@ -1,0 +1,12 @@
+writeset:
+  - scripts/control-tower/check-gate-integrity.sh
+  - tests/control-tower/check-gate-integrity.test.sh
+  - .gitea/workflows/local-gates.yml
+  - gate-exemptions/2026-11-01-1252-gate7-wiring.md
+  - memory/notes/proposed/2026-11-01-1252-gate7-wiring.md
+  - .claude/claims/1252.yaml
+done:
+  - verify: bash tests/control-tower/check-gate-integrity.test.sh
+  - verify: printf 'D:/x/tests/control-tower/a.test.sh:59:grep -qv x\n' | bash scripts/control-tower/check-gate-integrity.sh --root D:/x --fixture-power-parse
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+note: "#1252 T2：⑦ 两处缺陷——(1) Windows 盘符冒号打断 grep -nHE 行解析（本机违规2/豁免0、CI 违规0/豁免2，两腿结论相反）⇒ _fp_split_line 贪心取最后 :<num>: ＋ 只读单测缝 --fixture-power-parse；(2) ⑦ 步未注入 SYNO_BASE_REF ⇒ 越线者付账判据从未行使 ⇒ 按 resolve-ci-base.sh 注入。判据阈值一字未动；配对测试 74/0。"
