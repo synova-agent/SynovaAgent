@@ -1676,3 +1676,11 @@ documents:
     status: draft
     owner: P2/W0-1
     note: "#1238 W0-1 受保护路径豁免件（6 条受保护面 ＋ 自覆盖，首行 # review: #1238）；合入并过独立复核后由 L1 置 active。"
+  # ---- P4 2026-11-01：#1239 W2 批C 门禁迁腿 受保护路径豁免（DOC-1239；R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1239
+    type: decision
+    path: gate-exemptions/2026-11-01-w2-1239.md
+    status: active
+    owner: P4
+    note: "#1239（W2 批C 6 道门禁迁 Gitea 权威腿）：local-gates.yml 追加 job gates 六步 ⑦～⑫ 真阻断／ci.yml 同 6 道降 step 级 report-only（job 12 个不减、step 零删、|| true 35→32 且门禁调用行 0）／GATE-INVENTORY 6 条 run_by 迁 gitea-ci ＋ gate_meta 由 --regen 重写 ＋ 顺手修存量（R4 required_ci 2 条账实对齐）／四件载体齐（claim、brief、豁免、四态 Note）；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+
