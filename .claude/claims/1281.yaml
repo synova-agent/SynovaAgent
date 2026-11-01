@@ -1,0 +1,10 @@
+writeset:
+  - package.json
+  - docs/authority/GATE-INVENTORY.yaml
+  - .claude/claims/1281.yaml
+  - memory/notes/proposed/2026-11-02-1281-a3-orphan-wiring.md
+done:
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check --root .
+  - verify: python3 -c "import json;d=json.load(open('package.json'));assert d['scripts']['check:customer-deps']"
+note: "#1281（③ ORPHAN 对账）：P0=8（棘轮下限 8 不动）；四条腿 run_by 5，腿外自动化 2（block-paths 经 .sh:29、merge-conditions 经 auto-merge.sh:85），唯一真缺口 check-customer-deps.ts（全仓仅测试在调）⇒ 增 npm 通道 check:customer-deps ＋ run_by 无→npm ＋ 移出 candidates ＋ --regen。inventory 42/0、--check OK。不下调 P0 棘轮、不改分类凑数。"
