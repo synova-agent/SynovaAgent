@@ -75,7 +75,6 @@ const PROD_SIGNING_SECRET = 's0-1-boundary-identity-secret-0123456789';
 const ORG_A = 'org-a';
 const ORG_B = 'org-b';
 const NODE_TYPE = 'resource/money';
-const GRAPH = 'default';
 
 const ORIGINAL_ENV = {
   JWT_SECRET: process.env['JWT_SECRET'],
@@ -120,26 +119,40 @@ let BASE = '';
 /** 每例重建的种子节点 id（真 `createNode` 返回，用于证明"断言落在真行为上"） */
 let orgANodeId = '';
 let orgBNodeId = '';
+/** 同图异租户的"冒名"节点 id（#1211：`matchesTenant` 的专用判据对象） */
+let orgBImpostorId = '';
 
 /**
- * 重置图库为**固定 2 节点**：`resource/money` + graph='default'
- * ＋ `props.orgId` 分别 `org-a` / `org-b`。
+ * 重置图库为**固定 3 节点**（#1211 口径：**图分区 = 租户**）：
+ *   · org-a 节点      → graph='org-a'，`props.orgId='org-a'`  ⇒ 本租户可见（图过滤 ＋ props 双过）
+ *   · org-b 节点      → graph='org-b'，`props.orgId='org-b'`  ⇒ 另一租户（**图隔离**挡住）
+ *   · org-b-impostor → graph='org-a'，`props.orgId='org-b'`  ⇒ 同图异租户（**matchesTenant** 挡住）
+ * 🔴 三个缺一不可：只留前两个，U-1c 会靠"图不同"就绿，而 `matchesTenant` 一次都不被调用
+ *   ⇒ 测试名写"matchesTenant 生效"就成了名实不符。判据名写了哪条路径，就必须真走到哪条路径。
  * 🔴 必须真写、真读回（本仓判例：`tests/l4/decision-capture-single-entry.test.ts:147-161`
- *   的假 store会让 25/25 全绿 ⇒ 此处用真 `SqliteGraphStore` 并在夹具内**回读自证**）。
+ *   的假 store 会让 25/25 全绿 ⇒ 此处用真 `SqliteGraphStore` 并在夹具内**回读自证**）。
  */
 function reseedGraph(): void {
   graphDb.exec('DELETE FROM graph_triples; DELETE FROM graph_nodes;');
-  orgANodeId = graphStore.createNode(NODE_TYPE, { orgId: ORG_A, name: 'org-a-cash' }, GRAPH);
-  orgBNodeId = graphStore.createNode(NODE_TYPE, { orgId: ORG_B, name: 'org-b-cash' }, GRAPH);
-  const seeded = graphStore.queryNodes(NODE_TYPE, {}, GRAPH);
+  orgANodeId = graphStore.createNode(NODE_TYPE, { orgId: ORG_A, name: 'org-a-cash' }, ORG_A);
+  orgBNodeId = graphStore.createNode(NODE_TYPE, { orgId: ORG_B, name: 'org-b-cash' }, ORG_B);
+  orgBImpostorId = graphStore.createNode(NODE_TYPE, { orgId: ORG_B, name: 'org-b-impostor' }, ORG_A);
+  const seededA = graphStore.queryNodes(NODE_TYPE, {}, ORG_A);
+  const seededB = graphStore.queryNodes(NODE_TYPE, {}, ORG_B);
   // 夹具自证：真 store 真写入（若 store 是假实现，这里先红，而不是让判据假绿）
-  expect(seeded.length).toBe(2);
-  expect(seeded.map((n) => n.id).sort()).toEqual([orgANodeId, orgBNodeId].sort());
+  expect(seededA.length).toBe(2); // org-a 节点 ＋ impostor（同图异租户）
+  expect(seededB.length).toBe(1); // org-b 节点
+  expect([...seededA, ...seededB].map((n) => n.id).sort())
+    .toEqual([orgANodeId, orgBNodeId, orgBImpostorId].sort());
 }
 
 /** 用**独立** store 实例读回真实库内节点（U-2c「零删除」用真库计数，不用计数探针） */
 function inspectGraph(): { total: number; ids: string[] } {
-  const nodes = verifyStore.queryNodes(NODE_TYPE, {}, GRAPH);
+  // #1211：租户各在自己的图里 ⇒ 计数跨 org-a／org-b 两图（仍是真库读回，非计数探针）
+  const nodes = [
+    ...verifyStore.queryNodes(NODE_TYPE, {}, ORG_A),
+    ...verifyStore.queryNodes(NODE_TYPE, {}, ORG_B),
+  ];
   return { total: nodes.length, ids: nodes.map((n) => n.id) };
 }
 
@@ -298,7 +311,7 @@ describe('#1200 U-1 正常路径 — 本租户导出／审计（身份与声明�
     expect(archive.tenantId).toBe(ORG_A);
   });
 
-  it('U-1c archive.nodes 含 org-a 节点、不含 org-b 节点（matchesTenant 生效）', async () => {
+  it('U-1c archive.nodes 含 org-a 节点、不含 org-b 节点、不含同图异租户 impostor（图过滤 ＋ matchesTenant 双生效）', async () => {
     const res = await httpCall('/api/data/export', {
       token: signToken(ORG_A, 'boss'),
       body: { tenantId: ORG_A, role: 'boss' },
@@ -306,10 +319,13 @@ describe('#1200 U-1 正常路径 — 本租户导出／审计（身份与声明�
     expect(res.status).toBe(200);
     const archive = decodeArchive(res.body);
     const ids = archive.nodes.map((node) => node.id);
-    // 真 store 真写入 ⇒ 真导出可见（防"假 store / 恒真断言"假绿）
+    // (a) 图过滤生效：本租户图里的节点真导出可见（真 store 真写入 ⇒ 防"假 store / 恒真断言"假绿）
     expect(ids).toContain(orgANodeId);
-    // 带租户标记的异租户节点必须被过滤（matchesTenant，data-exporter.ts:244-252）
+    // (b) 图隔离生效：另一租户（graph='org-b'）的节点不可见
     expect(ids).not.toContain(orgBNodeId);
+    // (c) matchesTenant 真被覆盖：**同图**（graph='org-a'）但 props.orgId='org-b' 的 impostor 必须被挡
+    //     🔴 少了这条，(a)(b) 靠"图不同"就能过 ⇒ 测试名里的 matchesTenant 变成空话（名实不符）
+    expect(ids).not.toContain(orgBImpostorId);
     // 🔴 不断言"导出内容只含 org-a"（§4-8 已知限制 / 裁定 A）
   });
 
@@ -357,9 +373,9 @@ describe('#1200 U-2 反例① — 跨租户导出／清除 ⇒ 403 CROSS_ORG_DEN
     expect(res.body['reason']).toBe('org_mismatch');
   });
 
-  it('U-2c 身份 org-a/boss + body{tenantId:org-b,role:boss,immediate:true} purge ⇒ 403；org-b 零删除（2→2）', async () => {
+  it('U-2c 身份 org-a/boss + body{tenantId:org-b,role:boss,immediate:true} purge ⇒ 403；org-b 零删除（3→3）', async () => {
     const before = inspectGraph();
-    expect(before.total).toBe(2);
+    expect(before.total).toBe(3); // #1211 夹具三节点：org-a ＋ org-b ＋ 同图异租户 impostor
     expect(before.ids).toContain(orgBNodeId);
 
     const res = await httpCall('/api/data/purge', {
@@ -372,9 +388,10 @@ describe('#1200 U-2 反例① — 跨租户导出／清除 ⇒ 403 CROSS_ORG_DEN
     expect(res.body['reason']).toBe('org_mismatch');
 
     const after = inspectGraph();
-    expect(after.total).toBe(2); // 2 → 2：零删除（真库计数，非计数探针）
+    expect(after.total).toBe(3); // 3 → 3：零删除（真库计数，非计数探针）
     expect(after.ids).toContain(orgBNodeId); // org-b 节点仍在
     expect(after.ids).toContain(orgANodeId);
+    expect(after.ids).toContain(orgBImpostorId); // 同图异租户节点也未被误删
   });
 });
 
