@@ -2,6 +2,8 @@ writeset:
   - scripts/control-tower/check-ledger-budget.sh
   - tests/control-tower/check-ledger-budget.test.sh
   - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-01-1254-ledger-budget.md
   - memory/notes/proposed/2026-11-01-1254-ledger-budget.md
   - .claude/claims/1254.yaml
