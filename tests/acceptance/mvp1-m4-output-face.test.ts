@@ -68,6 +68,7 @@ import Database from 'better-sqlite3';
 import { createMetricSink } from '../../src/sentinel/metric-readings-writer';
 import { metricReadingsMigration } from '../../src/store/migrations/002-metric-readings';
 import sentinelRoutes from '../../src/routes/sentinel';
+import { jwtAuthMiddleware, signJwtToken } from '../../src/middleware/auth';
 import { loadMeasurementTrends, deriveTrendDirection } from '../../electron-renderer/src/lib/measurement-trends';
 import type { MeasurementTrendsView } from '../../electron-renderer/src/lib/measurement-trends';
 import { MeasurementTrendSection } from '../../electron-renderer/src/components/MeasurementTrendSection';
@@ -190,6 +191,45 @@ let realView: MeasurementTrendsView | null = null;
 /** T8：A4-a 的真 loader 结果（空表）→ A4-c「真 view 渲染空态」用例复用（摘 loader ⇒ 两处同红） */
 let emptyRealView: MeasurementTrendsView | null = null;
 
+// ── #1228 S0-2b 身份注入（**前提变更，不改期望结果**）────────────────────────────
+// 本批规则：组织来源 = 验签身份 ＞ 实例配置；请求里的 orgId 只作一致性声明。
+// m4 的"A6 两 org 隔离／A1–A5 各 org 窗口／T1–T2 真数据"因此必须**带身份**发起：
+//   · 给 AA／BB／A4/A5 各 org 各签一枚 token（signJwtToken，真 HMAC）；
+//   · 在**测试客户端**（globalThis.fetch 包装）按 URL 里的 orgId 注入 Bearer —— 不碰
+//     electron-renderer loader 源码（它仍是"真 fetch"），也不删任何隔离断言（A6 三条原样保留）。
+//   · 无 orgId 且打本机 metrics 端点 ⇒ 用 AA 身份。旧"缺 orgId ⇒ 聚合全 org"的语义已被本批规则删除
+//     ⇒ T1/T2 相应从"两 org 聚合视图"改为"AA 单租户视图 ＋ BB 数据不得出现"（更严，不是放宽）。
+const REAL_FETCH = globalThis.fetch;
+const ORG_TOKENS = new Map<string, string>();
+const METRICS_PATH = '/api/sentinel/metrics/readings';
+
+function requestUrlOf(input: Parameters<typeof globalThis.fetch>[0]): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.toString();
+  const candidate = input as { url?: unknown };
+  return typeof candidate.url === 'string' ? candidate.url : '';
+}
+
+function installIdentityFetchShim(): void {
+  globalThis.fetch = ((input, init) => {
+    const url = requestUrlOf(input);
+    let declared: string | null = null;
+    try {
+      declared = new URL(url).searchParams.get('orgId');
+    } catch {
+      // swallow-ok: 非法 URL ⇒ 视为未声明（此分支不参与判据，跑不通 URL 由下面显式断言兜）
+      declared = null;
+    }
+    const token = declared !== null
+      ? ORG_TOKENS.get(declared)
+      : (url.startsWith(base) && url.includes(METRICS_PATH) ? ORG_TOKENS.get(EXP_ORG.AA) : undefined);
+    if (token === undefined) return REAL_FETCH(input, init);
+    const headers = new Headers(init?.headers);
+    headers.set('authorization', `Bearer ${token}`);
+    return REAL_FETCH(input, { ...init, headers });
+  }) as typeof globalThis.fetch;
+}
+
 function listen(app: express.Express): Promise<{ server: Server; base: string }> {
   const server = app.listen(0);
   return new Promise((res, rej) => {
@@ -250,11 +290,21 @@ beforeAll(async () => {
   // ── 真 express（只读复用真路由；不改 src）──
   const app = express();
   app.use(express.json());
+  // #1228：真中间件（生产挂载顺序：jwtAuthMiddleware → 路由）——多 org 断言现在走"验签身份"
+  app.use(jwtAuthMiddleware);
   (app.locals as { orchestration?: unknown }).orchestration = { db };
   app.use('/api/sentinel', sentinelRoutes);
   const main = await listen(app);
   mainServer = main.server;
   base = main.base;
+
+  // #1228：签身份 → 装客户端注入（见文件上方说明）；任何 org token 缺失 ⇒ ENV 失败（禁空跑）
+  for (const orgId of [EXP_ORG.AA, EXP_ORG.BB, EXP_A4.ORG_OUT_OF_WINDOW, EXP_A4.ORG_NEVER_SEEDED, EXP_A5.ORG_THREE_OBS, EXP_A5.ORG_PREV_ZERO]) {
+    const token = signJwtToken({ sub: `u-m4-${orgId}`, role: 'admin', orgId });
+    if (token === null) throw new Error('[M4][ENV] signJwtToken 返回 null（JWT_SECRET 未生效）');
+    ORG_TOKENS.set(orgId, token);
+  }
+  installIdentityFetchShim();
 
   // ── 反例服务器：五个挂载点（HTTP 500／形状非法／坏 JSON／服务端 ok:false 带 errors／ok:false 无 errors）──
   const badApp = express();
@@ -277,6 +327,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  globalThis.fetch = REAL_FETCH; // #1228：还原客户端注入（防泄漏到其它件）
   mainServer?.close();
   badServer?.close();
   db?.close();
@@ -621,15 +672,19 @@ describe('#1053 T8 · A5 三观测（count=3、previous=次新、previous=0 ⇒ 
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe(`#1053 T5 · T1 真调 API（GET ${EXP_TRENDS_PATH}）`, () => {
-  it('T1 正例：真 express 路由返回两 org 趋势（原始 HTTP ＋ 被测 loader 双证据）', async () => {
-    // 独立证据①：原始 HTTP 直取（不经 loader）
+  it('T1 正例：真 express 路由返回身份组织（AA）趋势（原始 HTTP ＋ 被测 loader 双证据；BB 数据不得出现）', async () => {
+    // 独立证据①：原始 HTTP 直取（不经 loader）。#1228：无 orgId 声明 ⇒ 来源 = 验签身份（AA），
+    //   不再是"匿名聚合全 org"——聚合跨租户视图正是本批要删的语义。
     const raw = await fetch(`${base}${EXP_TRENDS_PATH}`);
     expect(raw.status).toBe(200);
     const rawJson = await trendsJson(raw);
     console.log(`[T1] raw ok=${rawJson.ok} count=${String(rawJson.count)}`);
     expect(rawJson.ok).toBe(true);
+    const rawSummary = rawJson.summary ?? [];
+    expect(rawSummary.some(item => item.metricId === EXP_METRIC.UP), 'AA 视图应含 UP').toBe(true);
+    expect(rawSummary.some(item => item.metricId === EXP_METRIC.DOWN), 'AA 视图不得含 BB 的 DOWN（隔离）').toBe(false);
 
-    // 独立证据②：被测 loader（真 fetch 打到上面的真 express；缺 orgId ⇒ 聚合视图）
+    // 独立证据②：被测 loader（真 fetch 打到上面的真 express；缺 orgId ⇒ 身份组织视图）
     const view = await loadMeasurementTrends(base);
     realView = view; // 供 T2「真数据渲染」用例（摘 API ⇒ 两处同红）
     console.log(`[T1] loader ok=${view.ok} degraded=${view.degraded} summary=${view.summary.length} errors=${(view.errors ?? []).join('|')}`);
@@ -638,11 +693,10 @@ describe(`#1053 T5 · T1 真调 API（GET ${EXP_TRENDS_PATH}）`, () => {
     expect(view.errors ?? []).toEqual([]);
 
     const up = findTrend(view.summary, EXP_METRIC.UP);
-    const down = findTrend(view.summary, EXP_METRIC.DOWN);
     expect(up.latestValue).toBe(EXP_SEED.UP.LATEST_VALUE);
     expect(up.changeRatio).toBeCloseTo(EXP_SEED.UP.CHANGE_RATIO, 9);
-    expect(down.latestValue).toBe(EXP_SEED.DOWN.LATEST_VALUE);
-    expect(down.changeRatio).toBeCloseTo(EXP_SEED.DOWN.CHANGE_RATIO, 9);
+    // #1228：AA 身份视图必须**读不到** BB 的指标（隔离断言，强度不降）
+    expect(view.summary.some(item => item.metricId === EXP_METRIC.DOWN), 'AA 视图不得含 BB 的 DOWN').toBe(false);
   });
 
   it('T1 反例：五条降级路径均显式 degraded 且不抛；loader 自造 errors 一律带 code 前缀（Q-3/Q-9）', async () => {
@@ -806,10 +860,11 @@ describe('#1053 T5 · T2 渲染「测量值＋趋势」（纯组件 ＋ render �
     const out = renderSection(realView, 'ready', () => {});
     expect(out).toContain(EXP_SECTION_TITLE);
     expect(out).toContain(EXP_METRIC.UP);
-    expect(out).toContain(EXP_METRIC.DOWN);
+    // #1228：T1 现在取的是 AA 单租户视图 ⇒ BB 的 DOWN 不得渲染（隔离；并入渲染面）
+    expect(out).not.toContain(EXP_METRIC.DOWN);
     expect(out).toContain(String(EXP_SEED.UP.LATEST_VALUE)); // 真库里 up 指标的最新值
-    expect(out).toContain(String(EXP_SEED.DOWN.LATEST_VALUE)); // 真库里 down 指标的最新值
-    expect(countItems(out)).toBeGreaterThanOrEqual(2);
+    expect(out).not.toContain(String(EXP_SEED.DOWN.LATEST_VALUE)); // BB 的值不得出现
+    expect(countItems(out)).toBeGreaterThanOrEqual(1);
     expect(out).toContain(`data-testid="${EXP_TESTID.onePager}"`);
   });
 

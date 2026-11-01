@@ -59,6 +59,8 @@ if (!readFileSync(join(repoRoot, 'package.json'), 'utf-8').includes('"name"')) {
 
 // 唯一锚点（防历史行冒充）：org id 带 pid + 时间戳
 const ANCHOR = `m3-org-${process.pid}-${Date.now()}`;
+/** #1228 S0-2b：本件的 metric 行落在 ANCHOR；实例组织须与之同一（单实例单租户前提），用后还原 */
+const SAVED_ORG_ID = process.env.SYNOVA_ORG_ID;
 const NOW = new Date(); // 真实当前时间（trends 的 days 过滤基于 datetime('now')）
 
 let db: Database.Database;
@@ -113,6 +115,8 @@ const EXP_YOY = 1;
 const EXP_RUNWAY = 12;
 
 beforeAll(async () => {
+  // #1228 S0-2b：实例组织 = ANCHOR（读取端点缺省 orgId 时来源 = 实例配置；不是改期望结果）
+  process.env.SYNOVA_ORG_ID = ANCHOR;
   db = new Database(process.env.SYNOVA_DB_PATH as string);
   store = new SqliteGraphStore(db); // 建真表（graph_nodes/graph_triples）
   metricReadingsMigration.up(db);   // 建真表（metric_readings 17 列）
@@ -161,6 +165,8 @@ afterAll(() => {
   server?.close();
   db?.close();
   rmSync(dbDir, { recursive: true, force: true });
+  if (SAVED_ORG_ID === undefined) delete process.env.SYNOVA_ORG_ID;
+  else process.env.SYNOVA_ORG_ID = SAVED_ORG_ID;
 });
 
 describe('#656 M3 · 领域链贯通（真哨兵 → 时序 → 趋势 → 循环 → ④b/c/d）', () => {
