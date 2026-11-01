@@ -557,6 +557,22 @@ jobs:
           #   CI 检出是**干净树** ⇒ 其自有分支会打印「无实际变更文件 (CI 检出场景) — 跳过文件范围检查」
           #   并 rc=0（脚本 :79-80）。这是**器自身的 CI 语义**，迁腿不改判据；要改成按 base..HEAD 判 diff
           #   属「改判据」（A 类），须 L1/CTO 另批，不在本批范围 —— 本步不得因此被写成假绿。
+          #   ⚠️ 更正（实测 #1243 run 2934）：上面「CI 检出是干净树」在本 job **不成立** —— 前面的步骤会写生成物，
+          #     到本步时工作树已脏 ⇒ 本器把生成物误判成"未声明变更"。真正的环境前提见下方「环境前提」块。
+          # 🔴 环境前提（实测 #1243 run 2934；红因＝工作树脏，**与载体无关**）：本器判据对象＝`git diff` ＋
+          #   `git diff --cached`（器 :40-41），而本 job 前面的步骤会写生成物 ——
+          #   `docs/synova/product-lines/evidence/D817-capture-20260918.json`、
+          #   `docs/synova/product-lines/evidence/D819-capture-20260919.json`、
+          #   `tests/output/expert-quality-cross-industry.json` ⇒ 到本步时工作树已脏 ⇒ 被当成"未声明变更" ⇒ HARD_FAIL。
+          #   ⇒ **先把工作树恢复成检出态再跑**：让判据对象回到本器自身假设的「CI 干净检出」语义（:79-80），
+          #     **不改任何阈值、不改判据**（这是让环境符合器已声明的假设，不是放宽器）。
+          #   🔴 已知限制（如实登记）：干净树上本器**判据对象为空** ⇒ 只会打
+          #     「无实际变更文件 (CI 检出场景) — 跳过文件范围检查」⇒ **本步在 CI 腿不具阻断力**
+          #     （其阻断力在 pre-commit／pre-push 的工作树＋暂存面）。要让它在 CI 真阻断＝改成按 base..HEAD 判 diff
+          #     ＝**改判据（A 类）**，须 L1/CTO 另批。**禁**把本步写成"已阻断"/"判据通过"。
+          #   🔴 `checkout -f` 只还原**已跟踪**文件、不动未跟踪物（如 `.gate-step1-ran`）；⑫ 是本 job 末步 ⇒ 无后续依赖。
+          #      ⚠️ 本机复现须知：它会**丢弃未提交的改动**（含本工作流文件本身）⇒ 只在一次性副本树里跑。
+          git checkout -q -f HEAD || exit $?
           # 🔴 载体守卫（实测 #1243 run 2927/2928 红）：claim-v2 下 `resolve-commit-brief.sh` 会把
           #   `.claude/claims/<issue>.yaml`（**YAML 载体**）当 BRIEF 返回；而本器只认 brief（.md，需 `## Done` 段）
           #   ⇒ 该器 :159 `VERIFY_CMDS=$(sed -n '/^## Done/,/^## /p' … | grep 'verify:' | …)` 对 YAML 取不到段落
