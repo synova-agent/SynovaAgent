@@ -1699,6 +1699,13 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1254 T4 台账三判据机检 受保护路径豁免 ----
+  - id: DOC-1254
+    type: decision
+    path: gate-exemptions/2026-11-01-1254-ledger-budget.md
+    status: active
+    owner: P4
+    note: "#1254（T4 台账三判据机检）：新增 check-ledger-budget.sh（行数/跨段重复/measured_at 三态出数）＋配对测试＋台账重锚与三处入册；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
   # ---- P4 2026-11-01：#1252 ⑦ 接线修复 受保护路径豁免（DOC-1252）----
   - id: DOC-1252
     type: decision
