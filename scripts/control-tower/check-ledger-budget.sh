@@ -13,6 +13,9 @@
 #   @exit   — 0 三条全通过 ｜ 1 违规 ｜ **2 判不了**（台账缺失／无 git／无 python／解析失败）
 #             🔴 2 绝不等于通过（三态铁律）
 #   @degraded — E_INV_MISSING / E_NO_GIT / E_NO_PYTHON / E_PARSE / E_BASE（stderr `degraded: <code> — …`）
+#   @authority — 授权（explicit authority）: 任何本地会话／CI job／人工复核均可调用；**只读仓库事实**，
+#             唯一副作用是 stdout/stderr；本件**不写台账、不改任何文件、不 git add/commit**
+#             （台账是权威账，"怎么缩"由 W5 施工，本件只出数与点名）。
 #
 # 三条判据（逐条可复跑；判据源＝标准 §十二 ⑥）:
 #   ① 行数 ≤ MAX-LINES（标准写 800）
@@ -27,6 +30,19 @@
 #   - 跨段重复只按 `id` / `entrypoint` 两种键计；其它键（如 path）不参与，避免误把"同路径不同登记面"算重复。
 #   - 不判**同段内**重复（同段两次登记同一键）—— 当前实测为 0；若将来出现，本件会漏判（另卡）。
 #   - `measured_at` 比对用 9 位短 sha：仓库若改用更长缩写，须同步此处（否则恒红）。
+#
+# 结构（Source map）:
+#   段                    职责
+#   ───────────────────   ────────────────────────────────────────────────
+#   参数解析 / degrade     四个旗标 ＋ E_* 降级码（D1 三态、D2 @降级）
+#   基准 ref 解析          SYNO_LEDGER_BASE → gitea/main → origin/main → HEAD
+#   核心（内嵌 Python）    一次进程完成：段边界／键收集／跨段重复／measured_at 比对
+#   输出与退出            首行摘要 ＋ 逐条 LEDGER-VIOLATION ＋ 0/1/2 三态
+#
+# 判别力自检（D4，改坏必红）: 见配对测试 `tests/control-tower/check-ledger-budget.test.sh`
+#   ① 超行数 ⇒ 必红（L_LINES 点名）｜② 跨段重复 ⇒ 必红（L_DUP 点名键）｜③ measured_at 落后 ⇒ 必红
+#   ④ 台账缺失 ⇒ exit 2（判不了≠通过）｜⑤ --advisory 下仍**照出违规行**（可见，不静默）。
+#   反证：把任一条判据改成恒 false，对应用例即由 1 变 0 ⇒ 证明红是判据而非恒红。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 export PYTHONIOENCODING=utf-8
