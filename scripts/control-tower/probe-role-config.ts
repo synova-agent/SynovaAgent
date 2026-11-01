@@ -40,7 +40,15 @@ const ONBOARDING_ROUTE = 'src/routes/onboarding.ts';
 const roleCap = (role: string): string => `${PRESETS_REL}/roles/${role}/capabilities.yaml`;
 
 /** 本探针报 PASS 时必然存在的目标件（ladder 不变式据此判"报绿时目标真存在"） */
-export const TARGETS: readonly string[] = [...ROLES.map(roleCap), ENGINE_FILE, ONBOARDING_GEN, ONBOARDING_ROUTE];
+// 🔴 ladder 以**源文本正则**解析本数组 ⇒ 必须是字面量引号数组（禁 map/常量拼接，见 probe-content-exile 同注）。
+export const TARGETS: readonly string[] = [
+  'extensions/presets/roles/finance/capabilities.yaml',
+  'extensions/presets/roles/hr/capabilities.yaml',
+  'extensions/presets/roles/sales/capabilities.yaml',
+  'src/middleware/auth.ts',
+  'src/onboarding/config-pack-generator.ts',
+  'src/routes/onboarding.ts',
+];
 
 /** 存在性闸：矩阵落点（角色包 capabilities.yaml × 3） */
 const GATE_TARGETS: readonly string[] = ROLES.map(roleCap);
