@@ -1640,3 +1640,11 @@ documents:
     owner: P4
     note: "#1234（G2 分腿证据源 v3）：verify-governance.sh 分腿判定＋--ci-evidence 注入缝／pre-commit-check.sh 8 条成功路径补埋点＋可选稳定键／check-gate-inventory.sh R4 剥注释／GATE-INVENTORY.yaml evidence 字段＋claims-table 假阳性修正／local-gates.yml 仅登记 step 映射注释／两配对测试扩两态；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
 
+  # ---- P4 2026-11-01：#1239 W2 批C 门禁迁腿 受保护路径豁免（DOC-1239；R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1239
+    type: decision
+    path: gate-exemptions/2026-11-01-w2-1239.md
+    status: active
+    owner: P4
+    note: "#1239（W2 批C 6 道门禁迁 Gitea 权威腿）：local-gates.yml 追加 job gates 六步 ⑦～⑫ 真阻断／ci.yml 同 6 道降 step 级 report-only（job 12 个不减、step 零删、|| true 35→32 且门禁调用行 0）／GATE-INVENTORY 6 条 run_by 迁 gitea-ci ＋ gate_meta 由 --regen 重写 ＋ 顺手修存量（R4 required_ci 2 条账实对齐）／四件载体齐（claim、brief、豁免、四态 Note）；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+

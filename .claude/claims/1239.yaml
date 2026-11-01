@@ -1,0 +1,19 @@
+writeset:
+  - .claude/claims/1239.yaml
+  - .claude/task-briefs/2026-11-01-1239-W2.md
+  - .gitea/workflows/local-gates.yml
+  - .github/workflows/ci.yml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - gate-exemptions/2026-11-01-w2-1239.md
+  - memory/notes/proposed/2026-11-01-1239-W2.md
+done:
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --quota
+  - verify: bash scripts/control-tower/check-gate-inventory.sh
+  - verify: python3 scripts/control-tower/check-required-contexts.py --verbose
+  - verify: node -e "require('yaml').parse(require('fs').readFileSync('.github/workflows/ci.yml','utf8'));console.log('YAML-PARSE: OK ci.yml')"
+  - verify: node -e "require('yaml').parse(require('fs').readFileSync('.gitea/workflows/local-gates.yml','utf8'));console.log('YAML-PARSE: OK local-gates.yml')"
+  - verify: bash tests/control-tower/verify-parallel-ci.test.sh
+  - verify: bash tests/control-tower/check-required-contexts.test.sh
+note: "#1239 W2 批C：把 6 道纪律/质量门禁从 GitHub 集成腿迁到 Gitea 权威腿（GATE-STANDARD §二 ＋ §六批C）。写集 8 件 = 2 腿载体（.gitea/workflows/local-gates.yml ＝ T1 新增 6 步 ⑦-⑫ 真阻断；.github/workflows/ci.yml ＝ T2 对应 6 道降 report-only）＋ 账本（GATE-INVENTORY 6 条 run_by → gitea-ci）＋ 四件载体（claim／brief／豁免／四态 Note）＋ DOCS-REGISTRY 登记 + 本 claim。gate_meta 只由 gen-gate-meta.sh --regen 写。GitHub 腿绿须合并后核（本机无 GitHub 凭据）。"
