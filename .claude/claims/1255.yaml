@@ -1,0 +1,12 @@
+writeset:
+  - scripts/control-tower/required-checks-baseline.txt
+  - scripts/control-tower/check-required-contexts.py
+  - tests/control-tower/check-required-contexts.test.sh
+  - gate-exemptions/2026-11-01-1255-category-gate.md
+  - memory/notes/proposed/2026-11-01-1255-category-gate.md
+  - .claude/claims/1255.yaml
+done:
+  - verify: python3 scripts/control-tower/check-required-contexts.py --category-gate
+  - verify: python3 scripts/control-tower/check-required-contexts.py
+  - verify: bash tests/control-tower/check-required-contexts.test.sh
+note: "#1255 T5：⑤ 基线 9 行补 category 并加机检模式 --category-gate（不新建脚本，避免新增能力件五道登记税）。实测 total=9 integration=1 non_integration=8 missing=0 ⇒ 判据如实红：GitHub 分支保护 9 条必需 context 里 8 条是纪律/质量，与 §二 两腿分工冲突，清理归 W8（admin 在创始人）。⑧ 静态面仍 9/9 OK；配对测试 51/0。"

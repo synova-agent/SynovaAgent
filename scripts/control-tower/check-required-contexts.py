@@ -650,6 +650,10 @@ def build_parser():
     parser.add_argument("--reverse", action="store_true", help="追加「产出但非必需」清单（信息级；报告模式不判违规）")
     parser.add_argument("--verbose", action="store_true", help="打印逐条 job→展开名明细（判定不变）")
     parser.add_argument("--version", action="version", version="check-required-contexts %s" % VERSION)
+    parser.add_argument("--category-gate", action="store_true",
+                        help="#1255-T5：只判 GATE-STANDARD §十二 ⑤（基线每行须标 category，category≠integration 行数=0）；不读 workflows/网络")
+    parser.add_argument("--category-advisory", action="store_true",
+                        help="配合 --category-gate：违规仍 exit 0（W8 admin 清理前的过渡态；判据数值照出）")
     return parser
 
 
@@ -664,6 +668,26 @@ def run(args):
     workflows = os.path.abspath(args.workflows) if args.workflows else os.path.join(root, ".github", "workflows")
     baseline_path = (os.path.abspath(args.baseline) if args.baseline
                      else os.path.join(root, "scripts", "control-tower", "required-checks-baseline.txt"))
+
+    # #1255-T5（GATE-STANDARD §十二 ⑤）：`category≠integration 行数＝0` 的机检。
+    #   与 ⑧（静态面一致性）**同一基线、同一解析器**，只多一个判据维度；不另建脚本（避免"新增能力件
+    #   五道登记税"再次发生）。判据自足：不需要 workflows，不需要网络。
+    if getattr(args, "category_gate", False):
+        base_entries = read_baseline(baseline_path)
+        def _cat(e):
+            return (e.fields.get("category") or "").strip()
+        integ = [e for e in base_entries if _cat(e) == "integration"]
+        non = [e for e in base_entries if _cat(e) != "integration"]
+        missing = [e for e in base_entries if _cat(e) == ""]
+        print("REQUIRED-CATEGORY: total=%d integration=%d non_integration=%d missing=%d"
+              % (len(base_entries), len(integ), len(non), len(missing)))
+        for e in non:
+            print("REQUIRED-CATEGORY-VIOLATION: %s category=%s" % (e.name, _cat(e) or "<缺失>"))
+        rc = EXIT_OK if not non else EXIT_VIOLATION
+        if rc != EXIT_OK and getattr(args, "category_advisory", False):
+            print("REQUIRED-CATEGORY: ADVISORY（--category-advisory ⇒ 不阻断；判据仍记为待清 %d 条）" % len(non))
+            rc = EXIT_OK
+        return rc
 
     entries, files = collect_produced(workflows)
     produced = {}
