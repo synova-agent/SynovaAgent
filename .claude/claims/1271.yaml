@@ -29,6 +29,7 @@ writeset:
   - src/onboarding/config-pack-generator.ts
   - tests/onboarding/config-pack-generator.test.ts
   - tests/l4/goal-alignment.test.ts
+  - gate-exemptions/2026-11-02-1271-1279-ladder-ci.md
   - memory/notes/implemented/2026-11-02-k12-eng-p1-3-ladder-ci.md
 done:
   - verify: bash scripts/check-integrity-startup.sh
