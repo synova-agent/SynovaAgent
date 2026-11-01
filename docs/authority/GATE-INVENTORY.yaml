@@ -963,6 +963,11 @@ candidates:
 # 口径①：owner 默认=治理线 P4；域专属件归属以 CTO 确认为准（confirmed_by: pending-cto，本批不编造归属）
 # 口径②：required_ci=true ⇔ 在 .gitea/workflows/*.yml ／ scripts/pre-commit-check.sh ／ scripts/pre-push-check.sh 任一被引用（合并/提交/推送一条强制腿）
 # 口径③：review_after 默认 +30d；P0 计数棘轮下限 = SYNO_P0_FLOOR（check-gate-inventory.sh 内，默认 8）
+# 口径④（#1234 G2 分腿证据源）：required 条目新增 `evidence` ∈ {telemetry, ci-step, none} ——
+#   telemetry=pre-commit 遥测有稳定键记录（可带 `telemetry_key`，缺省用 entrypoint 的确定性别名：
+#   全路径／文件名／去扩展名 stem）；ci-step=只在 CI 步骤里跑（证据经 verify-governance 的
+#   `--ci-evidence` JSONL 注入，本批无写方 ⇒ 一律判不了）；none=无任何可读证据通道（判不了）。
+#   非 required 条目可不写（不影响判定）；required 条目缺 `evidence` ⇒ 按 none 判不了（fail-closed）。
 # 生成：逐件从盘上枚举（禁手写），与 check-gate-inventory.sh 双向对齐判据配套
 classification:
   - id: CT-check-acceptance-matrix
@@ -978,6 +983,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-block-paths.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-block-paths
     confirmed_by: pending-cto
   - id: CT-check-block-paths.ts
     class: P0
@@ -999,6 +1006,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-board-truth.ts
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-bypass-log
     class: P1
@@ -1006,6 +1014,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-bypass-log.sh
     required_ci: true
+    evidence: none
     confirmed_by: pending-cto
     note: "evidence=self-written-local-logbook; auditable=no; retired_after=W9-branch-protection; reason=#1134"
   - id: CT-check-canary-drift
@@ -1042,6 +1051,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-doc-contract.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-doc-contract
     confirmed_by: pending-cto
   - id: CT-check-dsh-anchor
     class: P2
@@ -1049,6 +1060,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-dsh-anchor.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-dsh-anchor
     confirmed_by: pending-cto
   - id: CT-check-dual-repo-sync
     class: P1
@@ -1077,6 +1090,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-inventory.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-gate-inventory
     confirmed_by: pending-cto
   - id: CT-check-gate-protection
     class: P0
@@ -1084,6 +1099,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-protection.sh
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-gitlinks
     class: P1
@@ -1119,6 +1135,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-notes-lifecycle.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-notes-lifecycle
     confirmed_by: pending-cto
   - id: CT-check-ontology-fields
     class: P1
@@ -1154,6 +1172,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-pr-budget.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-pr-budget
     confirmed_by: pending-cto
   - id: CT-check-preset-bundles
     class: P1
@@ -1175,6 +1195,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-quality-delta.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-quality-delta
     confirmed_by: pending-cto
   - id: CT-check-registry-invariants
     class: P1
@@ -1182,6 +1204,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-registry-invariants.ts
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-required-contexts
     class: P0
@@ -1203,6 +1226,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-test-obligations.py
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   - id: CT-check-tool-args-delta
     class: P1
@@ -1210,13 +1234,18 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-tool-args-delta.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-tool-args-delta
     confirmed_by: pending-cto
   - id: CT-verify-claims-table
     class: P1
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/verify-claims-table.sh
-    required_ci: true
+    required_ci: false
+    evidence: none
+    na_cmd: "sed 's/#.*//' scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows/*.yml 2>/dev/null | grep -c 'verify-claims-table' || true"
+    note: "na_cmd 输出 0 = 四腿去注释后零引用（负证据）；grep -c 无命中时 rc=1 属预期 ⇒ || true 只兜该码，不改「输出 0」这条证据"
     confirmed_by: pending-cto
   - id: CT-verify-parallel
     class: P2
@@ -1224,6 +1253,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/verify-parallel.sh
     required_ci: true
+    evidence: none
     confirmed_by: pending-cto
 
 
@@ -1233,6 +1263,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-mirror-freshness.sh
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-mirror-freshness
     confirmed_by: pending-cto
   - id: CT-check-ci-empty-green
     class: P1
@@ -1240,6 +1272,7 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-ci-empty-green.sh
     required_ci: true
+    evidence: ci-step
     confirmed_by: pending-cto
   # ---- P4 2026-10-28：#1108 W10 Unicode 同形字分级门禁（纯追加；class P0 ＝ 视觉冒充/编码损坏类）----
   - id: CT-check-unicode-confusable
@@ -1248,6 +1281,8 @@ classification:
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-unicode-confusable.py
     required_ci: true
+    evidence: telemetry
+    telemetry_key: check-unicode-confusable
     confirmed_by: pending-cto
 
 # ═══════════════════════════════════════════════════════════════════════════════

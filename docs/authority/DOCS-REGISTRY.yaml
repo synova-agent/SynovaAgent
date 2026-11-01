@@ -1632,3 +1632,11 @@ documents:
     owner: CTO
     note: "登记对象 = docs/authority/GATE-STANDARD.md（GATE-STANDARD v3.1 / 裁定 D763 / 入 main 依据 PR #1231 @586ecb8ff43fa）；该件是本仓唯一工程质量体系标准（判据中枢），由 AGENTS.md V7.2 头部指向；本条目用于满足 D2 登记门禁（新增 .md 须登记），path 字段按 R2 可派生件回指本批豁免件，不代表该标准的文档归属。"
 
+  # ---- P4 2026-10-31：#1234 G2 分腿证据源 受保护路径豁免（DOC-1234；R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1234
+    type: decision
+    path: gate-exemptions/2026-10-31-g2-1234.md
+    status: active
+    owner: P4
+    note: "#1234（G2 分腿证据源 v3）：verify-governance.sh 分腿判定＋--ci-evidence 注入缝／pre-commit-check.sh 8 条成功路径补埋点＋可选稳定键／check-gate-inventory.sh R4 剥注释／GATE-INVENTORY.yaml evidence 字段＋claims-table 假阳性修正／local-gates.yml 仅登记 step 映射注释／两配对测试扩两态；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+

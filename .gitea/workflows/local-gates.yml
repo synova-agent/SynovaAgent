@@ -478,4 +478,25 @@ jobs:
           { printf '### ⑥ W10 Unicode 同形字分级门禁（A/B/C 阻断 · D 仅提醒）\n\n```\n%s\n```\n\n' "$_UNI_OUT" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; } 2>/dev/null || true  # swallow-ok: step summary 写失败不改判定（stdout 已留证）
           exit "$_UNI_RC"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# #1234 · ci-step 证据映射（**仅登记注释；不改本文件任何逻辑、不建日志回流通道**）
+#   用途：总闸 G2 的分腿证据里，`evidence: ci-step` 的闸「跑过没」只能由 CI step 结局回答。
+#         本表把 GATE-INVENTORY.yaml 的 entrypoint 映射到本文件的 step 名；将来写方
+#         （CI 侧／后续卡）按此产出 JSONL：
+#           {"entrypoint":"<GATE-INVENTORY 的 entrypoint 全路径>","ran":true|false,
+#            "at":"<ISO-8601>","step":"<本文件 step 名原文>"}
+#         再由总闸的 `--ci-evidence <file>` 注入判定（本文件本批**不产**该文件）。
+#   口径：entrypoint＝GATE-INVENTORY.yaml classification 的 entrypoint（逐字，禁别名）；
+#         step＝本文件 `- name:` 原文（逐字；改名即等于改映射，须同 PR 同步本注释）；
+#         行号＝基线 a025fc47e 上的**调用点**行号（仅供定位，**禁当判据**）。
+#   · scripts/control-tower/check-registry-invariants.ts → step「① 12 组门禁（唯一的阻断门）」（step L57；调用 L73）
+#   · scripts/control-tower/check-gate-protection.sh   → step「①d 门禁本体自检（清单 ＋ diff 豁免）」（step L89；调用 L110）
+#   · scripts/control-tower/check-board-truth.ts       → step「①b 看板真值（交付未回填检测 · CTO 2026-10-11 立）」（step L111；调用 L118）
+#   · scripts/control-tower/check-test-obligations.py  → step「①g 测试义务闸（新模块缺 expected/snapshot ⇒ 红 · 只判变更集）」（step L399；调用 L407）
+#   · scripts/control-tower/check-ci-empty-green.sh    → step「⑤ CI 空绿 step 级判据（test_count / skipped · 只判本 job 记录）」（step L436；调用 L442）
+#     ↳ 派单/Note 简写「④/442」指的就是本调用点：step 名原文为 ⑤（④ 是「门禁复现器自检」，
+#       它跑的是 ci-emptygreen-sim.sh 模拟器，不是本闸）。映射以本文件 step 名原文为准。
+#   已知限制：本批不产 JSONL（无写方）⇒ 真仓这 5 项恒「判不了」（exit 2）；这是如实，不是 CI 没跑。
+# ═══════════════════════════════════════════════════════════════════════════════
+
 
