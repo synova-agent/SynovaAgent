@@ -34,3 +34,17 @@
 
 - 本件**只删过期条目**，不改判据语义、不删测试、不调棘轮上下限。
 - 若将来台账格式升级（如改为自动生成），「手删条目」这一步应被生成器取代 ⇒ 本 Note 失效。
+
+## 五、v3 追加（2026-11-01 · FACE-TOTAL 204 → 211）
+
+- **触发方**：PR #1242／#1238 新增 `tests/doc-system/verify-doc-budgets.test.sh` 与
+  `verify-doc-gate-effectiveness.test.sh`（G-DOC-1／G-DOC-2 配对测试）⇒ 执行集口径 `scan=216`，
+  余量 `216 − 204 = 12 > SLACK-CAP=10`。
+- **实测证据**：Gitea 权威腿 `⑦ 门禁完整性` step#16 failure（run **2953** @ `81dea0509`），
+  报 `VIOLATION: SEALED-TESTS: 余量 12 > 上限 SLACK-CAP=10`。
+- **决定**：按脚本要求**显式上调下界**（禁自动重算，禁放宽 CAP）`204 → 211` ⇒ `slack=5`，
+  沿用 2026-10-19（slack=4）／2026-10-30（slack=5）两次同型留痕的 **3~5 余量口径**。
+- **不动**：`SLACK-CAP=10`、`QUARANTINE-TOTAL=77`。
+- **复算**：`bash scripts/control-tower/sealed-tests.sh --slack` ⇒ `5`。
+- **为何不塞进 #1242**：该台账文件挂在 claim `#1026` 名下，按「改他人名下文件用该卡号提交」单独立分支提交；
+  #1242 侧只做 forward-merge 取用。
