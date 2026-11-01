@@ -29,6 +29,11 @@
 #   @degraded 依赖缺失/不可读/解析失败/gh 不可用 → stderr 一行 `degraded: <原因>` + exit 2
 #             （不写 degraded-events.log: 本器可能运行在只读树上，降级信号由调用方 step 捕获，
 #              同 ct-test-gate.sh 口径）
+#   @authority explicit authority: 任何本地会话／CI job／人工复核均可调用；**只读**（不写仓库、不调 gh
+#             除非显式 `--api-check`）。`#1255-T5` 新增的 `--category-gate` 模式同样只读、
+#             不读 workflows、不碰网络（只解析基线文件的 `category=` 字段）。
+#             判据 = GATE-STANDARD §十二 ⑤（`category≠integration` 行数＝0）；`--category-advisory`
+#             仅供 W8 admin 清理前的软提示过渡，**不改变判据数值**。
 #
 # 核心能力（job `name:` → check-run 名全集）:
 #   · 解析 .github/workflows/*.yml|yaml 的 jobs 段（**YAML 子集**解析器，零第三方依赖——
@@ -66,6 +71,13 @@
 # 启动方式（双语法首行，兼容本卡验收命令 `bash <本文件>`）:
 #   · `python3 check-required-contexts.py …`（生产/CI 路径；Windows: python/py 亦可）
 #   · `bash check-required-contexts.py …`（等价；sh 侧 exec 到 python3/python/py）
+#
+# 已知限制（#1255-T5 · `--category-gate` 模式的边界，做不到什么）:
+#   · `category` 是**人工判定**（哪条腿该判什么），不是从数据派生 ⇒ 判错会导致 W8 清错 context；
+#     每条判定理由须在改动 PR 的 Note 里逐条写清，供复核。
+#   · 只认基线文件里**当前存在**的行：ruleset 变更后必须按文件头重放命令重取并重新标注（否则基线漂移 ⇒ 判据失真）。
+#   · `missing`（无 `category` 字段）与 `non_integration` **合并计入待清**，不区分"未标"与"标错"。
+#   · 本模式**不改 ruleset、不调 gh**（ruleset 清理是 W8 admin，属创始人权限）。
 # ═══════════════════════════════════════════════════════════════════════════════
 # 双语法行: sh 读作命令（exec 换 python）；python 读作相邻字符串字面量（无副作用空语句）
 "exec" "sh" "-c" 'for p in python3 python py; do command -v "$p" >/dev/null 2>&1 || continue; exec "$p" "$0" "$@"; done; printf "degraded: python 不可用（python3/python/py 均不可用）\n" >&2; exit 2' "$0" "$@"   # PYBIN 三级探测（python3→python→py，禁裸 python3；PLATFORM-CHECKLIST #1）
