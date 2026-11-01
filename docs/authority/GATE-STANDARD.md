@@ -278,6 +278,14 @@ C-1 frontmatter ＋ 结论／证据指针／状态／归属四列 ｜ C-2 清单
 2. retired **≥26**（口径：**只计退、不计降旁路**；已去重 `hook-block-write`）
 3. ORPHAN：**B 类 13 清零**、**`grep -c 'safety: yes' ∧ orphan: true` ＝ 0**、A 类接线率＝**P0 件 100%（n/N）**并附 awk 命令
 4. **自研** skill **≤40**（`.dsh` ≤12；**产品自带 `extensions/skills`／`skills/`／`vendor/` 不计入**）；四条硬引用 `path:line@anchor` 无断链
+   > 🔴 **本条判定方式 = 人工 ＋ 命令（无机检）** —— 2026-11-02 独立复核指出：全仓没有脚本数 skill、更没人守 40，
+   > 本条从"错但可量"变成"对但无人量"。**补机检前按下列命令人工判，数字写进台账（禁口述）**：
+   > ```bash
+   > ls .dsh/skills | wc -l ; ls .synova/skills | wc -l          # 自研（双轨同一套）应 ≤40，.dsh 根 ≤12
+   > bash scripts/workflow/sync-dsh-skills.sh --check             # 组 13 双轨一致
+   > find extensions -name SKILL.md | wc -l ; find skills -maxdepth 2 -name SKILL.md | wc -l ; find vendor -name SKILL.md | wc -l   # 产品自带：不计入、不得清理
+   > ```
+   > 补机检另卡（新增判定件要走五道登记税并动 D3 预算），**不算在本条通过门槛里**。
 5. `required-checks-baseline.txt` 每行标 `category`，**`category≠integration` 行数＝0**
 6. 台账 **≤800 行** ＋ 跨段无重复 ＋ `measured_at` ＝ 当前基准
 7. 新增仅 A1–A3（W0 前置 3 件单列）
