@@ -1699,7 +1699,6 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
-<<<<<<< HEAD
   # ---- P4 2026-11-01：#1255 ⑤ category 标注与机检 受保护路径豁免（DOC-1255）----
   - id: DOC-1255
     type: decision
@@ -1707,7 +1706,6 @@ documents:
     status: active
     owner: P4
     note: "#1255（T5）：⑤ 基线 9 行补 category ＋ check-required-contexts.py 新增 --category-gate（0/1/2 三态，缺失也计入待清）与 --category-advisory；实测 total=9 integration=1 non_integration=8 ⇒ GitHub 分支保护 9 条必需 context 里 8 条是纪律/质量，清理归 W8（admin）。配对测试 51/0。"
-=======
   # ---- P4 2026-11-01：#1254 T4 台账三判据机检 受保护路径豁免 ----
   - id: DOC-1254
     type: decision
@@ -1729,7 +1727,6 @@ documents:
     status: active
     owner: P4
     note: "#1210 判据 7 遗留项（#1255-T3）：pre-commit 结果段接线墙钟预算——落盘 wall_ms 后调用 check-gate-budget.sh --log 判定（0/1/2），只告警不阻断；台账同步 required_ci true／run_by pre-commit／移出 run_by_candidates。"
->>>>>>> gitea/main
   # ---- P4 2026-11-01：#1253 notes 门禁性能修复 受保护路径豁免（DOC-1253）----
   - id: DOC-1253
     type: decision
