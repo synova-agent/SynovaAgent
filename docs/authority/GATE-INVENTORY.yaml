@@ -1082,7 +1082,7 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-integrity.sh
-    required_ci: false
+    required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-gate-inventory
     class: P1
@@ -1211,7 +1211,7 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-required-contexts.py
-    required_ci: false
+    required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-sentinel-type-net
     class: P1
@@ -1375,7 +1375,7 @@ run_by:
     scope: github-only-integration
     na_cmd: "grep -rl 'check-fixture-requires.sh' .gitea/workflows 2>/dev/null | wc -l | grep -qx 0"
   - entrypoint: scripts/control-tower/check-gate-integrity.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-gate-inventory.sh
     run_by: pre-commit
@@ -1426,7 +1426,7 @@ run_by:
     run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-required-contexts.py
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-sentinel-type-net.sh
     run_by: "无"
@@ -1441,7 +1441,7 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/verify-parallel.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-mirror-freshness.sh
     run_by: pre-commit
@@ -1609,10 +1609,10 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/ci/diagnosis-quality-check.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/ci/golden-case-checker.ts
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/ci/verify-d703.sh
     run_by: "无"
@@ -1639,7 +1639,7 @@ run_by:
     run_by: pre-commit
     quota: true
   - entrypoint: scripts/workflow/check-brief-vs-code.sh
-    run_by: github-ci
+    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/workflow/check-dataflow-alignment.sh
     run_by: "无"
@@ -1851,7 +1851,7 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/check-brief-vs-code.sh
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: false
       quota_scope: non-doc
@@ -1956,14 +1956,14 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/ci/diagnosis-quality-check.sh
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/ci/golden-case-checker.ts
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -2096,7 +2096,7 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-integrity.sh
       class: P0
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -2222,7 +2222,7 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-required-contexts.py
       class: P0
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
@@ -2544,7 +2544,7 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/workflow/check-brief-vs-code.sh
       class: P2
-      run_by: github-ci
+      run_by: gitea-ci
       orphan: false
       quota: true
       quota_scope: non-doc
