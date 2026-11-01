@@ -1,4 +1,5 @@
 writeset:
+  - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-02-1266-gate-a-dsh-lens.md
   - .claude/claims/1266.yaml
   - .synova/skills/devdoc-gate-a/SKILL.md

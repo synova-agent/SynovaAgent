@@ -9,6 +9,14 @@
 
 documents:
 
+    # ---- CTO 2026-11-02：#1266 gate-A 镜头 7 受保护路径豁免（D2 登记）----
+    - id: DOC-1240
+      type: decision
+      path: gate-exemptions/2026-11-02-1266-gate-a-dsh-lens.md
+      status: active
+      owner: CTO
+      note: "gate-A 新增镜头 7（DSH 纪律与代码品味）＋R9 角色卡的受保护路径豁免（含 gate-exemptions 自覆盖；裁定号 裁 429）。"
+
   # ---- CTO 2026-10-12：CLAUDE.md 退役（裁定 059/061）----
   - id: DOC-0193
     type: decision
