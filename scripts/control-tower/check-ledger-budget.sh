@@ -46,10 +46,14 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 export PYTHONIOENCODING=utf-8
+export LC_ALL=C.UTF-8 2>/dev/null || true   # D732/D313 M5：与 check-gate-budget.sh 同形（复核挑出原来只有一半）
 
-DEGRADED=0
-degrade() { # <CODE> <msg>
+degrade() { # <CODE> <msg>  —— D2 契约：stderr 一行 + 追加 JSON 到 SYNO_GATE_DEGRADED_LOG
   echo "degraded: $1 — $2" >&2
+  _dl="${SYNO_GATE_DEGRADED_LOG:-.codex/control-tower/logs/degraded-events.log}"
+  mkdir -p "$(dirname "$_dl")" 2>/dev/null || true   # swallow-ok: 日志目录不可建不阻断降级本身
+  printf '{"time":"%s","component":"check-ledger-budget","code":"%s","phase":"%s","retryable":false}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "${2:-main}" >> "$_dl" 2>/dev/null || true   # swallow-ok: 落盘失败不改变 exit 2
   exit 2
 }
 
@@ -65,6 +69,7 @@ while [ $# -gt 0 ]; do
     --base) BASE_REF="${2:-}"; shift 2 ;;
     --base=*) BASE_REF="${1#--base=}"; shift ;;
     --json) JSON=1; shift ;;
+    --strict) ADVISORY=0; shift ;;   # 默认即 strict；显式旗标保留（与头注释一致，防"写了没实现"）
     --advisory) ADVISORY=1; shift ;;
     -h|--help) awk 'NR>1 && /^set -uo/{exit} NR>1' "$0"; exit 0 ;;
     *) degrade E_USAGE "未知参数: $1" ;;
@@ -95,7 +100,7 @@ fi
 BASE_SHA="$(git -C "$ROOT" rev-parse --short=9 "${BASE_REF}^{commit}" 2>/dev/null)" || degrade E_BASE "base 不可解析: ${BASE_REF}"
 [ -n "$BASE_SHA" ] || degrade E_BASE "base 短 sha 为空: ${BASE_REF}"
 
-OUT="$("$PYBIN" - "$INV" "$MAX_LINES" "$BASE_SHA" <<'PYCORE' 2>&1
+OUT="$("$PYBIN" - "$INV" "$MAX_LINES" "$BASE_SHA" 2>"${ERRF:=/tmp/syno-ledger-err.$$}" <<'PYCORE'
 import io, re, sys
 from collections import defaultdict
 
@@ -146,7 +151,9 @@ sys.exit(1 if viol else 0)
 PYCORE
 )"
 RC=$?
+[ -s "${ERRF:-/dev/null}" ] && { cat "${ERRF}" >&2; rm -f "${ERRF}"; }   # 降级/错因走 stderr（契约 @degraded）
 [ -n "$OUT" ] && printf '%s\n' "$OUT"
+case "$RC" in 0|1|2) ;; *) RC=2 ;; esac   # 归一：被信号杀等异常码一律按"判不了"（三态铁律）
 [ "$RC" = 2 ] && exit 2
 [ "$RC" != 0 ] || RC=0
 
