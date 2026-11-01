@@ -957,6 +957,25 @@ else
   no "M10-6 盘符冒号解析错误（期望 tests/control-tower/a.test.sh:59）: ${OUT}"
 fi
 
+echo "── M10-7（#1252 复核）: 代码文本含 :NN: 时不得把文件字段切坏（贪婪取最后 :NN: = 假红源）──"
+# 依据: 独立复核实证——旧实现取"最后一个 :NN:"，于是 `echo x:12:y` 让 FP_F=整段代码、FP_NUM=12，
+#       白名单永不命中 ⇒ 制造假红。新实现跳过盘符后取**第一个** `:NN:`。
+OUT="$(printf 'D:/x/a.sh:59:if [ "$1" = "1" ]; then echo x:12:y\n' \
+  | bash "$GATE" --root "D:/x" --fixture-power-parse 2>&1 || true)"
+if printf '%s' "$OUT" | grep -qx 'a.sh:59'; then
+  ok "M10-7 文本含 :12: ⇒ 仍按首个 :59: 拆分（修前给 a.sh:12 或整段）"
+else
+  no "M10-7 解析错误（期望 a.sh:59）: ${OUT}"
+fi
+
+echo "── M10-8（#1252 复核）: 纯 POSIX 路径行仍正确（不得因跳盘符逻辑引入回归）──"
+OUT="$(printf '/x/a.sh:12:text\n' | bash "$GATE" --root "/x" --fixture-power-parse 2>&1 || true)"
+if printf '%s' "$OUT" | grep -qx 'a.sh:12'; then
+  ok "M10-8 POSIX 行 ⇒ a.sh:12"
+else
+  no "M10-8 POSIX 解析错误（期望 a.sh:12）: ${OUT}"
+fi
+
 echo "=== 结果: PASS=${PASS} FAIL=${FAIL}${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}} ==="
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

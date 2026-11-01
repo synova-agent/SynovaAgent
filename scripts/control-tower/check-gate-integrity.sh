@@ -36,6 +36,18 @@
 #   @exit    0=通过；1=违规；2=执行失败/降级（fail-closed——2 绝不等于通过）
 #   @降级    依赖缺失/不可读/解析器失败 → stderr `degraded: <原因>` + 追加一行 JSON 到
 #             degraded 日志（字段 time/component/code/phase/retryable；铁律 11/32）+ exit 2
+#   @authority 授权（explicit authority）: CI job（`.github/workflows/ci.yml` ⑦ 步／`.gitea` ⑦ 步）、
+#             `scripts/commit-msg-check.sh`、`check-gate-protection.sh`、`sealed-tests.sh`、`weekly-recon.sh`
+#             与人工复核均可调用；**只读仓内事实**，唯一落盘是 degraded 日志（ignored 的 .codex/ 下）。
+#             `--fixture-power-parse` 是**测试专用**注入缝：只读 stdin 做字符串拆分，不读文件系统、
+#             不判违规、恒 exit 0，且**会跳过 `--root` 存在性校验**（见 usage 与本文件 Known Limitations）。
+#
+# Known Limitations（已知限制 — 做不到什么）:
+#   1. `--fixture-power-parse` 跳过 `--root` 存在性 fail-closed（它是纯字符串 seam）；生产路径不受影响，
+#      但**误把该旗标用于生产**会让"root 不存在"静默变 0。
+#   2. `_fp_split_line` 取**第一个** `:NN:`（跳盘符后）：路径自身含 `:NN:` 字样的极罕见情形仍会早切。
+#   3. A 模式哨兵只判 grep 方言合法性，不判"该 grep 是否真的检查了该检查的东西"（那是 ①e R1.2 的事）。
+#   4. C 段对账依赖外部 `--ci-reds` JSON；缺省时显式 SKIPPED（ratchet 不判定 ≠ 通过）。
 #
 # A 模式哨兵（方言分判是硬要求，否则误报）:
 #   ERE = flags 含 E / --extended-regexp；BRE = 其余（含 -v / --invert-match）；-F 固定串跳过；-P PCRE 不可校验。
@@ -256,6 +268,8 @@ usage() {
   --fixture-power-only 仅面 3 夹具判别力（grep -qv 逐行取反）
   --fixture-power-parse  #1252 单测缝：stdin 逐行 `path:line:text` → 输出 `<rel>:<num>`（只做字符串拆分，
                          不读文件系统、不判违规、恒 exit 0；用途=让"盘符冒号"缺陷在 mac 上也有判据）
+                         🔴 **副作用（务必知）**：本旗标在参数解析后**立即 exit 0**，因此
+                         **跳过 `--root` 存在性校验**（对不存在的 root 也返回 0）。只许测试用。
   --ci-reds <json>  追加 C 既有红基线对账（GitHub check-runs JSON）
   --base-ref <ref>  C 段对账对象（**取 base，不取当前提交**；如 PR base.sha / origin/main）
                     缺省时 C 段显式 SKIPPED（不判定 ≠ 通过）；不可解析 → exit 2
@@ -1005,13 +1019,25 @@ _qstate() {   # $1=文本 → 输出 s|d|n：结尾是否处于「单引号 / �
 #   `printf 'D:/x/a.test.sh:59:grep -qv y\n' | bash <本件> --root D:/x --fixture-power-parse`
 #   ⇒ `a.test.sh:59`（修前：盘符冒号被当分隔符 ⇒ `D:`, key 变 `D:` ⇒ 白名单永不命中）。
 #   为什么单列函数: 该缺陷只在 Windows 触发（盘符冒号），mac 上走不到 ⇒ 必须有**与平台无关**的判据。
+#   🔴 #1252 复核修正（2026-11-02）：原实现用贪婪 `^(.*):([0-9]+):(.*)$` ⇒ 取**最后**一个 `:NN:`，
+#   代码文本里含 `echo x:12:y` 时会把「文件字段」切坏（实测 `D:/x/a.sh:59:…x:12:y` → FP_F=整段代码、
+#   FP_NUM=12）⇒ 白名单永不命中、**制造假红**。现改为：跳过盘符（`X:` 两字符）后取**第一个** `:NN:`。
+#   已知限制：路径本身含 `:NN:` 字样（极罕见）时仍会早切；此时按点名改白名单键即可。
 _fp_split_line() { # $1=行 → 设 FP_F / FP_NUM / FP_TEXT
-  local _ln="$1"
-  if [[ "$_ln" =~ ^(.*):([0-9]+):(.*)$ ]]; then
-    FP_F="${BASH_REMATCH[1]}"; FP_NUM="${BASH_REMATCH[2]}"; FP_TEXT="${BASH_REMATCH[3]}"
-  else
-    FP_F="${_ln%%:*}"; FP_NUM=""; FP_TEXT=""
-  fi
+  local _ln="$1" _i _n="${#1}" _start=0 _num
+  [[ "$_ln" =~ ^[A-Za-z]:[\\/] ]] && _start=2      # 盘符：X:/ 或 X:\ ⇒ 跳过，不参与分隔
+  for ((_i = _start; _i < _n; _i++)); do
+    [ "${_ln:_i:1}" = ":" ] || continue
+    _num="${_ln:$((_i + 1))}"
+    if [[ "$_num" =~ ^([0-9]+): ]]; then
+      FP_F="${_ln:0:_i}"
+      FP_NUM="${BASH_REMATCH[1]}"
+      FP_TEXT="${_ln:$((_i + 1 + ${#BASH_REMATCH[1]} + 1))}"
+      return 0
+    fi
+  done
+  FP_F="${_ln%%:*}"; FP_NUM=""; FP_TEXT=""
+  return 0
 }
 
 _fixture_whitelist_status() { # $1=键（`<路径>:<行号>`）→ 0=命中未过期｜1=未命中｜2=命中但已过期
