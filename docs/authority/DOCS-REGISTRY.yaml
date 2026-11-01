@@ -1691,3 +1691,10 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1255-T6 skill 收敛（口径改自研）受保护路径豁免（DOC-1227-03；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1227-03
+    type: decision
+    path: gate-exemptions/2026-11-01-1227-t6-skill-retire.md
+    status: active
+    owner: P4
+    note: "#1255-T6（#1227）：skill 判据口径改（自研 <=40，产品自带 48 不计入）；按活面审计退役 line-audit-and-cards（活面引用 0）=> 自研 12->11，SYNC-OK(11)；产品自带 41/6/1 未动。"
