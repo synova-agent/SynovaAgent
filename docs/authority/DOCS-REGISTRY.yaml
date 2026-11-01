@@ -1691,3 +1691,10 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1253 notes 门禁性能修复 受保护路径豁免（DOC-1253）----
+  - id: DOC-1253
+    type: decision
+    path: gate-exemptions/2026-11-01-1253-notes-lifecycle-perf.md
+    status: active
+    owner: P4
+    note: "#1253（T1 P0）：notes 生命周期门禁逐文件 spawn（219 note ≈1300 进程、>90s 未跑完）→ 单进程解析（1.11s）；补 timeout⇒exit2+E_TIMEOUT 与缺 python⇒E_NO_PYTHON；契约 0/1/2 与四态输出不变；配对测试 23/0（含性能回归与超时两态）。"

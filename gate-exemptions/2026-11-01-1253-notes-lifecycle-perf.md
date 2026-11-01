@@ -5,3 +5,4 @@
 - scripts/control-tower/check-notes-lifecycle.sh — 单进程解析替代逐文件 spawn 并补超时与缺python显式降级 — #1253
 - tests/control-tower/check-notes-lifecycle.test.sh — 配对测试新增性能回归与超时降级两态并保留原18例 — #1253
 - gate-exemptions/2026-11-01-1253-notes-lifecycle-perf.md — 本豁免件自身属受保护目录变更故随批自覆盖 — #1253
+- docs/authority/DOCS-REGISTRY.yaml — 为本批豁免件补 DOC-1253 登记行以闭合 D782 D2 登记门禁 — #1253
