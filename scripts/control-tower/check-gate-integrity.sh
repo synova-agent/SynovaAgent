@@ -254,6 +254,8 @@ usage() {
   --patterns-only   仅 A 模式哨兵（grep 方言语法验证）
   --registry-only   仅 B CI 登记 gate
   --fixture-power-only 仅面 3 夹具判别力（grep -qv 逐行取反）
+  --fixture-power-parse  #1252 单测缝：stdin 逐行 `path:line:text` → 输出 `<rel>:<num>`（只做字符串拆分，
+                         不读文件系统、不判违规、恒 exit 0；用途=让"盘符冒号"缺陷在 mac 上也有判据）
   --ci-reds <json>  追加 C 既有红基线对账（GitHub check-runs JSON）
   --base-ref <ref>  C 段对账对象（**取 base，不取当前提交**；如 PR base.sha / origin/main）
                     缺省时 C 段显式 SKIPPED（不判定 ≠ 通过）；不可解析 → exit 2
