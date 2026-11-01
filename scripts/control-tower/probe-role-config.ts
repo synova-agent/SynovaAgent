@@ -81,7 +81,7 @@ async function loadEngine(): Promise<GrantModel | null> {
     const fn = mod['permissionsForRole'];
     if (typeof fn !== 'function') return null;
     return { permissionsForRole: fn as GrantModel['permissionsForRole'] };
-  } catch {
+  } catch { // 引擎包不可用 ⇒ 返回 null，由调用方 cannotJudge（显式降级，非静默）
     return null;
   }
 }
