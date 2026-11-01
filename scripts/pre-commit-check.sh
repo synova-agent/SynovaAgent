@@ -2420,10 +2420,10 @@ fi
 gate_budget_report() {
   local now_ms elapsed log out rc
   now_ms="$(_now_ms)"; elapsed=$(( now_ms - ${_GATE_T0_MS:-now_ms} ))
-  [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0
+  [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0   # swallow-ok: 非数字则按 0（只告警层，不影响提交结果）
   log="${SYNO_GATE_BUDGET_LOG:-$ROOT/.claude/gate-budget.log}"
-  mkdir -p "$(dirname "$log")" 2>/dev/null || true
-  printf 'wall_ms=%s  # pre-commit @ %s（#1255-T3 接线）\n' "$elapsed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$log" 2>/dev/null || true
+  mkdir -p "$(dirname "$log")" 2>/dev/null || true   # swallow-ok: 日志目录建不了不阻断（只告警层）
+  printf 'wall_ms=%s  # pre-commit @ %s（#1255-T3 接线）\n' "$elapsed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$log" 2>/dev/null || true   # swallow-ok: 落盘失败不影响判定（--log 读取时会 E_NO_DATA 显式降级）
   if [ ! -f "$ROOT/scripts/control-tower/check-gate-budget.sh" ]; then
     echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（check-gate-budget.sh 缺失）—— 本次 wall_ms=${elapsed}${RESET}"
     return 0
