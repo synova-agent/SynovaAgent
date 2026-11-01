@@ -29,6 +29,7 @@ writeset:
   - src/onboarding/config-pack-generator.ts
   - tests/onboarding/config-pack-generator.test.ts
   - tests/l4/goal-alignment.test.ts
+  - gate-exemptions/2026-11-02-1271-1277-content-registry-probe.md
   - tests/control-tower/probe-content-registry.test.sh
   - memory/notes/implemented/2026-11-02-k12-eng-p1-1-content-registry-probe.md
 done:
