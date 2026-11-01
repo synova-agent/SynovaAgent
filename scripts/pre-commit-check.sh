@@ -2402,6 +2402,28 @@ if [ -f "$_UNI_S" ]; then
   fi
 fi
 
+# ═══ K12-21（#205）测量梯子入 CI（#1271 P1-3 · 14 项批准 item 8）═══
+# 只在 CI 腿执行：梯子要真跑 10+ 探针，本地提交预算（D515 fast）不放；CI 权威腿注入 SYNO_CI=1。
+# 判据语义沿用 ladder：0 = 测量件自身健康（末行如实 DEGRADED/计数）；1 = 输出违契；2 = 自身异常。
+#   ⇒ 1/2 均判红（fail-closed，禁把"判不了"当通过）。
+# 超时：优先 timeout/gtimeout；两者皆缺 ⇒ 不阻塞但**显式披露**（CI job 级超时兜底，非静默）。
+if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${SYNO_FIXTURE_MODE:-0}" != "1" ]; then
+  LADDER_TMO="$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || true)"
+  if [ -n "$LADDER_TMO" ]; then
+    LADDER_OUT=$(cd "$ROOT" && "$LADDER_TMO" 300 npx tsx scripts/control-tower/probe-ladder.ts --all 2>&1)
+  else
+    echo "  ℹ️  无 timeout/gtimeout — 以 CI job 级超时兜底（显式披露，非静默）"
+    LADDER_OUT=$(cd "$ROOT" && npx tsx scripts/control-tower/probe-ladder.ts --all 2>&1)
+  fi
+  LADDER_EXIT=$?
+  if [ "$LADDER_EXIT" -eq 0 ]; then
+    printf '%s\n' "$LADDER_OUT" | grep -E '^RESULT=' | tail -1 | sed 's/^/  ℹ️  /' || true
+    soft_pass "K12 测量梯子 (K12-21)"
+  else
+    hard_check "K12 测量梯子 (K12-21: exit=$LADDER_EXIT)" "$(printf '%s\n' "$LADDER_EXIT" >/dev/null; printf '%s\n' "$LADDER_OUT" | grep -E '❌|RESULT=' | tail -3)"
+  fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════
