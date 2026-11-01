@@ -19,6 +19,7 @@
  *    若发现 victim 停在隔离区而仓库路径缺失 ⇒ 移回并点名（防测试进程被强杀把树留在半拔状态）。
  *    被测对象是真链路，**禁 mock**；重型探针须串行（锁文件负责），本文件不得与 T4/C3 并发。
  */
+import { describeContentRegistry } from '../../src/deploy/content-registry';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -176,7 +177,7 @@ describe('probe-content-exile · 纯函数面（C2 / #707）', () => {
     expect(exileRootFor('/repo').endsWith(join('exile', String(process.pid)))).toBe(true);
   });
 
-  it('③ typeCounts：内容类型 → 项数；types ＝ 键数（12 类各 1 项）', () => {
+  it('③ typeCounts：内容类型 → 项数；types ＝ 键数（注册表派生类数，各 1 项）', () => {
     const counts = typeCountsFromResults([{ type: 'sentinel' }, { type: 'ontology' }, { type: 'sentinel' }]);
     expect(counts).toEqual({ sentinel: 2, ontology: 1 });
     expect(Object.keys(counts)).toHaveLength(2);
@@ -238,6 +239,10 @@ describe('probe-content-exile · 纯函数面（C2 / #707）', () => {
   });
 });
 
+const EXPECTED_TYPE_COUNT = describeContentRegistry().entries.filter(
+  (entry) => entry.status === 'reachable' && entry.loader !== undefined,
+).length;
+
 describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
   it(
     '⑧ 主用例：--case main ⇒ rc 0 ＋ 7 条关键行 ＋ victim 六文件摘要复原 ＋ extensions/ 干净',
@@ -248,7 +253,7 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
       expect(lastResult(run.stdout)).toBe('RESULT=PASS');
       expect(run.stdout).toContain('[BASELINE] sentinels=46 ids=46');
       expect(run.stdout).toContain('[EXILE] cash-runway →');
-      expect(run.stdout).toContain('[CHILD] sentinels=45 types=12 errors=0 degraded=false');
+      expect(run.stdout).toContain(`[CHILD] sentinels=45 types=${EXPECTED_TYPE_COUNT} errors=0 degraded=false`);
       expect(run.stdout).toContain('[OTHERS] baselineIds − childIds = {sentinel-cash-runway}');
       expect(run.stdout).toContain('[IN-PROCESS-RELOAD] registry=46');
       expect(run.stdout).toContain('[RESTORE]');
@@ -353,7 +358,7 @@ describe('probe-content-exile · spawn 级（真链路，禁 mock）', () => {
       const payload = parseChildPayload(child.stdout);
       expect(payload.sentinels).toBe(46);
       expect(payload.ids).toHaveLength(46);
-      expect(Object.keys(payload.typeCounts)).toHaveLength(12);
+      expect(Object.keys(payload.typeCounts)).toHaveLength(EXPECTED_TYPE_COUNT);
       expect(payload.errors).toBe(0);
       expect(payload.degraded).toBe(false);
       // ③ 子进程日志静音（LOG_LEVEL=silent，与 C3 同口径）⇒ 合并采集（stdout+stderr）也只有 1 行

@@ -29,6 +29,8 @@ writeset:
   - src/onboarding/config-pack-generator.ts
   - tests/onboarding/config-pack-generator.test.ts
   - tests/l4/goal-alignment.test.ts
+  - gate-exemptions/2026-11-02-1271-1280-exile-baseline.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-1b-exile-baseline.md
   - memory/notes/implemented/2026-11-02-k12-eng-p2-1-content-layer-boot.md
 done:
   - verify: bash scripts/check-integrity-startup.sh
