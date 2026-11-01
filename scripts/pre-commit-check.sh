@@ -9,6 +9,16 @@
 # D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
+# ═══ #1255-T3（W6 接线）: pre-commit 墙钟预算计时起点 ═══
+# 判据源: GATE-STANDARD §七「pre-commit ≤90 s」＋ §十二 ⑨（墙钟 ≤90s 由 check-gate-budget.sh 出数）。
+# 只读取数不阻断：超预算在本层**只告警**（W6 出口判据写的是"破则告警"；是否转阻断由后续裁定），
+# 数值与判定一律来自 check-gate-budget.sh（0/1/2 三态），本处不另造一套算法。
+_now_ms() {
+  if command -v python3 >/dev/null 2>&1; then python3 -c 'import time;print(int(time.time()*1000))'
+  elif command -v python >/dev/null 2>&1; then python -c 'import time;print(int(time.time()*1000))'
+  else printf '%s000' "$(date +%s)"; fi
+}
+_GATE_T0_MS="$(_now_ms)"
 # ═══════════════════════════════════════════════════════════════════════════════
 # Loop Engineering V4.5.1 — pre-commit 12 组硬阻断 (全部 <10s) + 免疫系统
 # D515 / V5.0.0: 提交端硬阻断收敛到 4 道质量根（as any / 测试配对+expect / Secrets /
@@ -2403,6 +2413,31 @@ if [ -f "$_UNI_S" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════
+# #1255-T3: 墙钟预算（GATE-STANDARD §七 ≤90 s ／ §十二 ⑨）
+#   落盘 `wall_ms=<n>` → 交给 check-gate-budget.sh 判定（0/1/2 三态），本层**只告警不阻断**。
+#   为什么必须先落盘再判：check-gate-budget.sh 的契约是"读日志最后一条 wall_ms"，不在本脚本里另造算法。
+# ═══════════════════════════════════════════════════════════════════
+gate_budget_report() {
+  local now_ms elapsed log out rc
+  now_ms="$(_now_ms)"; elapsed=$(( now_ms - ${_GATE_T0_MS:-now_ms} ))
+  [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0
+  log="${SYNO_GATE_BUDGET_LOG:-$ROOT/.claude/gate-budget.log}"
+  mkdir -p "$(dirname "$log")" 2>/dev/null || true
+  printf 'wall_ms=%s  # pre-commit @ %s（#1255-T3 接线）\n' "$elapsed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$log" 2>/dev/null || true
+  if [ ! -f "$ROOT/scripts/control-tower/check-gate-budget.sh" ]; then
+    echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（check-gate-budget.sh 缺失）—— 本次 wall_ms=${elapsed}${RESET}"
+    return 0
+  fi
+  out="$(bash "$ROOT/scripts/control-tower/check-gate-budget.sh" --log "$log" 2>&1)"; rc=$?
+  case "$rc" in
+    0) echo -e "  ${GREEN}⏱ 墙钟预算: $(printf '%s' "$out" | tr '\n' ' ')${RESET}" ;;
+    1) echo -e "  ${YELLOW}⏱ 墙钟预算: $(printf '%s' "$out" | tr '\n' ' ')（告警不阻断；标准 §七 目标 ≤90 s）${RESET}" ;;
+    *) echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（rc=${rc}）—— $(printf '%s' "$out" | tr '\n' ' ')${RESET}" ;;
+  esac
+  return 0
+}
+
+# ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════
 echo ""
@@ -2412,6 +2447,7 @@ if [ "$HARD_FAIL" -gt 0 ]; then
   [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::error title=IronLaws:提交已拒绝::${HARD_FAIL} 组未通过（详见上方 ❌ 行）"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
+  gate_budget_report
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   exit 1
@@ -2419,6 +2455,7 @@ else
   echo -e "  ${GREEN}✅ 全部 ${GROUP_DONE} 组通过${RESET}"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告 (不阻断)${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
+  gate_budget_report
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   exit 0

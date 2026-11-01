@@ -1691,3 +1691,10 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1210 判据 7 遗留项（W6 墙钟接线）豁免登记（DOC-1210-01；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1210-01
+    type: decision
+    path: gate-exemptions/2026-11-01-1210-t3-budget-wiring.md
+    status: active
+    owner: P4
+    note: "#1210 判据 7 遗留项（#1255-T3）：pre-commit 结果段接线墙钟预算——落盘 wall_ms 后调用 check-gate-budget.sh --log 判定（0/1/2），只告警不阻断；台账同步 required_ci true／run_by pre-commit／移出 run_by_candidates。"
