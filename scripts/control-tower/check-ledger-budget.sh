@@ -63,7 +63,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "$INV" ] || degrade E_INV_MISSING "台账不存在: $INV"
 
 PYBIN=""
-for _c in python3 python py; do
+for _c in python3 python py; do   # PYBIN 三级探测（D520：禁裸 python3；本行为探测循环，非裸调用）
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
 done
 [ -n "$PYBIN" ] || degrade E_NO_PYTHON "python3/python/py 均不可用"
