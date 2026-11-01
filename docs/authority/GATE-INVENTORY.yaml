@@ -1326,7 +1326,7 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gate-budget.sh
-    required_ci: false
+    required_ci: true
     confirmed_by: pending-cto
   - id: CT-check-ledger-budget
     class: P2
@@ -1726,14 +1726,13 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/check-gate-budget.sh
-    run_by: "无"
+    run_by: pre-commit
     quota: false
   - entrypoint: scripts/control-tower/check-ledger-budget.sh
     run_by: "无"
     quota: false
 run_by_candidates:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）（20 件）
-  - entrypoint: scripts/control-tower/check-gate-budget.sh
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
   - entrypoint: scripts/control-tower/check-block-paths.ts
   - entrypoint: scripts/control-tower/check-board-metrics.ts
@@ -2114,8 +2113,8 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-budget.sh
       class: P1
-      run_by: 无
-      orphan: true
+      run_by: pre-commit
+      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical
