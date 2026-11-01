@@ -1368,7 +1368,7 @@ run_by:
     run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/check-customer-deps.ts
-    run_by: "无"
+    run_by: npm
     quota: false
   - entrypoint: scripts/control-tower/check-doc-contract.sh
     run_by: pre-commit
@@ -1738,7 +1738,6 @@ run_by_candidates:
   - entrypoint: scripts/control-tower/check-board-metrics.ts
   - entrypoint: scripts/control-tower/check-ci-stale-red.sh
   - entrypoint: scripts/control-tower/check-citations.py
-  - entrypoint: scripts/control-tower/check-customer-deps.ts
   - entrypoint: scripts/control-tower/check-dual-repo-sync.sh
   - entrypoint: scripts/control-tower/check-gitlinks.sh
   - entrypoint: scripts/control-tower/check-k3-report.py
@@ -2078,8 +2077,8 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-customer-deps.ts
       class: P0
-      run_by: 无
-      orphan: true
+      run_by: npm
+      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical
