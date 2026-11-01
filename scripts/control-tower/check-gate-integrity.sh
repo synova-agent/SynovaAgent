@@ -36,6 +36,18 @@
 #   @exit    0=通过；1=违规；2=执行失败/降级（fail-closed——2 绝不等于通过）
 #   @降级    依赖缺失/不可读/解析器失败 → stderr `degraded: <原因>` + 追加一行 JSON 到
 #             degraded 日志（字段 time/component/code/phase/retryable；铁律 11/32）+ exit 2
+#   @authority 授权（explicit authority）: CI job（`.github/workflows/ci.yml` ⑦ 步／`.gitea` ⑦ 步）、
+#             `scripts/commit-msg-check.sh`、`check-gate-protection.sh`、`sealed-tests.sh`、`weekly-recon.sh`
+#             与人工复核均可调用；**只读仓内事实**，唯一落盘是 degraded 日志（ignored 的 .codex/ 下）。
+#             `--fixture-power-parse` 是**测试专用**注入缝：只读 stdin 做字符串拆分，不读文件系统、
+#             不判违规、恒 exit 0，且**会跳过 `--root` 存在性校验**（见 usage 与本文件 Known Limitations）。
+#
+# Known Limitations（已知限制 — 做不到什么）:
+#   1. `--fixture-power-parse` 跳过 `--root` 存在性 fail-closed（它是纯字符串 seam）；生产路径不受影响，
+#      但**误把该旗标用于生产**会让"root 不存在"静默变 0。
+#   2. `_fp_split_line` 取**第一个** `:NN:`（跳盘符后）：路径自身含 `:NN:` 字样的极罕见情形仍会早切。
+#   3. A 模式哨兵只判 grep 方言合法性，不判"该 grep 是否真的检查了该检查的东西"（那是 ①e R1.2 的事）。
+#   4. C 段对账依赖外部 `--ci-reds` JSON；缺省时显式 SKIPPED（ratchet 不判定 ≠ 通过）。
 #
 # A 模式哨兵（方言分判是硬要求，否则误报）:
 #   ERE = flags 含 E / --extended-regexp；BRE = 其余（含 -v / --invert-match）；-F 固定串跳过；-P PCRE 不可校验。
@@ -122,16 +134,22 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   ROOT=那个仓）→ 会静默读错树的基线 = "测试的树不是被测的树"。故 `--root` 必须在**本行之前**解析生效
 #   （若在参数循环里才解析，非 git cwd 下 ROOT 已落空，覆盖将静默失效）。预扫只认 --root，不做别的判定。
 ROOT_OVERRIDE=""
+_FP_PARSE_PRE=0
 _i=1
 while [ "$_i" -le "$#" ]; do
   _a="${!_i}"
   case "$_a" in
     --root) _j=$((_i + 1)); [ "$_j" -le "$#" ] && ROOT_OVERRIDE="${!_j}" ;;
     --root=*) ROOT_OVERRIDE="${_a#--root=}" ;;
+    --fixture-power-parse) _FP_PARSE_PRE=1 ;;
   esac
   _i=$((_i + 1))
 done
-if [ -n "$ROOT_OVERRIDE" ]; then
+if [ -n "$ROOT_OVERRIDE" ] && [ "$_FP_PARSE_PRE" = 1 ]; then
+  # #1252 单测缝：`--fixture-power-parse` 只做纯字符串拆分，**不需要** root 真实存在
+  #   （否则测试只能拿真仓路径当输入，无法构造 `D:/x/...` 这类盘符用例）
+  ROOT="${ROOT_OVERRIDE%/}"
+elif [ -n "$ROOT_OVERRIDE" ]; then
   ROOT="$(cd "$ROOT_OVERRIDE" 2>/dev/null && pwd)"
   if [ -z "$ROOT" ]; then
     # degrade()/降级日志此刻尚未就绪（日志路径本身依赖 ROOT）→ 只 stderr 显式 + exit 2（fail-closed）
@@ -248,6 +266,10 @@ usage() {
   --patterns-only   仅 A 模式哨兵（grep 方言语法验证）
   --registry-only   仅 B CI 登记 gate
   --fixture-power-only 仅面 3 夹具判别力（grep -qv 逐行取反）
+  --fixture-power-parse  #1252 单测缝：stdin 逐行 `path:line:text` → 输出 `<rel>:<num>`（只做字符串拆分，
+                         不读文件系统、不判违规、恒 exit 0；用途=让"盘符冒号"缺陷在 mac 上也有判据）
+                         🔴 **副作用（务必知）**：本旗标在参数解析后**立即 exit 0**，因此
+                         **跳过 `--root` 存在性校验**（对不存在的 root 也返回 0）。只许测试用。
   --ci-reds <json>  追加 C 既有红基线对账（GitHub check-runs JSON）
   --base-ref <ref>  C 段对账对象（**取 base，不取当前提交**；如 PR base.sha / origin/main）
                     缺省时 C 段显式 SKIPPED（不判定 ≠ 通过）；不可解析 → exit 2
@@ -993,6 +1015,31 @@ _qstate() {   # $1=文本 → 输出 s|d|n：结尾是否处于「单引号 / �
   printf '%s' "$st"
 }
 
+# #1252: `grep -nHE` 行 → 字段拆分（**盘符冒号安全**）。纯字符串逻辑，可单测：
+#   `printf 'D:/x/a.test.sh:59:grep -qv y\n' | bash <本件> --root D:/x --fixture-power-parse`
+#   ⇒ `a.test.sh:59`（修前：盘符冒号被当分隔符 ⇒ `D:`, key 变 `D:` ⇒ 白名单永不命中）。
+#   为什么单列函数: 该缺陷只在 Windows 触发（盘符冒号），mac 上走不到 ⇒ 必须有**与平台无关**的判据。
+#   🔴 #1252 复核修正（2026-11-02）：原实现用贪婪 `^(.*):([0-9]+):(.*)$` ⇒ 取**最后**一个 `:NN:`，
+#   代码文本里含 `echo x:12:y` 时会把「文件字段」切坏（实测 `D:/x/a.sh:59:…x:12:y` → FP_F=整段代码、
+#   FP_NUM=12）⇒ 白名单永不命中、**制造假红**。现改为：跳过盘符（`X:` 两字符）后取**第一个** `:NN:`。
+#   已知限制：路径本身含 `:NN:` 字样（极罕见）时仍会早切；此时按点名改白名单键即可。
+_fp_split_line() { # $1=行 → 设 FP_F / FP_NUM / FP_TEXT
+  local _ln="$1" _i _n="${#1}" _start=0 _num
+  [[ "$_ln" =~ ^[A-Za-z]:[\\/] ]] && _start=2      # 盘符：X:/ 或 X:\ ⇒ 跳过，不参与分隔
+  for ((_i = _start; _i < _n; _i++)); do
+    [ "${_ln:_i:1}" = ":" ] || continue
+    _num="${_ln:$((_i + 1))}"
+    if [[ "$_num" =~ ^([0-9]+): ]]; then
+      FP_F="${_ln:0:_i}"
+      FP_NUM="${BASH_REMATCH[1]}"
+      FP_TEXT="${_ln:$((_i + 1 + ${#BASH_REMATCH[1]} + 1))}"
+      return 0
+    fi
+  done
+  FP_F="${_ln%%:*}"; FP_NUM=""; FP_TEXT=""
+  return 0
+}
+
 _fixture_whitelist_status() { # $1=键（`<路径>:<行号>`）→ 0=命中未过期｜1=未命中｜2=命中但已过期
   # 豁免白名单独立成文件（见 fixture-power-baseline.txt 头部：并入 gate-integrity-baseline.txt 会被
   #   REGISTRY-BASELINE 解析器误当隔离条目 ⇒ 3 处伪违规，实测）。
@@ -1040,9 +1087,9 @@ run_fixture_power() {
   while IFS= read -r _ln; do
     [ -n "$_ln" ] || continue
     local _f _num _text _head _tail _rel _key _st
-    _f="${_ln%%:*}"
-    _num="$(printf '%s' "${_ln#*:}" | cut -d: -f1)"
-    _text="${_ln#*:}"; _text="${_text#*:}"
+    # #1252: 见 `_fp_split_line` 头注释（盘符冒号安全，Windows 自证链断点）。
+    _fp_split_line "$_ln"
+    _f="$FP_F"; _num="$FP_NUM"; _text="$FP_TEXT"
     _rel="${_f#"$ROOT"/}"
     case "$(printf '%s' "$_text" | sed 's/^[[:space:]]*//')" in
       '#'*) vprint "  面3 跳过注释行 ${_rel}:${_num}"; continue ;;
@@ -1100,12 +1147,13 @@ run_fixture_power() {
 
 # ═══ 主流程 ═══════════════════════════════════════════════════════════════════
 
-DO_PATTERNS=0; DO_REGISTRY=0; DO_FIXTURE=0; CI_REDS=""; BASE_REF=""; VERBOSE=0; EXCLUDE_CHECKS=()
+DO_PATTERNS=0; DO_REGISTRY=0; DO_FIXTURE=0; CI_REDS=""; BASE_REF=""; VERBOSE=0; EXCLUDE_CHECKS=(); FP_PARSE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --patterns-only) DO_PATTERNS=1 ;;
     --registry-only) DO_REGISTRY=1 ;;
     --fixture-power-only) DO_FIXTURE=1 ;;
+    --fixture-power-parse) FP_PARSE=1 ;;   # #1252 单测缝：stdin 逐行 → `<rel>:<num>`
     --ci-reds)
       CI_REDS="${2:-}"
       [ -n "$CI_REDS" ] || { usage >&2; degrade "USAGE_ARGS" "args" "--ci-reds 缺少 <json> 参数"; }
@@ -1135,6 +1183,16 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+if [ "$FP_PARSE" = 1 ]; then
+  # #1252 单测缝（只做字符串拆分，不读文件系统、不判违规）
+  while IFS= read -r _l; do
+    [ -n "$_l" ] || continue
+    _fp_split_line "$_l"
+    printf '%s:%s\n' "${FP_F#"$ROOT"/}" "$FP_NUM"
+  done
+  exit 0
+fi
+
 if [ "$DO_PATTERNS" = 0 ] && [ "$DO_REGISTRY" = 0 ] && [ "$DO_FIXTURE" = 0 ]; then DO_PATTERNS=1; DO_REGISTRY=1; DO_FIXTURE=1; fi
 
 info "GATE-INTEGRITY-CHECK: patterns=${DO_PATTERNS} registry=${DO_REGISTRY} fixture=${DO_FIXTURE} ci_reds=$([ -n "$CI_REDS" ] && echo 1 || echo 0) base_ref=${BASE_REF:-<未提供>} exclude=${#EXCLUDE_CHECKS[@]} root=${ROOT}"
