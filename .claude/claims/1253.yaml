@@ -1,0 +1,12 @@
+writeset:
+  - scripts/control-tower/check-notes-lifecycle.sh
+  - tests/control-tower/check-notes-lifecycle.test.sh
+  - gate-exemptions/2026-11-01-1253-notes-lifecycle-perf.md
+  - memory/notes/proposed/2026-11-01-1253-notes-lifecycle-perf.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/claims/1253.yaml
+done:
+  - verify: bash tests/control-tower/check-notes-lifecycle.test.sh
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "#1253 P0：notes 生命周期门禁逐文件 spawn（219 note × 6 次 grep ≈ 1300 进程）实测 90s+ 未完成，把每次 commit 拖到分钟级；改为单 python 进程解析全部（实测 219 note 1.1s／200 note 0.49s），补 timeout 30s 兜底与缺 python 显式降级（exit 2 + E_TIMEOUT/E_NO_PYTHON）。契约 0/1/2 与四态输出不变，配对测试 23/0（含 grep 启动次数≤5 与 timeout=124 两态）。补 DOC-1253 登记以过 D782 D2。"
