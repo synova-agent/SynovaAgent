@@ -1,0 +1,13 @@
+writeset:
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-11-02-1266-gate-a-dsh-lens.md
+  - .claude/claims/1266.yaml
+  - .synova/skills/devdoc-gate-a/SKILL.md
+  - .dsh/skills/devdoc-gate-a/SKILL.md
+done:
+  - verify: bash -c 'diff -q .synova/skills/devdoc-gate-a/SKILL.md .dsh/skills/devdoc-gate-a/SKILL.md'
+  - verify: bash -c 'grep -q "镜头 7 · DSH 纪律与代码品味" .synova/skills/devdoc-gate-a/SKILL.md'
+  - verify: bash -c 'grep -q "R9 DSH 纪律" .synova/skills/devdoc-gate-a/SKILL.md'
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: bash -c 'grep -q "七镜头（逐个跑" .synova/skills/devdoc-gate-a/SKILL.md'
+note: gate-A 第七镜头（DSH 纪律）＋R9；A 类提案（裁 429 ⑥）

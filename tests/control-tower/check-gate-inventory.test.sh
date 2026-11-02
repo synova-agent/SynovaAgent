@@ -299,5 +299,37 @@ printf '%s' "$OUT" | grep -q "账实不符" && ok "㉕ 变异体点名「账实�
   || no "㉕ 变异体未点名账实不符（$OUT）"
 
 echo ""
+echo "── ㉖ W7 到期回收：review_after 已过期且无 review_owner ⇒ exit 1 且点名 ──"
+D26="$TMPD/expired"; mkfix "$D26"
+sed -i 's/^    review_after: 2026-11-27$/    review_after: 2020-01-01/' "$D26/docs/authority/GATE-INVENTORY.yaml"
+run "$D26"
+[ "$RC" -eq 1 ] && ok "㉖ exit 1" || no "㉖ 期望 1 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "已过期" && ok "㉖ 点名「已过期」" || no "㉖ 未点名过期（$OUT）"
+
+echo ""
+echo "── ㉗ W7 过期但已登记 review_owner ⇒ exit 0（视为已复核）──"
+D27="$TMPD/expired-owner"; mkfix "$D27"
+sed -i 's/^    review_after: 2026-11-27$/    review_after: 2020-01-01\n    review_owner: CTO/' \
+  "$D27/docs/authority/GATE-INVENTORY.yaml"
+run "$D27"
+[ "$RC" -eq 0 ] && ok "㉗ exit 0" || no "㉗ 期望 0 实得 $RC（$OUT）"
+
+echo ""
+echo "── ㉘ W7 未到期 ⇒ exit 0（不误红）──"
+D28="$TMPD/notyet"; mkfix "$D28"
+sed -i 's/^    review_after: 2026-11-27$/    review_after: 2999-12-31/' "$D28/docs/authority/GATE-INVENTORY.yaml"
+run "$D28"
+[ "$RC" -eq 0 ] && ok "㉘ exit 0" || no "㉘ 期望 0 实得 $RC（$OUT）"
+
+echo ""
+echo "── ㉙ 改坏必红：R7 判据改成恒不触发（/tmp 副本）⇒ ㉖ 变绿（判别力）──"
+MUT4="$TMPD/mutant4.sh"
+sed 's|^            if _due < datetime.date.today() and not e.get("review_owner", "").strip():|            if False:  # mutant-expiry|' "$S" > "$MUT4"
+grep -q "mutant-expiry" "$MUT4" && ok "㉙ 变异点已注入（过期判据 ⇒ 恒假）" || no "㉙ 变异点未命中"
+OUT="$(SYNO_P0_FLOOR=1 bash "$MUT4" --root "$D26" 2>&1)"; RC_MUT4=$?
+[ "$RC_MUT4" -eq 0 ] && ok "㉙ 变异后 ㉖ 变绿（证明 ㉖ 的红来自 R7 判据，不是恒红）" \
+  || no "㉙ 期望变异体 exit 0 实得 $RC_MUT4（$OUT）—— ㉖ 对 R7 无判别力"
+
+echo ""
 echo "  结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

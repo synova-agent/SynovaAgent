@@ -503,7 +503,11 @@ jobs:
           #     ⇒ 输出必含可见的 SKIPPED 行，**不是**假绿、**不是**静默跳过。
           #   ⇒ 代价（写明，禁当"已核"）：既有 CI 红基线（ci-red-baseline.txt）在这条腿上**不参与判定**；
           #     该面对账仍归 GitHub 腿的 gate-integrity job（本批降只报，回传 Gitea）。
-          bash scripts/control-tower/check-gate-integrity.sh || exit $?
+          # #1252: 必须注入 base —— 面 2 的「越线者付账」判据（sealed-tests.sh:307-320）靠 `SYNO_BASE_REF`
+          #   取 base 面扫描数；空 ⇒ 退化"现状语义"（余量>上限即红）且显式打印"未给 base"。
+          #   本步原缺该变量 ⇒ 同一提示在每次 run 里都出现，而判据实际从未行使「越线」判定。
+          CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
+          SYNO_BASE_REF="$CHANGED_BASE" bash scripts/control-tower/check-gate-integrity.sh || exit $?
       - name: ⑧ 必需 context ⇄ job name 一致性（check-required-contexts.py 静态面阻断；--api-check 显式不跑 · #1239）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent

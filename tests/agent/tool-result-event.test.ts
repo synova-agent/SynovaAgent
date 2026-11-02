@@ -15,7 +15,13 @@
  *   T3d deny（TOOL_DENIED）/ block（TOOL_BLOCKED）也落事件，且**两个循环各覆盖一次**（6 写点全达）
  *   T3e `SYNO_TOOL_RESULT_EVENT=0` ⇒ 0 条事件（其余行为不变）
  *
+ * #1257 P0-2a 增量（call/result 配对）：
+ *   T3a 起每个工具终态都先有 1 条 `tool_call`（payload `toolCallId/name/round`，**无**保留键残留），
+ *   其 `seq` 由 `tool_result.source_event_seq` 回指；三终态（完成/deny/block）各自配对；
+ *   den·block 用例同时断言 `listUnclosedToolCalls()` 为空（闭合）。
+ *
  * 改坏探针（判据常驻）：删 `appendToolResultEvent` 调用 ⇒ T3a/T3d/T3e(正控) 红；
+ *   删 `appendToolCallEvent` 调用 ⇒ T3a/T3d 的配对断言红（未闭合集合非空）；
  *   删 `session-store.ts` 的「无 content 的 tool_result 投影跳过」⇒ T3b 红（写后多出空 assistant）。
  * 时种棘轮：被测文件不新增 `Date.now()` / `new Date()`（`durationMs` 用 `performance.now()`）。
  */
@@ -153,6 +159,43 @@ function toolResultPayloads(store: SessionStore, sessionId: string): Array<Recor
     });
 }
 
+/**
+ * #1257 P0-2a: 读取全部 `tool_call` 事件 payload（按 seq 升序）。
+ * @input  store/sessionId — 真实 SessionStore（内存 DB）
+ * @output payload 对象数组（解析失败即抛，不静默）
+ * @error  payload 非对象/非法 JSON ⇒ 抛（测试不留空壳断言）
+ */
+function toolCallPayloads(store: SessionStore, sessionId: string): Array<Record<string, unknown>> {
+  return store.getEvents(sessionId)
+    .filter((event) => event.eventType === 'tool_call')
+    .map((event) => {
+      const parsed: unknown = JSON.parse(event.payloadJson);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error(`tool_call payload 不是对象: ${event.payloadJson.slice(0, 80)}`);
+      }
+      return parsed as Record<string, unknown>;
+    });
+}
+
+/**
+ * #1257 P0-2a: call/result 配对不变量（同一会话）。
+ * 断言：① 每条 `tool_result` 的 `source_event_seq` 都指向**已存在**的 `tool_call.seq`；
+ * ② `listUnclosedToolCalls()` 为空（本套用例的所有终态都已闭合）；
+ * ③ `tool_call` 事件数 == `tool_result` 事件数（本套每个终态都写配对）。
+ */
+function expectAllPairsClosed(store: SessionStore, sessionId: string): void {
+  const events = store.getEvents(sessionId);
+  const callSeqs = events.filter((event) => event.eventType === 'tool_call').map((event) => event.seq);
+  const results = events.filter((event) => event.eventType === 'tool_result');
+  expect(callSeqs.length).toBeGreaterThan(0);
+  expect(results.length).toBe(callSeqs.length);
+  for (const result of results) {
+    expect(result.sourceEventSeq).not.toBeNull();
+    expect(callSeqs).toContain(result.sourceEventSeq);
+  }
+  expect(store.listUnclosedToolCalls(sessionId)).toEqual([]);
+}
+
 function requireSnapshot(snapshot: MessageRow[] | undefined, label: string): MessageRow[] {
   if (snapshot === undefined) throw new Error(`parity 快照未捕获：${label}`);
   return snapshot;
@@ -210,10 +253,19 @@ describe('T3a 执行完成 ⇒ tool_result 事件', () => {
 
       expect(reply).toBe('DONE');
       expect(toolHandlerSpy).toHaveBeenCalledTimes(1);
-      // 全新会话：事件流里只有这一条 tool_result（ToolLoopExecutor 不写 message 事件）
+      // #1257 P0-2a：全新会话事件流 = tool_call → tool_result（ToolLoopExecutor 不写 message 事件）
       const allEvents = fx.store.getEvents(fx.sessionId);
-      expect(allEvents.length).toBe(1);
-      expect(allEvents[0].eventType).toBe('tool_result');
+      expect(allEvents.map((event) => event.eventType)).toEqual(['tool_call', 'tool_result']);
+      const callEvent = allEvents[0];
+      const resultEvent = allEvents[1];
+      expect(callEvent.sourceEventSeq).toBeNull(); // call 侧无来源
+      expect(resultEvent.sourceEventSeq).toBe(callEvent.seq); // result 回指 call 的 seq（列，不是 payload 字段）
+      const callPayloads = toolCallPayloads(fx.store, fx.sessionId);
+      expect(callPayloads.length).toBe(1);
+      expect(callPayloads[0]).toEqual({ toolCallId: 'call_probe_big', name: 'probe_big', round: 0 });
+      // 保留键在落库前被剥离 —— payload_json 不得残留 sourceEventSeq（它是列，不是 payload 字段）
+      expect(resultEvent.payloadJson).not.toContain('sourceEventSeq');
+      expect(fx.store.listUnclosedToolCalls(fx.sessionId)).toEqual([]);
 
       const payloads = toolResultPayloads(fx.store, fx.sessionId);
       expect(payloads.length).toBe(1);
@@ -343,6 +395,8 @@ describe('T3d Hook deny / ToolGuard block 也落事件', () => {
       expect(payloads.length).toBe(1);
       expect(payloads[0]).toMatchObject({ name: 'probe_deny_stream', ok: false, code: 'TOOL_DENIED' });
       expect(payloads[0].toolCallId).toBe('call_probe_deny_stream');
+      // #1257 P0-2a：deny 也是工具终态 ⇒ call/result 必须配对闭合
+      expectAllPairsClosed(fx.store, fx.sessionId);
     } finally {
       fx.db.close();
     }
@@ -364,6 +418,8 @@ describe('T3d Hook deny / ToolGuard block 也落事件', () => {
       const payloads = toolResultPayloads(fx.store, fx.sessionId);
       expect(payloads.length).toBe(1);
       expect(payloads[0]).toMatchObject({ name: 'probe_deny_plain', ok: false, code: 'TOOL_DENIED' });
+      // #1257 P0-2a：非流式循环的 deny 同样配对
+      expectAllPairsClosed(fx.store, fx.sessionId);
     } finally {
       fx.db.close();
     }
@@ -388,6 +444,8 @@ describe('T3d Hook deny / ToolGuard block 也落事件', () => {
       const blocked = payloads.filter((payload) => payload.code === 'TOOL_BLOCKED');
       expect(blocked.length).toBe(1);
       expect(blocked[0]).toMatchObject({ name: 'probe_block_stream', ok: false });
+      // #1257 P0-2a：3 次调用（2 完成 + 1 block）全部配对闭合
+      expectAllPairsClosed(fx.store, fx.sessionId);
     } finally {
       fx.db.close();
     }
@@ -410,6 +468,8 @@ describe('T3d Hook deny / ToolGuard block 也落事件', () => {
       expect(payloads.length).toBe(3);
       expect(payloads.filter((payload) => payload.ok === true).length).toBe(2);
       expect(payloads.filter((payload) => payload.code === 'TOOL_BLOCKED').length).toBe(1);
+      // #1257 P0-2a：非流式循环 3 次调用全部配对闭合
+      expectAllPairsClosed(fx.store, fx.sessionId);
     } finally {
       fx.db.close();
     }
@@ -432,7 +492,8 @@ describe('T3e SYNO_TOOL_RESULT_EVENT=0 ⇒ 不写', () => {
       const reply = await executor.streamWithToolLoop(() => undefined);
 
       expect(reply).toBe('DONE');
-      expect(fx.store.getEvents(fx.sessionId).length).toBe(0); // 一步回旧行为：事件流零写入
+      expect(fx.store.getEvents(fx.sessionId).length).toBe(0); // 一步回旧行为：事件流零写入（tool_call 同受该开关管）
+      expect(fx.store.listUnclosedToolCalls(fx.sessionId)).toEqual([]); // 零事件 ⇒ 无可报未闭合
       expect(ctx.messages.some((message) => message.role === 'tool' && message.content.includes('"value":42'))).toBe(true);
     } finally {
       delete process.env.SYNO_TOOL_RESULT_EVENT;
