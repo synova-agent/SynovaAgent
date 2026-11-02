@@ -11,7 +11,7 @@ for mf in $(find "$ROOT/extensions" -name "manifest.json" -not -path "*/node_mod
   case "$ep" in
     ../src/*) target="$ROOT/${ep#../}" ;;
     ./*) target="$dir/${ep#./}" ;;
-    *) target="$ep" ;;
+    *) target="$dir/$ep" ;;
   esac
   if [ ! -f "$target" ]; then echo -e "  ${RED}❌ entryPoint 缺失: $mf → $target${RESET}"; FAIL=$((FAIL+1)); fi
 done
