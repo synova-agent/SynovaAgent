@@ -1,1 +1,13 @@
-{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"feishu-approval","version":"1.0.0","type":"notification","channel":"feishu-approval","displayName":"飞书审批适配器","description":"通过飞书审批流程发起诊断行动项审批。","entryPoint":"./adapter.ts","exportKey":"feishuApprovalAdapter"}
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "feishu-approval",
+  "version": "1.0.0",
+  "type": "notification",
+  "channel": "feishu-approval",
+  "displayName": "飞书审批适配器",
+  "description": "通过飞书审批流程发起诊断行动项审批。",
+  "entryPoint": "./manifest.json",
+  "exportKey": "feishuApprovalAdapter",
+  "loaderRef": "src/notifications/feishu-approval-adapter.ts",
+  "entryPointNote": "实现归宿主 src/notifications/<channel>-adapter.ts（K12-17 归位）；本字段只作客户自带实现的兼容位，真源=content-registry。"
+}
