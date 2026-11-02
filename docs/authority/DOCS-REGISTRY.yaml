@@ -1847,31 +1847,3 @@ documents:
     status: active
     owner: CTO
     note: "编码预设 persona 加开工四问答案块；install-dsh-preset 补 dependencies 登记；dsh-code-standards 证据锚点校准。"
-  # ---- CTO 2026-11-03：#1317 存量文档补登记（main 上已存在但从未登记 ⇒ D782 D2 全线红）----
-  - id: DOC-1311-1
-    type: research
-    path: docs/assessment/DOC-GOVERNANCE-AUDIT-20261029.md
-    status: active
-    owner: CTO
-    note: "#1317 补登记：主树文档治理审计（对标 DSH，判留/改/撤）"
-  # ---- CTO 2026-11-03：#1317 存量文档补登记（main 上已存在但从未登记 ⇒ D782 D2 全线红）----
-  - id: DOC-1311-2
-    type: devdoc
-    path: docs/founder/DEVDOC-门禁治理实施规格-v1-20261028.md
-    status: active
-    owner: CTO
-    note: "#1317 补登记：门禁治理体系 v2.0 实施规格（DEV DOC）"
-  # ---- CTO 2026-11-03：#1317 存量文档补登记（main 上已存在但从未登记 ⇒ D782 D2 全线红）----
-  - id: DOC-1311-3
-    type: status
-    path: docs/founder/Gitea实测核对报告-20261027.md
-    status: active
-    owner: CTO
-    note: "#1317 补登记：Gitea 实测核对报告（逐模块对回真实代码，非官方验收）"
-  # ---- CTO 2026-11-03：#1317 存量文档补登记（main 上已存在但从未登记 ⇒ D782 D2 全线红）----
-  - id: DOC-1311-4
-    type: navigation
-    path: docs/founder/代码架构人话地图.md
-    status: active
-    owner: CTO
-    note: "#1317 补登记：代码架构人话地图 v2（给创始人的软件平面图；修正 L1–L5 与架构层混淆）"
