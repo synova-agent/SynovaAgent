@@ -4,6 +4,8 @@ writeset:
   - scripts/control-tower/check-gate-protection.sh
   - scripts/control-tower/check-ownership.py
   - scripts/pre-commit-check.sh
+  - scripts/control-tower/ct-test-gate.sh
+  - tests/control-tower/.ct40-baseline
   - docs/authority/GATE-STANDARD.md
   - gate-exemptions/2026-11-02-1299-d734-revision.md
   - memory/notes/proposed/2026-11-02-1299-d734-revision.md
