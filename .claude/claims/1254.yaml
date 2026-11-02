@@ -1,0 +1,15 @@
+writeset:
+  - scripts/control-tower/check-ledger-budget.sh
+  - tests/control-tower/check-ledger-budget.test.sh
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-11-01-1254-ledger-budget.md
+  - memory/notes/proposed/2026-11-01-1254-ledger-budget.md
+  - .claude/claims/1254.yaml
+done:
+  - verify: bash tests/control-tower/check-ledger-budget.test.sh
+  - verify: bash scripts/control-tower/check-ledger-budget.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check --root .
+note: "#1254 T4：台账（GATE-INVENTORY）三判据机检——行数 3087/800、跨段重复 158 键、measured_at 重锚至 4c50e4574；新增 check-ledger-budget.sh（0/1/2 三态＋--advisory/--json）与配对测试 15/0；新件按规矩三处入册（classification/run_by 无/run_by_candidates）并 --regen 重放 gate_meta（rows=126）。只出数不接线（接线＝W5 出口判据）。"

@@ -169,13 +169,16 @@ describe('D500 session event log — appendEvent + deriveMessages', () => {
     expect(localStore.lastDegraded).toBe(true);
 
     // 重建表（#964：夹具须与当前 schema 同形，含 format_version 列）
+    // #1257 P0-2a：同形补齐 —— CHECK 加 tool_call、新增 source_event_seq 列
+    //（缺列 ⇒ 写路径 INSERT 会失败 ⇒ 本用例的"恢复写入"变成假降级，故必须同批补）
     db.exec(`CREATE TABLE IF NOT EXISTS session_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
       seq INTEGER NOT NULL,
-      event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','system')),
+      event_type TEXT NOT NULL CHECK(event_type IN ('message','tool_result','tool_call','system')),
       payload_json TEXT NOT NULL,
       format_version INTEGER NOT NULL DEFAULT 1,
+      source_event_seq INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(session_id, seq)
     );`);
@@ -313,7 +316,7 @@ describe('D487 重建迁移（K3 P1 闭合）— 旧库 CHECK 约束升级', () 
 // #964 Q-7（裁 395）: 事件词表 fail-closed + 行格式版本 format_version
 //
 // 存量基线（**只登记，不全量改**）:
-//   · 词表 v1 = SESSION_EVENT_TYPES 六类（本文件「词表冻结」用例；新增/删减 ⇒ 必红）
+//   · 词表 v2 = SESSION_EVENT_TYPES 七类（#1257 加 tool_call；「词表冻结」用例；新增/删减 ⇒ 必红）
 //   · 隐藏载荷子词表 kind='llm_retry'（src/llm/retry-middleware.ts）
 //   · 生产写入点 3 处（src/store/session-store.ts addMessage / src/agent/diagnosis-launcher.ts /
 //     src/llm/retry-middleware.ts）—— 只加守卫，不改写入形状
@@ -321,16 +324,19 @@ describe('D487 重建迁移（K3 P1 闭合）— 旧库 CHECK 约束升级', () 
 // ═══════════════════════════════════════════════════════════════════
 
 describe('#964 事件词表 fail-closed', () => {
-  it('词表冻结 v1：六类逐字一致（新增/删减类目 ⇒ 本断言先红，逼一次显式格式版本 bump）', () => {
+  it('词表冻结 v2：七类逐字一致（新增/删减类目 ⇒ 本断言先红，逼一次显式格式版本 bump）', () => {
+    // #1257 P0-2a：v1（六类）→ v2（+ tool_call）。本用例是**冻结清单**：改词表必须同批改这里
+    // 并 bump SESSION_EVENT_FORMAT_VERSION（旧构建读新行 ⇒ EVENT_FORMAT_TOO_NEW，fail-closed）。
     expect(SESSION_EVENT_TYPES).toEqual([
       'message',
       'tool_result',
+      'tool_call',
       'system',
       'diagnosis_phase',
       'diagnosis_module',
       'diagnosis_report',
     ]);
-    expect(SESSION_EVENT_FORMAT_VERSION).toBe(1);
+    expect(SESSION_EVENT_FORMAT_VERSION).toBe(2);
   });
 
   it('未知 eventType ⇒ 抛 SessionEventError(UNKNOWN_EVENT_TYPE)，不落库、不返回 degraded', () => {

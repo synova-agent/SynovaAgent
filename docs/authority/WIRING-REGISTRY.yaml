@@ -419,3 +419,12 @@ entries:
     status: declared-only
     owner: P4
     notes: "G-DOC-2 生效性校验器（#1238 W0-1）：解析 docs/authority/DOC-STANDARD.md 的 G-DOC-1..6 规则行与内嵌 MAP 行做双向对齐，缺实现或缺调用点 ⇒ exit 1 逐条点名。本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 登记（接线另批；接前先核 GATE-STANDARD §七 pre-commit <=90 s 墙钟预算）。"
+  # ---- P4 2026-11-01：#1254 T4 台账三判据机检（declared-only 显式豁免 R1.2）----
+  - capability: gate.ledgerBudget
+    defined_at: "scripts/control-tower/check-ledger-budget.sh:1"
+    provider: "scripts/control-tower/check-ledger-budget.sh:1"
+    consumer: null
+    test: "tests/control-tower/check-ledger-budget.test.sh:1"
+    status: declared-only
+    owner: P4
+    notes: "台账三判据机检（#1254 T4）：行数 <=800／跨段无重复／measured_at=当前基准，三态 0/1/2 ＋ --advisory/--json。本批**只出数不接线**（接线＝W5 出口判据：先做台账 <=800 与去重，否则接上即恒红）⇒ 无生产调用点，按 declared-only 登记。"
