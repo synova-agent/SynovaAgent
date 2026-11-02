@@ -17,3 +17,8 @@
   （本地只报数、CI(SYNO_CI=1)/STRICT 判红）；`--print-baseline` 跳过。
 - 证据：放回 `extensions/adapters/feishu/adapter.ts` ⇒ 本地 `新增 1`（rc=0，按 local 契约）；
   `SYNO_CI=1` ⇒ **CC0 NEW=1 / `CONTENT-COUPLING: VIOLATION new=1` / rc=1**；常态 ⇒ 新增 0/rc=0。
+
+## 加固：覆盖 TS 家族＋扫描失败 fail-closed
+- `find` 改为 `-iname '*.ts' -o '*.tsx' -o '*.mts' -o '*.cts'`（大小写不敏感），避免用 `.tsx` 绕过。
+- `find` 失败 ⇒ `CONTENT-COUPLING: DEGRADED …` + exit 2（不当作通过）。
+- 证据：放回 `impl.tsx` ⇒ CI-strict `CC0 NEW=1 / rc=1`；常态 `新增 0/rc=0`。

@@ -135,7 +135,11 @@ esac
 #   本守卫把「adapters 不得含 .ts 实现」变成常驻不变式：本地只报数（沿用本门禁 local 契约），
 #   CI(SYNO_CI=1)/STRICT 判红；`--print-baseline` 时跳过（基线打印不受影响）。
 if [ -d "$EXT/adapters" ] && [ "${1:-}" != "--print-baseline" ]; then
-  ADAPTER_TS_LIST="$(find "$EXT/adapters" -type f -name '*.ts' | sort)"
+  #   覆盖 TS 家族（.ts/.tsx/.mts/.cts，大小写不敏感）；find 失败 ⇒ DEGRADED exit 2（fail-closed）。
+  if ! ADAPTER_TS_LIST="$(find "$EXT/adapters" -type f \( -iname '*.ts' -o -iname '*.tsx' -o -iname '*.mts' -o -iname '*.cts' \) | sort)"; then
+    echo "CONTENT-COUPLING: DEGRADED adapters 守卫扫描失败（fail-closed，不当作通过）"
+    exit 2
+  fi
   if [ -n "$ADAPTER_TS_LIST" ]; then
     ADAPTER_TS_N="$(printf '%s\n' "$ADAPTER_TS_LIST" | grep -c .)"
     echo "CC0 NEW extensions/adapters 下存在 .ts 实现文件（#466 裁定 (a)：内容面禁引擎码）："
