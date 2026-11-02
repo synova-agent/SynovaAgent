@@ -12,10 +12,26 @@
 schema_version: 1
 
 ratchet:
-  max_entries: 1
+  max_entries: 2
 
 entries:
   - path: tests/control-tower/precommit-groups-injection.test.sh
     rule: R3.3
     reason: 该夹具用 heredoc 故意生成恒真断言作为"组4 配对测试"注入样本，属测试夹具内容而非代码空壳断言
     ruling: 裁 421
+  # #1257（S1.5 P0）：本批仅改该文件 :28 的 `SessionStoreLike.appendEvent` 内联联合（+`'tool_call'` 1 行，
+  # 因该类型是 type 别名不可合并、engine-context.ts:59 用它 ⇒ 否则 TS2345）。R4.2 命中 :72 的
+  # `const teamId = this.ctx.orgId || 'default'` 是**文件创建时即存在**的存量行（edf871d4b），
+  # 本批零改动；闸「只扫变更文件内的字面」⇒ 整文件入视野把存量行一并扫中（本闸已登记已知限制 4）。
+  # 属本闸为 R4.2 设计的豁免通道用法；不改存量行为、不改 #910 基线。CTO 裁定见 PR #1265 对话。
+  #
+  # ⚠️ 已知缺陷登记（#1257 实测定，建议另立卡修）：本文件由 check-quality-delta.py 的**手写行解析器**
+  #    （parse_whitelist）读取，其正则为 `^\s*-\s+(path|rule|reason|ruling)\s*:` ⇒ **只有以 `- key:` 开头的行
+  #    才会被捕获**；标准 YAML 的「`- path:` 后缩进键」写法里 rule/reason/ruling **全部读不到**
+  #    ⇒ 上方 R3.3 那条既有条目因此恒不生效（rule 为空串，永不匹配）。
+  #    本条按解析器可识别的形态书写（每字段独立 `- key:` 行）以确保**真正生效**；未改既有条目形态
+  #    （避免顺带改变 R3.3 的存量语义）。正确修法是修 parse_whitelist 并补一条白名单匹配用例。
+  - path: src/agent/diagnosis-launcher.ts
+  - rule: R4.2
+  - reason: 命中的 :72 是文件创建时的存量行，本批只加内联联合 1 行且未触该行；闸扫变更文件整文件所致
+  - ruling: '#1257'

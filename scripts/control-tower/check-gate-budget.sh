@@ -27,7 +27,9 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #           code ∈ {E_USAGE, E_NO_PYTHON, E_NO_DATA, E_CMD_FAILED, E_TIMER, E_INTERNAL}
 #   @authority 授权（explicit authority）: 任何本地会话 / CI job / 人工复核均可调用；
 #           只读仓内事实（唯一落盘 = 降级日志，位于 ignored 的 .codex/ 下）；
-#           **不接 pre-commit 主路径**（卡 #1210 判据 7；接线由后续 W6/A3 卡决定）。
+#           **已接 pre-commit 主路径**（#1255-T3 / W6 接线，2026-11-01）：pre-commit-check.sh 在
+#           结果段落盘 `wall_ms=<n>` 后调用本件 `--log`，**只告警不阻断**（超标不改变提交结果；
+#           数值与判定唯一来源仍是本件 0/1/2 三态）。接线前状态见卡 #1210 判据 7 历史。
 #
 # 已复用的既有约定（禁重复实现）:
 #   D1 三态退出码 0/1/2（scripts/control-tower/AGENTS.md）
