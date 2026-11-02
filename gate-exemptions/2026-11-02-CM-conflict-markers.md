@@ -7,6 +7,6 @@
 - tests/control-tower/check-conflict-markers.test.sh — 配对测试 20 例，含改坏必红 — #1287
 - scripts/pre-commit-check.sh — 组 1 追加硬阻断调用（判据：命中即拒提交） — #1287
 - docs/authority/GATE-INVENTORY.yaml — 三处入册（classification P1／run_by pre-commit quota／gate_meta --regen） — #1287
-- docs/authority/DOCS-REGISTRY.yaml — 补 DOC 登记行 — #1287
+- docs/authority/DOCS-REGISTRY.yaml — 为本批豁免件补 DOC-1287 登记行以闭合登记门禁 — #1287
 - docs/authority/WIRING-REGISTRY.yaml — 补 capability 接线登记（consumer=pre-commit 组 1） — #1287
 - gate-exemptions/2026-11-02-CM-conflict-markers.md — 本豁免件自身属受保护目录变更故随批自覆盖 — #1287
