@@ -6,6 +6,7 @@
   "platform": "nemoclaw",
   "displayName": "NemoClaw 连接器",
   "description": "MCP-based 连接器。Stub 实现，待后续填充。",
-  "entryPoint": "./adapter.ts",
-  "exportKey": "nemoclawAdapter"
+  "entryPoint": "./manifest.json",
+  "exportKey": "nemoclawAdapter",
+  "entryPointNote": "实现已随 K12-17 / #466 死码清理移除（adapter-loader 只读 manifest；真消费者由 #466 决定）。"
 }

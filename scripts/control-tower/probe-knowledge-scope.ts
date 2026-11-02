@@ -210,7 +210,7 @@ const SELFCHECK_TIMEOUT_MS = 180_000;
 const V_ITEMS: ReadonlyArray<{ id: string; text: string }> = [
   { id: 'V1', text: '文件派生岗位集 == 实物 {finance,hr,sales}（集合相等），且每岗位 scopes[] 非空' },
   { id: 'V2', text: '两岗位同一 query 穿真路由 POST /api/knowledge/search ⇒ 返回 id 集合不同' },
-  { id: 'V3', text: '改临时内容根里 finance 的 scopes ⇒ finance 结果变、hr 不变，且仓库 git status --porcelain 无新增' },
+  { id: 'V3', text: '改临时内容根里 finance 的 scopes ⇒ 审批失效 ⇒ 该岗位全拒（fail-closed）、hr 不变，且仓库 git status --porcelain 无新增' },
   { id: 'V4', text: '可对账：两岗位结果 id 回临时库 SELECT source_id 反查 ⇒ 同一事实指向同一源行' },
   { id: 'V5', text: '判别力自检：拔岗位 scope 文件 ⇒ 自身 exit 2；scopes 改空 ⇒ 自身 exit 1' },
   { id: 'V6', text: 'deny 两段式：(i) 真 provider 条件集含 deny 派生的 NOT_EQ 逐 id；(ii) 临时根构造 scopes 与 deny 同 id 重叠 ⇒ 排除只能来自 deny' },
@@ -956,44 +956,29 @@ async function checkFileDrivesBehaviour(
       cannotJudge(out, 'V3', `${subject.role} 改文件后检索不可用（HTTP 非 200）`);
       return;
     }
-    const vanished = subject.before.ids.filter((id) => !subjectAfter.ids.includes(id));
-    const appeared = subjectAfter.ids.filter((id) => !subject.before.ids.includes(id));
-    if (vanished.length === 0) {
-      out.fail(
-        `V3 改 ${subject.role} 的 scopes（去掉 ${targetScope}）后结果集**未变**（${String(subject.before.ids.length)} → ${String(subjectAfter.ids.length)}）⇒ 生产链没读内容文件`,
-        'L2',
-      );
-      return;
-    }
-    const vanishedSources = vanished.map((id) => behaviour.sourceRows.get(id) ?? '(反查不到)');
-    const sourcesMatch = vanishedSources.every((sourceId) => sourceId.endsWith(targetScope));
-    if (sourcesMatch) {
-      out.pass(
-        `V3 行为跟着内容文件走: ${subject.role} 少了 ${String(vanished.length)} 条，且消失项 source_id 正属被去掉的 scope「${targetScope}」`,
-        'L2',
-      );
-    } else {
-      out.fail(
-        `V3 结果变化与内容改写**不对应**: 去掉「${targetScope}」却消失了 ${vanishedSources.join(',')} ⇒ 差异不是由 knowledge-scope.yaml 决定`,
-        'L2',
-      );
-      return;
-    }
-    if (appeared.length > 0) {
-      out.fail(`V3 改文件后 ${subject.role} 出现新命中 ${appeared.join(',')}（去掉 scope 不该新增命中）`, 'L1');
-    }
     if (controlAfter === null) {
       cannotJudge(out, 'V3', `${control.role} 改文件后检索不可用（HTTP 非 200）`);
       return;
     }
+    // #188 / 审批感知 V3（本原型验证）：改内容件 ⇒ contentHash 变 ⇒ 审批失效 ⇒ fail-closed 全拒。
+    //   （出厂角色审批只认代码锚；记录被忽略 ⇒ 这是产品正确行为，不是"没读文件"。）
+    const deniedAll = subject.before.ids.length > 0 && subjectAfter.ids.length === 0;
     const controlSame =
       control.before.ids.length === controlAfter.ids.length &&
       control.before.ids.every((id) => controlAfter.ids.includes(id));
-    if (controlSame) {
-      out.pass(`V3 对照岗位 ${control.role} 结果集不变（${String(controlAfter.ids.length)} 条）⇒ 差异只由该岗位的 scope 文件决定`, 'L2');
+    if (deniedAll && controlSame) {
+      out.pass(
+        `V3 审批感知: 改 ${subject.role} 的 scope 文件 ⇒ 审批失效 ⇒ 该岗位全拒（${String(subject.before.ids.length)} → 0，fail-closed）；对照岗位 ${control.role} 不变（${String(controlAfter.ids.length)} 条）`,
+        'L2',
+      );
+    } else if (!deniedAll) {
+      out.fail(
+        `V3 改文件后 ${subject.role} 未全拒（${String(subject.before.ids.length)} → ${String(subjectAfter.ids.length)}）⇒ 审批门/内容根未失效，fail-open 风险`,
+        'L2',
+      );
     } else {
       out.fail(
-        `V3 对照岗位 ${control.role} 结果集也变了（${String(control.before.ids.length)} → ${String(controlAfter.ids.length)}）⇒ 差异来源不止内容文件`,
+        `V3 对照岗位 ${control.role} 结果集也变了（${String(control.before.ids.length)} → ${String(controlAfter.ids.length)}）⇒ 差异来源不止该岗位内容文件`,
         'L1',
       );
     }

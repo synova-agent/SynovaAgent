@@ -1,1 +1,13 @@
-{"$schema":"https://synova.dev/schemas/extension-manifest-v1.json","name":"email","version":"1.0.0","type":"notification","channel":"email","displayName":"邮件通知适配器","description":"通过 SMTP 发送诊断行动项通知。","entryPoint":"./adapter.ts","exportKey":"emailNotificationAdapter"}
+{
+  "$schema": "https://synova.dev/schemas/extension-manifest-v1.json",
+  "name": "email",
+  "version": "1.0.0",
+  "type": "notification",
+  "channel": "email",
+  "displayName": "邮件通知适配器",
+  "description": "通过 SMTP 发送诊断行动项通知。",
+  "entryPoint": "./manifest.json",
+  "exportKey": "emailNotificationAdapter",
+  "loaderRef": "src/notifications/email-adapter.ts",
+  "entryPointNote": "实现归宿主 src/notifications/<channel>-adapter.ts（K12-17 归位）；本字段只作客户自带实现的兼容位，真源=content-registry。"
+}

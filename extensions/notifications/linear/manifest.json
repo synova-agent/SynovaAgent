@@ -6,12 +6,21 @@
   "channel": "linear",
   "displayName": "Linear 通知适配器",
   "description": "将诊断行动项创建为 Linear Issue（GraphQL API）。",
-  "entryPoint": "./adapter.ts",
+  "entryPoint": "./manifest.json",
   "exportKey": "linearNotificationAdapter",
   "config": {
     "credentialSchema": {
-      "LINEAR_API_KEY": { "type": "string", "required": true, "sensitive": true },
-      "LINEAR_TEAM_ID": { "type": "string", "required": true }
+      "LINEAR_API_KEY": {
+        "type": "string",
+        "required": true,
+        "sensitive": true
+      },
+      "LINEAR_TEAM_ID": {
+        "type": "string",
+        "required": true
+      }
     }
-  }
+  },
+  "loaderRef": "src/notifications/linear-adapter.ts",
+  "entryPointNote": "实现归宿主 src/notifications/<channel>-adapter.ts（K12-17 归位）；本字段只作客户自带实现的兼容位，真源=content-registry。"
 }
