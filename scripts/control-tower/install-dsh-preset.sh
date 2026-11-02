@@ -340,8 +340,22 @@ def do_install(bundle_src, profile_dir, retired, legacy_home, ids):
             bundles.append(decl)
             decl_state = "新增"
             changed = True
+        # #1311 修：**dependencies 必须同时登记**（preset-authoring「落盘机制」第 2 条：
+        #   两处都登记 = dependencies[包名] ＋ dsh.profile.bundles）。只写 bundles 的后果：
+        #   profile 重装/prune 时该包被当"多余"清掉 ⇒ 选择器里消失，且**看不出原因**
+        #   （实测 2026-11-03：synova-coding 已 CONSISTENT，但 dependencies 缺，本函数只说"bundle 声明 既有"）。
+        # 值用 file: 绝对路径（与其余预设同形），指向仓库 bundle 源目录。
+        deps = prof.setdefault("dependencies", {})
+        dep_key = "@local/dsh-preset-%s" % pid
+        dep_val = "file:" + str(Path(bundle_src) / pid).replace("\\", "/")
+        if deps.get(dep_key) != dep_val:
+            deps[dep_key] = dep_val
+            changed = True
+            dep_state = "写入"
+        else:
+            dep_state = "既有"
         count += 1
-        print("INSTALLED: %s → %s（bundle 声明 %s）" % (pid, dst, decl_state))
+        print("INSTALLED: %s → %s（bundle 声明 %s，dependencies %s）" % (pid, dst, decl_state, dep_state))
     if changed:
         write_profile(prof_pkg, prof)
         print("INSTALLED: bundle 声明已更新 %s" % prof_pkg)

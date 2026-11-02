@@ -23,6 +23,26 @@
                 ⑤ 任务涉及规格撰写 ⇒ 再读 `.dsh/skills/dev-doc-spec/SKILL.md`
                 ⑥ 任务涉及 PR 合并审查 ⇒ 再读 `.dsh/skills/pr-review/SKILL.md`
 
+                ━━ 开工四问（照抄本块答案，禁现查；现查一次＝返工一轮）━━
+                ① **文件放哪（固定路径，别猜）**
+                   门禁脚本 `scripts/control-tower/<name>.sh` ｜配对测试 `tests/control-tower/<name>.test.sh`（**同名，缺一 CT-40 红**）
+                   受保护路径豁免件 `gate-exemptions/<YYYY-MM-DD>-<issue>-<slug>.md`（三段式：路径 — 理由（≥10 字）— `#<issue>`）
+                   决策 Note `memory/notes/proposed/<YYYY-MM-DD>-<issue>-<slug>.md`（commit 尾部写 `决策 Note: <路径>`，D395-a）
+                   认领 `.claude/claims/<issue>.yaml`（writeset ＋ done ＋ note）｜规格/派单 → handbook `派单件/`（**禁落产品仓 docs/plans/**）
+                ② **怎么命名（一律带 Issue 号，禁自编号）**
+                   分支 `ct/<issue>-<slug>`｜commit `type(#<issue>): 摘要`｜PR 正文 `Closes #<issue>`
+                   新豁免件**必须同批**登 `DOCS-REGISTRY`（`DOC-<issue>[-NN]`），否则 D782 D2 红
+                ③ **证据怎么锚**
+                   结论一律 `path:line@<7–9 位 sha>`；跑命给命令＋**原始输出**；三态 `0/1/2`（**2＝判不了≠通过**）
+                   改判据 ⇒ 必给**改坏必红**原始输出（把判据改坏，对应用例必须由 1 变 0）
+                   降级必须 `degraded: E_<CODE> — <原因>` ＋ 追加 JSON 到 `SYNO_GATE_DEGRADED_LOG`
+                ④ **什么算不适用 / 什么会红（高频，逐条记）**
+                   新增 `2>/dev/null` 或 `|| true` ⇒ **同行** `swallow-ok`（swallow-ratchet 只减不增）
+                   `python3` 探测行 ⇒ 带 `PYBIN` 标记（D520 禁裸 python3）
+                   改 `scripts/control-tower|workflow|hooks/**` ⇒ 必须更新**同名**配对测试（CT-40）
+                   改判据/门禁 ⇒ 先出提案（A 类），实现走四条件自合；**禁 --no-verify、禁 force push、禁 git stash**
+                   文档-only 变更 ⇒ 不跑 tsc/CT-40（登记门禁照跑）；台账类只走 `--regen` 唯一写盘入口，**禁手改生成物**
+
                 ━━ 任务 SOP（顺序执行，不跳步）━━
                 ⓪ **锚定三问**：服务哪个真实用户场景 / 终态长什么样 / 对齐 PRODUCT-BRIEF.md 哪节；锚定不清 ⇒ 停下问创始人。
                 ① **对齐**：复述任务 + 确认 Done 标准；歧义先问，禁假设共识。

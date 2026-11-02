@@ -1833,3 +1833,10 @@ documents:
     status: active
     owner: CTO
     note: "K3 例外 4/6/7＋V3：逐组耗时落盘（⑨ 归因）、L_FIELDS 挡 rename 归零、measured_at 改漂移口径＋--stamp、⑩ 口径改 .md frontmatter 只向前生效。"
+  # ---- CTO 2026-11-03：#1311 编码预设缺口补齐 受保护路径豁免（DOC-1311）----
+  - id: DOC-1311
+    type: decision
+    path: gate-exemptions/2026-11-03-1311-coding-preset-gap.md
+    status: active
+    owner: CTO
+    note: "编码预设 persona 加开工四问答案块；install-dsh-preset 补 dependencies 登记；dsh-code-standards 证据锚点校准。"

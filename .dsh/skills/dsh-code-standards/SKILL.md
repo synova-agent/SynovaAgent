@@ -14,12 +14,15 @@ whenToUse: 写代码/脚本/测试、新建 compute 或模块、代码质量审�
 README 骨架（`dsh-tool-bash/README.md:10,14,26,72,108,201`）：Summary｜Use this package（**What can go wrong**←先讲失败）｜Understand（**Design philosophy**＝一个分离＋N 条承诺／**Source map**＝File→Role 表）｜Model Experience｜**Known Limitations**←🔴必须写"做不到什么"｜Dev Note
 
 ## B. 八项代码标准（带 file:line）
-B1 **typed error 带 `code`**，禁裸 `throw new Error`/`raise Exception` — `dsh-experimental-agent-team/lib/index.js:13-18`
-B2 **config 用 schema 校验**（schemastery/zod），不是裸 JSON — 同上 `:1`、`:9`
-B3 **invariant companion**：不变式独立成件 — 每包带 `lib/invariant.js`
-B4 **bounds fail loud**：越限报 typed error，绝不静默复用/降级 — `dsh-tool-bash/README.md:108`
-B5 **explicit authority**：每个入口写明"谁能调" — `README:107`（只有 Lead 能 spawn/reassign）
-B6 **JSDoc 全公开方法**（`@param`/`@returns`）— `dsh-tool-bash/lib/index.js:19-23`
+> ⚠️ **锚点基准（2026-11-03 实测校准）**：以下 `packages/...` 路径以 **dsh-ref v0.2.1-rc.2 @ 687f282e** 为准。
+> 旧锚点 `dsh-*/lib/index.js` **已全部失效**（该版本源码为 `packages/<域>/<包>/src/*.ts`，无 `lib/`）。引用前先跑 §F 复核路径。
+
+B1 **typed error 带 `code`**，禁裸 `throw new Error`/`raise Exception` — `packages/experimental/agent-team/src/error.ts:7-12`（`TeamError extends HarnessError`，`constructor(message, code, options)`）
+B2 **config 用 schema 校验**（schemastery/zod），不是裸 JSON — `packages/experimental/agent-team/src/index.ts:60-62`（`z.number().step(1).min(1).default(...)`）
+B3 **invariant companion**：不变式/错误类型独立成件 — `packages/experimental/agent-team/src/error.ts`（不进主入口）。⚠️ 旧锚点 `dsh-invariants` 包**已在 v0.2.0-rc.2 移除**（迁移指南：`docs/upgrade-guide/v0.2.0-rc.2/remove-runtime-invariants/`）
+B4 **bounds fail loud**：越限报 typed error，绝不静默复用/降级 — `packages/experimental/agent-team/src/index.ts:235`（超 `maxMessageBytes` → `TEAM_MESSAGE_TOO_LARGE`）
+B5 **explicit authority**：每个入口写明"谁能调" — `dsh-tool-bash/README.md:107`（只有 Lead 能 spawn/reassign）+ `:201` Known Limitations
+B6 **JSDoc 全公开方法**（`@param`/`@returns`）— `packages/shell/tool-bash/src/background.ts:17-18`；`@returns` 例：`packages/experimental/agent-team/src/error.ts:14-18`
 B7 **design philosophy 一句可诵**：一个分离＋N 条承诺 — `README:103→105-108`
 B8 **测试与实现配对**（含三态＋改坏必红）— CT-40：`<name>.sh|py` ↔ `<name>.test.sh`（`tests/control-tower/`）
 
@@ -56,20 +59,30 @@ D4 **判别力自检**：必须能证明"改坏确实红" — `check-gate-integr
 
 ## F. 决策镜头六原则（并入 dsh-decision-lens；引用必须给 file:line）
 > 创始人 2026-09-20：「决策用 DSH 的思维」＋「六条原则＝决策纪律」。**引用必须读 DSH 源码，不得凭印象**。
-1 **上限即纪律** — `dsh-experimental-agent-team/lib/index.js:564`/`:1327` 超限抛错 ⇒ 在飞必须有**显式上限**；超限先**退役**（关闭/合并/拒绝），不许堆积。
-2 **归属自有＋可归因** — `dsh-invariants/lib/index.js:6-19`（`InvariantError{code, packageName}`）⇒ 机制由被守护对象声明；在飞件有主人，失败带机器可读代码＋归属。
-3 **只做协调不干活** — `dsh-tool-workflow/lib/index.js:106`（agents do the work）⇒ 编排只管上限/并发/取消，执行一律派出。
-4 **机械与业务语义分离** — `dsh-output-retention/lib/types/index.js` 头注 ⇒ 队列健康＝纯机械派生指标（age/behind/CI/主人），不把"卡住"与"被绕过"揉进一个数字。
-5 **诊断不污染主路径** — 同上（invariant 不进主入口；retention 是库）⇒ 检查/协调走旁路，只有"不拦就真出事"才进主路径门禁。
+1 **上限即纪律** — `packages/experimental/agent-team/src/index.ts:42-44`（`DEFAULT_MAX_MEMBERS=16`／`MAX_TASKS=256`／`MAX_MESSAGE_BYTES=65_536`）＋`:50`（非正整数配置 → `TEAM_INVALID_CONFIG`）＋`:235`（超限抛错）⇒ 在飞必须有**显式上限**；超限先**退役**（关闭/合并/拒绝），不许堆积。⚠️ 上限值随版本变（本基准为 16，**不是**旧稿所记 4）。
+2 **归属自有＋可归因** — `packages/experimental/agent-team/src/error.ts:7-12`（`TeamError extends HarnessError`，失败带机器可读 `code`）⇒ 机制由被守护对象声明；在飞件有主人，失败带代码＋归属。⚠️ 旧锚点 `dsh-invariants` 已于 v0.2.0-rc.2 移除。
+3 **只做协调不干活** — `packages/workflow/tool-workflow/src/index.ts:166`（"the agents do the work"，脚本无 fs/network/timer/Node.js API）⇒ 编排只管上限/并发/取消，执行一律派出。
+4 **机械与业务语义分离** — `packages/util/output-retention/src/index.ts:7-9`（库只管 mechanical question"留了什么/省了什么"，业务语义归工具包）⇒ 队列健康＝纯机械派生指标（age/behind/CI/主人），不把"卡住"与"被绕过"揉进一个数字。
+5 **诊断不污染主路径** — 同上（`error.ts` 不进主入口；retention 是库）⇒ 检查/协调走旁路，只有"不拦就真出事"才进主路径门禁。
 6 **权威账本在 Lead** — agent-team `authoritative Lead-log owner`＋advisory write scopes ⇒ 写集是提示，权威记录在队长/CTO。
 **决策四步**：① 先量不先加机制（队列/behind/age/CI/在飞）② 先修瓶颈再加负载 ③ 超限即退役（给关闭理由，不留悬案）④ 旁路落地（优先派生指标/旁路检查）。
 **复核路径（引用前先跑）**：
+> ⚠️ **2026-11-03 校准**：下列命令中的 `lib/*.js` 路径**在 v0.2.1-rc.2 已不存在**，旧命令会全部空输出。
+> 包目录也从 `node_modules/@deepseek-ai/dsh-*` 扁平布局改为 **`packages/<域>/<包>/`** 分域布局。
+
 ```bash
-D="<DSH 安装>/node_modules/@deepseek-ai"
-sed -n '560,570p;1320,1330p' "$D/dsh-experimental-agent-team/lib/index.js"   # 上限
-sed -n '1,25p' "$D/dsh-invariants/lib/index.js"                              # 归因
-sed -n '100,110p' "$D/dsh-tool-workflow/lib/index.js"                        # 只协调
-sed -n '1,25p' "$D/dsh-output-retention/lib/types/index.js"                  # 机械 vs 语义
+D="<DSH 源码根>/packages"        # 本机实测基准：/d/dsh-ref/packages（v0.2.1-rc.2 @ 687f282e）
+sed -n '42,50p;230,240p' "$D/experimental/agent-team/src/index.ts"   # 上限（默认值 + 超限抛错）
+sed -n '1,20p'  "$D/experimental/agent-team/src/error.ts"            # 归因（TeamError 带 code）
+sed -n '160,170p' "$D/workflow/tool-workflow/src/index.ts"           # 只协调（agents do the work）
+sed -n '1,12p'  "$D/util/output-retention/src/index.ts"              # 机械 vs 语义
+```
+**自检（引用前必跑，任一为空即锚点失效，不得引用）**：
+```bash
+for f in experimental/agent-team/src/index.ts experimental/agent-team/src/error.ts \
+         workflow/tool-workflow/src/index.ts util/output-retention/src/index.ts; do
+  [ -s "/d/dsh-ref/packages/$f" ] && echo "OK  $f" || echo "DEAD $f"
+done
 ```
 **借鉴边界**：DSH 一能力一独立包、包间不共享文件 ⇒ advisory 写集够；我们单仓共享文件（`src/**`、`scripts/**`）⇒ **必须文件级互斥＋串行合并**。判据："两个 agent 同时改这个文件，坏不坏？"坏 ⇒ 物理互斥；不坏 ⇒ 照抄 advisory。
 **反模式**：❌ 用"再加一道门禁"回应某类错反复出现（先问是否队列/并发上限）❌ 多含义塞进一个指标（卡住＋被绕过＋质量差＝"健康分"）❌ 主路径承担诊断 ❌ 无界堆积 ❌ 引用 DSH 无 file:line（凭印象＝不算核查）。
