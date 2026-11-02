@@ -174,7 +174,14 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   #   判据: 未在本 PR 里的 untracked 文件不得阻断（untracked 已降为警告，见下）。
   TRUNK="${SYNO_TRUNK_REF:-main}"
   BASE_REF=""
-  for _cand in "gitea/$TRUNK" "$TRUNK" "origin/$TRUNK" origin/main main origin/HEAD; do
+  # #1311 修：**远端跟踪 ref 必须排在本地同名分支之前**。
+  #   实测（2026-11-03）：CI 工作区是长期复用的克隆，本地 `main` 从不更新（停在 6d52c15a），
+  #   而链序原本是 `gitea/main` → `main` → `origin/main` ⇒ 取到**陈旧本地 main** ⇒
+  #   merge-base 落在旧提交 ⇒ 源③ 把「main 早就有、只是本分支基线之前」的文档全算成"本 PR 新增"
+  #   ⇒ 任意 PR 都被 D782 D2 误判（实测：docs/assessment/DOC-GOVERNANCE-AUDIT-20261029.md）。
+  #   修法：先试远端跟踪（gitea/ → origin/），本地同名分支垫底；语义不变——仍然"以 trunk 为基线"，
+  #   只是不再被本地陈旧 ref 劫持。
+  for _cand in "gitea/$TRUNK" "origin/$TRUNK" "$TRUNK" origin/main main origin/HEAD; do
     if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_REF="$_cand"; break; fi
   done
   MERGE_BASE=""
