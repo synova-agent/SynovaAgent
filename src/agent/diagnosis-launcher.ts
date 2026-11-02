@@ -25,7 +25,8 @@ export type SessionStoreLike = {
   saveDiagnosisCheckpoint?: (cp: { sessionId: string; phase: number; completedModules: string[]; partialReport: unknown; savedAt: string }) => void;
   appendEvent?: (
     sessionId: string,
-    eventType: 'message' | 'tool_result' | 'system' | 'diagnosis_phase' | 'diagnosis_module' | 'diagnosis_report',
+    // 'tool_call' 与 session-store 的 SESSION_EVENT_TYPES 同步（#1257；转 type-only 需另裁）
+    eventType: 'message' | 'tool_result' | 'tool_call' | 'system' | 'diagnosis_phase' | 'diagnosis_module' | 'diagnosis_report',
     payload: unknown,
   ) => { ok: true; seq: number } | { ok: false; degraded: true; error: string };
 };

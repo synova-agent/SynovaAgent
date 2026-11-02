@@ -138,7 +138,7 @@ if grep -qE '^gate_meta:[[:space:]]*$' "$INV"; then
 fi
 
 OUT="$(ga_run "check-gate-inventory" -- "$PYBIN" - "$INV" "$ROOT" "$P0_FLOOR" "$JSON" "$GMFAIL" "$GMMSG" <<'PYEOF'
-import glob, json, os, re, sys
+import datetime, glob, json, os, re, sys
 inv_path, root, floor_s, json_mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
 gm_fail, gm_msg = (sys.argv[5] == "1"), (sys.argv[6] if len(sys.argv) > 6 else "")
 viol, ok = [], []
@@ -234,6 +234,21 @@ for e in entries:
         v("R2", "%s owner 为空" % eid)
     if not DATE.match(e.get("review_after", "")):
         v("R2", "%s review_after 非 YYYY-MM-DD: %r" % (eid, e.get("review_after")))
+    else:
+        # ── R7 到期回收（GATE-STANDARD §十 第 9 条 ／ W7）──────────────────
+        # 为什么需要: R2 只校**格式**，过期的 review_after 与"今天到期"在账上长得一模一样；
+        #   标准要求"过期未复核或未附负证据 ⇒ 机检转红并自动回滚为在用"。
+        # 判据: review_after < 今天 且 无 review_owner ⇒ 红（未复核）；有 owner ⇒ 视为已复核（放行）。
+        # 已知限制: 只认 `review_owner` 一种负证据字段；`negative_evidence`/`reviewed_at`
+        #   等别名不认（避免多口径）。要加别名须同步改本行与本文件头。
+        try:
+            _due = datetime.date(*[int(x) for x in e.get("review_after", "").split("-")])
+        except ValueError:
+            v("R7", "%s review_after 不是合法日历日期: %r" % (eid, e.get("review_after")))
+        else:
+            if _due < datetime.date.today() and not e.get("review_owner", "").strip():
+                v("R7", "%s 已过期(%s)且无 review_owner／负证据 ⇒ 按标准 §十 转红并回滚为在用"
+                  % (eid, e.get("review_after")))
     if not ep:
         v("R2", "%s entrypoint 为空" % eid)
     elif not os.path.isfile(os.path.join(root, ep)):
