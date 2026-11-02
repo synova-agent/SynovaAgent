@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1312.yaml
+  - scripts/control-tower/resolve-ci-base.sh
+  - tests/control-tower/resolve-ci-base.test.sh
+  - gate-exemptions/2026-11-02-1312-resolver-local-stale.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-11-02-1312-resolver-local-stale.md
+done:
+  - verify: "bash tests/control-tower/resolve-ci-base.test.sh   # 24/24；改坏(本地优先) ⇒ T13/T14 红"
+note: "#1312 多远端时本地分支不作对账基（worktree 天然陈旧）；sha 逃生缝不变。"

@@ -98,11 +98,23 @@ if [ "$BARE" -eq 1 ]; then
     BASE="origin/${BASE_IN}"
     log "无远端 ⇒ 缺省回退 ${BASE}"
   else
-    if resolvable "$BASE_IN"; then BASE="$BASE_IN"
-    elif resolvable "gitea/${BASE_IN}"; then BASE="gitea/${BASE_IN}"
-    elif resolvable "origin/${BASE_IN}"; then BASE="origin/${BASE_IN}"
-    else BASE="$BASE_IN"; fi
-    log "多远端（${N_REMOTES} 个）⇒ 不 fetch、不猜；归一化 = ${BASE}"
+    # 多远端（开发机）。#1311：本地分支**不可**作对账基——一任务一 worktree 的作业方式下，
+    # 新建 worktree 不会更新本地 main ⇒ 它天然陈旧 ⇒ main..HEAD 会混入他线已合提交。
+    if git show-ref --verify --quiet "refs/heads/${BASE_IN}"; then
+      if resolvable "gitea/${BASE_IN}"; then BASE="gitea/${BASE_IN}"
+      elif resolvable "origin/${BASE_IN}"; then BASE="origin/${BASE_IN}"
+      else
+        die "E_BAD_BASE: 多远端且 ${BASE_IN} 无远端跟踪 ref（gitea/origin）——本地分支不可作对账基（worktree 场景天然陈旧）；请 git fetch <remote>，或显式 SYNO_BASE_REF=<remote>/${BASE_IN}，或 SYNO_BASE_REF=<sha>"
+      fi
+      log "多远端（${N_REMOTES} 个）⇒ 本地分支 ${BASE_IN} 让位于远端跟踪 ${BASE}（不 fetch、不猜）"
+    else
+      # 非本地分支（sha/tag/其它 rev）：显式语义优先，原样使用
+      if resolvable "$BASE_IN"; then BASE="$BASE_IN"
+      elif resolvable "gitea/${BASE_IN}"; then BASE="gitea/${BASE_IN}"
+      elif resolvable "origin/${BASE_IN}"; then BASE="origin/${BASE_IN}"
+      else BASE="$BASE_IN"; fi
+      log "多远端（${N_REMOTES} 个）⇒ 不 fetch、不猜；归一化 = ${BASE}"
+    fi
   fi
 fi
 log "base 候选（归一化后）= ${BASE}"
