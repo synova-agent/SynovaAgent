@@ -76,7 +76,8 @@
 #      单元级实证（原判定代码 + 仅注入一行基线）：
 #        ① 与基线同体（OLD 目标）        → total=1 **new=0**
 #        ② 换成全新目标（NEW，同数）      → total=1 **new=0**   ← 新越界依赖被静默接受
-#      反向确认（计数上升时判据有效）：给已登记基线的 `extensions/adapters/feishu/adapter.ts` 追加 1 条 ⇒
+#      复活守卫（K12-ENG P0-1 / #466）：已删 adapters/notifications 实现**不再登记基线** ⇒
+#        放回原死码（如 `extensions/adapters/feishu/adapter.ts`）即计 CC1 NEW ⇒ CI-strict exit 1。
 #        正确报 `CC1 NEW …adapter.ts:33 '…' (值)` exit=1。
 #      ⇒ **本门禁当前只守"量"，守不住"体"**。接入 CI 前必须二选一：
 #        (a) 把**逐条 specifier 身份**纳入基线比较（基线体积会显著增大，需重定基线格式），或
