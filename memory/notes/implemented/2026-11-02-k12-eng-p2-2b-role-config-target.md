@@ -19,3 +19,7 @@
   - V2/V4/V5 均在 `mkdtemp` 临时副本上真跑引擎（`@synova/engine-auth`），仓库零写痕
 - **回滚**: 还原探针单文件＋删配对测试（无产品改动）。
 - **边界**: 不改引擎、不改角色包、不改生成器（P2-2a 单独 PR）。
+
+## CI 重触发（2026-11-02 21:30）
+- 首次新 head CI 红在**与本 PR 无关**的 `tests/expert-quality/layer2-judge`（LLM API 404）与 `gss-common` 期望值；判定为 CI 环境/主干波动，重触发一次。
+- 本提交无代码变更（仅本 Note）。
