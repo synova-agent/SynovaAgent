@@ -130,6 +130,25 @@ USAGE
     exit 2 ;;
 esac
 
+# ── CC0（#466 / K12-ENG P0-1）：adapters 目录**零 .ts** 常驻守卫 ────────────────
+#   删除类判据不能只做一次性快照：已删实现若被原样（或改写）放回，任何门禁都不红 ⇒ 死码回潮。
+#   本守卫把「adapters 不得含 .ts 实现」变成常驻不变式：本地只报数（沿用本门禁 local 契约），
+#   CI(SYNO_CI=1)/STRICT 判红；`--print-baseline` 时跳过（基线打印不受影响）。
+if [ -d "$EXT/adapters" ] && [ "${1:-}" != "--print-baseline" ]; then
+  ADAPTER_TS_LIST="$(find "$EXT/adapters" -type f -name '*.ts' | sort)"
+  if [ -n "$ADAPTER_TS_LIST" ]; then
+    ADAPTER_TS_N="$(printf '%s\n' "$ADAPTER_TS_LIST" | grep -c .)"
+    echo "CC0 NEW extensions/adapters 下存在 .ts 实现文件（#466 裁定 (a)：内容面禁引擎码）："
+    printf '%s\n' "$ADAPTER_TS_LIST" | sed 's/^/  /'
+    if [ "$MODE" = "ci" ] || [ "$MODE" = "strict" ]; then
+      echo "CONTENT-COUPLING: VIOLATION new=${ADAPTER_TS_N}"
+      exit 1
+    fi
+    echo "CONTENT-COUPLING: OK（新增 ${ADAPTER_TS_N}｜本地只报数，CI(SYNO_CI=1) 判红）"
+    exit 0
+  fi
+fi
+
 PY="$(command -v python3 || true)"
 if [ -z "$PY" ]; then
   echo "CONTENT-COUPLING: DEGRADED python3 不可用（CC1–CC4 无法判定；fail-closed，绝不当作通过）"

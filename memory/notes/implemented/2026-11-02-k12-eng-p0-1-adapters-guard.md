@@ -11,3 +11,9 @@
 - **证据**：放回 `extensions/adapters/feishu/adapter.ts`（原死码）⇒ `SYNO_CI=1` 下 CC1 NEW=1、RC=1；
   删除后 ⇒ RC=0、`CONTENT-COUPLING: OK（新增 0）`。
 - **回滚**：恢复被删的 6 行基线（单点段）＋删本豁免文件/登记。
+
+## 追加：字面「零 .ts 常驻守卫」（K3 建议原文）
+- 在 `check-content-coupling.sh` 的 bash 入口加 **CC0**：`extensions/adapters/**/*.ts` 存在即违规
+  （本地只报数、CI(SYNO_CI=1)/STRICT 判红）；`--print-baseline` 跳过。
+- 证据：放回 `extensions/adapters/feishu/adapter.ts` ⇒ 本地 `新增 1`（rc=0，按 local 契约）；
+  `SYNO_CI=1` ⇒ **CC0 NEW=1 / `CONTENT-COUPLING: VIOLATION new=1` / rc=1**；常态 ⇒ 新增 0/rc=0。
