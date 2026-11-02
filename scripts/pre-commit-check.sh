@@ -9,6 +9,16 @@
 # D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
+# ═══ #1255-T3（W6 接线）: pre-commit 墙钟预算计时起点 ═══
+# 判据源: GATE-STANDARD §七「pre-commit ≤90 s」＋ §十二 ⑨（墙钟 ≤90s 由 check-gate-budget.sh 出数）。
+# 只读取数不阻断：超预算在本层**只告警**（W6 出口判据写的是"破则告警"；是否转阻断由后续裁定），
+# 数值与判定一律来自 check-gate-budget.sh（0/1/2 三态），本处不另造一套算法。
+_now_ms() {
+  if command -v python3 >/dev/null 2>&1; then python3 -c 'import time;print(int(time.time()*1000))'
+  elif command -v python >/dev/null 2>&1; then python -c 'import time;print(int(time.time()*1000))'
+  else printf '%s000' "$(date +%s)"; fi
+}
+_GATE_T0_MS="$(_now_ms)"
 # ═══════════════════════════════════════════════════════════════════════════════
 # Loop Engineering V4.5.1 — pre-commit 12 组硬阻断 (全部 <10s) + 免疫系统
 # D515 / V5.0.0: 提交端硬阻断收敛到 4 道质量根（as any / 测试配对+expect / Secrets /
@@ -2416,13 +2426,43 @@ if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${SYNO_
     LADDER_OUT=$(cd "$ROOT" && npx tsx scripts/control-tower/probe-ladder.ts --all 2>&1)
   fi
   LADDER_EXIT=$?
-  if [ "$LADDER_EXIT" -eq 0 ]; then
-    printf '%s\n' "$LADDER_OUT" | grep -E '^RESULT=' | tail -1 | sed 's/^/  ℹ️  /'
+  LADDER_EVIDENCE="$(printf '%s\n' "$LADDER_OUT" | grep -E '^RESULT=|❌' | tail -3)"
+  # K3 P1-1（#1279）：exit≠0 无条件判红；且 exit=0 但无 RESULT= 证据行同样判红（禁"零证据=零违规"）。
+  if [ "$LADDER_EXIT" -eq 0 ] && printf '%s\n' "$LADDER_EVIDENCE" | grep -q '^RESULT='; then
+    printf '%s\n' "$LADDER_EVIDENCE" | sed 's/^/  ℹ️  /'
     soft_pass "K12 测量梯子 (K12-21)"
   else
-    hard_check "K12 测量梯子 (K12-21: exit=$LADDER_EXIT)" "$(printf '%s\n' "$LADDER_EXIT" >/dev/null; printf '%s\n' "$LADDER_OUT" | grep -E '❌|RESULT=' | tail -3)"
+    hard_check "K12 测量梯子 (K12-21: exit=$LADDER_EXIT)" "exit=$LADDER_EXIT；证据行: ${LADDER_EVIDENCE:-（无 ❌/RESULT= 输出——fail-closed）}"
   fi
 fi
+
+# ═══════════════════════════════════════════════════════════════════
+# #1255-T3: 墙钟预算（GATE-STANDARD §七 ≤90 s ／ §十二 ⑨）
+#   落盘 `wall_ms=<n>` → 交给 check-gate-budget.sh 判定（0/1/2 三态），本层**只告警不阻断**。
+#   为什么必须先落盘再判：check-gate-budget.sh 的契约是"读日志最后一条 wall_ms"，不在本脚本里另造算法。
+#   @authority: 本函数只由 pre-commit-check.sh 自身在**结果段**调用（两条出口：失败/通过各一次）；
+#     任何本地会话与 CI job 都会经过它；**只读计时 + 追加一行日志**，不改提交结果、不写仓库受版本管理文件
+#     （日志落在 ignored 的 .claude/ 下）。已知限制：计时不含 git hook 派发前的耗时（只量"脚本内"）。
+# ═══════════════════════════════════════════════════════════════════
+gate_budget_report() {
+  local now_ms elapsed log out rc
+  now_ms="$(_now_ms)"; elapsed=$(( now_ms - ${_GATE_T0_MS:-now_ms} ))
+  [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0   # swallow-ok: 非数字则按 0（只告警层，不影响提交结果）
+  log="${SYNO_GATE_BUDGET_LOG:-$ROOT/.claude/gate-budget.log}"
+  mkdir -p "$(dirname "$log")" 2>/dev/null || true   # swallow-ok: 日志目录建不了不阻断（只告警层）
+  printf 'wall_ms=%s  # pre-commit @ %s（#1255-T3 接线）\n' "$elapsed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$log" 2>/dev/null || true   # swallow-ok: 落盘失败不影响判定（--log 读取时会 E_NO_DATA 显式降级）
+  if [ ! -f "$ROOT/scripts/control-tower/check-gate-budget.sh" ]; then
+    echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（check-gate-budget.sh 缺失）—— 本次 wall_ms=${elapsed}${RESET}"
+    return 0
+  fi
+  out="$(bash "$ROOT/scripts/control-tower/check-gate-budget.sh" --log "$log" 2>&1)"; rc=$?
+  case "$rc" in
+    0) echo -e "  ${GREEN}⏱ 墙钟预算: $(printf '%s' "$out" | tr '\n' ' ')${RESET}" ;;
+    1) echo -e "  ${YELLOW}⏱ 墙钟预算: $(printf '%s' "$out" | tr '\n' ' ')（告警不阻断；标准 §七 目标 ≤90 s）${RESET}" ;;
+    *) echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（rc=${rc}）—— $(printf '%s' "$out" | tr '\n' ' ')${RESET}" ;;
+  esac
+  return 0
+}
 
 # ═══════════════════════════════════════════════════════════════════
 # 结果
@@ -2434,6 +2474,7 @@ if [ "$HARD_FAIL" -gt 0 ]; then
   [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::error title=IronLaws:提交已拒绝::${HARD_FAIL} 组未通过（详见上方 ❌ 行）"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
+  gate_budget_report
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   exit 1
@@ -2441,6 +2482,7 @@ else
   echo -e "  ${GREEN}✅ 全部 ${GROUP_DONE} 组通过${RESET}"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告 (不阻断)${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
+  gate_budget_report
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   exit 0

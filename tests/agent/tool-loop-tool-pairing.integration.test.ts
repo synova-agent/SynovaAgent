@@ -20,6 +20,13 @@
  * 证据落盘：docs/synova/product-lines/evidence/D819-capture-20260919.json
  *   afterAll 统一写（机器生成；剥离端口 / sessionId / 毫秒时间戳等易变面，两次运行 sha256 一致）
  *
+ * #1257 P0-2a（配对回归，本批追加）：executor 现在还会写 `tool_call`/`tool_result` 事件
+ * （`source_event_seq` 配对）。本文件断言**出站消息配对不退化**：每个请求的
+ * `assistant.tool_calls[].id` 序列必须与 `tool.tool_call_id` 序列逐位相等（证据文件里同源落盘）。
+ * 🔴 为什么不在此断言事件流：本用例的库是 `SYNOVA_DB_PATH=':memory:'`，SessionStore 实例在
+ *   createServer 内部、HTTP 层拿不到句柄 ⇒ 事件级配对由 tests/store/tool-call-pairing.test.ts（U-3）承载；
+ *   此处守"用户可见面"（模型收到的工具对话结构）不因写事件而回归。
+ *
  * 铁律 24/31/33/47/48；红线：不在 src/** 加测试专用分支，不改 D817 的 helper 与断言口径。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -553,6 +560,18 @@ describe('D819 工具接线（真实 createServer + 真实路由 + 假上游，�
       // 每场景必须写真实复算值（不是初始化的 0），与顶层同源
       expect(s.registered_tool_count).toBe(expectedToolCount);
     }
+    // #1257 P0-2a：配对回归 —— 证据里每个请求的 assistant.tool_calls[].id 与 tool.tool_call_id
+    // 必须逐位相等且 pairing_ok（写 tool_call/tool_result 事件后，出站结构不得退化）
+    let requestsChecked = 0;
+    for (const record of evidenceScenarios) {
+      expect(record.requests.length).toBeGreaterThan(0);
+      for (const request of record.requests) {
+        expect(request.pairing_ok).toBe(true);
+        expect(request.tool_message_ids).toEqual(request.assistant_tool_call_ids);
+        requestsChecked += 1;
+      }
+    }
+    expect(requestsChecked).toBeGreaterThanOrEqual(5); // 防"零请求也绿"（至少 A/B1/B2/C1×2/C2×4）
     expect(expectedToolCount).toBeGreaterThan(0);
     // 上游缝确实指向 127.0.0.1 假上游（配置缝生效，非真实 provider）
     expect(entryBaseUrl.startsWith('http://127.0.0.1:')).toBe(true);
