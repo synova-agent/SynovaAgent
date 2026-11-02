@@ -1927,8 +1927,8 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/check-integrity-startup.sh
       class: P2
-      run_by: 无
-      orphan: true
+      run_by: pre-commit
+      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical
