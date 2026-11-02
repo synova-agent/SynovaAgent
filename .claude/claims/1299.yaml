@@ -1,0 +1,16 @@
+writeset:
+  - scripts/control-tower/check-pr-budget.sh
+  - scripts/control-tower/bypass-ledger.sh
+  - scripts/control-tower/check-gate-protection.sh
+  - scripts/control-tower/check-ownership.py
+  - scripts/pre-commit-check.sh
+  - docs/authority/GATE-STANDARD.md
+  - gate-exemptions/2026-11-02-1299-d734-revision.md
+  - memory/notes/proposed/2026-11-02-1299-d734-revision.md
+  - .claude/claims/1299.yaml
+done:
+  - verify: bash scripts/control-tower/check-pr-budget.sh --files "a.sh" --base HEAD
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+  - verify: python3 scripts/control-tower/check-ownership.py scripts/control-tower/check-pr-budget.sh
+  - verify: bash -n scripts/pre-commit-check.sh
+note: "D734 判据改版（件数硬阻断→软提示／跨域→硬阻断／>12 件须分段计划表五列且合计=变更数）＋四项实证：⑩10b 全量vs基线并集、bypass-ledger 落点按 git-common-dir 共享、铁律47 裸词须同现 engine-core/packages、skills 双轨按提案卡+裁定号自动豁免；附带修 check-ownership.py 在 Windows 的 UTF-8 解码崩溃。"

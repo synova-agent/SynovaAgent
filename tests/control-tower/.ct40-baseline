@@ -1,0 +1,10 @@
+# CT-40 基线已知红（#1299 · A 类 · 创始人 2026-11-02 批）
+# 语义：命中本表的配对测试**跳过执行**（不跑、不阻断、只告警）；不在表内 = 新红 ⇒ 阻断。
+# 反绕过：只认精确测试名（不支持通配/路径）；新增条目须在 PR 正文附基线红的原始输出。
+# 依据（2026-11-02 干净 worktree d0ad5f5e9 实测，未含当批改动）：
+#   bypass-ledger     3 项红
+#   check-ownership   4 项红
+#   check-pr-budget   超时 rc=124（421s）＋2 项红
+bypass-ledger
+check-ownership
+check-pr-budget
