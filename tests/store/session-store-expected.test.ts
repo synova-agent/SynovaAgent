@@ -20,13 +20,21 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { SessionStore, SessionEventError } from '../../src/store/session-store';
+import { SessionStore, SessionEventError, SESSION_EVENT_FORMAT_VERSION, SESSION_EVENT_TYPES, SOURCE_EVENT_SEQ_KEY } from '../../src/store/session-store';
 
 interface ExpectedAsset {
   schema: string;
   module: string;
   issue: string;
   cases: {
+    toolCallVocabulary: { formatVersion: number; eventTypes: string[] };
+    sourceEventSeqLink: {
+      callId: string;
+      unclosedAfterCallOnly: string[];
+      unclosedAfterResult: string[];
+      resultSourceSeqEqualsCallSeq: boolean;
+      payloadJsonCarriesReservedKey: boolean;
+    };
     addMessageSuccess: { result: { ok: boolean; seq: number }; agentMessagesRows: number; sessionEventsRows: number };
     addMessageAppendDegraded: {
       result: { ok: boolean; degraded: boolean };
@@ -72,6 +80,47 @@ describe('R-E1 expected 资产：会话账本协议面（①g 义务）', () => 
     expect(asset.schema).toBe('synova-expected/v1');
     expect(asset.module).toBe('src/store/session-store.ts');
     expect(asset.issue).toBe('#1165');
+  });
+
+  it('toolCallVocabulary：#1257 词表含 tool_call、行格式版本 = 2（协议面冻结）', () => {
+    expect(SESSION_EVENT_FORMAT_VERSION).toBe(asset.cases.toolCallVocabulary.formatVersion);
+    expect([...SESSION_EVENT_TYPES]).toEqual(asset.cases.toolCallVocabulary.eventTypes);
+    expect(SESSION_EVENT_TYPES).toContain('tool_call');
+  });
+
+  it('sourceEventSeqLink：#1257 call/result 经 source_event_seq 列配对（列不是 payload 字段）', () => {
+    const call = store.appendEvent(sessionId, 'tool_call', {
+      toolCallId: asset.cases.sourceEventSeqLink.callId,
+      tool: 'query_ontology',
+      round: 1,
+    });
+    expect(call.ok).toBe(true);
+    const callSeq = call.ok ? call.seq : -1;
+    // 只有 call、没有 result ⇒ 未闭合查询恰为该 callId
+    expect(store.listUnclosedToolCalls(sessionId)).toEqual(asset.cases.sourceEventSeqLink.unclosedAfterCallOnly);
+
+    // result 经保留键传入来源 seq（appendEvent 签名保持 3 参；缝为原型级 3 参不可改）
+    const result = store.appendEvent(sessionId, 'tool_result', {
+      toolCallId: asset.cases.sourceEventSeqLink.callId,
+      name: 'query_ontology',
+      ok: true,
+      durationMs: 1,
+      [SOURCE_EVENT_SEQ_KEY]: callSeq,
+    });
+    expect(result.ok).toBe(true);
+
+    expect(store.listUnclosedToolCalls(sessionId)).toEqual(asset.cases.sourceEventSeqLink.unclosedAfterResult);
+
+    const row = db
+      .prepare("SELECT source_event_seq s, payload_json p FROM session_events WHERE session_id=? AND event_type='tool_result'")
+      .get(sessionId) as { s: number | null; p: string };
+    // 列有值且指回 call.seq
+    expect(row.s === callSeq).toBe(asset.cases.sourceEventSeqLink.resultSourceSeqEqualsCallSeq);
+    // 保留键在序列化前被剥离 ⇒ payload_json 不含该键（"是列，不是 payload 字段"）
+    const payloadObj = JSON.parse(row.p) as Record<string, unknown>;
+    expect(Object.prototype.hasOwnProperty.call(payloadObj, SOURCE_EVENT_SEQ_KEY)).toBe(
+      asset.cases.sourceEventSeqLink.payloadJsonCarriesReservedKey,
+    );
   });
 
   it('addMessageSuccess：整笔落账（消息 1 行 / 事件 1 条 / seq=1）', () => {
