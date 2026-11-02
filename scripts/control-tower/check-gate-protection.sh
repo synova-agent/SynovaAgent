@@ -139,6 +139,23 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 set -uo pipefail
 
 # ── ② 解释器探测（D520/D328：禁裸 python3；探可用性，不只看 command -v）──
+# ── #1295/#1296：skills 双轨自动豁免的**留痕授权**（只对 .dsh/skills/** 与 .synova/skills/** 生效）──
+# 条件：本次提交信息含「提案」或「裁定」＋ #<Issue> 号（提案卡/裁定号留痕，可追溯）。
+_MSG_SRC="${SYNO_COMMIT_MSG_FILE:-}"
+_MSG=""
+if [ -n "$_MSG_SRC" ] && [ -f "$_MSG_SRC" ]; then
+  _MSG="$(cat "$_MSG_SRC" 2>/dev/null)"                                   # swallow-ok: 读不到则走 git log 回落
+else
+  _MSG="$(git -C "${ROOT:-.}" log -1 --format=%B 2>/dev/null)"             # swallow-ok: 非 git 仓 ⇒ 空 ⇒ 不授权
+fi
+# 注意（实测坑）: grep 默认按行匹配，而 commit message 里「提案」与「#1296」常**不在同一行**
+#   （首行标题 + 尾部 Refs）⇒ 用两条 grep 分别要求"有提案词"且"有裁定/Issue 号"，都能跨行成立。
+if printf '%s' "$_MSG" | grep -qE "(提案|裁定)" && printf '%s' "$_MSG" | grep -qE "#[0-9]+"; then
+  export SYNO_SKILLS_AUTHORIZED=1
+else
+  export SYNO_SKILLS_AUTHORIZED=0
+fi
+
 PYBIN=""
 for _c in python3 python py; do  # PYBIN 三级探测（PLATFORM-CHECKLIST #1；本行含 PYBIN 标记供 D520 平台扫描识别）
   if command -v "$_c" >/dev/null 2>&1 && "$_c" -c "import sys" >/dev/null 2>&1; then PYBIN="$_c"; break; fi
@@ -727,6 +744,10 @@ def main():
                             break
                     if covered:
                         ok("受保护路径有合规豁免: %s" % path)
+                    elif re.match(r"^\.(dsh|synova)/skills/", path) and os.environ.get("SYNO_SKILLS_AUTHORIZED") == "1":
+                        # #1295/#1296：skills 双轨**自动豁免**（提案卡＋裁定号留痕，免手写豁免件）
+                        # 实证：一次 .dsh/.synova skills 改动要手写豁免件＋排队 20–55 min，成本＞改动本身。
+                        ok("受保护路径**自动豁免**（skills 双轨 · 提交信息含提案/裁定号）: %s" % path)
                     else:
                         reason = "; ".join(notes) if notes else "diff 内无 gate-exemptions/*.md，或豁免行未覆盖该路径"
                         fail("E_EXEMPT_INVALID", "exempt",

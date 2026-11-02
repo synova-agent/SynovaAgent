@@ -1833,3 +1833,10 @@ documents:
     status: active
     owner: CTO
     note: "K3 例外 4/6/7＋V3：逐组耗时落盘（⑨ 归因）、L_FIELDS 挡 rename 归零、measured_at 改漂移口径＋--stamp、⑩ 口径改 .md frontmatter 只向前生效。"
+  # ---- CTO 2026-11-02：#1299 D734 判据改版 受保护路径豁免（DOC-1299）----
+  - id: DOC-1299
+    type: decision
+    path: gate-exemptions/2026-11-02-1299-d734-revision.md
+    status: active
+    owner: CTO
+    note: "D734 改版：件数软提示／跨域硬阻断／>12 件须分段计划表；附带四项：10b 交付判据、D331 按 repo 共享、铁律47 收窄、skills 自动豁免。"

@@ -147,9 +147,14 @@ def discover_markers(repo_root: Path = REPO_ROOT) -> dict:
     @degraded — 非 git 仓 / git 不可用 → exit 2（无法发现 ≠ 无标记）
     """
     try:
+        # #1296（与 D734 改版同批）：Windows 上 `text=True` 用本地编码（cp936）解码 UTF-8 输出
+        #   ⇒ reader 线程抛 UnicodeDecodeError ⇒ p.stdout 变成 None ⇒ AttributeError 崩。
+        #   实测（2026-11-02）：本机每次调用都崩，导致"跨域判定"永远落入"判不了"（静默降级）。
+        #   修法：显式指定 UTF-8 + errors=replace（不损失可判性；坏字节只会让路径名变形，不会崩）。
         p = subprocess.run(
             ["git", "-C", str(repo_root), "ls-files", "-z"],
             capture_output=True, text=True, check=False,
+            encoding="utf-8", errors="replace",
         )
     except OSError as e:
         _die("git 不可用（%s）→ 无法发现 %s 标记" % (e, MARKER_NAME))

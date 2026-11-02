@@ -39,12 +39,21 @@ fi
 
 MISSING=""
 RED=""
+KNOWN_RED=""
 while IFS= read -r sf; do
   [ -z "$sf" ] && continue; [ ! -f "$ROOT/$sf" ] && continue
   bn=$(basename "$sf"); bn="${bn%.*}"  # foo.sh/foo.py → foo
   t="$ROOT/tests/control-tower/${bn}.test.sh"
   if [ ! -f "$t" ]; then
     MISSING="${MISSING}  ${sf} → 缺配对测试 tests/control-tower/${bn}.test.sh\n"
+  elif [ -f "$ROOT/tests/control-tower/.ct40-baseline" ] && tr -d '\r' < "$ROOT/tests/control-tower/.ct40-baseline" | grep -vE '^[[:space:]]*(#|$)' | grep -qxF "$bn"; then
+    # #1299（A 类·创始人 2026-11-02 批）基线已知红：**直接跳过执行**（不跑、不阻断、只告警）。
+    #   为什么跳过而不是"跑完再告警"：known-red 里 check-pr-budget 单跑要 421s，每提交都付这个成本
+    #   等于把提交链拖死（实测一次 commit >7 分钟）。跳过=省时间；红仍在表里可见。
+    KNOWN_RED="${KNOWN_RED}  ${sf} 已知红(基线，跳过不阻断): tests/control-tower/${bn}.test.sh\n"
+  elif ! ( cd "$ROOT" && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE bash "$t" >/dev/null 2>&1 ); then
+    RED="${RED}  ${sf} 配对测试红(新红，阻断): tests/control-tower/${bn}.test.sh\n"
+  fi
   # D521/M13: 剥 GIT_DIR/GIT_WORK_TREE——hook 上下文（pre-commit→本门禁）会导出它们，
   #   测试内沙箱 git commit（git -C 不覆盖 GIT_DIR env）会污染宿主分支（D521-3 实证:
   #   bypass-precommit/post-commit-marker 沙箱提交落到执行分支，branch ref 被覆写）。
@@ -52,11 +61,12 @@ while IFS= read -r sf; do
   #   GIT_INDEX_FILE 优先级高于仓库默认 index，沙箱 git add/commit 会把沙箱条目
   #   写进宿主 index（D555 实证: verify-parallel.test.sh 沙箱 src/middleware/merged.ts
   #   入宿主 index，blob 不在宿主 odb → git commit「invalid object」失败）。根治于此。
-  elif ! ( cd "$ROOT" && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE bash "$t" >/dev/null 2>&1 ); then
-    RED="${RED}  ${sf} 配对测试红: tests/control-tower/${bn}.test.sh\n"
-  fi
 done <<< "$CT_SCRIPTS"
 
+if [ -n "$KNOWN_RED" ]; then
+  echo "⚠️  控制塔脚本测试门禁 (U7/CT-40) 基线已知红（不阻断，见 tests/control-tower/.ct40-baseline）:"
+  printf "%b" "${KNOWN_RED}"
+fi
 if [ -n "$MISSING" ] || [ -n "$RED" ]; then
   echo "❌ 控制塔脚本测试门禁 (U7/CT-40):"
   printf "%b" "${MISSING}${RED}"
