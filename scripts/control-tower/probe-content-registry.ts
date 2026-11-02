@@ -9,7 +9,7 @@
  * 规范来源: 山河研究院《extensions内容面规范-v0》§3.5（C3 可达 / C4 结构）＋ §5.2（唯一 type→loader 表）
  *
  * 四段（**禁把 L1-静态可达 报成 L2-真跑通** —— 每段标明级别）:
- *   PRESENCE  [L1] 20/20 项存在 ＋ 与 `extensions/` 顶层目录集**双向相等**（V1）
+ *   PRESENCE  [L1] 注册表项集与 `extensions/` 顶层目录集**双向相等**（V1；禁硬编码项数）
  *   INTEGRITY [L1] 状态/分面闭合 / 非可达项须有 reason / 无空挂 / 表完整性零问题（V1）
  *   RESOLVE   [L1] loader 模块文件真实存在；按名声明的 init/verify/cleanup 导出**真在模块上**
  *                  （经 file URL 直载模块取 `typeof === 'function'` —— 与宿主 loader 同型证据）
@@ -98,13 +98,8 @@ async function main(): Promise<number> {
   const snapshot = describeContentRegistry();
 
   // ═══ ① PRESENCE [L1] ═══
-  section('① PRESENCE [L1] — 20/20 项覆盖 × extensions 顶层目录集');
+  section('① PRESENCE [L1] — 注册表项集 == extensions 顶层目录集（不变式，禁硬编码）');
   console.log(`  registry 项数: ${snapshot.counts.total}`);
-  if (snapshot.counts.total !== 20) {
-    fail(`注册表应为 20 项，实测 ${snapshot.counts.total}`);
-  } else {
-    ok('项数 = 20');
-  }
 
   const extRoot = join(repoRoot, 'extensions');
   if (!existsSync(extRoot)) {
@@ -121,7 +116,10 @@ async function main(): Promise<number> {
   const extra = inRegistry.filter((d) => !onDisk.includes(d));
   if (missing.length > 0) fail(`注册表漏登记顶层目录: ${missing.join(', ')}`);
   if (extra.length > 0) fail(`注册表登记了不存在的目录: ${extra.join(', ')}`);
-  if (missing.length === 0 && extra.length === 0) ok('双向相等（V1 20/20 有明确状态）');
+  if (snapshot.counts.total !== onDisk.length) {
+    fail(`注册表项数(${snapshot.counts.total}) ≠ 磁盘顶层目录数(${onDisk.length})`);
+  }
+  if (missing.length === 0 && extra.length === 0) ok('双向相等（V1：项数 == 顶层目录数，均有明确状态）');
 
   // ═══ ② INTEGRITY [L1] ═══
   section('② INTEGRITY [L1] — 状态/分面闭合 / reason / 空挂 / 表完整性');

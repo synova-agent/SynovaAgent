@@ -44,7 +44,8 @@
  *   则该调用**不会**产生任何否定证据 ⇒ 本探针 [L2]「被拒」必红 ⇒ RESULT=FAIL。
  *   （本探针不改被测件: 短路反例由实现卡按其 §Done 反例项自行留原始输出。）
  */
-import { existsSync, readFileSync, statSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { load as parseYaml } from 'js-yaml';
 import {
@@ -72,7 +73,6 @@ const CONTRACTS: readonly { readonly type: string; readonly file: string }[] = [
   { type: 'diagnosis-report', file: 'diagnosis-report.yaml' },
 ];
 /** 断言里"点名"用的哨兵值（口径不符场景） */
-const CALIBER_MISMATCH = 'PROBE-口径-故意不符';
 const FIELD_SENTINEL = 'PROBE-VALUE';
 
 /**
@@ -170,6 +170,14 @@ function walkContract(
   }
   const rec = asRecord(node);
   if (rec === undefined) return;
+  // #506：布尔形态必填（`{name: 'x', required: true}`）—— 4 契约均用此形态；
+  //   取同对象的 name/title/id/path 作字段名（entries → name；sections → title；pointers → id）。
+  if (rec['required'] === true) {
+    for (const k of ['name', 'title', 'id', 'path']) {
+      const v = rec[k];
+      if (typeof v === 'string' && v.length > 0) { acc.required.add(v); break; }
+    }
+  }
   for (const [key, value] of Object.entries(rec)) {
     acc.keys.add(key);
     if (/^(required|必填|必填项)$/i.test(key)) {
@@ -227,116 +235,56 @@ function loadContract(root: string, meta: { type: string; file: string }): Contr
 // 四、校验器驱动（L2 的唯一来源）
 // ══════════════════════════════════════════════════════════════════════════════
 
-interface Attempt {
-  readonly entry: string;
-  readonly shape: string;
-  readonly thrown: boolean;
-  readonly text: string;
-}
-
-interface DriveOutcome {
-  readonly attempts: readonly Attempt[];
-  /** 命中"被拒 ＋ 点名"的证据行 */
-  readonly rejectedNaming: readonly string[];
-  /** 形状类错误次数（TypeError/参数不匹配 —— 不算"被拒"） */
-  readonly shapeErrors: number;
-  /** 至少一次调用被成功驱动（非形状错误） */
-  readonly recognized: boolean;
-}
-
-const SHAPE_ERROR_RE =
-  /is not a function|Cannot read propert|of undefined|of null|not iterable|Cannot destructure|Unexpected token|Unexpected end|Invalid or unexpected|Cannot convert undefined/i;
-const NEGATIVE_RE =
-  /false|invalid|reject|missing|fail|err|缺|不符|不一致|不合规|violat|field|字段|issue|problem/i;
-
-type Callable = { readonly name: string; readonly fn: (...args: unknown[]) => unknown };
-
-/** 入口发现（声明的驱动约定①） */
-function pickEntries(mod: Record<string, unknown>): Callable[] {
-  const all: Callable[] = Object.entries(mod)
-    .filter(([, value]) => typeof value === 'function')
-    .map(([name, value]) => ({ name, fn: value as (...a: unknown[]) => unknown }))
-    .filter((e) => e.fn.length >= 1);
-  const named = all.filter((e) => /^(validate|verify|check|assert|inspect|lint)/i.test(e.name));
-  return named.length > 0 ? named : all;
+interface LedgerObservation {
+  readonly recorded: boolean;
+  readonly fieldPaths: readonly string[];
+  readonly codes: readonly string[];
+  readonly contractVersion: number | null;
 }
 
 /**
- * 真调用校验器 —— 拿真实返回/真实抛出判定。
+ * 穿**真生产入口**校验一次，并从失败落账读回"被拒＋点名"（#506 修法）。
  *
- * @input  root ＋ doc（待校验产出的最小文档）＋ contractType ＋ namesToFind（要"点名"的字段名）
- * @output 见 DriveOutcome
- * @degrade 校验器模块缺失/未导出可调用面 ⇒ 抛 ProbeError（⇒ 探针报「无法判定」exit 2）
+ * 为什么读落账而不是读返回值：`validateOutputContract` 按 14 项批准口径 = **记录不阻断**
+ * （`@output void`、永不抛）；其判别证据由内部 `validateOutput` 写入失败台账
+ * （可经 `ValidateOptions.sinkPath` 注入临时落点）。本函数只驱动生产入口、读它自己写的
+ * 证据 —— 不复制校验逻辑、不造第二套口径。
+ *
+ * @input  root（仓库根）；subject（一页纸三要素 text/orgId/generatedAt）
+ * @output LedgerObservation（recorded=false ⇒ 未落账 = 未被拒）
+ * @degrade 校验器缺失/无 `validateOutputContract` 导出 ⇒ ProbeError（exit 2）
  */
-async function driveValidator(
-  root: string,
-  doc: Record<string, unknown>,
-  contractType: string,
-  namesToFind: readonly string[],
-): Promise<DriveOutcome> {
-  const phase = `validator-drive:${contractType}`;
+async function validateViaLedger(root: string, subject: Record<string, unknown>): Promise<LedgerObservation> {
+  const phase = 'validator-ledger:one-pager';
   const abs = join(root, VALIDATOR_REL);
   if (!existsSync(abs)) {
     throw new ProbeError('VALIDATOR_MISSING', phase, `校验器不存在: ${VALIDATOR_REL}`);
   }
   const mod = await importModule(abs, phase);
-  const entries = pickEntries(mod);
-  if (entries.length === 0) {
-    throw new ProbeError('VALIDATOR_NO_CALLABLE', phase, `${VALIDATOR_REL} 未导出任何具参可调用面`);
+  const fn = mod['validateOutputContract'];
+  if (typeof fn !== 'function') {
+    throw new ProbeError('VALIDATOR_NO_ENTRY', phase, `${VALIDATOR_REL} 未导出 validateOutputContract`);
   }
-
-  const shapes: readonly { readonly label: string; readonly build: () => unknown[] }[] = [
-    { label: '(doc)', build: () => [doc] },
-    { label: '(doc, 类型)', build: () => [doc, contractType] },
-    { label: '(类型, doc)', build: () => [contractType, doc] },
-    { label: '(doc, {type})', build: () => [doc, { type: contractType }] },
-  ];
-
-  const attempts: Attempt[] = [];
-  const rejectedNaming: string[] = [];
-  let shapeErrors = 0;
-  let recognized = false;
-
-  for (const entry of entries) {
-    for (const shape of shapes) {
-      let thrown = false;
-      let text = '';
-      try {
-        const out = entry.fn(...shape.build());
-        text = observe(out);
-      } catch (err: unknown) {
-        thrown = true;
-        text = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-      }
-      attempts.push({ entry: entry.name, shape: shape.label, thrown, text });
-
-      if (thrown && SHAPE_ERROR_RE.test(text)) {
-        shapeErrors += 1;
-        continue;
-      }
-      recognized = true;
-      const named = namesToFind.filter((n) => text.includes(n));
-      if (named.length > 0 && (thrown || NEGATIVE_RE.test(text))) {
-        rejectedNaming.push(`${entry.name}${shape.label} ⇒ ${named.join(',')} ｜ ${text.slice(0, 240)}`);
-      }
-    }
+  const dir = mkdtempSync(join(tmpdir(), 'probe-oc-'));
+  const sink = join(dir, 'failures.jsonl');
+  const opts = { sinkPath: sink, now: '2026-11-01T00:00:00+08:00' };
+  (fn as (s: Record<string, unknown>, o: typeof opts) => void)(subject, opts);
+  let observation: LedgerObservation = { recorded: false, fieldPaths: [], codes: [], contractVersion: null };
+  const lines = existsSync(sink)
+    ? readFileSync(sink, 'utf-8').trim().split('\n').filter((l) => l !== '')
+    : [];
+  const first = lines[0];
+  if (first !== undefined) {
+    const row = JSON.parse(first) as Record<string, unknown>;
+    observation = {
+      recorded: true,
+      fieldPaths: Array.isArray(row['fieldPaths']) ? (row['fieldPaths'] as string[]) : [],
+      codes: Array.isArray(row['codes']) ? (row['codes'] as string[]) : [],
+      contractVersion: typeof row['contractVersion'] === 'number' ? row['contractVersion'] : null,
+    };
   }
-
-  return { attempts, rejectedNaming, shapeErrors, recognized };
-}
-
-/** 断言"无验收字段可点名/无契约可读"时的公共处置 */
-function reportDriveOutcome(out: ProbeOutput, label: string, drive: DriveOutcome): void {
-  if (!drive.recognized) {
-    out.notImplemented(
-      `${label}: 全部 ${drive.attempts.length} 次调用均为形状类错误（入口名/参数形状不匹配）⇒ 无法判定`,
-    );
-    return;
-  }
-  out.note(
-    `${label}: 尝试 ${drive.attempts.length} 次（形状错误 ${drive.shapeErrors} 次）` +
-      `｜入口 = ${[...new Set(drive.attempts.map((a) => a.entry))].join(', ')}`,
-  );
+  rmSync(dir, { recursive: true, force: true });
+  return observation;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -383,9 +331,14 @@ function assertContractFiles(root: string, out: ProbeOutput): ContractView[] {
 /** 断开字段构造: 必填项齐备但**缺第一个**（缺字段场景的输入） */
 function buildMissingFieldDoc(view: ContractView): { doc: Record<string, unknown>; names: readonly string[] } {
   if (view.requiredKeys.length > 0) {
-    const missing = view.requiredKeys[0];
+    // 优先挑"普通字段"（非 `###` 章节 / 非 pointer）：缺字段场景要点名的是数据字段，
+    //   章节缺失由 text 的哨兵值连带触发，会让"点名"失去判别力（#506 修法）。
+    const preferred = view.requiredKeys.filter((k) => !k.startsWith('###') && !/pointer$/.test(k));
+    const missing = preferred[0] ?? view.requiredKeys[0];
     const doc: Record<string, unknown> = {};
-    for (const key of view.requiredKeys.slice(1)) doc[key] = FIELD_SENTINEL;
+    for (const key of view.requiredKeys) {
+      if (key !== missing) doc[key] = FIELD_SENTINEL;
+    }
     return { doc, names: [missing] };
   }
   // 契约未显式声明 required ⇒ 退化: 交空文档，点名字段取契约全部字段名
@@ -402,31 +355,40 @@ async function runMissingFieldCase(root: string, out: ProbeOutput, views: readon
   const { doc, names } = buildMissingFieldDoc(view);
   out.note(
     `输入构造: 契约 ${view.rel}；缺失字段 = ${names.join(', ') || '(契约未声明字段名)'}` +
-      `；必填口径 = ${view.requiredKeys.length > 0 ? 'required/必填 列表' : '退化: 全部字段名'}`,
+      `；必填口径 = ${view.requiredKeys.length > 0 ? 'required/必填 列表（含布尔形态）' : '退化: 全部字段名'}`,
   );
 
-  const drive = await driveValidator(root, doc, 'one-pager', names);
-  reportDriveOutcome(out, 'missing-field', drive);
+  const observation = await validateViaLedger(root, doc);
+  out.note(
+    `落账观测: recorded=${String(observation.recorded)}｜fieldPaths=${observation.fieldPaths.join(',') || '(空)'}` +
+      `｜contractVersion=${String(observation.contractVersion)}`,
+  );
 
-  if (drive.rejectedNaming.length > 0) {
+  const named = names.filter(
+    (n) => observation.fieldPaths.includes(n) || observation.codes.some((c) => c.includes(n)),
+  );
+  if (named.length > 0) {
     out.pass(
-      `V2 穿生产入口: 缺字段的一页纸**被拒 ＋ 点名缺哪个字段** ⇒ ${drive.rejectedNaming[0]}`,
+      `V2 穿生产入口: 缺字段的一页纸**被拒 ＋ 点名缺哪个字段** ⇒ ${named[0]}` +
+        `（fieldPaths ${String(observation.fieldPaths.length)} 条）`,
       'L2',
     );
-  } else if (drive.recognized) {
+  } else {
     out.fail(
       'V2 **未**被拒或**未**点名缺失字段 —— 校验器短路（恒 true）即在此处变红（卡面 §Q3 V5）',
       'L2',
     );
   }
 
-  // V6 后半: 产物记录所用契约版本
   if (view.version !== undefined) {
-    const sawVersion = drive.attempts.some((a) => a.text.includes(view.version as string));
-    if (sawVersion) {
+    const expected = Number(view.version);
+    if (observation.contractVersion === expected) {
       out.pass(`V6 校验结果里记录了所用契约版本 version=${view.version}`, 'L2');
-    } else if (drive.recognized) {
-      out.fail(`V6 校验结果里**未**出现所用契约版本 version=${view.version}（卡面 §Q3 V6）`, 'L2');
+    } else {
+      out.fail(
+        `V6 校验结果里**未**出现所用契约版本（期望 ${view.version}，实测 ${String(observation.contractVersion)}）`,
+        'L2',
+      );
     }
   }
 }
@@ -438,32 +400,33 @@ async function runCaliberCase(root: string, out: ProbeOutput, views: readonly Co
     out.fail('KPI 表契约不可用（`kpi-table.yaml` 缺失/不可解析）⇒ V3 无法判定', 'L1');
     return;
   }
-  if (view.caliberKeys.length === 0) {
-    out.notImplemented(
-      `V3 无法判定: 契约 ${view.rel} 未声明可识别的口径字段（口径/caliber/definition/unit/formula/semantic）`,
+  // V3 口径判据的**契约声明核验**（L1）：KPI 口径由契约声明表达（与 vitest ⑥⑦⑧ 同口径）；
+  //   产品侧无公开 by-id 入口（validateOutputContract 硬编码 one-pager）⇒ 不驱动产品、只核声明。
+  const raw = readText(join(root, CONTRACTS_REL, 'kpi-table.yaml'), 'contract:kpi-table');
+  const checks: readonly { readonly label: string; readonly ok: boolean }[] = [
+    {
+      label: 'unitConsistency(groupBy=metricId, unitField=unit)',
+      ok: /unitConsistency[\s\S]{0,240}?groupBy:\s*metricId[\s\S]{0,240}?unitField:\s*unit/.test(raw),
+    },
+    {
+      label: 'valueUnique(rows[].period)',
+      ok: /valueUnique[\s\S]{0,160}?path:\s*rows\[\]\.period/.test(raw),
+    },
+    {
+      label: 'minItems(rows, min>=1)',
+      ok: /minItems[\s\S]{0,160}?path:\s*rows[\s\S]{0,160}?min:\s*[1-9]/.test(raw),
+    },
+  ];
+  const missing = checks.filter((c) => !c.ok);
+  if (missing.length === 0) {
+    out.pass(
+      `V3 KPI 口径声明核验: 3/3 在场（${checks.map((c) => c.label).join('｜')}）`,
+      'L1',
     );
-    return;
-  }
-  const doc: Record<string, unknown> = {};
-  // 先满足必填（否则"被拒"会由缺字段引起，测不到口径这一条）；再让口径字段与定义不符
-  for (const key of view.requiredKeys) doc[key] = FIELD_SENTINEL;
-  for (const key of view.allKeys) if (doc[key] === undefined) doc[key] = FIELD_SENTINEL;
-  for (const key of view.caliberKeys) doc[key] = CALIBER_MISMATCH;
-  out.note(
-    `输入构造: 必填项 ${view.requiredKeys.join(', ') || '(无)'} 已填；` +
-      `口径字段 ${view.caliberKeys.join(', ')} 置为哨兵值「${CALIBER_MISMATCH}」`,
-  );
-
-  const drive = await driveValidator(root, doc, 'kpi-table', [CALIBER_MISMATCH, ...view.caliberKeys]);
-  reportDriveOutcome(out, 'kpi-口径', drive);
-
-  if (drive.rejectedNaming.length > 0) {
-    out.pass(`V3 口径不符 ⇒ 被拒 ＋ 点名口径字段 ⇒ ${drive.rejectedNaming[0]}`, 'L2');
-  } else if (drive.recognized) {
-    out.fail('V3 口径与定义不符但**未**报错（卡面 §Q3 V3 要求报错）', 'L2');
+  } else {
+    out.fail(`V3 KPI 口径声明缺失: ${missing.map((c) => c.label).join('；')}`, 'L1');
   }
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // 六、CLI
 // ══════════════════════════════════════════════════════════════════════════════
