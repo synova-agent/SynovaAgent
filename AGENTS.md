@@ -166,7 +166,12 @@
 ## 6. 🔴 两侧信息同步（Mac ↔ Win）
 
 产品仓只放 **A 入口重写式 / B 决策六段 / C 长期**；**过程件一律走 handbook 仓**。
-· handbook：`http://192.168.1.7:3000/synova/synova-handbook.git`（**Win 侧读这个**）
+· handbook：`http://<本机局域网IP>:3000/synova/synova-handbook.git`（**Win 侧读这个**）
+  🔴 **IP 会漂移，禁止写死**：2026-11-02 本机从 `192.168.1.7` 变为 `192.168.31.138`，Win 侧全部连接失败。
+  · **现取**：`ipconfig getifaddr en0`（Mac 侧）→ 拼成 `http://<IP>:3000`
+  · **切换后 Win 侧**：`git remote set-url origin http://<IP>:3000/synova/synova-handbook.git`
+  · **根治**：在路由器给本机做 DHCP 保留（按 MAC 绑定），否则每次重连都要再改一次
+  · **历史记录不回改**：evidence/decisions/memory 里的旧 IP 是当时的真实记录，保持原样
 · 主仓镜像：`.handbook-mirror/`（**本地便利副本，会滞后 —— 引用前先核**）
 
 ---

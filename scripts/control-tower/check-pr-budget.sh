@@ -63,7 +63,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #             豁免不生效时必须打印「出库豁免不适用」+ ⓐ/ⓑ 哪条不满足 + 逐条点名命中的 ❌ 路径
 #             （超 30 件时截断显示，行内恒给「共 N 件」）。
 #   @exit   — 0 = 在预算内（可含 ⚠️ 落后告警，不阻断）
-#             1 = 超预算（文件数超上限 / 变更跨域 / 纯 D/R 命中 ❌ 拒绝名单）
+#             1 = 阻断（变更跨域 / 纯 D/R 命中 ❌ 拒绝名单 / >上限时缺合格的分段计划表）
+#                 🔴 2026-11-02 改版：**文件数超上限不再是 exit 1**（软提示），改由 ④ 分段计划表把关
 #             2 = 检查执行失败（git 不可用 / 域校验器不可用 / 变更集算不出）—— fail-closed
 #   @degraded — 基线 ref 全链不可解析（origin/main→main→origin/HEAD 均无）→ **显式 ⚠️ 留痕 +
 #               跳过（exit 0）**，不 exit 2：沿用 pre-push 门禁 0-1 对「fetch 失败」的既有语义
@@ -106,6 +107,7 @@ done
 BASE="${SYNO_PR_BUDGET_BASE:-}"
 TRUNK="${SYNO_TRUNK_REF:-main}"
 MAX_FILES=12
+SEGMENT_FILE=""   # #1296：分段计划表（--segment-file / $SYNO_SEGMENT_PLAN_FILE / .claude/pr-segment-plan.md）
 MAX_BEHIND=20
 FILES_OVERRIDE=""
 FILES_SET=0                     # D1235: 与 DIFF_STATUS_SET 同款「是否**显式提供**」标志。
@@ -121,6 +123,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --base)        BASE="${2:-}"; shift 2 ;;
     --max-files)   MAX_FILES="${2:-}"; shift 2 ;;
+    --segment-file) SEGMENT_FILE="${2:-}"; shift 2 ;;   # #1296：分段计划表路径（覆盖默认查找链）
     --max-behind)  MAX_BEHIND="${2:-}"; shift 2 ;;
     --files)       FILES_OVERRIDE="${2:-}"; FILES_SET=1; shift 2 ;;
     --diff-status) DIFF_STATUS="${2:-}"; DIFF_STATUS_SET=1; shift 2 ;;
@@ -637,6 +640,7 @@ if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
 fi
 
 FAILED=0
+SOFT_HINT=0   # #1296：软提示计数（不阻断；与 FAILED 分开记，便于回执区分"提示"与"拦"）
 
 # ── ① 变更文件数 ≤ 上限（或 D1028 出库豁免生效 / 旁路封堵 FAIL）──
 if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
@@ -646,15 +650,17 @@ if [ "$OUTBOUND_EXEMPT" -eq 1 ]; then
 elif [ "$N_FILES" -le "$MAX_FILES" ]; then
   echo "  ✅ ① 变更文件数 $N_FILES ≤ 上限 $MAX_FILES"
 else
-  echo "  ❌ ① 变更文件数 $N_FILES > 上限 $MAX_FILES —— 拆 PR（禁调高上限）"
-  FAILED=1
+  # #1296/D734 改版（2026-11-02 CTO 提案·PDC 通过）：文件数从**硬阻断**改**软提示**。
+  # 理由：件数只是"大 PR"的**代理指标**，真正要拦的是"不可分段验收"；拦的活儿交给 ④ 分段计划表。
+  echo "  ⚠️  ① 变更文件数 $N_FILES > 上限 $MAX_FILES —— **软提示**（不再阻断）；须补 ④ 分段计划表"
+  SOFT_HINT=$((SOFT_HINT + 1))
 fi
 if [ "$DECL_EFFECTIVE" -eq 1 ]; then
   # D1028-A2v2: 声明生效 = 解除旁路封堵（**不豁免预算** —— 这批路径仍在 COUNTED/N_FILES 里）
   echo "  ⚠️  D1028 死代码清理声明生效：${DECL_RELEASED_N} 件（逐条放行）"
   echo "      生效来源（逐条列出实际取证的文件路径 —— 取并来源必须全部可见，可审计）:"
   printf '%s\n' "${DECL_SRC_DESC:-（未标注）}" | awk 'NF { print "        · " $0 }'
-  echo "      → 放行 ≠ 豁免: 这 ${DECL_RELEASED_N} 件**照常计入上面 ${N_FILES} 件预算**（> ${MAX_FILES} 仍阻断）"
+  echo "      → 放行 ≠ 豁免: 这 ${DECL_RELEASED_N} 件**照常计入上面 ${N_FILES} 件预算**（超 ${MAX_FILES} 为软提示，见 ①）"
   printf '%s\n' "$DR_DENY_RE_LIST" | awk -v ind="      " -v cap=30 'NF { if (++i <= cap) print ind "- " $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
 fi
 if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
@@ -699,23 +705,34 @@ if [ "$OUTBOUND_DENY_HARD" -eq 1 ]; then
     echo "      ❌ 声明未覆盖的 ❌ D/R 路径 ${DECL_MISSING_N} 件（缺这一条即不生效，逐条点名）:"
     printf '%s\n' "$DECL_MISSING_LIST" | awk -v ind="         " -v cap=30 'NF { if (++i <= cap) print ind $0 } END { if (i > cap) print ind "… 其余 " (i - cap) " 件省略（共 " i " 件）" }'
   fi
-  echo "      注意: 声明生效只解除旁路封堵，**这些路径照常计入 ≤ ${MAX_FILES} 件预算**（放行 ≠ 豁免）"
+  echo "      注意: 声明生效只解除旁路封堵，**这些路径照常计入 ≤ ${MAX_FILES} 件预算**（放行 ≠ 豁免；超限为软提示）"
   FAILED=1
 fi
 
 # ── ② 变更涉及的域（**信息性，不阻断**）──
   # 创始人 2026-09-29 决策：**域不用于分配与阻断**（"硬要分域，门禁相互拉扯，浪费时间"）。
   # 分配由 CTO 指定；本段只显示信息。校验器缺失 / python 不可用 ⇒ 同样不阻断。
+  # #1296/D734 改版（2026-11-02 CTO 提案·PDC 通过 · 2026-09-29「域不用于分配/阻断」的**收窄例外**）：
+  #   跨域 ⇒ **硬阻断**。理由：跨域 PR 的冲突面与验收面都无法在一处收口，是 D721/D734 事故的共因。
+  #   ⚠️ 与 2026-09-29 创始人决策的关系：那条解的是"**分配**按域拉扯"；本条只管"**跨域合并**"这一件事，
+  #      不用于分配、不产生域路由。要撤销本判据：删本块并改 §二 契约（一次提案即可）。
   if [ "${N_FILES:-0}" -gt 0 ] && [ -f "$OWNERSHIP" ] && [ -n "$PYBIN" ]; then
-    DOMAIN_OUT="$("$PYBIN" "$OWNERSHIP" $COUNTED 2>&1)" || true
-    if printf '%s' "$DOMAIN_OUT" | grep -q '^✅ PASS'; then
+    DOMAIN_OUT="$("$PYBIN" "$OWNERSHIP" $COUNTED 2>&1)"; DOMAIN_RC=$?
+    if printf '%s' "$DOMAIN_OUT" | grep -qE 'Traceback|Exception in thread'; then
+      # 判不了 ≠ 跨域（也 ≠ 通过）：校验器自己崩了，只留痕、不误判
+      echo "  ⚠️  ② 跨域判定**判不了**（check-ownership.py 异常退出 rc=${DOMAIN_RC}）—— 不计通过，软提示留痕"
+      printf '%s\n' "$DOMAIN_OUT" | tail -3 | sed 's/^/       /'
+      SOFT_HINT=$((SOFT_HINT + 1))
+    elif [ "$DOMAIN_RC" -eq 0 ] || printf '%s' "$DOMAIN_OUT" | grep -q '^✅ PASS'; then
       echo "  ✅ ② 变更单域: $(printf '%s\n' "$DOMAIN_OUT" | grep -E '^✅ PASS' | head -1)"
     else
-      echo "  ℹ️  ② 变更跨域（**信息性，不阻断** —— 域不用于分配/阻断）:"
+      echo "  ❌ ② 变更跨域（**硬阻断** —— 拆成单域 PR；跨域合并是 D721/D734 事故共因）:"
       printf '%s\n' "$DOMAIN_OUT" | grep -vE '^✅' | head -8 | sed 's/^/       /'
+      FAILED=1
     fi
   else
-    echo "  ℹ️  ② 域信息跳过（无变更 / 校验器缺失 / python 不可用 —— 不阻断）"
+    echo "  ⚠️  ② 跨域判定**判不了**（无变更 / 校验器缺失 / python 不可用）—— 不计通过，按软提示留痕"
+    SOFT_HINT=$((SOFT_HINT + 1))
   fi
 
   # ── ③ 落后基线提交数（告警，不阻断——防「落后分支直接合」）──
@@ -733,9 +750,82 @@ else
   fi
 fi
 
+# ── ④ 分段计划表（#1296/D734 改版 · 新增硬判据）──
+# 为什么需要: ① 的件数改成软提示后，"大 PR 能不能合"必须换一个**可判的**闸门 ——
+#   答案不是"件数多少"，而是"**能不能分段独立验收**"。分段计划表就是这条窄路：
+#   它要求 PR 把大改动拆成若干段，每段写明路径范围/件数/base/单独预验命令 —— 缺一即阻断。
+# 为什么不做"人工豁免通道": 那等于给大 PR 开后门；分段计划表是**声明式**的、可机械校验的。
+SEG_REQUIRED=0
+if [ "${N_FILES:-0}" -gt "$MAX_FILES" ]; then SEG_REQUIRED=1; fi
+SEG_FILE=""; SEG_SRC=""
+if [ "$SEG_REQUIRED" -eq 1 ]; then
+  for _cand in "${SEGMENT_FILE:-}" "${SYNO_SEGMENT_PLAN_FILE:-}" "${ROOT:-.}/.claude/pr-segment-plan.md"; do
+    [ -n "$_cand" ] || continue
+    if [ -f "$_cand" ]; then SEG_FILE="$_cand"; break; fi
+  done
+  if [ -z "$SEG_FILE" ]; then
+    echo "  ❌ ④ 变更 ${N_FILES} 件 > ${MAX_FILES} ⇒ **必须附分段计划表**（本次未找到）"
+    echo "      查找顺序: --segment-file <path> → \$SYNO_SEGMENT_PLAN_FILE → .claude/pr-segment-plan.md"
+    echo "      格式（表头固定五列；件数合计须等于 ${N_FILES}）:"
+    echo "        ## 分段计划"
+    echo "        | 段名 | 路径范围 | 件数 | base | 单独预验 |"
+    echo "        |---|---|---|---|---|"
+    echo "        | S1 | scripts/control-tower/** | 8 | abc1234 | bash scripts/pre-commit-check.sh |"
+    FAILED=1
+  else
+    _seg_out="$("$PYBIN" - "$SEG_FILE" "$N_FILES" <<'PYS' 2>&1
+import io, re, sys
+path, nfiles = sys.argv[1], int(sys.argv[2])
+rows, bad = [], []
+for i, ln in enumerate(io.open(path, encoding="utf-8", errors="replace"), 1):
+    s = ln.strip()
+    if not s.startswith("|"):
+        continue
+    cells = [c.strip() for c in s.strip("|").split("|")]
+    if len(cells) < 5:
+        continue
+    if cells[0] in ("段名", "---") or set(cells[0]) <= {"-", " "}:
+        continue
+    name, rng, cnt, base, pre = cells[0], cells[1], cells[2], cells[3], cells[4]
+    lack = [k for k, v in (("段名", name), ("路径范围", rng), ("件数", cnt), ("base", base), ("单独预验", pre)) if not v]
+    if lack:
+        bad.append("第 %d 行缺: %s" % (i, ",".join(lack))); continue
+    if not re.fullmatch(r"\d+", cnt):
+        bad.append("第 %d 行件数非整数: %r" % (i, cnt)); continue
+    if not re.fullmatch(r"[0-9a-f]{7,40}", base):
+        bad.append("第 %d 行 base 非 sha 形态: %r" % (i, base)); continue
+    rows.append((name, int(cnt), pre))
+total = sum(r[1] for r in rows)
+print("SEG_ROWS=%d SEG_TOTAL=%d NFILES=%d" % (len(rows), total, nfiles))
+for b in bad[:8]:
+    print("SEG_BAD: " + b)
+if bad or not rows:
+    sys.exit(1)
+if total != nfiles:
+    print("SEG_BAD: 件数合计 %d ≠ 变更数 %d（分段必须覆盖全部变更）" % (total, nfiles))
+    sys.exit(1)
+for name, cnt, pre in rows:
+    print("SEG_OK: %s 件数=%d 单独预验=%s" % (name, cnt, pre))
+sys.exit(0)
+PYS
+)"
+    _seg_rc=$?
+    printf '%s\n' "$_seg_out" | sed 's/^/       /'
+    if [ "$_seg_rc" -ne 0 ]; then
+      echo "  ❌ ④ 分段计划表不合格（来源: ${SEG_FILE}）—— 每段五列必须齐全、件数合计=变更数、base 须 sha"
+      FAILED=1
+    else
+      echo "  ✅ ④ 分段计划表合格（来源: ${SEG_FILE}）—— 每段须**独立跑通**其「单独预验」命令，R2 附原始输出"
+    fi
+  fi
+else
+  echo "  ✅ ④ 分段计划表: 变更 ${N_FILES} 件 ≤ ${MAX_FILES}，不要求"
+fi
+
 if [ "$FAILED" -eq 0 ]; then
   [ "$QUIET" -eq 0 ] && echo "✅ PASS PR 预算内（$N_FILES 文件）"
   exit 0
 fi
-echo "❌ FAIL PR 超预算 —— 拆 PR，不要调高上限"
+echo "❌ FAIL PR 预算门禁（#1296 改版：件数只提示；阻断项＝跨域／分段计划表不合格／❌ 拒绝名单）"
+[ "${SOFT_HINT:-0}" -gt 0 ] && echo "   ℹ️ 另有 ${SOFT_HINT} 项软提示（见上）"
 exit 1

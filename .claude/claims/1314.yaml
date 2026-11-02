@@ -1,0 +1,6 @@
+writeset:
+  - .claude/claims/1314.yaml
+  - AGENTS.md
+done:
+  - verify: "grep -n 'IP 会漂移' AGENTS.md   # 应命中同步地址段"
+note: "#1314 AGENTS.md 同步地址去写死（IP 2026-11-02 由 192.168.1.7 漂移到 192.168.31.138，Win 侧连接全部失败）。"

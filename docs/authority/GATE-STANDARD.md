@@ -313,6 +313,16 @@ C-1 frontmatter ＋ 结论／证据指针／状态／归属四列 ｜ C-2 清单
    > ```
    > 已知限制：跨仓（handbook）⇒ 产品仓 CI **无法机检**；本条为**人工判定＋命令留痕**。
 11. **10 个 workflow 全部定态，无"账外"**；pre-push/npm 腿已处置
+    > 🔴 **10b（#1289 · 2026-11-02）：每关交付判据 = 「全量 vs 基线并集，新红 = 0」**。
+    > 任一关报告"绿"时，必须附**该口径的原始输出**——只跑变更集（gate 必跑集）得到的绿**不算数**。
+    > 成本取向：**写进判据，不要求每 PR 跑全量**（不新增必跑面）。
+    > 复跑示例（基线并集＝该关已知红清单，新红必须为 0）：
+    > ```bash
+    > # 以 ① 组为例：全量跑一遍，再与基线并集求差，只允许"基线内"的红
+    > bash scripts/pre-commit-check.sh > /tmp/full.out 2>&1; echo "rc=$?"
+    > grep -E '^  ❌' /tmp/full.out | sort > /tmp/full.red
+    > comm -23 /tmp/full.red <(sort .claude/gate-red-baseline.txt)   # 输出必须为空（新红=0）
+    > ```
 12. **`AGENTS.md` 已升 V7.2** 且判据中枢指向本件
 
 ---
