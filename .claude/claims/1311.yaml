@@ -1,0 +1,15 @@
+writeset:
+  - docs/synova/presets/synova-coding/cordis.patch.yml
+  - scripts/control-tower/install-dsh-preset.sh
+  - AGENTS.md
+  - .dsh/skills/dsh-code-standards/SKILL.md
+  - .synova/skills/dsh-code-standards/SKILL.md
+  - gate-exemptions/2026-11-03-1311-coding-preset-gap.md
+  - memory/notes/proposed/2026-11-03-1311-coding-preset-gap.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - .claude/claims/1311.yaml
+done:
+  - verify: bash scripts/control-tower/install-dsh-preset.sh --check synova-coding
+  - verify: bash scripts/control-tower/check-preset-bundles.sh --consistency synova-coding
+  - verify: bash tests/control-tower/install-dsh-preset.test.sh
+note: "编码预设缺口补齐：persona 加「开工四问」答案块（放哪/命名/证据锚/不适用）＋ install-dsh-preset 补 dependencies 登记（原先只写 bundles，prune 即丢）＋ dsh-code-standards 证据锚点校准到真实包路径。"

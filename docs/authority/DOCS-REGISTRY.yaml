@@ -1840,3 +1840,10 @@ documents:
     status: active
     owner: CTO
     note: "D734 改版：件数软提示／跨域硬阻断／>12 件须分段计划表；附带四项：10b 交付判据、D331 按 repo 共享、铁律47 收窄、skills 自动豁免。"
+  # ---- CTO 2026-11-03：#1311 编码预设缺口补齐 受保护路径豁免（DOC-1311）----
+  - id: DOC-1311
+    type: decision
+    path: gate-exemptions/2026-11-03-1311-coding-preset-gap.md
+    status: active
+    owner: CTO
+    note: "编码预设 persona 加开工四问答案块；install-dsh-preset 补 dependencies 登记；dsh-code-standards 证据锚点校准。"
