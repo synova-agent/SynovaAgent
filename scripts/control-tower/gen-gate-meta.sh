@@ -88,6 +88,7 @@ set -uo pipefail
 ROOT=""
 INV=""
 MODE="emit"
+STAMP=0
 JSON="0"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -95,6 +96,7 @@ while [ $# -gt 0 ]; do
     --check) MODE="check" ;;
     --quota) MODE="quota" ;;
     --regen) MODE="regen" ;;
+    --stamp) STAMP=1 ;;   # #1296：刷新 measured_at（唯一写盘入口仍是 --regen）
     --json) JSON="1" ;;
     --root) shift; ROOT="${1:-}" ;;
     --root=*) ROOT="${1#--root=}" ;;
@@ -138,10 +140,11 @@ cleanup_tmp() { if [ -n "${EMIT_TMP:-}" ]; then rm -f "${EMIT_TMP:-}"; fi; }
 trap cleanup_tmp EXIT
 
 run_py() {
-  "$PYBIN" - "$INV" "$ROOT" "$MODE" "$JSON" <<'PYEOF'
+  "$PYBIN" - "$INV" "$ROOT" "$MODE" "$JSON" "$STAMP" <<'PYEOF'
 import glob, json, os, re, subprocess, sys
 
 inv_path, root, mode, json_mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
+STAMP = (len(sys.argv) > 5 and sys.argv[5] == "1")   # #1296：--stamp 时 measured_at 取当前基准
 
 
 class GateError(Exception):
@@ -547,6 +550,9 @@ def _render_with_preserved_measured():
                 old_measured = m.group(1)
                 break
     out = render(include_measured=True)
+    # #1296（W5/例外 7）：--stamp ⇒ 刷新 measured_at 为**当前基准**；否则保留旧值（原设计，防噪声）
+    if STAMP:
+        return out, None   # 交给调用方回落到当前 sha（REGEN 消息里显示真值）
     if old_measured:
         out = [("  measured_at: %s" % old_measured) if ln.strip().startswith("measured_at:") else ln
                for ln in out]

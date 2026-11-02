@@ -291,7 +291,27 @@ C-1 frontmatter ＋ 结论／证据指针／状态／归属四列 ｜ C-2 清单
 7. 新增仅 A1–A3（W0 前置 3 件单列）
 8. 每条退役/不适用附 **`na_cmd:` 字段**，机检逐条执行并断言 rc/命中数
 9. 墙钟 ≤90s 由 `check-gate-budget.sh` 出数（三态）
-10. K3 报告 PR 号 ＋ CTO 派单件 YAML 存在且 `status` 齐全；**bypass 面按 K3-7 口径**
+10. K3 报告（本体已入库可追溯）＋ CTO 派单件**`.md` frontmatter 的 `status` 齐全（在飞件）**；**bypass 面按 K3-7 口径**
+   > 🔴 **口径更正（2026-11-02 · K3 审计 V3）**：原文为「派单件 **YAML** 存在且 status 齐全」，
+   > 而 K3 实测 handbook `派单件/` **0 个 YAML（366 个文件全 .md）** ⇒ 该口径与现实脱节、**永不可能满足**。
+   > 现改判 **`.md` frontmatter**（承认现状，不新增第二套载体），并**只向前生效**：
+   > **自 2026-11-02 起新增的**「名称含 `派单`／`规格`」文件，frontmatter 必须含 `status:`；`done`／`retired` 视为已结项。
+   > **存量不追**（实测 196 件里 121 件缺 `status`——历史件补字段无信息量，且等于伪造）；
+   > 存量数字按 §十二 要求**如实记账**，不进阻断面。
+   > **复跑命令**（人工判定，无机检——handbook 不在产品仓门禁面内）：
+   > ```bash
+   > cd <handbook>; CUTOFF=2026-11-02; miss=0; tot=0
+   > for f in 派单件/*.md; do
+   >   b=$(basename "$f"); d="${b:0:10}"
+   >   [[ "$d" < "$CUTOFF" ]] && continue                 # 存量不追
+   >   [[ "$b" =~ 派单|规格 ]] || continue
+   >   st=$(head -12 "$f" | sed -n 's/^status:[[:space:]]*//p' | head -1 | tr -d '\r')
+   >   case "$st" in done|retired) continue;; esac
+   >   tot=$((tot+1)); [ -n "$st" ] || miss=$((miss+1))
+   > done
+   > echo "面内=$tot 缺 status=$miss"
+   > ```
+   > 已知限制：跨仓（handbook）⇒ 产品仓 CI **无法机检**；本条为**人工判定＋命令留痕**。
 11. **10 个 workflow 全部定态，无"账外"**；pre-push/npm 腿已处置
 12. **`AGENTS.md` 已升 V7.2** 且判据中枢指向本件
 

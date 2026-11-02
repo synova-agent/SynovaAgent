@@ -1839,7 +1839,7 @@ run_by_candidates:
     why: "#1254 T4 判据工具（台账三判据：行数/跨段重复/measured_at）；本批只出数不接线 —— W5 收口（台账 ≤800 与去重）后再接 pre-commit/CI ⇒ 记 无"
 
 gate_meta:
-  measured_at: 4c50e4574
+  measured_at: 4b5a9d399
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
   legacy_sections:
     - name: meta
