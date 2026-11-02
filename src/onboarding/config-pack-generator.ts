@@ -50,7 +50,7 @@
  *      不得让 400 响应体／日志随条数无界增长（§4.5-C1 上限 5 条）；需要完整原值时由调用方对原始 seed 自行点名。
  */
 import { createLogger } from '@synova/logger';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { EXPECTED_PIECES } from '../init/preset-loader';
 import {
@@ -338,6 +338,32 @@ function slugify(text: string): string {
 // 四、六件逐件渲染（形状 = 规格 §2.5-B；refs 只来自 projectSeedRefs）
 // ══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * 从既有 `capabilities.yaml` 文本里**逐字**摘出顶层 `permissionGrants:` 块（无则 null）。
+ *
+ * 为什么：生成器重写角色包时只渲染 seed 的 `capabilities[]`，会把客户已配的
+ * `permissionGrants`（#195 客户矩阵／K12-11 项模型）整块抹掉（实测 1384B→136B）。
+ * 修复口径 = **只保留客户段**（不解析、不改写其内部结构），其余仍按 seed 重生成。
+ *
+ * @input existing 既有文件全文
+ * @output 顶层 `permissionGrants:` 起的连续块（含行尾换行）；无此键 ⇒ null
+ */
+function extractPermissionGrantsBlock(existing: string): string | null {
+  const lines = existing.split('\n');
+  const start = lines.findIndex((line) => /^permissionGrants\s*:/.test(line));
+  if (start < 0) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const line = lines[i] ?? '';
+    const isTopLevelKey = line.length > 0 && !/^\s/.test(line) && !line.startsWith('#');
+    if (isTopLevelKey) {
+      end = i;
+      break;
+    }
+  }
+  return `${lines.slice(start, end).join('\n').replace(/\s+$/, '')}\n`;
+}
+
 /** `manifest.json`（JSON；键集严格 = 10 键 —— P1-a `MANIFEST_ZOD` 是 strictObject，多键即红） */
 function renderManifest(seed: RoleSeed, refs: readonly RolePackRef[]): string {
   const doc = {
@@ -558,7 +584,20 @@ export function generateConfigPack(input: GenerateConfigPackInput): ConfigPackRe
     for (const file of files) {
       const rel = join(relDir, file.name);
       try {
-        writeFileSync(join(root, rel), file.body, 'utf8');
+        let body = file.body;
+        if (file.name === 'capabilities.yaml') {
+          // #195 P0：保留既有客户矩阵段（permissionGrants），不被 seed 重生成抹掉。
+          try {
+            const grants = extractPermissionGrantsBlock(readFileSync(join(root, rel), 'utf8'));
+            if (grants !== null) body = `${body}\n${grants}`;
+          } catch (err: unknown) {
+            const code = (err as { code?: string }).code;
+            if (code !== 'ENOENT') {
+              log.warn({ rel, err }, '既有 capabilities.yaml 读取失败 — 本次不保留 permissionGrants（degraded）');
+            }
+          }
+        }
+        writeFileSync(join(root, rel), body, 'utf8');
         written.push(rel);
       } catch (err: unknown) {
         const msg = `${rel}: ${err instanceof Error ? err.message : String(err)}`;

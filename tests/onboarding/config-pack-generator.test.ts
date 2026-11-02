@@ -27,7 +27,7 @@
  *   既有 18 条**一字不改**；本组全部断言真 `generateConfigPack()`（禁 grep 当验收）。
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { generateConfigPack, type RoleSeed } from '../../src/onboarding/config-pack-generator';
@@ -108,6 +108,21 @@ describe('config-pack-generator — J4 正常路径（六件）', () => {
     expect(r.written).toContain(join('extensions/presets/roles/finance', 'manifest.json'));
     // 磁盘实测 = 六件
     expect(readdirSync(roleDir('finance')).sort()).toEqual([...EXPECTED_PIECES].sort());
+  });
+
+  it('P0-2-2 重生成同一角色 ⇒ 保留既有 permissionGrants（不抹客户矩阵；#195 P0）', () => {
+    const seed = completeSeed({ roleId: 'ops' });
+    generateConfigPack({ roles: [seed], rootDir: root });
+    const capPath = join(roleDir('ops'), 'capabilities.yaml');
+    const generated = readFileSync(capPath, 'utf8');
+    const withGrants = `${generated}\npermissionGrants:\n  grants:\n    - knowledge.finance.read\n  denies:\n    - knowledge.finance.write\n`;
+    writeFileSync(capPath, withGrants, 'utf8');
+    generateConfigPack({ roles: [seed], rootDir: root });
+    const after = readFileSync(capPath, 'utf8');
+    expect(after).toContain('permissionGrants:');
+    expect(after).toContain('knowledge.finance.read');
+    expect(after).toContain('knowledge.finance.write');
+    expect(after.length).toBeGreaterThan(generated.length);
   });
 
   it('J4-2a knowledge-scope.yaml 顶层含 scopes: 且 scopes[].id 非空', () => {

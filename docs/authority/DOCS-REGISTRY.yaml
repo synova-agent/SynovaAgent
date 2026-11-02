@@ -1748,3 +1748,81 @@ documents:
     status: active
     owner: CTO
     note: "#1281（③ ORPHAN 对账 ＋ W7）：check-gate-inventory.sh 新增 R7 到期回收判据（review_after 过期且无 review_owner ⇒ 红）；四例测试含改坏必红；P0 棘轮 8 不动；check-customer-deps 补 npm 通道（记账闭合，仍不自动执行）。"
+  # ---- CTO 2026-11-02：冲突标记机检 受保护路径豁免（DOC-<Issue#>）----
+  - id: DOC-1287
+    type: decision
+    path: gate-exemptions/2026-11-02-CM-conflict-markers.md
+    status: active
+    owner: P4
+    note: "冲突标记机检：把「严格冲突标记 0」从人规变机检（四形态＋扩展名白名单＋三态＋降级），接 pre-commit 组 1 硬阻断。"
+
+  # ---- K12-ENG (#1271) 门禁豁免文件登记（D2 登记门禁；2026-11-02）----
+  - id: DOC-1301
+    type: governance
+    path: gate-exemptions/2026-11-02-1272-adapters-deadcode-guard.md
+    status: active
+    owner: K12
+    note: "#1272 K3 P0-1：adapters/notifications 死码复活守卫（下调存量基线）"
+
+  - id: DOC-1302
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1304
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1276-v3-approval-fixture.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1303
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1275-output-contract-probe.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+  # ---- CTO 2026-11-02：#1290 T1 降级日志补合 受保护路径豁免（DOC-1290）----
+  - id: DOC-1290
+    type: decision
+    path: gate-exemptions/2026-11-02-1290-t1-degraded-log.md
+    status: active
+    owner: CTO
+    note: "K3 审计例外 1 补合：T1 的 D2 降级日志修复曾在 PR #1256 合并后才推分支 ⇒ 从未进 main；本卡补合 degrade() 统一出口（stderr＋SYNO_GATE_DEGRADED_LOG JSON）。"
+
+  - id: DOC-1305
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1277-content-registry-probe.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1306
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1278-content-layering-probe.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1307
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1279-ladder-ci.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1308
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1280-exile-baseline.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1309
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1283-role-config-target.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"

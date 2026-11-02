@@ -1,0 +1,8 @@
+writeset:
+  - scripts/control-tower/check-notes-lifecycle.sh
+  - gate-exemptions/2026-11-02-1290-t1-degraded-log.md
+  - .claude/claims/1290.yaml
+done:
+  - verify: bash tests/control-tower/check-notes-lifecycle.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
+note: "K3 审计例外 1：T1 的 D2 降级日志修复（a27faaa89）在 PR #1256 合并之后才推分支 ⇒ 从未进 main，而台账 §9.20-E 写成「已修并合入」= 虚假宣称。本卡 cherry-pick 补合：degrade() 统一出口（E_TASK_STATE/E_NO_PYTHON/E_TIMEOUT/E_INTERNAL）写 stderr ＋ SYNO_GATE_DEGRADED_LOG JSON。"

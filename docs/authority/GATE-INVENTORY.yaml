@@ -1337,6 +1337,14 @@ classification:
     confirmed_by: pending-cto
     note: "#1254 T4：台账三判据（行数 <=800／跨段无重复／measured_at=当前基准）出数与点名；本批不接线，W5 收口后再接"
 
+  - id: CT-check-conflict-markers
+    class: P1
+    owner: P4
+    review_after: 2026-11-27
+    entrypoint: scripts/control-tower/check-conflict-markers.sh
+    required_ci: true
+    confirmed_by: founder-2026-11-02
+    note: "冲突标记机检：open/base(diff3)/sep/close 四形态，行首匹配＋扩展名白名单（只扫机器可解析文件，.md 面外）；接 pre-commit 组 1 硬阻断。实证依据：2026-11-02 两个带 <<<<<<< 的 forward-merge 提交（2d70f7e2b/b0edc5c92）在 CI 两条腿都判 success ⇒ 此前无机检"
 run_by:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
@@ -1731,6 +1739,9 @@ run_by:
   - entrypoint: scripts/control-tower/check-ledger-budget.sh
     run_by: "无"
     quota: false
+  - entrypoint: scripts/control-tower/check-conflict-markers.sh
+    run_by: pre-commit
+    quota: true
 run_by_candidates:
 #   classification（40 条，逐件一行；与上方 classification 段的 entrypoint 同键）（20 件）
   - entrypoint: scripts/control-tower/check-acceptance-matrix.py
@@ -1916,8 +1927,8 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/check-integrity-startup.sh
       class: P2
-      run_by: 无
-      orphan: true
+      run_by: pre-commit
+      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical
@@ -2073,6 +2084,13 @@ gate_meta:
       run_by: 无
       orphan: true
       quota: false
+      quota_scope: non-doc
+      nature: mechanical
+    - entrypoint: scripts/control-tower/check-conflict-markers.sh
+      class: P1
+      run_by: pre-commit
+      orphan: false
+      quota: true
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/check-customer-deps.ts
@@ -2406,8 +2424,8 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/probe-ladder.ts
       class: P2
-      run_by: 无
-      orphan: true
+      run_by: pre-commit
+      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical

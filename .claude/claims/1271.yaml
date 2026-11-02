@@ -29,6 +29,10 @@ writeset:
   - src/onboarding/config-pack-generator.ts
   - tests/onboarding/config-pack-generator.test.ts
   - tests/l4/goal-alignment.test.ts
+  - scripts/control-tower/gate-integrity-baseline.txt
+  - docs/authority/DOCS-REGISTRY.yaml
+  - scripts/check-content-coupling.sh
+  - gate-exemptions/2026-11-02-1272-adapters-deadcode-guard.md
   - gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
   - memory/notes/implemented/2026-11-02-k12-eng-p0-3-output-contract-probe.md
   - gate-exemptions/2026-11-02-1271-1275-output-contract-probe.md
