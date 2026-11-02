@@ -2424,8 +2424,8 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/probe-ladder.ts
       class: P2
-      run_by: 无
-      orphan: true
+      run_by: pre-commit
+      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical
