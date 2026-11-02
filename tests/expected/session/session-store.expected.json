@@ -3,9 +3,20 @@
   "module": "src/store/session-store.ts",
   "issue": "#1165",
   "surface": "protocol",
-  "frozen_at": "2026-10-30",
-  "note": "R-E1 会话账本协议冻结面：addMessage 结果形状 / 事务原子性 / seq 连续 / tool_result log-only / cap 拒绝三态。任何一项行为变化都必须改本资产（tests/store/session-store-expected.test.ts 逐项断言）。",
+  "frozen_at": "2026-11-02",
+  "note": "R-E1 会话账本协议冻结面：addMessage 结果形状 / 事务原子性 / seq 连续 / tool_result log-only / cap 拒绝三态。任何一项行为变化都必须改本资产（tests/store/session-store-expected.test.ts 逐项断言）。#1257 增补：事件词表新增 tool_call、行格式版本 1→2、新增 source_event_seq 列（call/result 配对，列不是 payload 字段）——三项均为协议面变化，故同批扩本资产并加断言。",
   "cases": {
+    "toolCallVocabulary": {
+      "formatVersion": 2,
+      "eventTypes": ["message", "tool_result", "tool_call", "system", "diagnosis_phase", "diagnosis_module", "diagnosis_report"]
+    },
+    "sourceEventSeqLink": {
+      "callId": "call_expected_link",
+      "unclosedAfterCallOnly": ["call_expected_link"],
+      "unclosedAfterResult": [],
+      "resultSourceSeqEqualsCallSeq": true,
+      "payloadJsonCarriesReservedKey": false
+    },
     "addMessageSuccess": {
       "result": { "ok": true, "seq": 1 },
       "agentMessagesRows": 1,
