@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1306.yaml
+  - tests/expert-quality/layer2-judge.eval.ts
+  - tests/expert-quality/layer2-judge.test.ts
+  - tests/expert-quality/README.md
+done:
+  - verify: "npx vitest list 2>/dev/null | grep -c layer2-judge  # 期望 0（不再被收集）"
+note: "#1306 eval 移出 CI 收集面：.test.ts→.eval.ts、去掉 .env 读取、缺 key 时 exit 2（密钥不得入仓）。"

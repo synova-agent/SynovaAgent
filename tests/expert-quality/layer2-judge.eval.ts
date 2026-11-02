@@ -1,9 +1,9 @@
 /**
- * tests/expert-quality/layer2-judge.test.ts — L2 LLM 法官评分（跨行业对比）
+ * tests/expert-quality/layer2-judge.eval.ts — L2 LLM 法官评分（跨行业对比｜**eval，不是 test**）
  *
  * 对 5 个行业 × 7 位专家 = 35 组诊断输出进行六维加权评分。
  *
- * 运行: npx vitest run tests/expert-quality/layer2-judge.test.ts
+ * 运行: LLM_API_KEY=... npx vitest run tests/expert-quality/layer2-judge.eval.ts（**不参与 CI 收集**）
  * 耗时: ~15-20 分钟（35 次专家调用 + 35 次法官调用）
  */
 import { describe, it, expect } from 'vitest';
@@ -22,14 +22,19 @@ import { ENTERPRISES, getEnterpriseContext, type EnterpriseFixture } from './fix
 
 // ═══ Config ═══
 
+/**
+ * 只从环境变量取密钥。**禁止读取仓库内任何文件**（含 .env）：
+ * 那等于邀请把 API key 落到工作树，一旦误提交即密钥入仓。
+ */
 function loadConfig() {
-  let apiKey = process.env.LLM_API_KEY || process.env.DEEPSEEK_API_KEY || '';
+  const apiKey = process.env.LLM_API_KEY || process.env.DEEPSEEK_API_KEY || '';
   if (!apiKey) {
-    try {
-      const envContent = fs.readFileSync(path.resolve('.env'), 'utf-8');
-      const m = envContent.match(/LLM_API_KEY=(.+)/);
-      if (m) apiKey = m[1].trim();
-    } catch { /* expected: JSON parse may fail */ }
+    console.error(
+      'layer2-judge.eval: 缺少 LLM_API_KEY / DEEPSEEK_API_KEY。\n' +
+      '本文件是 **eval**（需真实模型，15–20 分钟），不参与 CI 收集；\n' +
+      '请用环境变量提供密钥——**不得写入仓库任何文件（含 .env）**。',
+    );
+    process.exit(2); // 2 = 检查自身失败（缺前置），不是判据红
   }
   return {
     apiKey,
