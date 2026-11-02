@@ -41,14 +41,24 @@ TASK_STATE_DIR="${TASK_STATE_DIR:-$ROOT/task-state}"
 PROPOSED_DIR="$NOTES_DIR/proposed"
 NOTES_TIMEOUT="${SYNO_NOTES_TIMEOUT:-30}"
 
+# ── D2 契约：降级一行 + 追加 JSON 到 SYNO_GATE_DEGRADED_LOG（与 check-gate-budget.sh 同形）──
+# 为什么单列函数: 降级有三处出口（目录不可读／缺 python／超时），复制三份日志字段必然漂移。
+degrade() { # <CODE> <msg>
+  echo "degraded: $1 — $2" >&2
+  local _dl="${SYNO_GATE_DEGRADED_LOG:-$ROOT/.codex/control-tower/logs/degraded-events.log}"
+  mkdir -p "$(dirname "$_dl")" 2>/dev/null || true   # swallow-ok: 日志目录建不了不阻断降级本身
+  printf '{"time":"%s","component":"check-notes-lifecycle","code":"%s","phase":"%s","retryable":false}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" >> "$_dl" 2>/dev/null || true   # swallow-ok: 落盘失败不改 exit 2
+  exit 2
+}
+
 # ── 目录可读性检查（铁律 24: 显式降级，不静默）──
 if [ ! -d "$PROPOSED_DIR" ]; then
   echo "✅ [notes-lifecycle] proposed/ 不存在 — 跳过"
   exit 0
 fi
 if [ ! -d "$TASK_STATE_DIR" ]; then
-  echo "degraded: 目录不可读 — task-state/ 不存在: $TASK_STATE_DIR" >&2
-  exit 2
+  degrade "E_TASK_STATE" "task-state/ 不存在: $TASK_STATE_DIR"
 fi
 
 # ── PYBIN 三级探测（D520: 不裸 spawn python3；先 command -v ＋ 可用性验证）──
@@ -59,8 +69,7 @@ for _c in python3 python py; do
   fi
 done
 if [ -z "$PYBIN" ]; then
-  echo "degraded: E_NO_PYTHON — python3/python/py 均不可用，判不了（禁当通过）" >&2
-  exit 2
+  degrade "E_NO_PYTHON" "python3/python/py 均不可用，判不了（禁当通过）"
 fi
 
 # ── 核心：一次进程解析全部（#1253）──
@@ -157,9 +166,7 @@ fi
 case "$RC" in
   0|1) exit "$RC" ;;
   124|137)
-    echo "degraded: E_TIMEOUT — notes 生命周期门禁超过 ${NOTES_TIMEOUT}s 未返回（判不了，禁当通过）" >&2
-    exit 2 ;;
+    degrade "E_TIMEOUT" "超过 ${NOTES_TIMEOUT}s 未返回（判不了，禁当通过）" ;;
   *)
-    echo "degraded: E_INTERNAL — 扫描失败（rc=$RC）" >&2
-    exit 2 ;;
+    degrade "E_INTERNAL" "扫描失败（rc=$RC）" ;;
 esac

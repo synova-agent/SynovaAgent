@@ -61,8 +61,8 @@
  *      `SYNO_M6_LOCK_WAIT_MS` 可调；**超时才** LOCK_BUSY ＋ exit 2）；锁 stale 回收靠同机 pid 存活探测。
  *      若进程被强杀且目录停在隔离区，下一次运行会 `degraded: 隔离区残留` ＋ exit 2 点名（**不自动搬回**，
  *      因为无法区分「本批残留」与「别人正在用」）。人确认后手工移回即可。
- *   ④ 46 / 45 / 12 是 **as_of b8edf9860** 的硬基线；内容面增删后须同步
- *      `BASELINE_SENTINEL_COUNT` / `CONTENT_TYPE_COUNT`，否则报基线漂移红（刻意如此，不静默放宽）。
+ *   ④ 46 / 45 是 **as_of b8edf9860** 的哨兵硬基线；**内容类型数不硬编码**——从
+ *      `describeContentRegistry()` 的 reachable+loader 项数派生（单一真源，内容面增删不手改）。
  *   ⑤ 本机 node v24.16.0；node22 未复跑（#1158 U1）。
  *   ⑥ 本件只判「内容项级」可拔性（内容项 loader 即端口），**不是**题 8 的「包级 customerDeps」口径（禁混用）。
  *   ⑦ 恢复的完整性用 **全目录 sha256（6 文件）** 核对，不依赖 mtime；`git status --short extensions/`
@@ -89,7 +89,7 @@ import {
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listSentinels } from '../../src/agent/sentinel-service';
-import { initContentTypes } from '../../src/deploy/content-registry';
+import { describeContentRegistry, initContentTypes } from '../../src/deploy/content-registry';
 import { reloadContentTypes } from '../../src/deploy/content-reload';
 import { getSentinelRegistry } from '../../src/sentinel/registry';
 import { clearSentinelCache } from '../../src/sentinel/sentinel-loader';
@@ -114,8 +114,16 @@ const VICTIM_ID = 'sentinel-cash-runway';
 /** 内容面基线（as_of b8edf9860） */
 const BASELINE_SENTINEL_COUNT = 46;
 const EXILED_SENTINEL_COUNT = BASELINE_SENTINEL_COUNT - 1;
-/** 已装配内容类型数（as_of b8edf9860；`initContentTypes()` 的 12 个 reachable 项） */
-const CONTENT_TYPE_COUNT = 12;
+/**
+ * 已装配内容类型数 = 注册表 `reachable && loader !== undefined` 的项数。
+ *
+ * 🔴 #1271 P2-1：原为硬编码 12（as_of b8edf9860）；content-layer 转 reachable 后基线漂移。
+ *   改为**从注册表派生**（单一真源），内容面增删不再手改本常量——同时保留判据牙齿：
+ *   子进程装配数仍须 == 该派生值，装少了/多了即红。
+ */
+const CONTENT_TYPE_COUNT = describeContentRegistry().entries.filter(
+  (entry) => entry.status === 'reachable' && entry.loader !== undefined,
+).length;
 /** 隔离区（**必须在 `extensions/sentinels/` 之外**：放里面会被 loader 当第 46 项扫到） */
 const EXILE_ROOT_REL = '.synova-out/m6-1158/exile';
 const EVIDENCE_DIR_REL = '.synova-out/m6-1158';

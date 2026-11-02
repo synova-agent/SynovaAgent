@@ -76,7 +76,8 @@
 #      单元级实证（原判定代码 + 仅注入一行基线）：
 #        ① 与基线同体（OLD 目标）        → total=1 **new=0**
 #        ② 换成全新目标（NEW，同数）      → total=1 **new=0**   ← 新越界依赖被静默接受
-#      反向确认（计数上升时判据有效）：给已登记基线的 `extensions/adapters/feishu/adapter.ts` 追加 1 条 ⇒
+#      复活守卫（K12-ENG P0-1 / #466）：已删 adapters/notifications 实现**不再登记基线** ⇒
+#        放回原死码（如 `extensions/adapters/feishu/adapter.ts`）即计 CC1 NEW ⇒ CI-strict exit 1。
 #        正确报 `CC1 NEW …adapter.ts:33 '…' (值)` exit=1。
 #      ⇒ **本门禁当前只守"量"，守不住"体"**。接入 CI 前必须二选一：
 #        (a) 把**逐条 specifier 身份**纳入基线比较（基线体积会显著增大，需重定基线格式），或
@@ -129,6 +130,29 @@ USAGE
     exit 2 ;;
 esac
 
+# ── CC0（#466 / K12-ENG P0-1）：adapters 目录**零 .ts** 常驻守卫 ────────────────
+#   删除类判据不能只做一次性快照：已删实现若被原样（或改写）放回，任何门禁都不红 ⇒ 死码回潮。
+#   本守卫把「adapters 不得含 .ts 实现」变成常驻不变式：本地只报数（沿用本门禁 local 契约），
+#   CI(SYNO_CI=1)/STRICT 判红；`--print-baseline` 时跳过（基线打印不受影响）。
+if [ -d "$EXT/adapters" ] && [ "${1:-}" != "--print-baseline" ]; then
+  #   覆盖 TS 家族（.ts/.tsx/.mts/.cts，大小写不敏感）；find 失败 ⇒ DEGRADED exit 2（fail-closed）。
+  if ! ADAPTER_TS_LIST="$(find "$EXT/adapters" -type f \( -iname '*.ts' -o -iname '*.tsx' -o -iname '*.mts' -o -iname '*.cts' \) | sort)"; then
+    echo "CONTENT-COUPLING: DEGRADED adapters 守卫扫描失败（fail-closed，不当作通过）"
+    exit 2
+  fi
+  if [ -n "$ADAPTER_TS_LIST" ]; then
+    ADAPTER_TS_N="$(printf '%s\n' "$ADAPTER_TS_LIST" | grep -c .)"
+    echo "CC0 NEW extensions/adapters 下存在 .ts 实现文件（#466 裁定 (a)：内容面禁引擎码）："
+    printf '%s\n' "$ADAPTER_TS_LIST" | sed 's/^/  /'
+    if [ "$MODE" = "ci" ] || [ "$MODE" = "strict" ]; then
+      echo "CONTENT-COUPLING: VIOLATION new=${ADAPTER_TS_N}"
+      exit 1
+    fi
+    echo "CONTENT-COUPLING: OK（新增 ${ADAPTER_TS_N}｜本地只报数，CI(SYNO_CI=1) 判红）"
+    exit 0
+  fi
+fi
+
 PY="$(command -v python3 || true)"
 if [ -z "$PY" ]; then
   echo "CONTENT-COUPLING: DEGRADED python3 不可用（CC1–CC4 无法判定；fail-closed，绝不当作通过）"
@@ -154,12 +178,6 @@ STATUS_OK = ("reachable", "retired", "pending-cto")
 CC_BASELINE_BEGIN = "CC-BASELINE-BEGIN"
 CC_BASELINE_END = "CC-BASELINE-END"
 BASELINE_TEXT = r"""
-CC1 extensions/adapters/feishu/adapter.ts t=1 v=1
-CC1 extensions/adapters/nemoclaw/adapter.ts t=1 v=1
-CC1 extensions/notifications/email/adapter.ts t=1 v=0
-CC1 extensions/notifications/feishu-approval/adapter.ts t=1 v=0
-CC1 extensions/notifications/jira/adapter.ts t=1 v=0
-CC1 extensions/notifications/linear/adapter.ts t=1 v=0
 CC1 extensions/sentinels/agent-deployment-maturity/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/agent-deployment-maturity/computes/compute-agent-deployment-maturity.ts t=0 v=1
 CC1 extensions/sentinels/agent-opportunity-window/aggregate.ts t=1 v=0
