@@ -6,14 +6,29 @@
   "channel": "jira",
   "displayName": "Jira 通知适配器",
   "description": "将诊断行动项创建为 Jira Issue（REST API v3）。",
-  "entryPoint": "./adapter.ts",
+  "entryPoint": "./manifest.json",
   "exportKey": "jiraNotificationAdapter",
   "config": {
     "credentialSchema": {
-      "JIRA_BASE_URL": { "type": "string", "required": true },
-      "JIRA_EMAIL": { "type": "string", "required": true },
-      "JIRA_API_TOKEN": { "type": "string", "required": true, "sensitive": true },
-      "JIRA_PROJECT_KEY": { "type": "string", "required": true }
+      "JIRA_BASE_URL": {
+        "type": "string",
+        "required": true
+      },
+      "JIRA_EMAIL": {
+        "type": "string",
+        "required": true
+      },
+      "JIRA_API_TOKEN": {
+        "type": "string",
+        "required": true,
+        "sensitive": true
+      },
+      "JIRA_PROJECT_KEY": {
+        "type": "string",
+        "required": true
+      }
     }
-  }
+  },
+  "loaderRef": "src/notifications/jira-adapter.ts",
+  "entryPointNote": "实现归宿主 src/notifications/<channel>-adapter.ts（K12-17 归位）；本字段只作客户自带实现的兼容位，真源=content-registry。"
 }
