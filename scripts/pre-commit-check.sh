@@ -801,6 +801,22 @@ soft_check "硬编码业务数据/类型 (禁止硬编码部门名/可扩展实�
 # V4.5.1: 旧适配器废弃映射检查 (不阻断)
 par_collect_quiet deprecated-mapping "$PAR_DEPRECATED" || true
 
+# ── #冲突标记机检（2026-11-02 实证：带 <<<<<<< 的提交在 CI 跑出 success）──
+# 为什么放组 1: 冲突标记是**语法完整性**问题（文件解析不了），是类型安全的前提。
+# 为什么机检: 「严格冲突标记 0」此前只是人规——两个带标记的 forward-merge 提交
+#   （2d70f7e2b / b0edc5c92）推上去后 CI 两条腿都判 success，说明全仓无一处判据在看它。
+# 语义: 0=干净 / 1=命中（**阻断**）/ 2=判不了（fail-closed，不当通过）。
+if [ -f "$ROOT/scripts/control-tower/check-conflict-markers.sh" ]; then
+  _CM_OUT="$(bash "$ROOT/scripts/control-tower/check-conflict-markers.sh" --root "$ROOT" 2>&1)"; _CM_RC=$?
+  case "$_CM_RC" in
+    0) soft_pass "冲突标记机检（组 1·语法完整性）" "check-conflict-markers" ;;
+    1) hard_check "冲突标记机检（组 1·语法完整性）" "$(printf '%s' "$_CM_OUT" | grep '^MARKER:' | head -5)" "check-conflict-markers" ;;
+    *) soft_check "冲突标记机检（组 1·语法完整性）：判不了（rc=${_CM_RC}，按 2 归，禁当通过）" "$(printf '%s' "$_CM_OUT" | tail -1)" ;;
+  esac
+else
+  soft_check "冲突标记机检: 脚本缺失（判不了，禁当通过）" "scripts/control-tower/check-conflict-markers.sh 不存在"
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # 组 2: 测试质量 (原 2, 4, 12, 17 合并)
 #
