@@ -1791,3 +1791,24 @@ documents:
     status: active
     owner: CTO
     note: "K3 审计例外 1 补合：T1 的 D2 降级日志修复曾在 PR #1256 合并后才推分支 ⇒ 从未进 main；本卡补合 degrade() 统一出口（stderr＋SYNO_GATE_DEGRADED_LOG JSON）。"
+
+  - id: DOC-1305
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1277-content-registry-probe.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1306
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1278-content-layering-probe.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1307
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1279-ladder-ci.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
