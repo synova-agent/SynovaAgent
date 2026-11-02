@@ -174,16 +174,24 @@ if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1;
   #   判据: 未在本 PR 里的 untracked 文件不得阻断（untracked 已降为警告，见下）。
   TRUNK="${SYNO_TRUNK_REF:-main}"
   BASE_REF=""
-  # #1311 修：**远端跟踪 ref 必须排在本地同名分支之前**。
-  #   实测（2026-11-03）：CI 工作区是长期复用的克隆，本地 `main` 从不更新（停在 6d52c15a），
-  #   而链序原本是 `gitea/main` → `main` → `origin/main` ⇒ 取到**陈旧本地 main** ⇒
-  #   merge-base 落在旧提交 ⇒ 源③ 把「main 早就有、只是本分支基线之前」的文档全算成"本 PR 新增"
-  #   ⇒ 任意 PR 都被 D782 D2 误判（实测：docs/assessment/DOC-GOVERNANCE-AUDIT-20261029.md）。
-  #   修法：先试远端跟踪（gitea/ → origin/），本地同名分支垫底；语义不变——仍然"以 trunk 为基线"，
-  #   只是不再被本地陈旧 ref 劫持。
+  # #1311 修（2026-11-03 两次修才对准）：base 不能按"名字顺序"取，要按**新鲜度**取。
+  #   实证①：链序 `gitea/main` → `main` → `origin/main`，CI 工作区本地 main 陈旧（6d52c15a）⇒ 误判。
+  #   实证②：改成远端优先后仍误判 —— 因为 CI 工作区**同时存在** `gitea/main`（陈旧）与 `origin/main`（刚 fetch），
+  #           而名字顺序无法表达谁新。
+  #   ⇒ 现规则：把全部存在的候选列出来，取**提交时间最新**的那个作 base（同日取 merge-base 更深者），
+  #     并打印实际选中的 ref+sha（可审计）。
+  _CAND_OK=""
   for _cand in "gitea/$TRUNK" "origin/$TRUNK" "$TRUNK" origin/main main origin/HEAD; do
-    if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1; then BASE_REF="$_cand"; break; fi
+    git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify --quiet "$_cand" >/dev/null 2>&1 && _CAND_OK="$_CAND_OK $_cand"
   done
+  BASE_REF=""
+  _BEST_TS=-1
+  for _cand in $_CAND_OK; do
+    _ts="$(git -c safe.directory="$ROOT" -C "$ROOT" log -1 --format=%ct "$_cand" 2>/dev/null)"   # swallow-ok: 取不到时间就当最旧，随后仍会打印所选 ref
+    case "$_ts" in ''|*[!0-9]*) _ts=0 ;; esac
+    if [ "$_ts" -gt "$_BEST_TS" ]; then _BEST_TS="$_ts"; BASE_REF="$_cand"; fi
+  done
+  [ -n "$BASE_REF" ] && echo "  ℹ️ base 选择: ${BASE_REF}（候选:${_CAND_OK}；按提交时间取最新）"
   MERGE_BASE=""
   [ -n "$BASE_REF" ] && MERGE_BASE="$(git -c safe.directory="$ROOT" -C "$ROOT" merge-base "$BASE_REF" HEAD 2>/dev/null)" # swallow-ok: merge-base 失败即降级（下一分支显式留痕），不改判定
   ADDED_VS_BASE=""
