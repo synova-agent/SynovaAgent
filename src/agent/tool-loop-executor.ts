@@ -17,6 +17,10 @@ import { pruneToolResult, ToolResultPruneError } from '../llm/tool-result-pruner
 // 重试事件落 D500 事件流（投影计数单元见 store/retry-projection，由 deploy/bootstrap 注册）：
 // 落盘缝在 src/llm（共享基础设施层）——铁律 39 禁本层静态 import src/store。
 import { callWithResilience, appendRetryEvent, type LlmRetryEvent, type ResilienceOutcome } from '../llm/retry-middleware';
+// #1257 P0-2a: 保留传输键（来源 seq 经 payload 传入 → 由 store 落 source_event_seq 列并剥离）。
+// L2→L5 具体类 import 的既有先例：src/agent/session-storage-service.ts:23 同样 runtime import store；
+// 架构门禁（scripts/check-architecture.sh）只约束 L1→* 与 L2→L4，本 import 不在其列。
+import { SOURCE_EVENT_SEQ_KEY } from '../store/session-store';
 // #915 Q-5: 取消语义（signal 贯穿 execute 链；取消文案导出供引擎复用）
 import { isToolAbortEnabled, type ToolAbortErrorCode } from './tools';
 
@@ -86,6 +90,39 @@ export interface ToolResultEventPayload {
 
 /** 预览字节上限（规格 §4.3「预览 ≤2KB」；#991 事件上限 20k 条 ⇒ 单条 payload 必须小） */
 const TOOL_RESULT_PREVIEW_MAX_BYTES = 2048;
+
+// ═══ #1257 P0-2a: 工具调用事件（call 侧留痕；call/result 配对）═══
+
+/**
+ * #1257 P0-2a: `tool_call` 事件 payload（writer 侧契约；**log-only**，不进模型消息）。
+ *
+ * 为什么需要它：库里只有 `tool_result` 时，「有调用无结果」（崩溃/取消/落盘降级/进程被杀）
+ * 在**事实层不可检出**。写 call 侧后，`SessionStore.listUnclosedToolCalls()` 用
+ * `tool_result.source_event_seq = tool_call.seq` 反查即可暴露悬空调用。
+ *
+ * 身份口径与 `ToolResultEventPayload` **同源同名**（`toolCallId`/`name`）——这样同一个
+ * `call.id` 在 assistant.tool_calls、role='tool'、`tool_call`、`tool_result` 四处逐字一致；
+ * `round` = 工具循环轮次（0 起），用于"第几轮发起的调用"检索。
+ */
+export interface ToolCallEventPayload {
+  /** 模型侧 tool_call id（与 tool_result.toolCallId / assistant.tool_calls[].id 同源） */
+  toolCallId: string;
+  /** 工具名 */
+  name: string;
+  /** 工具循环轮次（0 起；callLLMWithTools/streamWithToolLoop 的 round 变量） */
+  round: number;
+}
+
+// ═══ #1257 P0-2a 已知限制（实现取法偏差；R2/记忆件已披露）═══
+//  ① 来源 seq 经 payload 的**保留键** `SOURCE_EVENT_SEQ_KEY` 传给 `appendEvent`，而非第 4 形参——
+//     原因：`src/store/session-projection.ts` 的原型级订阅缝以三参签名包装并只转发
+//     `(sessionId, eventType, payload)`，且由 `src/deploy/bootstrap.ts` 副作用导入**在生产必安装**
+//     ⇒ 第 4 实参在生产被丢弃、而单测直连 SessionStore 是绿的（假绿）。改那 1 行需扩写集（CTO 批准）。
+//     若日后批准扩写集，可改回形参并删除保留键机制（store 侧同步）。
+//  ② `tool_call` 是**log-only**：`deriveMessages` 不投影它（模型可见消息零增量）；
+//     `seq` 因此会比模型消息多消耗（#991 上限按 seq 计）。
+//  ③ 取消（AbortError 两码）路径**有意不写** `tool_result` ⇒ 该 call 会**留在未闭合集合里**
+//     （事实即如此：没有结果）。查未闭合的消费方须把"取消"与"崩溃/丢结果"当同一类事实处理。
 
 /**
  * #1165 E1: `tool_result` 写入开关（逐调用读取；`SYNO_TOOL_RESULT_EVENT=0` ⇒ 不写 = 回旧行为）。
@@ -264,24 +301,66 @@ export class ToolLoopExecutor {
   }
 
   /**
+   * #1257 P0-2a: `tool_call` 写入（call 侧唯一写点）。
+   *
+   * 范式照 `appendToolResultEvent`（必须 `appendEvent.bind(store)`；落盘失败只 warn 不阻断本轮）。
+   *
+   * @input  payload — ToolCallEventPayload（身份 + 轮次）
+   * @output 事件 seq（写成功）｜null（开关关/无 store/无 sessionId/写失败）——供 tool_result 回指
+   * @degraded 写失败 ⇒ `log.warn({degraded:true})` + 返回 null（result 侧照写，未闭合查询会把该 call 报出来）
+   * @error  永不抛（落盘是旁路，不得反向打断工具循环）
+   */
+  private appendToolCallEvent(payload: ToolCallEventPayload): number | null {
+    if (!isToolResultEventEnabled()) return null; // 与 tool_result 同一回滚开关（SYNO_TOOL_RESULT_EVENT=0）
+    const store = this.ctx.sessionStore;
+    const sessionId = this.ctx.sessionId;
+    if (!store?.appendEvent || !sessionId) return null;
+    try {
+      const result = store.appendEvent.bind(store)(sessionId, 'tool_call', payload);
+      if (!result.ok) {
+        this.log.warn(
+          { tool: payload.name, round: payload.round, degraded: true, error: result.error },
+          'tool_call 事件落盘降级 — 不阻断本轮（该调用将在未闭合查询里可见）',
+        );
+        return null;
+      }
+      return result.seq;
+    } catch (err: unknown) {
+      this.log.warn(
+        { tool: payload.name, round: payload.round, degraded: true, error: errorMessage(err) },
+        'tool_call 事件落盘抛错 — 不阻断本轮',
+      );
+      return null;
+    }
+  }
+
+  /**
    * #1165 E1（item ③）: `tool_result` 落事件流（log-only）。
    *
    * 写入范式照 `onLlmRetry`（D810）：必须 `appendEvent.bind(store)`（解构出的方法会丢 this）；
    * 落盘失败/抛错 ⇒ `log.warn({degraded:true})`，**不阻断本轮**（工具结果照常进模型消息）。
    * 取消返回与 guard reminder 不是 result 语义 ⇒ 调用方不调用本方法（设计稿 §2.3/§6-3）。
    *
+   * #1257 P0-2a: `sourceEventSeq` = 配对 call 的事件 seq ⇒ 经**保留键** `SOURCE_EVENT_SEQ_KEY`
+   * 随 payload 传入（生产订阅缝三参转发、不丢 payload 键；落库写列并剥离，见该常量 JSDoc）。
+   * 为 null（call 侧没写成/开关关）⇒ 照写 result，不做配对（未闭合查询会把该 call 报出来）。
+   *
    * @input  payload — 已构造好的 ToolResultEventPayload（**不含 content**）
+   * @input  sourceEventSeq — 配对 `tool_call` 的 seq；null = 未配对
    * @output 无（void）；`SYNO_TOOL_RESULT_EVENT=0` / 无 store / 无 sessionId ⇒ 跳过
    * @degraded 写失败 ⇒ log.warn({degraded:true})，不抛
    * @error  永不抛（落盘是旁路，不得反向打断对话）
    */
-  private appendToolResultEvent(payload: ToolResultEventPayload): void {
+  private appendToolResultEvent(payload: ToolResultEventPayload, sourceEventSeq: number | null): void {
     if (!isToolResultEventEnabled()) return;
     const store = this.ctx.sessionStore;
     const sessionId = this.ctx.sessionId;
     if (!store?.appendEvent || !sessionId) return;
     try {
-      const result = store.appendEvent.bind(store)(sessionId, 'tool_result', payload);
+      // 配对 seq 只经保留键传输（不改 appendEvent 签名 —— 生产原型级订阅缝为三参）
+      const wirePayload =
+        sourceEventSeq === null ? payload : { ...payload, [SOURCE_EVENT_SEQ_KEY]: sourceEventSeq };
+      const result = store.appendEvent.bind(store)(sessionId, 'tool_result', wirePayload);
       if (!result.ok) {
         this.log.warn(
           { code: payload.code, tool: payload.name, degraded: true, error: result.error },
@@ -371,6 +450,13 @@ export class ToolLoopExecutor {
             params = {};
           }
 
+          // #1257 P0-2a: call 侧留痕（先写 tool_call 取 seq；deny/block/完成三态各自回指配对）
+          const callEventSeq = this.appendToolCallEvent({
+            toolCallId: tc.id,
+            name: tc.function.name,
+            round,
+          });
+
           // 编排层 Hook: pre-tool-use (权限/脱敏)
           let effectiveParams = params;
           if (hookRunner) {
@@ -396,7 +482,7 @@ export class ToolLoopExecutor {
                 ok: false,
                 code: 'TOOL_DENIED',
                 durationMs: 0,
-              });
+              }, callEventSeq);
               continue; // Skip this tool, continue next
             }
             if (preResult.action === 'modify' && preResult.modifiedInput) {
@@ -416,7 +502,7 @@ export class ToolLoopExecutor {
               ok: false,
               code: 'TOOL_BLOCKED',
               durationMs: 0,
-            });
+            }, callEventSeq);
             continue;
           }
           // D473: reminder 注入模型可见上下文（不阻断执行，决策留给模型 — DSH advisory 范式）
@@ -448,6 +534,7 @@ export class ToolLoopExecutor {
           // #1165 E1: 执行完成 ⇒ tool_result 落事件流（log-only；取消不写）
           this.appendToolResultEvent(
             buildToolResultPayload(tc.id, tc.function.name, execResult, performance.now() - executeStartedAt),
+            callEventSeq,
           );
 
           // L3 ToolGuard: 工具调用后记录（失败计数）
@@ -611,6 +698,13 @@ export class ToolLoopExecutor {
             params = {};
           }
 
+          // #1257 P0-2a: call 侧留痕（先写 tool_call 取 seq；deny/block/完成三态各自回指配对）
+          const callEventSeq = this.appendToolCallEvent({
+            toolCallId: tc.id,
+            name: tc.function.name,
+            round,
+          });
+
           // T1.3: stream 路径也执行 hook (权限检查)
           let effectiveParams = params;
           if (hookRunner) {
@@ -625,7 +719,7 @@ export class ToolLoopExecutor {
                 ok: false,
                 code: 'TOOL_DENIED',
                 durationMs: 0,
-              });
+              }, callEventSeq);
               continue;
             }
             if (preResult.action === 'modify' && preResult.modifiedInput) {
@@ -645,7 +739,7 @@ export class ToolLoopExecutor {
               ok: false,
               code: 'TOOL_BLOCKED',
               durationMs: 0,
-            });
+            }, callEventSeq);
             continue;
           }
           // D473: reminder 注入模型可见上下文（streaming 路径同样消费，不阻断执行）
@@ -681,6 +775,7 @@ export class ToolLoopExecutor {
           // #1165 E1: 执行完成 ⇒ tool_result 落事件流（log-only；取消不写）
           this.appendToolResultEvent(
             buildToolResultPayload(tc.id, tc.function.name, execResult, performance.now() - executeStartedAt),
+            callEventSeq,
           );
 
           // L3 ToolGuard: 工具调用后记录

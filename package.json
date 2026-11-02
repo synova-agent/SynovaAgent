@@ -51,7 +51,8 @@
     "check:all": "bash scripts/pre-push-check.sh",
     "hooks:install": "bash scripts/install-hooks.sh",
     "hooks:test": "echo 'feat(test): verify hook' | bash scripts/commit-msg-check.sh /dev/stdin",
-    "build:backend": "bash scripts/desktop/build-backend.sh"
+    "build:backend": "bash scripts/desktop/build-backend.sh",
+    "check:customer-deps": "tsx scripts/control-tower/check-customer-deps.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
