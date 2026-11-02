@@ -6,12 +6,20 @@
   "platform": "feishu",
   "displayName": "飞书连接器",
   "description": "飞书组织架构 + 消息 + 文档数据源。通过 Python Bridge 获取数据，映射到 SOG 本体。",
-  "entryPoint": "./adapter.ts",
+  "entryPoint": "./manifest.json",
   "exportKey": "feishuAdapter",
   "config": {
     "credentialSchema": {
-      "FEISHU_APP_ID": { "type": "string", "required": true },
-      "FEISHU_APP_SECRET": { "type": "string", "required": true, "sensitive": true }
+      "FEISHU_APP_ID": {
+        "type": "string",
+        "required": true
+      },
+      "FEISHU_APP_SECRET": {
+        "type": "string",
+        "required": true,
+        "sensitive": true
+      }
     }
-  }
+  },
+  "entryPointNote": "实现已随 K12-17 / #466 死码清理移除（adapter-loader 只读 manifest；真消费者由 #466 决定）。"
 }
