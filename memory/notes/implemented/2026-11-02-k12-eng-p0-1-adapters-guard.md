@@ -22,3 +22,7 @@
 - `find` 改为 `-iname '*.ts' -o '*.tsx' -o '*.mts' -o '*.cts'`（大小写不敏感），避免用 `.tsx` 绕过。
 - `find` 失败 ⇒ `CONTENT-COUPLING: DEGRADED …` + exit 2（不当作通过）。
 - 证据：放回 `impl.tsx` ⇒ CI-strict `CC0 NEW=1 / rc=1`；常态 `新增 0/rc=0`。
+
+## CI 重触发（2026-11-02 15:50）
+- 现象：run 3227 在 ①e 覆盖率步骤挂起 >40min（runner 重启后 job 仍未收尾）；重启 runner 并重触发。
+- 本提交**无代码变更**（仅本 Note），用于让最终 head 获得一次完整 CI 结果。
