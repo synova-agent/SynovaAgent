@@ -1749,6 +1749,21 @@ documents:
     owner: CTO
     note: "#1281（③ ORPHAN 对账 ＋ W7）：check-gate-inventory.sh 新增 R7 到期回收判据（review_after 过期且无 review_owner ⇒ 红）；四例测试含改坏必红；P0 棘轮 8 不动；check-customer-deps 补 npm 通道（记账闭合，仍不自动执行）。"
 
+  # ---- K12-ENG (#1271) 门禁豁免文件登记（D2 登记门禁；2026-11-02）----
+  - id: DOC-1301
+    type: governance
+    path: gate-exemptions/2026-11-02-1272-adapters-deadcode-guard.md
+    status: active
+    owner: K12
+    note: "#1272 K3 P0-1：adapters/notifications 死码复活守卫（下调存量基线）"
+
+  - id: DOC-1302
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
+
   - id: DOC-1304
     type: governance
     path: gate-exemptions/2026-11-02-1271-1276-v3-approval-fixture.md
