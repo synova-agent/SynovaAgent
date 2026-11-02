@@ -1756,3 +1756,10 @@ documents:
     status: active
     owner: K12
     note: "#1272 K3 P0-1：adapters/notifications 死码复活守卫（下调存量基线）"
+
+  - id: DOC-1302
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
