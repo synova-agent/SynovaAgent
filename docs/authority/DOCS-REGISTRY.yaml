@@ -1763,3 +1763,10 @@ documents:
     status: active
     owner: K12
     note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1304
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1276-v3-approval-fixture.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
