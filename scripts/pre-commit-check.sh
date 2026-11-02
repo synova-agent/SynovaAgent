@@ -1111,7 +1111,11 @@ BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "${DECL_SCOPE:-$ST
 BRIEF_RESOLVED="$BRIEF"
 CLEANUP_CLAIM=""
 if [ -n "$BRIEF" ] && [ -f "$BRIEF" ]; then
-  if grep -qi "已拆\|已迁移\|已清理\|拆分.*完成\|迁移.*完成\|清理.*完成\|完成.*拆分\|完成.*迁移\|完成.*清理" "$BRIEF" 2>/dev/null; then  # swallow-ok: brief 不可读→grep 静默→CLEANUP_CLAIM 空（拆分/迁移裸词不作完成声称，避免误伤工作描述）
+  # #1295/#1296：裸词（已拆/已迁移/已清理）**必须与 engine-core 或 packages/ 同现**才认为是"完成声称"——
+  #   实证：claim/brief 里写"已拆卡""已迁移到 handbook"被这条判成"声称代码拆分完成"⇒ CI 硬阻断。
+  #   语义收窄：这条判的是**engine-core 拆分/迁移完成**，不是任何"拆/迁移/清理"字面。
+  if grep -qi "已拆\|已迁移\|已清理\|拆分.*完成\|迁移.*完成\|清理.*完成\|完成.*拆分\|完成.*迁移\|完成.*清理" "$BRIEF" \
+     && grep -qi "engine-core\|packages/" "$BRIEF" 2>/dev/null; then  # swallow-ok: brief 不可读→grep 静默→CLEANUP_CLAIM 空（裸词+无上下文不判完成声称）
     CLEANUP_CLAIM="task brief 声称拆分/迁移/清理完成 — 请确认 grep -r 'packages/engine-core' src/ 零结果"
   fi
 fi

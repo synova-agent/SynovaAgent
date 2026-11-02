@@ -32,7 +32,16 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 # ═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+# #1295：落点必须**按 repo 共享**，不能按 worktree 隔离 —— 否则在两棵 worktree 之间搬提交后
+#   push 会因"新 worktree 没有本 session 记录"被 D331 拒；旧做法要手工复制 .sessions/ 或手补继承行
+#   （= 手写证据）。修法：取 `--git-common-dir` 的**上一级**（主仓根），所有 worktree 共用同一 .sessions/。
+_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || echo "")"  # swallow-ok: 非 git/旧 git ⇒ 回退 show-toplevel
+if [ -n "$_COMMON_DIR" ]; then
+  ROOT="$(cd "$_COMMON_DIR/.." 2>/dev/null && pwd)"   # common dir = <主仓根>/.git ⇒ 上一级即主仓根
+else
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+fi
+[ -n "$ROOT" ] || ROOT="$(pwd)"
 LEGACY_LOG="${SYNO_LEGACY_BYPASS_LOG:-$ROOT/.claude/bypass.log}"
 
 # ── 会话标识解析（优先级: 显式 env > 任务号 env > git 分支 > 仓库目录名 > default）──

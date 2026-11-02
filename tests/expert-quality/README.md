@@ -55,3 +55,11 @@ L2 LLM 法官 (2s/expert)
 
 - L0+L1：无外部依赖
 - L2：需要 `LLM_API_KEY` 环境变量或 `.env` 文件
+
+## 🔴 eval 与 test 的边界（2026-11-02）
+
+- `layer2-judge.eval.ts` 是 **eval**（LLM 当裁判、需真实模型、15–20 分钟、结果统计性），**不是门禁判据**；
+  后缀用 `.eval.ts`，`vitest` 的 `include: tests/**/*.test.ts` **不会收集它**。
+- **密钥只走环境变量**（`LLM_API_KEY` / `DEEPSEEK_API_KEY`）；**禁止读取仓库内任何文件（含 `.env`）**——
+  那等于邀请把 key 落到工作树，一旦误提交即密钥入仓。
+- 缺密钥时本 eval **exit 2**（检查自身失败），不伪装成测试红。
