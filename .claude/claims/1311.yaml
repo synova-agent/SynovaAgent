@@ -1,0 +1,20 @@
+# .claude/claims/1311.yaml — 编码 session 启动加载链：正式预设 synova-coding
+# #CRITERIA: D ｜ 架构层: 治理线（D0 开发预设，非产品五层）
+# 声明载体 = 本件（writeset + done 两字段制）。
+# 背景：此前「编码 session 开工即遵循 DSH 工程纪律与代码品味」只实现一半——纪律内容已在主干
+#       （squad-discipline / dsh-code-standards），但普通编码 session 的启动加载缺失
+#       （可加载预设只有 dsh-preset-draft，缺 package.json 与 cordis.patch.yml，不在正式目录）。
+#       本件补齐该环节，**不新增任何门禁**。
+writeset:
+  - .claude/claims/1311.yaml
+  - docs/synova/presets/synova-coding/package.json
+  - docs/synova/presets/synova-coding/cordis.patch.yml
+  - docs/synova/presets/synova-coding/preset.yml
+  - docs/synova/presets/synova-coding/README.md
+  - docs/synova/coordination/dsh-preset-draft/preset.yml
+done:
+  - verify: bash scripts/control-tower/check-preset-bundles.sh --repo
+  - verify: bash scripts/control-tower/install-dsh-preset.sh --check synova-coding
+  - verify: bash scripts/control-tower/check-preset-bundles.sh --consistency synova-coding
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+note: "#1311：新增正式可加载编码预设 docs/synova/presets/synova-coding/。声明 dsh.bundle.patch 后即被安装器与校验器自动发现（无需改注册表）。人格块含开工必读 6 项、任务 SOP 0-10、纪律红线、技能路由；引用的 9 个 skill 与 5 条 SOP 命令经死链自检全部存在。dsh-preset-draft 标注已被取代。实测：--repo 发现预设 2->3 且 REPO-OK；install --check 0 漂移；--consistency 逐字节一致（12016 字节）。拆分说明：AGENTS.md 指针与 .synova/.dsh 双轨 dsh-code-standards 锚点校准属第二批，被 .claude/claims/1227.yaml 认领挡下（D-C 对账判 #1311 与 claim #1227 不一致），不在本件内。"

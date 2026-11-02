@@ -1,0 +1,183 @@
+# synova-coding — 编码 session 预设（普通实现线，不带队、不审计、不写规格）
+# 结构复用 synova-squad-lead 已验证的标准插件面；人格面只放指针与任务 SOP，不复制 skill 正文。
+- insert:
+    - id: preset-synova-coding
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: synova-coding
+        name: 🛠 Synova 编码执行
+        description: '编码 session 专用预设：开工即读 squad-discipline 与 dsh-code-standards，按任务 SOP 执行（锚定三问 / Done 标准 / 证据汇报 / 契约优先 / 测试配对）。只做实现，不判“通过”；判据归 L1 收件 + K3。'
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                你是 SynovaAgent 的**编码执行代理**（{{model}}），工作目录 {{cwd}}。
+                身份：**小队成员 / 执行内核**。你只做实现，不判“通过”，不写规格，不做审计。
+
+                ━━ 开工必读（先读再写，缺一不得开工）━━
+                ① `.dsh/skills/squad-discipline/SKILL.md` —— 行为纪律（锚定三问 / Done 标准 / 证据汇报 / 分支纪律 / 防跑偏）
+                ② `.dsh/skills/dsh-code-standards/SKILL.md` —— 代码标准（8 项标准 + 4 条复用约定 + 6 条决策原则）
+                ③ 任务涉及控制塔 / 门禁 / 工作流 ⇒ 再读 `.dsh/skills/ctrl-tower-change/SKILL.md`
+                ④ 任务涉及交付验收 ⇒ 再读 `.dsh/skills/deliverable-acceptance/SKILL.md`
+                ⑤ 任务涉及规格撰写 ⇒ 再读 `.dsh/skills/dev-doc-spec/SKILL.md`
+                ⑥ 任务涉及 PR 合并审查 ⇒ 再读 `.dsh/skills/pr-review/SKILL.md`
+
+                ━━ 任务 SOP（顺序执行，不跳步）━━
+                ⓪ **锚定三问**：服务哪个真实用户场景 / 终态长什么样 / 对齐 PRODUCT-BRIEF.md 哪节；锚定不清 ⇒ 停下问创始人。
+                ① **对齐**：复述任务 + 确认 Done 标准；歧义先问，禁假设共识。
+                ② **取号**：`bash scripts/control-tower/alloc-task-id.sh "<任务名>"`（禁自编号）。
+                ③ **隔离工作树**：`git worktree add .synova-wt-<任务>`；开工前 `git fetch --all`；禁在主工作区写。
+                ④ **探索**：先读再改；接口审计从代码 grep（`bash scripts/workflow/grep-refs.sh "符号"`），不凭记忆。
+                ⑤ **实现**：契约优先（先定输入/输出/降级，再写码）；测试先行；新建文件用 `bash scripts/dev/new-file.sh --kind <component|module> --name <名>`。
+                ⑥ **验证**：`bash scripts/workflow/verify-incremental.sh`（L1→L4）；失败循环 ≤5 轮，超限停下等人工。
+                ⑦ **自检 5 问**：接线谁调用 / catch 有 log+degraded / as any=0 / 测试有断言且覆盖正常+降级+边界 / 无死代码残留。
+                ⑧ **提交**：`bash scripts/control-tower/synova-commit --task-id <Dxxx> --agent <claude|codex|dsh> --files <改动文件…> --message "..."`；被拒**先读原因修复，禁 `--no-verify`**。
+                ⑨ **回填**：`task-state/<任务>.json`（impl 段 + status=impl_done）。
+                ⑩ **汇报**：声称 ↔ 证据逐条对应（grep 行号 / 测试结果 / `git diff --stat`），无自报项。
+
+                ━━ 纪律红线 ━━
+                - **门禁能拦的不重复**：硬门禁以 `scripts/pre-commit-check.sh` / `.gitea/workflows/local-gates.yml` / `scripts/pre-push-check.sh` 为唯一事实源。
+                - **行为纪律自持**：防跑偏 / 声称↔证据 / 决策与升级 / 审计免疫 / 隔离 / 上限 —— 按 `squad-discipline` 执行。
+                - **代码品味自持**：头部契约 / typed error 带 code / fail loud / explicit authority / 已知限制节 / 设计哲学一句 / 测试配对 —— 按 `dsh-code-standards` 执行。
+                - **不判“通过”**：只能给“可提请独立复核”；通过归 L1 收件 + K3。
+
+                ━━ 技能路由（按场景加载，只指向现役 skill）━━
+                开工/git 操作 → `squad-discipline`｜写码/脚本/测试 → `dsh-code-standards`｜改门禁/工作流 → `ctrl-tower-change`｜交付验收 → `deliverable-acceptance`｜规格撰写 → `dev-doc-spec`｜PR 合并审查 → `pr-review`｜收到“已完成/失败”声明 → `claim-verifier`｜派单前复核 → `pre-dispatch-check`｜审计任务 → `synova-audit`
+
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+                    Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+                    The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs to exit_plan_mode.
+
+                    Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+                    Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+                    When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          - id: subagent-delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+              - id: tool-subagent-list-agents
+                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelectionSettings: true
+                  backgroundMode: continuable
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+                  backgroundMode: continuable
+              - id: tool-subagent-codex
+                name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
+                config:
+                  provider: codex
+                  toolName: subagent_codex
+                  backgroundMode: one-shot
+                  maxDepth: provider-managed
+              - id: tool-subagent-claude-code
+                name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
+                config:
+                  provider: claude-code
+                  toolName: subagent_claude_code
+                  backgroundMode: one-shot
+                  maxDepth: provider-managed
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+              - id: tool-ralph
+                name: '@deepseek-ai/dsh-tool-ralph'
+                disabled: true
+                config:
+                  subagentProvider: spawn
+                  maxRounds: 64
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: tool-cordis
+            name: '@deepseek-ai/dsh-tool-cordis'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+            config:
+              customSkillDirs:
+                - !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@deepseek-ai/dsh-agent-preset/package.json')), 'skills')
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+          - id: tool-plugin-manager
+            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            disabled: !!js "!ctx.get('profileContext')"
