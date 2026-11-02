@@ -154,12 +154,6 @@ STATUS_OK = ("reachable", "retired", "pending-cto")
 CC_BASELINE_BEGIN = "CC-BASELINE-BEGIN"
 CC_BASELINE_END = "CC-BASELINE-END"
 BASELINE_TEXT = r"""
-CC1 extensions/adapters/feishu/adapter.ts t=1 v=1
-CC1 extensions/adapters/nemoclaw/adapter.ts t=1 v=1
-CC1 extensions/notifications/email/adapter.ts t=1 v=0
-CC1 extensions/notifications/feishu-approval/adapter.ts t=1 v=0
-CC1 extensions/notifications/jira/adapter.ts t=1 v=0
-CC1 extensions/notifications/linear/adapter.ts t=1 v=0
 CC1 extensions/sentinels/agent-deployment-maturity/aggregate.ts t=2 v=0
 CC1 extensions/sentinels/agent-deployment-maturity/computes/compute-agent-deployment-maturity.ts t=0 v=1
 CC1 extensions/sentinels/agent-opportunity-window/aggregate.ts t=1 v=0
