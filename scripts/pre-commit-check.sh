@@ -27,7 +27,7 @@ _GATE_T0_MS="$(_now_ms)"
 # 为什么用 SECONDS：bash 内建，零进程开销；归因要的是"哪组十几秒"的量级，不需要 ms。
 _GT_LOG=""; _GT_T0="$SECONDS"; _GT_NAME=""
 _grp_tick() {  # <组名>：结算上一组
-  [ -n "$_GT_LOG" ] || { _GT_LOG="${SYNO_GROUP_TIMING_LOG:-$ROOT/.claude/precommit-groups.log}"; : > "$_GT_LOG" 2>/dev/null || _GT_LOG=/dev/null; }
+  [ -n "$_GT_LOG" ] || { _GT_LOG="${SYNO_GROUP_TIMING_LOG:-$ROOT/.claude/precommit-groups.log}"; : > "$_GT_LOG" 2>/dev/null || _GT_LOG=/dev/null; }   # swallow-ok: 日志不可写时降级到 /dev/null，不影响门禁判定
   if [ -n "$_GT_NAME" ]; then
     printf '%s\t%s\n' "$((SECONDS - _GT_T0))" "$_GT_NAME" >> "$_GT_LOG" 2>/dev/null || true   # swallow-ok: 计时日志写不进不影响门禁判定
   fi
