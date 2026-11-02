@@ -1791,3 +1791,10 @@ documents:
     status: active
     owner: K12
     note: "K12-ENG #1271 豁免登记（D2）"
+
+  - id: DOC-1306
+    type: governance
+    path: gate-exemptions/2026-11-02-1271-1278-content-layering-probe.md
+    status: active
+    owner: K12
+    note: "K12-ENG #1271 豁免登记（D2）"
