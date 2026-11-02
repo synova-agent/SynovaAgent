@@ -1,17 +1,21 @@
 # .claude/claims/1210.yaml — W0 通道 B：sealed-tests 扩面 ＋ check-gate-budget 新建（#1210）
+# 2026-11-01 #1255-T3（W6 接线）：扩写集——接线 pre-commit 主路径（判据 7 遗留项）
 writeset:
   - scripts/control-tower/sealed-tests.sh
   - scripts/control-tower/check-gate-budget.sh
   - scripts/control-tower/gen-gate-meta.sh
   - scripts/control-tower/gate-inventory.invariant.sh
+  - scripts/pre-commit-check.sh
   - tests/control-tower/sealed-tests.test.sh
   - tests/control-tower/check-gate-budget.test.sh
   - tests/control-tower/gate-inventory.invariant.test.sh
   - tests/control-tower/gen-gate-meta.test.sh
   - gate-exemptions/2026-10-31-w06-1210.md
+  - gate-exemptions/2026-11-01-1210-t3-budget-wiring.md
   - .claude/task-briefs/2026-10-31-1210-W0b.md
   - .claude/claims/1210.yaml
   - memory/notes/proposed/2026-10-31-1210-W0b.md
+  - memory/notes/proposed/2026-11-01-1210-t3-budget-wiring.md
   - docs/authority/WIRING-REGISTRY.yaml
   - docs/authority/DOCS-REGISTRY.yaml
   - docs/authority/GATE-INVENTORY.yaml
@@ -19,6 +23,8 @@ done:
   - verify: bash scripts/control-tower/sealed-tests.sh --face-total
   - verify: bash tests/control-tower/sealed-tests.test.sh
   - verify: bash tests/control-tower/check-gate-budget.test.sh
+  - verify: bash scripts/control-tower/check-gate-budget.sh --cmd "true"
+  - verify: bash scripts/pre-commit-check.sh
   - verify: bash scripts/control-tower/gate-inventory.invariant.sh
   - verify: bash tests/control-tower/gate-inventory.invariant.test.sh
   - verify: bash scripts/control-tower/gen-gate-meta.sh --check
@@ -28,4 +34,4 @@ done:
   - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
   - verify: bash scripts/doc-system/doc-registry-gate.sh
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root .
-note: "#1210 W0 附通道 B：sealed-tests 发现面扩到 .test.ts（含 tests/security .ts-only 面）＋ --list 保持只出 .sh/.py ＋ --list-ts 无 runner 即 exit 2；新建 check-gate-budget.sh（真实墙钟/阈值/无数据 exit 2，旁路不接主路径）；B-Redo 批（merge 新 main de485d272）：gen-gate-meta.sh 新增 --regen（gate_meta 段唯一写盘入口：内存校验→原子写→写后等价校验→失败回滚；保留旧 measured_at 与逐行行尾），新建 gate-inventory.invariant.sh（配额恒等式 39=35+2+2／段内 id 唯一／workflows n=10 账外 0／disk↔registry 复用 check-gate-inventory rc）与其配对测试。棘轮 FACE-TOTAL 仍按 .sh/.py 口径（台账不在本卡写集）。"
+note: "#1210 W0 附通道 B：sealed-tests 发现面扩到 .test.ts（含 tests/security .ts-only 面）＋ --list 保持只出 .sh/.py ＋ --list-ts 无 runner 即 exit 2；新建 check-gate-budget.sh（真实墙钟/阈值/无数据 exit 2，旁路不接主路径）；B-Redo 批（merge 新 main de485d272）：gen-gate-meta.sh 新增 --regen（gate_meta 段唯一写盘入口：内存校验→原子写→写后等价校验→失败回滚；保留旧 measured_at 与逐行行尾），新建 gate-inventory.invariant.sh（配额恒等式 39=35+2+2／段内 id 唯一／workflows n=10 账外 0／disk↔registry 复用 check-gate-inventory rc）与其配对测试。棘轮 FACE-TOTAL 仍按 .sh/.py 口径（台账不在本卡写集）。【2026-11-01 #1255-T3】判据 7 遗留项落地：pre-commit 结果段落盘 wall_ms 后调用 check-gate-budget.sh --log 判定（0/1/2 三态），本层只告警不阻断；台账同步 required_ci true／run_by pre-commit／移出 run_by_candidates。"

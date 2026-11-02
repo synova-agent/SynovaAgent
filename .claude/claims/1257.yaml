@@ -1,0 +1,28 @@
+writeset:
+  - src/cron/scheduler.ts
+  - src/sentinel/runner.ts
+  - src/store/session-store.ts
+  - src/agent/tool-loop-executor.ts
+  - src/agent/diagnosis-launcher.ts        # CTO 批准扩张（2026-11-02，仅内联联合 +'tool_call' 1 行）
+  - docs/authority/quality-delta-whitelist.yaml  # CTO 批准治理豁免（#1257：R4.2 命中 :72 存量行，闸扫整文件所致）
+  - src/services/db-encryption.ts
+  - tests/cron/scheduler.test.ts
+  - tests/store/session-event-log.test.ts
+  - tests/store/session-store.test.ts
+  - tests/agent/tool-result-event.test.ts
+  - tests/agent/tool-loop-tool-pairing.integration.test.ts
+  - tests/deploy/backup-verify.test.ts
+  - tests/cron/s1-5-single-flight.test.ts
+  - tests/store/tool-call-pairing.test.ts
+  - tests/expected/session/session-store.expected.json  # CTO 批准扩张（#1257：①g 测试义务闸要求 protocol 面资产同批更新）
+  - tests/store/session-store-expected.test.ts          # CTO 批准扩张（#1257：资产断言方，否则资产=纸面）
+  - .claude/claims/1257.yaml
+  - memory/notes/proposed/2026-11-01-1257-s1-5-p0.md
+done:
+  - verify: npx tsc --noEmit --pretty false
+  - verify: SYNO_CI=1 bash scripts/check-architecture.sh
+  - verify: npx vitest run --pool=forks tests/cron/s1-5-single-flight.test.ts
+  - verify: npx vitest run --pool=forks tests/store/tool-call-pairing.test.ts
+  - verify: npx vitest run --pool=forks tests/cron/ tests/store/ tests/agent/ tests/deploy/ tests/contract/
+  - verify: bash -c 'test "$(git diff --name-only 5550eb95b..HEAD | wc -l | tr -d " ")" -le 19'   # 15 规格 + 1 CTO 批准扩张
+note: "#1257 S1.5 P0；写集 15 件（time-injection 收缩不改）+ 1 件 CTO 批准扩张（diagnosis-launcher.ts）；与 #1258 重叠 4 件、与 #1249 2 件；「本批先合」串行；PR base = main"

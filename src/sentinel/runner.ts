@@ -466,7 +466,8 @@ export class SentinelRunner {
     }
 
     try {
-      state.cronJobs = this.scheduler.listJobs().map((j) => ({
+      // #1257 S1.5 P0-3b（规格 §1.2-4/§4-5）：disabled 是**已处置终态**，不计入「连续失败」统计
+      state.cronJobs = this.scheduler.listJobs().filter((j) => !j.disabled).map((j) => ({
         id: j.id, failures: j.failures, lastRunAt: j.lastRunAt, lastError: j.lastError,
       }));
     } catch (err: unknown) {

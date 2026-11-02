@@ -430,6 +430,42 @@ else
   no "反向验证失败: 去掉接线后断言仍通过（夹具 ${FIXY}）"
 fi
 
+# ═══ T5（#1255）: --category-gate —— GATE-STANDARD §十二 ⑤ `category≠integration 行数＝0` ═══
+echo ""
+echo "── T5: --category-gate（基线 category 标注判据）──"
+CB="$TMPD/cat-base.txt"
+cat > "$CB" <<'EOF'
+Alpha Gate | owner=x | source=test | as_of=2026-11-01T00:00:00Z | category=integration
+Beta Gate | owner=x | source=test | as_of=2026-11-01T00:00:00Z | category=integration
+EOF
+OUT="$(python3 "$C" --baseline "$CB" --category-gate 2>&1)"; RC=$?
+[ "$RC" -eq 0 ] && ok "T5 全 integration ⇒ exit 0" || no "T5 全 integration 应 exit 0，实际 $RC: $OUT"
+printf '%s' "$OUT" | grep -q 'REQUIRED-CATEGORY: total=2 integration=2 non_integration=0' \
+  && ok "T5 摘要计数正确" || no "T5 摘要计数不符: $OUT"
+
+cat > "$CB" <<'EOF'
+Alpha Gate | owner=x | source=test | as_of=2026-11-01T00:00:00Z | category=integration
+Beta Gate | owner=x | source=test | as_of=2026-11-01T00:00:00Z | category=discipline
+Gamma Gate | owner=x | source=test | as_of=2026-11-01T00:00:00Z
+EOF
+OUT="$(python3 "$C" --baseline "$CB" --category-gate 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && ok "T5 非 integration ⇒ exit 1（如实红）" || no "T5 非 integration 应 exit 1，实际 $RC"
+printf '%s' "$OUT" | grep -q 'REQUIRED-CATEGORY: total=3 integration=1 non_integration=2 missing=1' \
+  && ok "T5 计数含 missing（缺失也计入待清）" || no "T5 missing 计数不符: $OUT"
+printf '%s' "$OUT" | grep -q 'REQUIRED-CATEGORY-VIOLATION: Beta Gate category=discipline' \
+  && ok "T5 点名 discipline 行" || no "T5 未点名 discipline 行"
+printf '%s' "$OUT" | grep -q 'REQUIRED-CATEGORY-VIOLATION: Gamma Gate category=<缺失>' \
+  && ok "T5 点名缺失 category 行" || no "T5 未点名缺失行"
+
+OUT="$(python3 "$C" --baseline "$CB" --category-gate --category-advisory 2>&1)"; RC=$?
+[ "$RC" -eq 0 ] && ok "T5 --category-advisory ⇒ 违规仍 exit 0（W8 前过渡态）" \
+  || no "T5 advisory 应 exit 0，实际 $RC"
+printf '%s' "$OUT" | grep -q 'ADVISORY' && ok "T5 advisory 可见标注" || no "T5 advisory 无标注"
+
+OUT="$(python3 "$C" --baseline "$TMPD/no-such-baseline.txt" --category-gate 2>&1)"; RC=$?
+[ "$RC" -eq 2 ] && ok "T5 基线缺失 ⇒ exit 2（判不了≠通过）" || no "T5 基线缺失应 exit 2，实际 $RC"
+printf '%s' "$OUT" | grep -q 'degraded:' && ok "T5 缺失显式降级输出" || no "T5 缺失无 degraded"
+
 echo ""
 echo "结果: $PASS 通过, $FAIL 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

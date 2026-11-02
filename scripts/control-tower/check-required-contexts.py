@@ -29,6 +29,11 @@
 #   @degraded 依赖缺失/不可读/解析失败/gh 不可用 → stderr 一行 `degraded: <原因>` + exit 2
 #             （不写 degraded-events.log: 本器可能运行在只读树上，降级信号由调用方 step 捕获，
 #              同 ct-test-gate.sh 口径）
+#   @authority explicit authority: 任何本地会话／CI job／人工复核均可调用；**只读**（不写仓库、不调 gh
+#             除非显式 `--api-check`）。`#1255-T5` 新增的 `--category-gate` 模式同样只读、
+#             不读 workflows、不碰网络（只解析基线文件的 `category=` 字段）。
+#             判据 = GATE-STANDARD §十二 ⑤（`category≠integration` 行数＝0）；`--category-advisory`
+#             仅供 W8 admin 清理前的软提示过渡，**不改变判据数值**。
 #
 # 核心能力（job `name:` → check-run 名全集）:
 #   · 解析 .github/workflows/*.yml|yaml 的 jobs 段（**YAML 子集**解析器，零第三方依赖——
@@ -66,6 +71,13 @@
 # 启动方式（双语法首行，兼容本卡验收命令 `bash <本文件>`）:
 #   · `python3 check-required-contexts.py …`（生产/CI 路径；Windows: python/py 亦可）
 #   · `bash check-required-contexts.py …`（等价；sh 侧 exec 到 python3/python/py）
+#
+# 已知限制（#1255-T5 · `--category-gate` 模式的边界，做不到什么）:
+#   · `category` 是**人工判定**（哪条腿该判什么），不是从数据派生 ⇒ 判错会导致 W8 清错 context；
+#     每条判定理由须在改动 PR 的 Note 里逐条写清，供复核。
+#   · 只认基线文件里**当前存在**的行：ruleset 变更后必须按文件头重放命令重取并重新标注（否则基线漂移 ⇒ 判据失真）。
+#   · `missing`（无 `category` 字段）与 `non_integration` **合并计入待清**，不区分"未标"与"标错"。
+#   · 本模式**不改 ruleset、不调 gh**（ruleset 清理是 W8 admin，属创始人权限）。
 # ═══════════════════════════════════════════════════════════════════════════════
 # 双语法行: sh 读作命令（exec 换 python）；python 读作相邻字符串字面量（无副作用空语句）
 "exec" "sh" "-c" 'for p in python3 python py; do command -v "$p" >/dev/null 2>&1 || continue; exec "$p" "$0" "$@"; done; printf "degraded: python 不可用（python3/python/py 均不可用）\n" >&2; exit 2' "$0" "$@"   # PYBIN 三级探测（python3→python→py，禁裸 python3；PLATFORM-CHECKLIST #1）
@@ -650,6 +662,10 @@ def build_parser():
     parser.add_argument("--reverse", action="store_true", help="追加「产出但非必需」清单（信息级；报告模式不判违规）")
     parser.add_argument("--verbose", action="store_true", help="打印逐条 job→展开名明细（判定不变）")
     parser.add_argument("--version", action="version", version="check-required-contexts %s" % VERSION)
+    parser.add_argument("--category-gate", action="store_true",
+                        help="#1255-T5：只判 GATE-STANDARD §十二 ⑤（基线每行须标 category，category≠integration 行数=0）；不读 workflows/网络")
+    parser.add_argument("--category-advisory", action="store_true",
+                        help="配合 --category-gate：违规仍 exit 0（W8 admin 清理前的过渡态；判据数值照出）")
     return parser
 
 
@@ -664,6 +680,35 @@ def run(args):
     workflows = os.path.abspath(args.workflows) if args.workflows else os.path.join(root, ".github", "workflows")
     baseline_path = (os.path.abspath(args.baseline) if args.baseline
                      else os.path.join(root, "scripts", "control-tower", "required-checks-baseline.txt"))
+
+    # #1255-T5（GATE-STANDARD §十二 ⑤）：`category≠integration 行数＝0` 的机检。
+    #   与 ⑧（静态面一致性）**同一基线、同一解析器**，只多一个判据维度；不另建脚本（避免"新增能力件
+    #   五道登记税"再次发生）。判据自足：不需要 workflows，不需要网络。
+    if getattr(args, "category_gate", False):
+        # 🔴 #1255-T5 复核修正：`--category-gate` 与 `--api-check`/`--reverse` 是**互斥模式**。
+        #   旧实现到这里直接 return ⇒ 后者被**静默丢弃**（与文件头"与 --api-check 同给时以其为准"相反）。
+        #   互斥就显式报错（fail loud），不许静默——这是 DSH「bounds that fail loud」的要求。
+        _conflict = [n for n, v in (("--api-check", getattr(args, "api_check", False)),
+                                    ("--reverse", getattr(args, "reverse", False))) if v]
+        if _conflict:
+            print("degraded: E_USAGE — %s 与 --category-gate 互斥（二者判的是不同对象，不能同给）"
+                  % "/".join(_conflict), file=sys.stderr)
+            return 2
+        base_entries = read_baseline(baseline_path)
+        def _cat(e):
+            return (e.fields.get("category") or "").strip()
+        integ = [e for e in base_entries if _cat(e) == "integration"]
+        non = [e for e in base_entries if _cat(e) != "integration"]
+        missing = [e for e in base_entries if _cat(e) == ""]
+        print("REQUIRED-CATEGORY: total=%d integration=%d non_integration=%d missing=%d"
+              % (len(base_entries), len(integ), len(non), len(missing)))
+        for e in non:
+            print("REQUIRED-CATEGORY-VIOLATION: %s category=%s" % (e.name, _cat(e) or "<缺失>"))
+        rc = EXIT_OK if not non else EXIT_VIOLATION
+        if rc != EXIT_OK and getattr(args, "category_advisory", False):
+            print("REQUIRED-CATEGORY: ADVISORY（--category-advisory ⇒ 不阻断；判据仍记为待清 %d 条）" % len(non))
+            rc = EXIT_OK
+        return rc
 
     entries, files = collect_produced(workflows)
     produced = {}
