@@ -399,18 +399,19 @@ const CONTENT_TYPES: readonly ContentTypeEntry[] = [
     //   ＋ 解析服务 `src/services/content-layering.ts`（导出 resolveContent）。
     //   ⚠️ 与 `docs/synova/presets/**`（**内部作业预设**：synova-cto / synova-k3-audit / synova-squad-lead）
     //   不是一回事 —— 后者与客户岗位无关（V6 概念区分）。
-    // 🔴 status = pending-cto（**不是** reachable）：`listLoadableTypes()` 只装配
-    //   `reachable && loader!==undefined` 的项 ⇒ 本批**不启用 boot 装配**（宿主侧内容面装配的
-    //   启用属架构变更，须过 CTO）。loader 仍按名声明 —— 它是「该 type 的加载入口真实存在」的
-    //   机器可核证据（本目录测试断言 loader.module 对应文件确实存在），不是散文式声明。
+    // 🔴 status = reachable（2026-11-02 CTO 14 项批准 item 5 放行 boot 装配）：
+    //   `listLoadableTypes()` 只装配 `reachable && loader!==undefined` 的项 ⇒ 本项进 boot 装配面；
+    //   loader 返回 `LayeredContent`，缺目录/坏文件时**降级信号**经 `collectInitWarnings` 上抛
+    //   （铁律 31，不静默）。与 `extensions/departments/**`（K12-10 部门定义真源）职责不同：
+    //   本项答「这个部门看到什么样」，departments 答「有哪几个部门、身份如何解析」。
     type: 'content-layer',
     dir: 'content-layers',
     face: 'content',
-    status: 'pending-cto',
+    status: 'reachable',
     reason:
       'K12-20 岗位内容分层内容载体（提示词/工具/知识按部门变）：解析服务 src/services/content-layering.ts' +
       '（导出 resolveContent）＋ extensions/content-layers/** 已就位（探针 probe-content-layering exit 0）；' +
-      '宿主侧 boot 装配的启用属架构变更，待 CTO 放行。',
+      'boot 装配于 2026-11-02 经 CTO 14 项批准 item 5 放行。',
     loader: {
       module: '../services/content-layering',
       init: 'resolveContent',

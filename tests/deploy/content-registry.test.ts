@@ -73,7 +73,8 @@ describe('#1465 content-registry — V1 全项有明确状态（K12-16 #199 删�
     const snap = describeContentRegistry();
     const reachable = snap.entries.filter((e) => e.status === 'reachable');
     // #1056（K4-07）: professions 项 reachable（有 loader）⇒ 19 → 20
-    expect(reachable.length).toBe(20);
+    // K12-ENG P2-1（#1271）: content-layer 转 reachable（CTO 14 项 item 5）⇒ 20 → 21
+    expect(reachable.length).toBe(21);
     for (const e of reachable) {
       expect(e.loader !== undefined || (e.readers ?? []).length > 0).toBe(true);
     }
@@ -115,8 +116,9 @@ describe('#1465 content-registry — 正常路径（真实装配，非 grep）',
     const notWired = snap.entries.filter((e) => e.status !== 'reachable').map((e) => e.type);
     // #1465 时 = 5（retired×2 engine/tools ＋ pending-cto×3 llm-provider/onboarding/content-layer）
     // K12-16（#199）真删 engine / tools / llm-providers ⇒ 5 → 2（onboarding-method ＋ content-layer）
+    // K12-ENG P2-1（#1271）content-layer 转 reachable ⇒ 2 → 1（onboarding-method）
     // 🔴 `retired` 现为**空集**（不再以 retired 名义留存死内容）
-    expect(notWired.length).toBe(2);
+    expect(notWired.length).toBe(1);
     const report = await initContentTypes();
     for (const t of notWired) {
       expect(report.results.some((r) => r.type === t)).toBe(false);
