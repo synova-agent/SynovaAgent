@@ -39,7 +39,7 @@
  *      未命中 ⇒ `NOT_IMPLEMENTED`（exit 2，ladder brief §4.2-2：符号缺失 = 能力未实现）。
  *   ② 目标件 `src/services/content-layering.ts` ＋ `extensions/content-layers/` 实测**均不存在**
  *      （as_of `local-b940b101d`）⇒ 初始态 = exit 2（预期态，不是失败）。
- *   ③ V4 交叉验证依赖 K12-05 载体 `extensions/knowledge-scope/` —— 实测**不存在** ⇒ 该条只能
+ *   ③ V4 交叉验证依赖 K12-05 载体 `extensions/presets/roles/<role>/knowledge-scope.yaml`（裁 423 归一）＋ #188 行为面夹具 ⇒ 本卡不重复判定
  *      记 `[UNVERIFIED]`，**不计入 PASS**（判例 V-09）。
  *   ④ 本件被 `probe-ladder.ts` 编译期 import；但自带直执行守卫 ⇒ 可单独 `npx tsx` 直跑。
  */
@@ -188,6 +188,27 @@ function collectStringLeaves(
     }
   }
   return leaves;
+}
+
+/**
+ * 只保留**内容面**叶子（`CONTENT_FACETS` = prompt/tool/knowledge）。
+ *
+ * 为什么：#1271 P1-2 —— 旧实现把整个解析结果（含 `appliedLayers` / 部门身份/层名）都算"差异叶子"，
+ * 于是"两部门层内容被抹平"时仍因身份串不同而 PASS（判据可恒真）。V2 要求的是**内容**不同，
+ * 身份/层名属元数据，必须排除（DSH rc.5：判据要能拒绝非法输入）。
+ *
+ * @input leaves（`collectStringLeaves` 产出；路径形如 `$.prompt` / `$.tools[0]`）
+ * @output 仅内容面叶子
+ */
+function contentLeaves(leaves: readonly { path: string; value: string }[]): { path: string; value: string }[] {
+  return leaves.filter((leaf) =>
+    CONTENT_FACETS.some(
+      (facet) =>
+        leaf.path === `$.${facet}` ||
+        leaf.path.startsWith(`$.${facet}.`) ||
+        leaf.path.startsWith(`$.${facet}[`),
+    ),
+  );
 }
 
 function uniqueValues(leaves: readonly { path: string; value: string }[]): string[] {
@@ -355,8 +376,8 @@ async function caseDeptDiff(entry: ContentEntry, root: string, out: ProbeOutput)
   const deptB = carrier.departments[1];
   const resolvedA = await callResolve(entry, [deptA.id], 'dept-diff');
   const resolvedB = await callResolve(entry, [deptB.id], 'dept-diff');
-  const leavesA = collectStringLeaves(resolvedA);
-  const leavesB = collectStringLeaves(resolvedB);
+  const leavesA = contentLeaves(collectStringLeaves(resolvedA));
+  const leavesB = contentLeaves(collectStringLeaves(resolvedB));
   const valuesA = uniqueValues(leavesA);
   const valuesB = uniqueValues(leavesB);
 
@@ -437,11 +458,14 @@ async function caseDeptDiff(entry: ContentEntry, root: string, out: ProbeOutput)
   }
 
   // V4 交叉验证（依赖 K12-05 载体）—— 不存在 ⇒ 如实标 UNVERIFIED，不计入 PASS
-  if (existsSync(join(root, 'extensions/knowledge-scope'))) {
-    out.note('[L1-辅证] K12-05 载体 extensions/knowledge-scope/ 存在 ⇒ 可见性交叉验证可另卡复核');
+  const roleScopeFiles = ['finance', 'hr', 'sales'].map((r) =>
+    join(root, 'extensions/presets/roles', r, 'knowledge-scope.yaml'),
+  );
+  if (roleScopeFiles.every((p) => existsSync(p))) {
+    out.note('[L1-辅证] K12-05 载体 = extensions/presets/roles/*/knowledge-scope.yaml（裁 423 归一）');
   } else {
     out.unverified(
-      'V4 可见性交叉验证不可核：K12-05 载体 extensions/knowledge-scope/ 实测不存在 ⇒ 「不能看的数据仍然看不到」无法与本卡交叉验证（不计入 PASS）',
+      'V4 可见性交叉验证不可核：可见性面由 #188 行为面夹具（probe-knowledge-scope）覆盖，本卡不重复判定（不计入 PASS）',
     );
   }
 }
