@@ -2,12 +2,19 @@
 # 取数源（唯一）：gh api repos/synova-agent/SynovaAgent/rules/branches/main
 #   ⇒ ruleset main-protect (id=24259959, active)；重放命令见下，禁止手抄：
 #   gh api repos/<o>/<r>/rules/branches/main --jq '[.[]|select(.type=="required_status_checks")|.parameters.required_status_checks[].context]'
-Checker Review (maker/checker) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Golden Case F1 Gate | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Integration Contract Check | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-PR 元信息门禁 (docs/evidence/write-set) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Vitest (1/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Vitest (2/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
-Gate Integrity (pattern sentinel + injection fixture + ci-reds) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959
+#
+# `category=` 字段（#1255-T5，2026-11-01 补标注；判据源 = GATE-STANDARD §十二 ⑤）:
+#   取值枚举: integration | quality | discipline | advisory | mixed（与 GATE-INVENTORY 同词表）。
+#   判据: **`category≠integration` 行数 = 0** —— 依据 §二 两腿分工（GitHub=集成/跨平台/构建；纪律/质量必须落 Gitea）。
+#   机检: `python3 scripts/control-tower/check-required-contexts.py --category-gate`
+#         （另有 `--category-advisory` = W8 admin 清理前的软提示过渡态）。
+#   🔴 现状（2026-11-01）：9 条中 **8 条非 integration** ⇒ 本判据如实红；清理归 **W8（ruleset admin，需创始人）**。
+Checker Review (maker/checker) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=discipline
+Control Tower Gate Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=discipline
+Golden Case F1 Gate | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=quality
+Integration Contract Check | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=integration
+Test-Kit Architecture Tests (ubuntu-latest) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=quality
+PR 元信息门禁 (docs/evidence/write-set) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=discipline
+Vitest (1/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=quality
+Vitest (2/2) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=quality
+Gate Integrity (pattern sentinel + injection fixture + ci-reds) | owner=UNASSIGNED | source=rulesets API | as_of=2026-10-26T13:10:00Z | evidence=ruleset 24259959 | category=discipline

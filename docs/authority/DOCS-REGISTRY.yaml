@@ -9,6 +9,14 @@
 
 documents:
 
+    # ---- CTO 2026-11-02：#1266 gate-A 镜头 7 受保护路径豁免（D2 登记）----
+    - id: DOC-1240
+      type: decision
+      path: gate-exemptions/2026-11-02-1266-gate-a-dsh-lens.md
+      status: active
+      owner: CTO
+      note: "gate-A 新增镜头 7（DSH 纪律与代码品味）＋R9 角色卡的受保护路径豁免（含 gate-exemptions 自覆盖；裁定号 裁 429）。"
+
   # ---- CTO 2026-10-12：CLAUDE.md 退役（裁定 059/061）----
   - id: DOC-0193
     type: decision
@@ -1691,6 +1699,41 @@ documents:
     status: active
     owner: P4
     note: "#1221：D331 class 已 P1；补 local_only/required_ci_scope=pre-push；confirmed_by=founder-2026-10-31；退役仍等 W9。"
+  # ---- P4 2026-11-01：#1255-T6 skill 收敛（口径改自研）受保护路径豁免（DOC-1227-03；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1227-03
+    type: decision
+    path: gate-exemptions/2026-11-01-1227-t6-skill-retire.md
+    status: active
+    owner: P4
+    note: "#1255-T6（#1227）：skill 判据口径改（自研 <=40，产品自带 48 不计入）；按活面审计退役 line-audit-and-cards（活面引用 0）=> 自研 12->11，SYNC-OK(11)；产品自带 41/6/1 未动。"
+  # ---- P4 2026-11-01：#1255 ⑤ category 标注与机检 受保护路径豁免（DOC-1255）----
+  - id: DOC-1255
+    type: decision
+    path: gate-exemptions/2026-11-01-1255-category-gate.md
+    status: active
+    owner: P4
+    note: "#1255（T5）：⑤ 基线 9 行补 category ＋ check-required-contexts.py 新增 --category-gate（0/1/2 三态，缺失也计入待清）与 --category-advisory；实测 total=9 integration=1 non_integration=8 ⇒ GitHub 分支保护 9 条必需 context 里 8 条是纪律/质量，清理归 W8（admin）。配对测试 51/0。"
+  # ---- P4 2026-11-01：#1254 T4 台账三判据机检 受保护路径豁免 ----
+  - id: DOC-1254
+    type: decision
+    path: gate-exemptions/2026-11-01-1254-ledger-budget.md
+    status: active
+    owner: P4
+    note: "#1254（T4 台账三判据机检）：新增 check-ledger-budget.sh（行数/跨段重复/measured_at 三态出数）＋配对测试＋台账重锚与三处入册；含 gate-exemptions 自覆盖与 DOCS-REGISTRY 自登记行。"
+  # ---- P4 2026-11-01：#1252 ⑦ 接线修复 受保护路径豁免（DOC-1252）----
+  - id: DOC-1252
+    type: decision
+    path: gate-exemptions/2026-11-01-1252-gate7-wiring.md
+    status: active
+    owner: P4
+    note: "#1252（T2）：⑦ 两处缺陷——Windows 盘符冒号打断 grep -nHE 行解析（本机违规2/rc=1 vs CI 违规0/OK，两腿相反）⇒ _fp_split_line 贪心取最后 :<num>: ＋只读单测缝 --fixture-power-parse；⑦ 步补注入 SYNO_BASE_REF 使『越线者付账』判据真正行使。判据阈值一字未动；配对测试 74/0。"
+  # ---- P4 2026-11-01：#1210 判据 7 遗留项（W6 墙钟接线）豁免登记（DOC-1210-01；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1210-01
+    type: decision
+    path: gate-exemptions/2026-11-01-1210-t3-budget-wiring.md
+    status: active
+    owner: P4
+    note: "#1210 判据 7 遗留项（#1255-T3）：pre-commit 结果段接线墙钟预算——落盘 wall_ms 后调用 check-gate-budget.sh --log 判定（0/1/2），只告警不阻断；台账同步 required_ci true／run_by pre-commit／移出 run_by_candidates。"
   # ---- P4 2026-11-01：#1253 notes 门禁性能修复 受保护路径豁免（DOC-1253）----
   - id: DOC-1253
     type: decision
@@ -1698,10 +1741,17 @@ documents:
     status: active
     owner: P4
     note: "#1253（T1 P0）：notes 生命周期门禁逐文件 spawn（219 note ≈1300 进程、>90s 未跑完）→ 单进程解析（1.11s）；补 timeout⇒exit2+E_TIMEOUT 与缺 python⇒E_NO_PYTHON；契约 0/1/2 与四态输出不变；配对测试 23/0（含性能回归与超时两态）。"
-  # ---- K12-ENG (#1271) 门禁豁免文件登记（D2 登记门禁；2026-11-02）----
-  - id: DOC-1260
+  # ---- CTO 2026-11-02：#1281 W7 到期回收机检 受保护路径豁免（DOC-1281）----
+  - id: DOC-1281
+    type: decision
+    path: gate-exemptions/2026-11-02-1281-w7-expiry.md
+    status: active
+    owner: CTO
+    note: "#1281（③ ORPHAN 对账 ＋ W7）：check-gate-inventory.sh 新增 R7 到期回收判据（review_after 过期且无 review_owner ⇒ 红）；四例测试含改坏必红；P0 棘轮 8 不动；check-customer-deps 补 npm 通道（记账闭合，仍不自动执行）。"
+
+  - id: DOC-1308
     type: governance
     path: gate-exemptions/2026-11-02-1271-1280-exile-baseline.md
     status: active
     owner: K12
-    note: "#1280 P2-1b：content-exile 类型基线注册表派生"
+    note: "K12-ENG #1271 豁免登记（D2）"
