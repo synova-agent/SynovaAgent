@@ -1784,6 +1784,13 @@ documents:
     status: active
     owner: K12
     note: "K12-ENG #1271 豁免登记（D2）"
+  # ---- CTO 2026-11-02：#1290 T1 降级日志补合 受保护路径豁免（DOC-1290）----
+  - id: DOC-1290
+    type: decision
+    path: gate-exemptions/2026-11-02-1290-t1-degraded-log.md
+    status: active
+    owner: CTO
+    note: "K3 审计例外 1 补合：T1 的 D2 降级日志修复曾在 PR #1256 合并后才推分支 ⇒ 从未进 main；本卡补合 degrade() 统一出口（stderr＋SYNO_GATE_DEGRADED_LOG JSON）。"
 
   - id: DOC-1305
     type: governance
