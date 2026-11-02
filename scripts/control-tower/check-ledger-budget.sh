@@ -57,7 +57,7 @@ degrade() { # <CODE> <msg>  —— D2 契约：stderr 一行 + 追加 JSON 到 S
   exit 2
 }
 
-ROOT=""; INV=""; MAX_LINES=800; BASE_REF=""; JSON=0; ADVISORY=0
+ROOT=""; INV=""; MAX_LINES=800; BASE_REF=""; JSON=0; ADVISORY=0; MAX_DRIFT=30
 while [ $# -gt 0 ]; do
   case "$1" in
     --inv) INV="${2:-}"; shift 2 ;;
@@ -66,6 +66,8 @@ while [ $# -gt 0 ]; do
     --root=*) ROOT="${1#--root=}"; shift ;;
     --max-lines) MAX_LINES="${2:-}"; shift 2 ;;
     --max-lines=*) MAX_LINES="${1#--max-lines=}"; shift ;;
+    --max-drift) MAX_DRIFT="${2:-}"; shift 2 ;;
+    --max-drift=*) MAX_DRIFT="${1#--max-drift=}"; shift ;;
     --base) BASE_REF="${2:-}"; shift 2 ;;
     --base=*) BASE_REF="${1#--base=}"; shift ;;
     --json) JSON=1; shift ;;
@@ -76,6 +78,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$MAX_LINES" in ''|*[!0-9]*) degrade E_USAGE "--max-lines 须为正整数: ${MAX_LINES}" ;; esac
+case "$MAX_DRIFT" in ''|*[!0-9]*) degrade E_USAGE "--max-drift 须为非负整数: ${MAX_DRIFT}" ;; esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -n "$ROOT" ] || ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
@@ -100,11 +103,23 @@ fi
 BASE_SHA="$(git -C "$ROOT" rev-parse --short=9 "${BASE_REF}^{commit}" 2>/dev/null)" || degrade E_BASE "base 不可解析: ${BASE_REF}"
 [ -n "$BASE_SHA" ] || degrade E_BASE "base 短 sha 为空: ${BASE_REF}"
 
-OUT="$("$PYBIN" - "$INV" "$MAX_LINES" "$BASE_SHA" 2>"${ERRF:=/tmp/syno-ledger-err.$$}" <<'PYCORE'
+# ── #1296：measured_at 漂移量（>=0 = 台账落后代码多少个提交；-1 = 判不了/非祖先）──
+_MEASURED="$(sed -n 's/^[[:space:]]*measured_at:[[:space:]]*\([^[:space:]\#]*\).*/\1/p' "$INV" 2>/dev/null | head -1)"   # swallow-ok: 台账不可读时由 E_PARSE 分支先行拦截
+DRIFT=-1
+if [ -n "$_MEASURED" ]; then
+  if git -C "$ROOT" merge-base --is-ancestor "$_MEASURED" "$BASE_REF" 2>/dev/null; then   # swallow-ok: 非祖先由 drift=-1 显式判红
+    DRIFT="$(git -C "$ROOT" rev-list --count "${_MEASURED}..${BASE_REF}" 2>/dev/null)" || DRIFT=-1
+    case "$DRIFT" in ''|*[!0-9]*) DRIFT=-1 ;; esac
+  fi
+fi
+
+
+OUT="$("$PYBIN" - "$INV" "$MAX_LINES" "$BASE_SHA" "$DRIFT" "$MAX_DRIFT" 2>"${ERRF:=/tmp/syno-ledger-err.$$}" <<'PYCORE'
 import io, re, sys
 from collections import defaultdict
 
 inv, max_lines, base = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+drift, max_drift = int(sys.argv[4]), int(sys.argv[5])   # #1296：<measured>..<base> 的提交数
 try:
     lines = io.open(inv, encoding="utf-8", errors="replace").read().splitlines()
 except OSError as e:
@@ -132,6 +147,40 @@ for ln in lines:
     m = re.match(r"^\s*measured_at:\s*([^\s#]+)", ln)
     if m: measured = m.group(1).strip('"')
 
+# ── 字段齐全（#1296 · W5 例外 6）：dup 可被"改名"归零，字段面挡这条路 ──
+# 为什么需要: 把 `- entrypoint:` 改名 `- path:` 就能让 dup 从 159 掉到 32（K3 实测），
+#   因为判据只认两种键名。字段齐全检查让"改名"立刻在**缺字段**上红。
+CLS_REQUIRED = ("id", "class", "owner", "review_after", "entrypoint", "required_ci")
+RB_REQUIRED = ("entrypoint", "run_by", "quota")
+
+def block_records(secname):
+    """按顶层段取出 - 开头的记录块，返回 [(首键, {字段: 值})]"""
+    recs, cur = [], None
+    for i, ln in enumerate(lines):
+        if sec_of(i) != secname:
+            continue
+        m = re.match(r"^\s*-\s+(\w+):\s*(.*?)\s*$", ln)
+        if m:
+            if cur: recs.append(cur)
+            cur = {m.group(1): m.group(2).strip().strip('"')}
+            continue
+        if cur is None: continue
+        m2 = re.match(r"^\s+(\w+):\s*(.*?)\s*$", ln)
+        if m2 and m2.group(1) not in cur:
+            cur[m2.group(1)] = m2.group(2).strip().strip('"')
+    if cur: recs.append(cur)
+    return recs
+
+missing_fields = []
+for rec in block_records("classification"):
+    lack = [f for f in CLS_REQUIRED if not rec.get(f, "").strip()]
+    if lack:
+        missing_fields.append(("classification", rec.get("id") or rec.get("entrypoint") or "<无 id>", lack))
+for rec in block_records("run_by"):
+    lack = [f for f in RB_REQUIRED if not rec.get(f, "").strip()]
+    if lack:
+        missing_fields.append(("run_by", rec.get("entrypoint") or "<无 entrypoint>", lack))
+
 n = len(lines)
 viol = []
 if n > max_lines:
@@ -140,11 +189,25 @@ if dup:
     sample = "；".join("%s@%s" % (k, "/".join(v)) for k, v in list(dup.items())[:5])
     viol.append(("L_DUP", "跨段重复键 %d 个（同一键出现在多个顶层段）：%s%s" % (
         len(dup), sample, " …" if len(dup) > 5 else "")))
-if measured != base:
-    viol.append(("L_MEASURED_AT", "measured_at=%s ≠ 当前基准 %s" % (measured or "<缺失>", base)))
+if missing_fields:
+    sample = "；".join("%s:%s 缺 %s" % (s, k, ",".join(l)) for s, k, l in missing_fields[:5])
+    viol.append(("L_FIELDS", "字段不全的记录 %d 条（rename 归零挡板）：%s%s" % (
+        len(missing_fields), sample, " …" if len(missing_fields) > 5 else "")))
 
-print("LEDGER: lines=%d/%d dup_across_sections=%d measured_at=%s base=%s" % (
-    n, max_lines, len(dup), measured or "<缺失>", base))
+# ── measured_at（#1296 · 例外 7）：由"等于 base"改为"是 base 祖先且落后 ≤ max_drift 个提交" ──
+# 为什么改: `--regen` 按设计保留旧 measured_at（防噪声）⇒ 旧判据**结构性常红**（永远 ≠ 新 base）。
+# 判据改成"漂移量"，语义变成"台账数据落后代码多少"；需要锚定时用 `gen-gate-meta.sh --regen --stamp`。
+if not measured:
+    viol.append(("L_MEASURED_AT", "measured_at 缺失（无法判漂移）"))
+else:
+    if drift < 0:
+        viol.append(("L_MEASURED_AT", "measured_at=%s 不是当前基准 %s 的祖先（drift=未知）⇒ 需 `gen-gate-meta.sh --regen --stamp` 重锚" % (measured, base)))
+    elif drift > max_drift:
+        viol.append(("L_MEASURED_AT", "measured_at=%s 落后当前基准 %s **%d 个提交** > 上限 %d ⇒ 需 `gen-gate-meta.sh --regen --stamp`" % (
+            measured, base, drift, max_drift)))
+
+print("LEDGER: lines=%d/%d dup_across_sections=%d missing_fields=%d drift=%d measured_at=%s base=%s" % (
+    n, max_lines, len(dup), len(missing_fields), drift, measured or "<缺失>", base))
 for code, msg in viol:
     print("LEDGER-VIOLATION: %s — %s" % (code, msg))
 sys.exit(1 if viol else 0)

@@ -1826,3 +1826,10 @@ documents:
     status: active
     owner: K12
     note: "K12-ENG #1271 豁免登记（D2）"
+  # ---- CTO 2026-11-02：#1296 K3 阻断级处置 受保护路径豁免（DOC-1296）----
+  - id: DOC-1296
+    type: decision
+    path: gate-exemptions/2026-11-02-1296-k3-blockers.md
+    status: active
+    owner: CTO
+    note: "K3 例外 4/6/7＋V3：逐组耗时落盘（⑨ 归因）、L_FIELDS 挡 rename 归零、measured_at 改漂移口径＋--stamp、⑩ 口径改 .md frontmatter 只向前生效。"

@@ -37,10 +37,15 @@ mk_inv() { # <path> <measured_at> <dup:yes|no>
     echo "  - id: G-B"
     echo "classification:"
     echo "  - id: CT-x"
+    echo "    class: P2"
+    echo "    owner: P4"
+    echo "    review_after: 2026-11-27"
     echo "    entrypoint: scripts/control-tower/x.sh"
+    echo "    required_ci: false"
     echo "run_by:"
     echo "  - entrypoint: scripts/control-tower/x.sh"
     echo "    run_by: gitea-ci"
+    echo "    quota: false"
     echo "gate_meta:"
     echo "  measured_at: $m"
     if [ "$dup" = yes ]; then
@@ -99,6 +104,23 @@ printf '%s' "$OUT" | grep -q 'LEDGER-VIOLATION: L_MEASURED_AT' && ok "软提示�
 echo "── 7 --json 机读摘要 ──"
 OUT="$(bash "$GATE" --root "$REPO" --inv "$TMPD/pass.yaml" --base HEAD --json 2>&1)"; RC=$?
 printf '%s' "$OUT" | grep -q '^{\"lines\":' && ok "--json 输出机读摘要" || no "--json 摘要缺失: $OUT"
+
+echo ""
+echo "── 8 L_FIELDS（#1296）：分类条缺字段 ⇒ exit 1 且点名 ──"
+cp "$TMPD/pass.yaml" "$TMPD/fields.yaml"
+sed -i 's/^    class: P2$/    /' "$TMPD/fields.yaml"
+OUT="$(bash "$GATE" --root "$REPO" --inv "$TMPD/fields.yaml" --base HEAD 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && ok "8 字段不齐 exit 1" || no "8 期望 1 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "L_FIELDS" && ok "8 点名 L_FIELDS" || no "8 未点名 L_FIELDS（$OUT）"
+
+echo ""
+echo "── 9 measured_at 漂移（#1296）：非祖先 ⇒ exit 1 且给修复命令 ──"
+cp "$TMPD/pass.yaml" "$TMPD/drift.yaml"
+sed -i 's/^  measured_at: .*/  measured_at: deadbeef/' "$TMPD/drift.yaml"
+OUT="$(bash "$GATE" --root "$REPO" --inv "$TMPD/drift.yaml" --base HEAD 2>&1)"; RC=$?
+[ "$RC" -eq 1 ] && ok "9 非祖先 exit 1" || no "9 期望 1 实得 $RC（$OUT）"
+printf '%s' "$OUT" | grep -q "L_MEASURED_AT" && ok "9 点名 L_MEASURED_AT" || no "9 未点名（$OUT）"
+printf '%s' "$OUT" | grep -q "stamp" && ok "9 给出 --regen --stamp 修复命令" || no "9 未给修复命令（$OUT）"
 
 echo "═══════════════════════════════════════════════════════════"
 echo "=== 结果: PASS=${PASS} FAIL=${FAIL}${FIRST_FAIL:+ FIRST_FAIL=${FIRST_FAIL}} ==="

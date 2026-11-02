@@ -1,0 +1,16 @@
+writeset:
+  - scripts/control-tower/check-ledger-budget.sh
+  - scripts/control-tower/gen-gate-meta.sh
+  - scripts/pre-commit-check.sh
+  - docs/authority/GATE-STANDARD.md
+  - docs/authority/GATE-INVENTORY.yaml
+  - gate-exemptions/2026-11-02-1296-k3-blockers.md
+  - memory/notes/proposed/2026-11-02-1296-k3-blockers.md
+  - .claude/claims/1296.yaml
+done:
+  - verify: bash scripts/control-tower/check-ledger-budget.sh
+  - verify: bash scripts/control-tower/gen-gate-meta.sh --check --root .
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash tests/control-tower/check-ledger-budget.test.sh
+  - verify: bash scripts/pre-commit-check.sh
+note: "K3 阻断级 3 条＋V3：①逐组耗时落盘（pre-commit 每组分界记 SECONDS，写 .claude/precommit-groups.log，结果段打印最慢 5 组；实测 组7=80s/组13=46s/组1=25s）②check-ledger-budget 新增 L_FIELDS（classification 六字段/run_by 三字段，挡 rename 归零：实测改名后 dup 159→32 但 missing_fields=127 红）③measured_at 改漂移口径（祖先＋落后≤--max-drift=30），并用 gen-gate-meta --regen --stamp 显式刷新 ④⑩ 口径改 .md frontmatter 且只向前生效（存量 121/196 记账不阻断）。"

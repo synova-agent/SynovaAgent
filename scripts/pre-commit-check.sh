@@ -3,6 +3,7 @@
 # 契约（铁律 47·裁 421 补齐 D 项）
 #   @input  暂存区或 SYNO_DIFF_BASE 指定的变更集
 #   @output 逐组 ✅/⚠️/❌ 报告 + 末行「N 组未通过」或「全部通过」
+#            另打印「逐组耗时」最慢 5 组（#1296 / ⑨ 归因通道；明细写 .claude/precommit-groups.log）
 #   @exit   0=全通过；1=有组未通过（SYNO_CI=1 时软提示转硬）；2=检查自身失败
 #   @degraded 某组检查自身失败时按 exit 2 处理或显式降级留痕
 # ═══════════════════════════════════════════════════════════════
@@ -19,6 +20,28 @@ _now_ms() {
   else printf '%s000' "$(date +%s)"; fi
 }
 _GATE_T0_MS="$(_now_ms)"
+
+# ═══ #1296（K3 例外 4 / W6 真出口）: 逐组耗时 ═══
+# 为什么需要：⑨ 只落一个聚合 wall_ms（445 s / 117.6 s），耗散在哪一组**完全不可归因**。
+# 做法：每组起点结算上一组耗时，写入 .claude/precommit-groups.log（`<秒>\t<组名>`，每次运行覆盖）。
+# 为什么用 SECONDS：bash 内建，零进程开销；归因要的是"哪组十几秒"的量级，不需要 ms。
+_GT_LOG=""; _GT_T0="$SECONDS"; _GT_NAME=""
+_grp_tick() {  # <组名>：结算上一组
+  [ -n "$_GT_LOG" ] || { _GT_LOG="${SYNO_GROUP_TIMING_LOG:-$ROOT/.claude/precommit-groups.log}"; : > "$_GT_LOG" 2>/dev/null || _GT_LOG=/dev/null; }
+  if [ -n "$_GT_NAME" ]; then
+    printf '%s\t%s\n' "$((SECONDS - _GT_T0))" "$_GT_NAME" >> "$_GT_LOG" 2>/dev/null || true   # swallow-ok: 计时日志写不进不影响门禁判定
+  fi
+  _GT_T0="$SECONDS"; _GT_NAME="$1"
+}
+_grp_report() {  # 结果段调用：结算最后一组并打印最慢 5 组
+  _grp_tick "（收尾/结果段）"
+  [ -s "${_GT_LOG:-/dev/null}" ] || return 0
+  echo "  ⏱ 逐组耗时（本机，秒；明细见 .claude/precommit-groups.log）:"
+  sort -rn -k1 "${_GT_LOG}" 2>/dev/null | head -5 | while IFS=$(printf '\t') read -r _s _n; do   # swallow-ok: 计时日志读不到不影响门禁结论
+    echo "     ${_s}s  ${_n}"
+  done
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Loop Engineering V4.5.1 — pre-commit 12 组硬阻断 (全部 <10s) + 免疫系统
 # D515 / V5.0.0: 提交端硬阻断收敛到 4 道质量根（as any / 测试配对+expect / Secrets /
@@ -759,6 +782,7 @@ echo ""
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 1: 类型安全 + 硬编码数据 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 1"
 
 # 1a. as any 零容忍 — 只拦本次变更新增的 as any（存量独立治理）
 # 方案1(挪CI): 本地用暂存区 diff；CI 用 base...HEAD diff（SYNO_DIFF_BASE 注入）
@@ -830,6 +854,7 @@ fi
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 2: 测试质量 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 2"
 
 # 2a. empty catch 无 log
 EMPTY=""
@@ -938,6 +963,7 @@ fi
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 3: Secrets ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 3"
 par_collect_quiet secrets "$PAR_SECRETS" || HARD_FAIL=$((HARD_FAIL + 1))
 
 # ═══════════════════════════════════════════════════════════════════
@@ -952,6 +978,7 @@ par_collect_quiet secrets "$PAR_SECRETS" || HARD_FAIL=$((HARD_FAIL + 1))
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 4: 接线完整性 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 4"
 
 # 4a. 新 export 被引用 (V3.8 简化: bash 只验证"被引用"这个物理事实)
 # Anthropic 原则: bash 退回到物理事实——"这个符号在文件外部出现过吗？"
@@ -1016,6 +1043,7 @@ GROUP_DOWN=1  # 裁 409：组5/6 降级（只报不拦；❌ 保留）
 # 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
 if [ "${SYNO_DOWN_SELFTEST:-}" = "5" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "6" ]; then hard_check "SELFTEST-组5/6 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 5"
 
 # 5a. 跨层引用检测 (原 8)
 CROSS_LAYER=""
@@ -1103,6 +1131,7 @@ warn_check "铁律 47: 声称完成须 grep 物理证明" "${CLEANUP_CLAIM:-}"
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${CYAN}── 组 6: Task Brief (6 核心字段) ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 6"
 
 # ═══ D537 #2 (D537r2): 主树提交禁止门禁 ═══
 # 判据（CTO 裁定 §三bis）: 拦 = 在主树（pwd -P 后 toplevel == ${SYNO_MAIN_TREE}，默认 $HOME/SynovaAgent）提交;
@@ -1374,6 +1403,7 @@ fi
 echo -e "${CYAN}── 组 7: 架构合规 ──${RESET}"
 GROUP_DOWN=0  # 组5/6 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 7"
 
 # 7a. DiagnosticModule 禁止 (原 6)
 # D937: 原实现三处缺陷（K3 可核）:
@@ -1545,6 +1575,7 @@ fi
 echo -e "${CYAN}── 组 8: 文件驱动架构完整性 (V3.9) ──${RESET}"
 GROUP_DOWN=1  # 裁 409：本组降级（只报不拦）
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 8"
 # V3.9: 能力验收 CI — 验收测试必须通过 CI
 # D1148 转旁路: 原 `par_collect … || v5_soft "验收 CI (V3.9)"`（软提示，CI 转硬）→ 旁路观测。
 #   理由: 该检查与提交内容弱相关（跑的是 acceptance 用例集，非本次变更）；
@@ -1581,6 +1612,7 @@ GROUP_DOWN=1  # 裁 409：组9/10 降级（块级 paths 由 CI ①d 承担）
 # 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
 if [ "${SYNO_DOWN_SELFTEST:-}" = "9" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "10" ]; then hard_check "SELFTEST-组9/10 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 9"
 CONTRACT_DIR="$ROOT/.codex/contracts"
 CONTRACT_FAIL=""
 if [ -d "$CONTRACT_DIR" ] && [ "$(ls -A "$CONTRACT_DIR" 2>/dev/null)" ]; then
@@ -1660,6 +1692,7 @@ fi
 # ═══ 组 10: V3 CP3 — 条件区域 + 测试覆盖 (D260) ═══
 echo -e "${CYAN}── 组 10: V3 流水线健康度 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 10"
 
 CRITERIA_MAP="$ROOT/.codex/criteria-code-map.json"
 if [ -f "$CRITERIA_MAP" ]; then
@@ -1735,6 +1768,7 @@ fi
 echo -e "${CYAN}── 组 12: Task Scope 一致性 ──${RESET}"
 GROUP_DOWN=0  # 组9/10 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 12"
 
 TODAY=$(date +%Y-%m-%d)
 # 修复 (D291): 组12 只用当前 session 的 brief, 避免并发 session 的 brief 干扰暂存文件匹配
@@ -2048,6 +2082,7 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 #   已知限制: CT-34 纯文档提交在组 6 前早退 ⇒ 组 13 不执行（技能目录不在文档白名单，不构成漏拦）。
 echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
+_grp_tick "组 13"
 
 # 裁 409 确定性自检缝（#1227 W3 更新语义：注入 ⇒ CI 硬阻断 / 本地仅软提示）
 if [ "${SYNO_DOWN_SELFTEST:-}" = "13" ]; then
@@ -2490,6 +2525,7 @@ gate_budget_report() {
   return 0
 }
 
+_grp_report
 # ═══════════════════════════════════════════════════════════════════
 # 结果
 # ═══════════════════════════════════════════════════════════════════
