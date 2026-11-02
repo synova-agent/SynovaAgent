@@ -1,0 +1,62 @@
+# .claude/claims/1271.yaml — #1271（K12-ENG 长程整改批）写集声明
+#   卡面：Gitea #1271 ｜ 台账 #1270 ｜ 规格 `.handbook/派单件/2026-11-02-规格-1271-K12-ENG-整改.md`
+#   口径：14 项批准（2026-11-02）；本 claim 覆盖 P0–P2 判据件/内容面/门禁接线与本批 brief
+writeset:
+  - .claude/claims/1271.yaml
+  - .claude/task-briefs/2026-11-02-1271-K12-ENG-整改.md
+  - extensions/adapters/feishu/adapter.ts
+  - extensions/adapters/nemoclaw/adapter.ts
+  - extensions/adapters/feishu/manifest.json
+  - extensions/adapters/nemoclaw/manifest.json
+  - extensions/notifications/email/manifest.json
+  - extensions/notifications/jira/manifest.json
+  - extensions/notifications/linear/manifest.json
+  - extensions/notifications/feishu-approval/manifest.json
+  - scripts/check-integrity-startup.sh
+  - scripts/pre-commit-check.sh
+  - .gitea/workflows/local-gates.yml
+  - scripts/control-tower/probe-output-contract.ts
+  - scripts/control-tower/probe-knowledge-scope.ts
+  - scripts/control-tower/fixtures/k12-05-behavioral.sh
+  - docs/synova/coordination/施工项登记.ts
+  - scripts/control-tower/probe-content-registry.ts
+  - scripts/control-tower/probe-content-layering.ts
+  - scripts/control-tower/probe-ladder.ts
+  - tests/control-tower/probe-contract.test.sh
+  - src/deploy/content-registry.ts
+  - tests/deploy/content-registry.test.ts
+  - scripts/control-tower/probe-role-config.ts
+  - src/onboarding/config-pack-generator.ts
+  - tests/onboarding/config-pack-generator.test.ts
+  - tests/l4/goal-alignment.test.ts
+  - docs/authority/DOCS-REGISTRY.yaml
+  - scripts/check-content-coupling.sh
+  - gate-exemptions/2026-11-02-1272-adapters-deadcode-guard.md
+  - gate-exemptions/2026-11-02-1271-1274-integrity-wiring.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p0-3-output-contract-probe.md
+  - gate-exemptions/2026-11-02-1271-1275-output-contract-probe.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p0-4-knowledge-scope-v3.md
+  - docs/authority/WIRING-REGISTRY.yaml
+  - tests/control-tower/k12-05-behavioral.test.sh
+  - gate-exemptions/2026-11-02-1271-1276-v3-approval-fixture.md
+  - gate-exemptions/2026-11-02-1271-1277-content-registry-probe.md
+  - tests/control-tower/probe-content-registry.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-1-content-registry-probe.md
+  - gate-exemptions/2026-11-02-1271-1278-content-layering-probe.md
+  - tests/control-tower/probe-content-layering.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-2-content-layering-probe.md
+  - gate-exemptions/2026-11-02-1271-1279-ladder-ci.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p1-3-ladder-ci.md
+  - gate-exemptions/2026-11-02-1271-1280-exile-baseline.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-1b-exile-baseline.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-1-content-layer-boot.md
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-2a-grants-preserve.md
+  - gate-exemptions/2026-11-02-1271-1283-role-config-target.md
+  - tests/control-tower/probe-role-config.test.sh
+  - memory/notes/implemented/2026-11-02-k12-eng-p2-2b-role-config-target.md
+
+done:
+  - verify: bash scripts/check-integrity-startup.sh
+  - verify: bash scripts/check-content-coupling.sh
+  - verify: npx tsx scripts/control-tower/probe-ladder.ts --all
+note: "K12-ENG 长程整改批（#1271）；P0 判据面/内容面，P1 归一/恒真/梯子入 CI，P2 产品面（K12-20/12）。"

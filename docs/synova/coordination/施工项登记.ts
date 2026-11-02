@@ -1190,7 +1190,9 @@ export const constructionItems: readonly ConstructionItem[] = [
     worker: 'win', batch: '第3批', block: 'K12',
     title: '角色预设包（Role Pack）',
     paths: [
-      'docs/synova/presets/roles/',
+      // K12-ENG P2-3（#1271）：裁 423 归一后角色包真源 = extensions/presets/roles/**；
+      //   原 `docs/synova/presets/roles/` 是文档镜像（会漂移），不再作为施工写集。
+      'extensions/presets/roles/**',
       'scripts/control-tower/probe-role-pack.ts',  // 判据交付物（本卡创建）
     ],
     // ✅ 落点已裁（选项③）：用 docs/synova/presets/** 既有规则（=mac）
@@ -1892,9 +1894,13 @@ export const constructionItems: readonly ConstructionItem[] = [
   {
     issue: 188, id: 'K12-05', worker: 'win', batch: '第12批', block: 'K12',
     title: '知识一致：分层权限的数据面（四层＝企业/部门/岗位/个人）',
-    paths: ['extensions/knowledge-scope/**', 'src/init/file-driven-loaders.ts', 'tests/knowledge-scope/layering.test.ts', 'scripts/control-tower/probe-knowledge-scope.ts'],
+    // K12-ENG P2-3（#1271）：删已废 `extensions/knowledge-scope/**`／不存在的 `tests/knowledge-scope/layering.test.ts`；
+    //   真载体 = 角色包 knowledge-scope.yaml ＋ role-pack-knowledge-filter ＋ 探针/夹具。
+    paths: ['extensions/presets/roles/**', 'src/init/role-pack-knowledge-filter.ts', 'src/init/file-driven-loaders.ts', 'scripts/control-tower/probe-knowledge-scope.ts', 'scripts/control-tower/fixtures/k12-05-behavioral.sh', 'tests/control-tower/k12-05-behavioral.test.sh'],
     dependsOn: ['RB-01', 'RB-02'],
-    acceptance: [{ run: 'npx tsx scripts/control-tower/probe-knowledge-scope.ts', expectExit: 0 }],
+    // K12-ENG P0-4（#1271 / 14 项批准 K12-05）：裸跑只做结构面（exit 2=VERIFIED 环境缺），
+    //   行为面（V2/V3/V4）由夹具提供真服务＋临时库＋repo 形临时根 ⇒ 验收命令改用夹具。
+    acceptance: [{ run: 'bash scripts/control-tower/fixtures/k12-05-behavioral.sh', expectExit: 0 }],
     status: 'todo',
     source: '宪章 §2.7 第①层 / 02-一致性 §三机制2（四层不是"一个统一知识库"）',
   },
@@ -2366,7 +2372,7 @@ export const constructionBlocks: readonly ConstructionBlock[] = [
             'RB-01', 'RB-02', 'RB-03', 'RB-04', 'RB-05', 'RB-06', 'K12-13', 'K12-14', 'K12-15', 'K12-16', 'K12-17', 'K12-18', 'K12-21'],
     // 🔴 CTO 裁定 074 步 1：块级 paths 快照（**机器生成，勿手改**）
     //   生成器/检查待治理线实现（scripts/ ⇒ 治理线域）；来源＝items.paths 并集
-    paths: ['docs/synova/presets/roles/', 'extensions/', 'extensions/adapters/**', 'extensions/business-models/**', 'extensions/content-layers/**', 'extensions/engine/**', 'extensions/knowledge-scope/**', 'extensions/llm-providers/**', 'extensions/locales/manifest.json', 'extensions/notifications/**', 'extensions/onboarding/**', 'extensions/ontology/**', 'extensions/policies/data-access.yaml', 'extensions/reports/contracts/**', 'extensions/tools/**', 'scripts/check-content-coupling.sh', 'scripts/control-tower/probe-*.ts', 'scripts/control-tower/probe-approval-seam.ts', 'scripts/control-tower/probe-content-layering.ts', 'scripts/control-tower/probe-decision-ledger.ts', 'scripts/control-tower/probe-department-axis.ts', 'scripts/control-tower/probe-knowledge-scope.ts', 'scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-onboarding.ts', 'scripts/control-tower/probe-permission-grants.ts', 'scripts/control-tower/probe-rbac-multitenant.ts', 'scripts/control-tower/probe-role-config.ts', 'scripts/control-tower/probe-role-pack.ts', 'src/agent/prompt-assembler.ts', 'src/connectors/**', 'src/deploy/content-reload.ts', 'src/init/file-driven-loaders.ts', 'src/l4/decision-capture.ts', 'src/l4/goal-alignment.ts', 'src/middleware/auth.ts', 'src/middleware/rbac.ts', 'src/notifications/**', 'src/onboarding/', 'src/onboarding/gap-questioner.ts', 'src/output/contract-validator.ts', 'src/runtime/approval-seam.ts', 'src/services/content-layering.ts', 'tests/control-tower/content-coupling.test.sh', 'tests/control-tower/probe-contract.test.sh', 'tests/deploy/content-reload.test.ts', 'tests/knowledge-scope/layering.test.ts', 'tests/l4/decision-capture-single-entry.test.ts', 'tests/l4/goal-alignment.test.ts', 'tests/onboarding/completeness.test.ts', 'tests/onboarding/gap-questioner.test.ts', 'tests/output/contract-validator.test.ts', 'tests/security/approval-seam.test.ts', 'tests/services/content-layering.test.ts'],
+    paths: ['extensions/', 'extensions/adapters/**', 'extensions/business-models/**', 'extensions/content-layers/**', 'extensions/engine/**', 'extensions/llm-providers/**', 'extensions/locales/manifest.json', 'extensions/notifications/**', 'extensions/onboarding/**', 'extensions/ontology/**', 'extensions/policies/data-access.yaml', 'extensions/presets/roles/**', 'extensions/reports/contracts/**', 'extensions/tools/**', 'scripts/check-content-coupling.sh', 'scripts/control-tower/fixtures/k12-05-behavioral.sh', 'scripts/control-tower/probe-*.ts', 'scripts/control-tower/probe-approval-seam.ts', 'scripts/control-tower/probe-content-layering.ts', 'scripts/control-tower/probe-decision-ledger.ts', 'scripts/control-tower/probe-department-axis.ts', 'scripts/control-tower/probe-knowledge-scope.ts', 'scripts/control-tower/probe-ladder.ts', 'scripts/control-tower/probe-onboarding.ts', 'scripts/control-tower/probe-permission-grants.ts', 'scripts/control-tower/probe-rbac-multitenant.ts', 'scripts/control-tower/probe-role-config.ts', 'scripts/control-tower/probe-role-pack.ts', 'src/agent/prompt-assembler.ts', 'src/connectors/**', 'src/deploy/content-reload.ts', 'src/init/file-driven-loaders.ts', 'src/init/role-pack-knowledge-filter.ts', 'src/l4/decision-capture.ts', 'src/l4/goal-alignment.ts', 'src/middleware/auth.ts', 'src/middleware/rbac.ts', 'src/notifications/**', 'src/onboarding/', 'src/onboarding/gap-questioner.ts', 'src/output/contract-validator.ts', 'src/runtime/approval-seam.ts', 'src/services/content-layering.ts', 'tests/control-tower/content-coupling.test.sh', 'tests/control-tower/k12-05-behavioral.test.sh', 'tests/control-tower/probe-contract.test.sh', 'tests/deploy/content-reload.test.ts', 'tests/l4/decision-capture-single-entry.test.ts', 'tests/l4/goal-alignment.test.ts', 'tests/onboarding/completeness.test.ts', 'tests/onboarding/gap-questioner.test.ts', 'tests/output/contract-validator.test.ts', 'tests/security/approval-seam.test.ts', 'tests/services/content-layering.test.ts'],
     blockAcceptance: [
       { run: 'npx tsx scripts/control-tower/probe-onboarding.ts --dry-run', expectExit: 0 },
       { run: 'npx tsx scripts/control-tower/probe-role-pack.ts --role finance', expectExit: 0 },
