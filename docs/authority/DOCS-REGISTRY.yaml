@@ -1847,3 +1847,53 @@ documents:
     status: active
     owner: CTO
     note: "编码预设 persona 加开工四问答案块；install-dsh-preset 补 dependencies 登记；dsh-code-standards 证据锚点校准。"
+
+  # ---- CTO 2026-11-04：#1317 DSH 首个客户 v2.0 源件包（D2 登记；只归档，不代表实施落位）----
+  - id: DOC-1317-01
+    type: decision
+    path: Synova-on-DSH-首个客户可部署版-v2.0-2026-11-03.md
+    status: active
+    owner: CTO
+    note: "首个客户可部署版 v2.0：当前产品方向与施工依据；取代 v1.0 的 90 天内核替换主线。"
+  - id: DOC-1317-02
+    type: devdoc
+    path: Synova-on-DSH-首个客户可部署版-v2.0-DSH施工方案.md
+    status: active
+    owner: CTO
+    note: "首个客户可部署版 v2.0 的分阶段 DSH 施工工作包。"
+  - id: DOC-1317-03
+    type: decision
+    path: 门禁体系最终裁定与收缩施工方案-v1.0-2026-11-03.md
+    status: active
+    owner: CTO
+    note: "停止旧门禁扩张，切换核心门；普通任务轻卡、高风险一次独立复核。"
+  - id: DOC-1317-04
+    type: devdoc
+    path: CTO-DEVDOC-Coding双角色预设与Skill修订方案-v1.0-2026-11-04.md
+    status: active
+    owner: CTO
+    note: "CTO 防方向漂移、DEV DOC 收缩、coding 单任务执行及逐文件修订清单；待实施后生效。"
+  - id: DOC-1317-05
+    type: governance
+    path: 产品宪章-v8.4-最小修订案-2026-11-04.md
+    status: active
+    owner: CTO
+    note: "第 10 节六项已于 2026-11-04 全部通过；权威原件与镜像是否落位须另行核对。"
+  - id: DOC-1317-06
+    type: devdoc
+    path: DSH开工指令-宪章v8.4与双角色预设修订-2026-11-04.md
+    status: active
+    owner: CTO
+    note: "给 DSH 的宪章同步及 CTO／DEV DOC／coding 修订具体指令。"
+  - id: DOC-1317-07
+    type: decision
+    path: Synova-on-DSH-方向决议与执行计划-v1.0-2026-11-03.md
+    status: superseded
+    owner: CTO
+    note: "原始参考件；其 90 天内核替换施工主线由 v2.0 取代，保留用于对照。"
+  - id: DOC-1317-08
+    type: decision
+    path: gate-exemptions/2026-11-04-1317-source-pack.md
+    status: active
+    owner: CTO
+    note: "#1317 源件包归档的 DOCS-REGISTRY 变更与豁免件自覆盖。"

@@ -1,0 +1,15 @@
+writeset:
+  - .claude/claims/1317.yaml
+  - Synova-on-DSH-首个客户可部署版-v2.0-2026-11-03.md
+  - Synova-on-DSH-首个客户可部署版-v2.0-DSH施工方案.md
+  - 门禁体系最终裁定与收缩施工方案-v1.0-2026-11-03.md
+  - CTO-DEVDOC-Coding双角色预设与Skill修订方案-v1.0-2026-11-04.md
+  - 产品宪章-v8.4-最小修订案-2026-11-04.md
+  - DSH开工指令-宪章v8.4与双角色预设修订-2026-11-04.md
+  - Synova-on-DSH-方向决议与执行计划-v1.0-2026-11-03.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-11-04-1317-source-pack.md
+done:
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+note: "只归档 #1317 的 7 份源件与必要登记/豁免；不实施宪章原文、镜像、预设、skill 或门禁实物更新。"
