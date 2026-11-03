@@ -1,4 +1,5 @@
 writeset:
+  - docs/synova/presets/synova-coding/README.md
   - docs/synova/presets/synova-coding/cordis.patch.yml
   - scripts/control-tower/install-dsh-preset.sh
   - AGENTS.md
