@@ -1,0 +1,88 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1324,
+  "patch_fingerprint": "sha256:91e15be556b3c712babef6b855106d5449ace6911ac53f34b8f8c1b78cc68503",
+  "author": "synova-coding T1 执行会话（#1319）",
+  "reviewer": "g0g2-docreviewer（fresh，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "变更面＝4 处、无第 5 处",
+      "cmd": "git diff -U0 49d9fee36..99f548b4e -- AGENTS.md",
+      "evidence": "hunks 仅 L3 / L270 / L305 / L349（§15 块含 L351+L353），无其他行",
+      "result": "pass"
+    },
+    {
+      "name": "L3 判据源切换",
+      "cmd": "sed -n '3p' AGENTS.md | grep -c 门禁判据源／最终裁定与收缩施工方案 v1.0／已停止作为施工目标／以该裁定为准／判据中枢 =／以该件为准",
+      "evidence": "1 / 1 / 1 / 1 / 0 / 0（仍含『本模块 Issue #1319』）",
+      "result": "pass"
+    },
+    {
+      "name": "§15 轻量化无残留强制",
+      "cmd": "sed -n '349p' AGENTS.md ＋ 全文 grep 三串",
+      "evidence": "仅新模块／高风险触发=1；所有包、所有派单=0；任何 L1（P1–P10）=0；未过关卡 A 不许开工=0；触发范围内未过复核不许开工=1；不得自审=1；零上下文独立会话=1",
+      "result": "pass"
+    },
+    {
+      "name": "L270／L305",
+      "cmd": "sed -n '270p'／'305p' AGENTS.md | grep",
+      "evidence": "legacy 规范，已退役，不强制=1；不作合并阻断=1",
+      "result": "pass"
+    },
+    {
+      "name": "文档真值",
+      "cmd": "bash scripts/doc-system/check-doc-truth.sh",
+      "evidence": "rc=0；❌=0；⚠️=2（C2 组数／W1 版本滞后，均存量）",
+      "result": "pass"
+    },
+    {
+      "name": "门禁本体＋豁免",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main",
+      "evidence": "6 通过, 0 失败；diff 变更 4 条；受保护路径变更 0 条（PATTERNS 22、pin 一致）",
+      "result": "pass"
+    },
+    {
+      "name": "notes 生命周期",
+      "cmd": "bash scripts/control-tower/check-notes-lifecycle.sh",
+      "evidence": "rc=0；proposed/ 无僵尸条目",
+      "result": "pass"
+    },
+    {
+      "name": "写集与红线",
+      "cmd": "git diff --name-status 49d9fee36..99f548b4e ＋ grep scripts/audit/",
+      "evidence": "4 文件；scripts/audit 命中 0；claims/1319.yaml 的 writeset 与改动文件一一对应",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "non-blocking",
+      "where": ".synova/skills/devdoc-gate-a/SKILL.md（PR 树内）",
+      "detail": "AGENTS.md:354 仍把该 skill 标为『规范』，但 skill 仍是旧口径（七镜头／R9 与 R1–R6 同级必跑／派给 L2 之前）⇒ G0 出口『不再收到相反指令』尚未成立；本 PR 写集不含 skill"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "AGENTS.md:270 / :305",
+      "detail": "文本已写『按裁定 v1.0 §3.3 转报告』，但机检 pre-commit 组 6、local-gates ⑨ 当前仍真阻断 ⇒ 文本领先机检（G2 兑现）"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "memory/notes/proposed/2026-11-04-1319-g0-gate-source-switch.md:44",
+      "detail": "note 写『改后 24,733 B（+303）』，HEAD blob 实测 24,753 B（base 24,430 ⇒ 实增 +323）"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "AGENTS.md:349-354",
+      "detail": "§15 原 fenced 代码块被压成单行长段落；内容齐、格式与逐字表不符"
+    },
+    {
+      "severity": "non-blocking",
+      "where": ".claude/claims/1319.yaml note 字段",
+      "detail": "仍写『三处（L3/L270/L305）』，实际 4 处；writeset 正确"
+    }
+  ],
+  "issued_at": "2026-11-04T17:57:51+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}
