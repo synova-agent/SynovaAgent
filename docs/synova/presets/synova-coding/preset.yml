@@ -1,2 +1,2 @@
 name: 🛠 Synova 编码执行
-description: 编码 session 专用预设：开工即读 squad-discipline 与 dsh-code-standards，按任务 SOP 执行（锚定三问 / Done 标准 / 证据汇报 / 契约优先 / 测试配对）。只做实现，不判“通过”；判据归 L1 收件 + K3。
+description: 单任务编码 session 专用预设：一个会话只执行一个明确任务，开工先答「客户动作／Done 与真实入口／最小改动与不做／正常失败回退怎么证明」四问，按 DEV DOC＋任务卡＋实际代码做最小实现并真实自验。不重新解释产品方向、不改验收标准、不冒充独立验收；高风险独立验收在队外。

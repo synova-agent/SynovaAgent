@@ -1,0 +1,34 @@
+# .claude/claims/1323.yaml — #1323（双角色预设与 Skill 修订实施 · Win 实施端）写集声明
+# 上游：#1321/#1322 已落位宪章 v8.4（权威原件＋镜像＋AGENTS 同步）；#1317 已归档 7 份源件。本卡只做实施端。
+writeset:
+  - .claude/claims/1323.yaml
+  - gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md
+  - docs/synova/reviews/1329.132900000000.json
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-11-04-1323-preset-skill-revamp.md
+  - AGENTS.md
+  - .synova/skills/cto-handover/SKILL.md
+  - .dsh/skills/cto-handover/SKILL.md
+  - .synova/skills/dev-doc-spec/SKILL.md
+  - .dsh/skills/dev-doc-spec/SKILL.md
+  - .synova/skills/dev-doc-spec/template/编码指令模板.md
+  - .dsh/skills/dev-doc-spec/template/编码指令模板.md
+  - .synova/skills/devdoc-gate-a/SKILL.md
+  - .dsh/skills/devdoc-gate-a/SKILL.md
+  - .synova/skills/squad-discipline/SKILL.md
+  - .dsh/skills/squad-discipline/SKILL.md
+  - .synova/skills/dsh-code-standards/SKILL.md
+  - .dsh/skills/dsh-code-standards/SKILL.md
+  - docs/synova/presets/synova-cto/persona-block.yml
+  - docs/synova/presets/synova-cto/preset.yml
+  - docs/synova/presets/synova-cto/README.md
+  - docs/synova/presets/synova-coding/cordis.patch.yml
+  - docs/synova/presets/synova-coding/preset.yml
+  - docs/synova/presets/synova-coding/README.md
+  - docs/synova/presets/synova-squad-lead/cordis.patch.yml
+  - docs/synova/presets/synova-squad-lead/preset.yml
+done:
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: bash scripts/control-tower/install-dsh-preset.sh --check synova-coding synova-squad-lead
+note: "双角色方案实施端：CTO/DEV DOC/关卡 A/coding 四端预设与 5 个 skill（含模板）收缩重写＋根 AGENTS.md 角色入口与交接契约同步；宪章 v8.4 与源件归档已由 #1321/#1317 落位，本卡不重复。运行态已安装，新会话行为待重启后人工验证。"

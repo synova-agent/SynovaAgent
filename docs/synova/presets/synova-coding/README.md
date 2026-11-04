@@ -39,32 +39,33 @@
 | 文件 | 行数 | 作用 |
 |---|---|---|
 | `package.json` | 7 | 声明 `dsh.bundle.patch → ./cordis.patch.yml`，DSH 启动自动发现（不需要改任何注册表） |
-| `cordis.patch.yml` | **203** | 插件面 ＋ 人格面：**开工必读 6 项**／**开工四问答案块**／任务 SOP ⓪–⑩／纪律红线／技能路由 |
+| `cordis.patch.yml` | **201** | 插件面 ＋ 人格面：**开工必读 6 项**／**开工四问**（客户动作／Done 与真实入口／最小改动／失败回退）／**单任务轻量流程**／方向与事实／自验与独立验收分层／纪律红线／按任务加载的 skill 路由 |
 | `preset.yml` | 2 | 选择器里的标签 `🛠 Synova 编码执行` |
 | `README.md` | 本文件 | 能力说明（你在读的这个） |
 
-**persona 里的「开工四问」是这版的重点**（+20 行，2026-11-03 加）—— 直接给答案，不让 agent 现查：
+**persona 里的「开工四问」是这版的重点**（2026-11-04 重写；旧版门禁四问已删除）—— 先问清再动手：
 
 ```
-① 文件放哪：门禁脚本 scripts/control-tower/<name>.sh｜配对测试 tests/control-tower/<name>.test.sh（同名）
-            豁免件 gate-exemptions/<日期>-<issue>-<slug>.md｜Note memory/notes/proposed/｜claim .claude/claims/<issue>.yaml
-② 怎么命名：一律带 Issue 号；分支 ct/<issue>-<slug>；commit type(#issue): …；新豁免件同批登 DOCS-REGISTRY
-③ 证据怎么锚：path:line@<sha>（7-9 位）｜三态 0/1/2（2=判不了≠通过）｜改坏必红贴原始输出｜降级必须 E_<CODE>+JSON 日志
-④ 什么会红：新增 2>/dev/null 需同行 swallow-ok｜python3 探测行带 PYBIN｜改控制塔脚本须更新同名测试（CT-40）
+① 本任务服务哪个客户／用户动作？
+② Done 是什么，从哪个真实入口验证？
+③ 最小改动是什么，明确不做什么？
+④ 正常、失败和回退分别怎么证明？
 ```
+
+随后按**单任务轻量流程**执行（读 DEV DOC＋任务卡＋代码 → 核前提与可复用 → 独立工作树最小实现 → 验证正常/失败/边界 → 跑真实入口 → 如实报告四态）。门禁/部署/安全/DSH 适配知识**按任务加载**，不再常驻人格。
 
 ### ② 两个 skill（D2 层 · 读一次的成本）
 
 | skill | 作用（只放机检抓不到的语义） | 位置 |
 |---|---|---|
-| `squad-discipline` | 行为纪律：锚定三问／Done 标准／证据汇报／分支纪律（禁直推 main、禁 force push、禁 stash）／防跑偏 | `.dsh/skills/squad-discipline/`（镜像 `.synova/skills/`） |
-| `dsh-code-standards` | 代码标准 8 项（typed error／schema／invariant／fail loud／explicit authority／JSDoc／design philosophy／测试配对）＋ 4 条必复用约定（三态／@降级＋degraded log／UTF-8／判别力自检），**每项带 DSH 源码 file:line** | 同上 |
+| `squad-discipline` | 行为纪律：真实用户场景与 Done／歧义不假设共识／声称↔证据／**自验与独立验收分层**／越范围停止／DEV DOC 有错带证据退回／工作树与 Git 安全 | `.dsh/skills/squad-discipline/`（镜像 `.synova/skills/`） |
+| `dsh-code-standards` | 代码标准：**稳定原则（12 条）＋ 按对象适用**（typed error／schema 校验／三态退出码／公开契约／Known Limitations／配对测试／DSH 源码核查仅在需要时）；不再机械要求所有代码同一套标准，不写死旧版本/SHA/行号 | 同上 |
 
 > 🔴 设计原则：**skill 是唯一事实源，预设只放指针**，不复制正文（复制必然漂移）。
 
 ### ③ 一处指针（保险丝）
 
-`AGENTS.md` 里有 3 行「编码任务开工必读」——**即使预设没被加载**（例如在别的预设里干活），也有一条路把它指向这两个 skill。
+`AGENTS.md` 里有「编码任务开工必读」入口块（两份 skill 指针＋预设名＋CTO↔coding 交接契约）——**即使预设没被加载**（例如在别的预设里干活），也有一条路把它指向这两个 skill。
 
 ---
 
@@ -101,13 +102,13 @@ bash scripts/control-tower/check-preset-bundles.sh --consistency synova-coding
 ```
 
 **④ 内容验收（只能在新会话里做，这是"目的达成"的唯一判据）**
-重启 DSH → 新开会话 → 选择器选 `🛠 Synova 编码执行` → 连问四句：
-> ① 给控制塔脚本加一个检查，要同时改哪些文件？
-> ② 豁免件的文件名和每行格式？
-> ③ 怎么证明你的判据没被改坏？
-> ④ 新增一行 `2>/dev/null` 要注意什么？
+重启 DSH → 新开会话 → 选择器选 `🛠 Synova 编码执行` → 观察它是否**在动代码之前**先答四问：
+> ① 本任务服务哪个客户／用户动作？
+> ② Done 是什么，从哪个真实入口验证？
+> ③ 最小改动是什么，明确不做什么？
+> ④ 正常、失败和回退分别怎么证明？
 
-**四问全答对（带路径/字段名）⇒ 这个预设才有存在价值**；答不全 ⇒ 说明 persona 内容不够，回去补。
+**四问先答出、且不冒充独立验收 ⇒ 达到目的**；若仍先去背门禁路径/命名/SOP ⇒ persona 内容没生效，回查预设是否重装并重启 DSH。
 
 ---
 
@@ -115,9 +116,9 @@ bash scripts/control-tower/check-preset-bundles.sh --consistency synova-coding
 
 - ❌ **它不是门禁**：不阻断任何提交、不进 pre-commit、不占 45 配额。
 - ❌ **它不减少门禁数量**：它是"退门禁"的**前置条件**——先把「做对」的路铺好，退 D3 才不会退成事故。
-- ❌ **它只做实现**：不判"通过"（通过归 L1 收件 ＋ K3）、不写规格、不做审计、不带队。
+- ❌ **它只做实现与自验**：不重新解释产品方向、不改验收标准、**不冒充独立验收**；不写规格、不做审计、不带队。
 - ❌ **它不管别的 session**：只对新开的、选了它的会话生效；已开会话保留启动时的插件修订。
-- ⚠️ **它会漂移**：persona 里那 20 行答案是"快照"，门禁语义一改它就可能过期 ⇒ 改门禁判据的 PR 有责任顺手看一眼这块。
+- ⚠️ **它会漂移**：persona 里的四问与轻量流程是"快照"，门禁/运行时候选一改它就可能过期 ⇒ 改判据的 PR 有责任顺手看一眼这块。
 
 ---
 
@@ -127,6 +128,7 @@ bash scripts/control-tower/check-preset-bundles.sh --consistency synova-coding
 |---|---|---|
 | 2026-11-03 | 预设四件首次入库（persona 183 行）＋ `AGENTS.md` 指针 ＋ 两个 skill 证据锚点校准到 v2.0.1-rc.2 真实路径 | #1311 |
 | 2026-11-03 | **persona +20 行（「开工四问」答案块，183→203）**；安装器补 `dependencies`；豁免件与登记 | #1311 / PR #1316 |
+| 2026-11-04 | **双角色方案实施**：persona 重写（开工四问／单任务轻量流程／方向与事实／不冒充独立验收）；删除旧门禁四问与 ⓪–⑩ SOP；两个 skill 收缩为「稳定原则＋按对象适用／行为纪律＋自验分层」；`AGENTS.md` 角色入口与交接契约同步 | #1323 |
 
 **相关但独立的交付**（同一夜，供参考别混淆）：
 - 门禁侧改动（K3 阻断级 3 条：逐组耗时／`L_FIELDS`／`measured_at` 漂移）—— #1296 / PR #1297
@@ -140,3 +142,4 @@ bash scripts/control-tower/check-preset-bundles.sh --consistency synova-coding
 2. **`dependencies` 的 `file:` 指向本仓路径** —— 仓库换位置/换机器后需重跑一次 `--install`。
 3. **persona 是快照** —— 不进机检，靠 PR 评审兜漂移。
 4. **四问验收靠人** —— 没有自动判据能证明"它真的让 agent 少返工了"；只能靠新会话实测 + 事后统计返工率。
+5. **persona 模板不能用 `{{cwd}}`** —— DSH 只注册 `provider`/`model`，未注册变量会在 prompt 装配时抛 `unknown prompt variable`；本预设用「工作目录 = 会话的当前目录」表述。
