@@ -4,3 +4,4 @@
 # 证据：claim .claude/claims/1323.yaml；源变更依据 CTO 方案 v1.0 ＋ DSH 开工指令 2026-11-04；独立复核 4 轮通过。
 - .dsh/skills/** — 双角色方案修订的 .synova 源文件同步镜像，变更受任务 #1323 授权 — #1323
 - gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md — 本豁免文件自覆盖（#623 清单与豁免目录自我保护）— #1323
+- docs/authority/DOCS-REGISTRY.yaml — 为本批豁免件补 DOC-1323-01 登记行（R1/R2 合规）— #1323

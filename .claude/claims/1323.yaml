@@ -3,6 +3,7 @@
 writeset:
   - .claude/claims/1323.yaml
   - gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md
+  - docs/authority/DOCS-REGISTRY.yaml
   - memory/notes/proposed/2026-11-04-1323-preset-skill-revamp.md
   - AGENTS.md
   - .synova/skills/cto-handover/SKILL.md

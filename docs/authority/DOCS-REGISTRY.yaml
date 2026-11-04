@@ -1897,3 +1897,11 @@ documents:
     status: active
     owner: CTO
     note: "#1317 源件包归档的 DOCS-REGISTRY 变更与豁免件自覆盖。"
+
+  # ---- CTO 2026-11-04：#1323 双角色预设与 Skill 修订实施（门禁豁免件登记）----
+  - id: DOC-1323-01
+    type: governance
+    path: gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md
+    status: active
+    owner: CTO
+    note: "#1323 实施端的 .dsh/skills 镜像门禁豁免件；含豁免件自覆盖与 DOCS-REGISTRY 登记行。"
