@@ -14,7 +14,7 @@ documents:
     path: docs/synova/coordination/编码指令-CompanyOS-Ticket0-1327-20261104.md
     status: draft
     owner: CTO
-    note: "CompanyOS Ticket 0 DEV DOC v1.6 (minimal multi-agent loop); gate A round 7 pending; implementation must not start before pass."
+    note: "CompanyOS Ticket 0 DEV DOC v1.7 (minimal multi-agent loop); gate A round 8 pending; implementation must not start before pass."
 
   - id: DOC-1330-01
     type: research

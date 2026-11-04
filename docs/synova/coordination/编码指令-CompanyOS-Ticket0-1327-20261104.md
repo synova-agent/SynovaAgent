@@ -1,10 +1,10 @@
 # DEV DOC · CompanyOS Ticket 0——最小多 Agent 协作闭环
 
-> **版本**：**v1.6**（v1.5 ＋ 第六次复审：围栏结构修正／迁移改为 7 目录 38 件／Pack 模板字段分角色／K8 聚合与空仓守卫）  
-> **日期**：2026-11-04（v1.6 修订 2026-11-05 02:50）  
+> **版本**：**v1.7**（v1.6 ＋ 第七次复审：迁移 step4/5 绑定目标仓／根件口径三处统一／Schema 与 Pack 措辞收口）  
+> **日期**：2026-11-04（v1.7 修订 2026-11-05 03:10）  
 > **任务**：#1327  
 > **Issue**：`synova-agent/SynovaAgent#1327`  
-> **状态**：**T0.1 部分完成；关卡 A 已六轮（初审＋复验＋四次收缩复审），v1.6 已按第六次复审再修；待第七次复审；未通过不得写实现**  
+> **状态**：**T0.1 部分完成；关卡 A 已七轮（初审＋复验＋五次收缩复审），v1.7 已按第七次复审再修；待第八次复审；未通过不得写实现**  
 > **本版修订**：见 §0.2（K1–K12）、§0.2b（N1–N4）、§5.8（S1 变更落地：不新增 profile，角色走 Context Pack）
 > **模块**：CompanyOS 自用先行·最小协作控制面  
 > **目标施工仓**：`win-push/company-os-practice`（Gitea 私有仓，默认分支 `main`）  
@@ -49,7 +49,7 @@
 | **N1** A3 判据把正确行为判成失败（"epoch 未变"被当失败） | A3 失败判据改为"**epoch 发生变化**"；epoch 递增的正例归 A8；并把"epoch 只在交接时递增"写进状态机 | §7.2 A3、§5.15 |
 | **N2** Ticket／Assignment 状态机未定义 | 新增两个状态枚举 ＋ 迁移表 ＋ 触发者 ＋ 非法迁移 409 | **§5.15** |
 | **N3** Kimi"只读"与"Report 回流"矛盾 | 新增 `kimi-report` 域 token（只放行 `POST /v1/reports`），Hub 代写评论 | §3.3、§7.1 token 表 |
-| **N4** S6 迁移范围未清单化 | 新增完整迁移清单（41 件全迁，不只 03）+ 执行与核验命令 | **§4.4** |
+| **N4** S6 迁移范围未清单化 | 新增完整迁移清单（**7 个内容目录 38 件迁出；根件 README/MANIFEST/.gitignore 不迁**）+ 执行与核验命令 | **§4.4** |
 
 ### 0.3 Ticket 0 窄映射（按 S7：只映本模块要用的面，不读全 41 件）
 
@@ -306,7 +306,7 @@ WorkBuddy 是独立辅助验收线，不阻塞 T0.2–T0.5 研发主闭环；以
 
 T0.1 已确认目标仓当前只有文档，以下代码、工程与测试路径**全部为新建**。T0.2 首批提交先建立 Node `24.16.0`＋npm 工程、lockfile、最小 CI 和 main 分支保护；pnpm 实测 corepack 挂起，不作为首版前提。
 
-> 🔴 **口径说明（防误判）**：本节路径**相对目标仓根**（`company-os-practice`），不是 Synova 仓。在 `synova-agent` 里跑 `pre-dispatch-check.sh` 时，④ 会把它们全部报成"不存在"——**这是跨仓的预期结果，不是遗漏**；逐条核验请用：
+> 🔴 **口径说明（防误判）**：本节路径**相对目标仓根**（`company-os-practice`），不是 Synova 仓。在 `synova-agent` 里跑 `pre-dispatch-check.sh` 时，④ 会把 `src/**` 那 9 条报成「不存在」（`scripts/**`／`tests/**` 因本仓同名而报 ✅，`schemas/**`／`config/**` 等不在 ④ 的路径白名单内）——**这是跨仓的预期结果，不是遗漏**；逐条核验请用：
 > `git -C <company-os-practice 克隆> ls-tree -r --name-only 48580c5d | grep -E '^(src/|schemas/|config/|tests/|scripts/)'` → 当前 **0 命中**（即 §4.1 的 13 条运行时代码路径全为新建；另 4 项工程文件同样新建）。
 
 ```text
@@ -353,7 +353,7 @@ synova-agent/docs/synova/presets/**  # 不重写人格
 
 ### 4.4 迁移清单（S6／N4：把"客户材料迁研究仓"落到具体路径）
 
-**判断口径**：S6 原文"代码仓只留代码与合成样例" ⇒ **目标仓现有 41 件全部迁出**（38 件方案/实践文档 ＋ README ＋ MANIFEST ＋ .gitignore 后两者重写），**不只 03 的 13 件**。
+**判断口径**：S6 原文"代码仓只留代码与合成样例" ⇒ **7 个内容目录共 38 件迁出研究仓**；**根件三个（`README.md`／`MANIFEST.md`／`.gitignore`）不迁**——前两者由代码仓重写为代码仓版，`.gitignore` 仅代码仓需要。**不只 03 的 13 件**，但也**不是 41 件全迁**（与下表及 §4.4 命令一致）。
 
 | 源（`win-push/company-os-practice` @`48580c5d`） | 去向 | 处置 |
 |---|---|---|
@@ -364,8 +364,8 @@ synova-agent/docs/synova/presets/**  # 不重写人格
 | `04-复核与整改/`（5） | 同上 `04-复核与整改/` | 移动 |
 | `05-参考/`（1） | 同上 `05-参考/` | 移动 |
 | `06-历史版/`（5） | 同上 `06-历史版/` | 移动 |
-| `MANIFEST.md`、`README.md` | 随迁；代码仓另写新 README/MANIFEST | 移动＋重写 |
-| `.gitignore` | 代码仓保留并重写 | 重写 |
+| `MANIFEST.md`、`README.md` | **不迁**（代码仓重写为代码仓版） | 代码仓原地重写 |
+| `.gitignore` | **不迁** | 代码仓保留并重写 |
 
 **执行与核验**（T0.0 前置，未完成不得开 T0.2）：
 ```bash
@@ -399,12 +399,16 @@ echo "files=$(wc -l < /tmp/src.list) ok=$ok diff=$diff missing=$miss"
 [ "$diff" -eq 0 ] && [ "$miss" -eq 0 ] || { echo "核验未过：先出上述 DIFF/MISSING 清单，由 CTO 裁哪版权威"; exit 1; }
 echo "SHA256-ALL-EQUAL"
 
-# 4) 删代码仓原件（7 个目录 + 两个根件；.gitignore 保留）
-git rm -r $DIRS
-git rm -f MANIFEST.md README.md
+# 4) 删代码仓原件（7 个目录 + 两个根件；.gitignore 保留）—— 必须绑定目标仓，任一步失败即红
+git -C <code-repo> rev-parse --git-dir >/dev/null 2>&1 || { echo "判不了：<code-repo> 不是 git 仓库"; exit 2; }
+git -C <code-repo> rm -r $DIRS || { echo "红：删除 7 目录失败"; exit 1; }
+git -C <code-repo> rm -f MANIFEST.md README.md || { echo "红：删除根件失败"; exit 1; }
 
-# 5) 验收：代码仓不得再有客户材料
-git grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' | wc -l   # 必须 0
+# 5) 验收：代码仓不得再有客户材料（绑定目标仓；空集也必须真跑过）
+n=$(git -C <code-repo> grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' | wc -l) \
+  || { echo "判不了：git grep 执行失败"; exit 2; }
+[ "$n" -eq 0 ] || { echo "红：仍有 $n 个文件含客户材料"; exit 1; }
+echo "step5 OK（0 命中）"
 ```
 - **`.gitignore`**：**不迁移、不复制、不核验**（代码仓保留）。上面 step 1/2/3 的清单都不含它。
 - **`README.md`／`MANIFEST.md`**：**不迁移**；代码仓改为代码仓版。这样 step 2 不会覆盖研究仓自有的 `README.md`（实测过：整目录 archive 会覆盖它，65+/117-）。
@@ -418,7 +422,7 @@ git grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixt
 
 ## §5 关键契约
 
-### 5.1 六份 Schema
+### 5.1 六份核心 Schema（＋顾问报告专用 schema）
 
 必须提供并用非法样本测试：
 
@@ -432,6 +436,8 @@ schemas/session-checkpoint.schema.json
 ```
 
 Schema 使用明确 `required`、字段类型、枚举和 `additionalProperties: false`；版本字段从 `v1` 开始。非法字段不得静默忽略。
+
+> 第 7 份 `schemas/advisor-report.schema.json` 属**顾问专用**（字段口径见 §5.13b，不含 `role_template_*`），不计入上面六份执行链 Schema。
 
 ### 5.2 AgentInstance
 
@@ -502,7 +508,7 @@ lease_id / leased_at / expires_at / last_heartbeat / fencing_token
   "assignment_id": "asg_...",
   "context_pack_id": "cp_...",
   "role_template_version": "v1",
-  "role_template_hash": "sha256:...",
+  "role_template_hash": "<64-hex>",
   "session_epoch": 1,
   "status": "ready",
   "base_sha": "...",
@@ -529,7 +535,7 @@ context_pack_id / ticket_id / role / created_at / expires_at
 objective / current_product_decisions / mandate
 base_sha / head_sha / ticket_stage / assignment
 latest_reports / unresolved / evidence_refs
-role_template_version / role_template_hash / skill_set_version / template_version / policy_version
+role_template_version / role_template_hash / skill_set_version / template_version / policy_version   # 前两者仅执行链角色（cto/worker/auditor）填写
 ```
 
 按角色裁剪：K3 不默认接收 Worker 自我解释；Kimi 只接收创始人当前咨询所需范围；WorkBuddy 只接收固定检查所需事实。Context Pack 不保存 Secret。
@@ -541,7 +547,7 @@ role_template_version / role_template_hash / skill_set_version / template_versio
   · **执行链角色**（`cto`／`worker`／`auditor`）**必须**带 `role_template_version`（如 `v1`）＋ `role_template_hash`，二者随 Pack 入库、随 Report 回引；
   · **`advisor`／`inspector` 不带**这两个字段（无角色模板，见 §5.2 映射表与 §5.13b）；其 Pack 只带 `role`＋任务范围。
 - **`role_template_hash` 口径（定死）**：对 `config/role-templates/<role>.md` 的**文件原始字节**做 `sha256`（含 front-matter，不做任何规范化、不 trim）。同一模板字节 ⇒ 同一 hash；模板任何改动 ⇒ 新 version ＋ 新 hash。
-- **Report 必须回引 `context_pack_id` ＋ `role_template_version` ＋ `role_template_hash`**；缺失即 §5.13 第 1 步 Schema 拒绝。
+- **执行链角色的 Report 必须回引 `context_pack_id` ＋ `role_template_version` ＋ `role_template_hash`**；缺失即 §5.13 第 1 步 Schema 拒绝。`advisor` 的 Report 只回引 `context_pack_id`（见 §5.13b）。
 - **禁止以"模型自称什么角色"作为验收证据**：A4/A9/T0.3 一律以 Hub 记录（pack id／hash／role 三元组）判定，模型口头声明无效。
 
 ### 5.7 Session Checkpoint／Handoff Ack
@@ -1093,7 +1099,7 @@ if [ -z "$ONLY" ] || [ "$ONLY" = "--only=4" ]; then
   [ "$(git rev-list --count HEAD 2>/dev/null || echo 0)" -gt 0 ] || { echo "判不了：仓库无提交（禁把空仓当无客户材料）"; UNKNOWN=1; }
   if git grep -lE '南宁|员工简表|人效地图' -- ':!tests/fixtures' >/dev/null 2>&1; then
     echo "④ 红：客户材料仍在代码仓"; FAIL=1
-  else echo "④ OK"; fi
+  elif [ "$UNKNOWN" -eq 0 ]; then echo "④ OK"; fi
   }
 fi
 
@@ -1133,6 +1139,7 @@ exit 0
    | 合并方式未冻结（当前仓） | `--only=5` | **1** | 目标仓实测 squash/rebase=true |
    | 三态不压平 | 无参（当前仓） | **1** | ① 红优先于 ③ 的「无 workflows 判不了」（聚合：先红后判不了）；且无参**也会跑 ⑤** |
 | 非 git 目录 | `--only=4` | **2** | 禁把 `git grep` 失败吞成通过（N-1） |
+| 迁移 step4/5 在错误 cwd | 在非目标仓目录跑 §4.4 step4/5 | **2 或 1** | 禁「什么都没删也返回 0」（F1） |
 | 早退清理 | 任一 `exit 2` 路径 | — | `trap` 清理 `mktemp -d`，不留垃圾（N-4） |
    | T0.2 建好保护＋CI＋冻结合并 | 无参 | **0** | |
 
@@ -1191,7 +1198,7 @@ exit 0
 
 | 检查项 | 结论 |
 |---|---|
-| 同一路径是否被两处要求互斥？ | 否。写集只在 §4.1（全部 `src/…｜schemas/…｜tests/…` 等新建路径）；§4.2 全为 Synova 仓或"任何 main／客户数据"表述，无交集 |
+| 同一路径是否被两处要求互斥？ | 否。写集只在 §4.1；§4.2 全为 Synova 仓或"任何 main／客户数据"表述，无交集。**§4.4 根件三处口径已核一致**（§0.2b／§4.4 表／§4.4 命令均为"38 件迁出、根件不迁"） |
 | 同一动作是否两处不同判据？ | 否。停止语义只在 §5.8 定义（`close` 只释放句柄，Lease 由 Hub 置位）；§5.4、§7.2 A14、§7.5 第 1 条引用同一处 |
 | SessionRef 是否一处说"不透明"、另一处又要求解析？ | 否。v1.0 的矛盾已修：§5.4 现明确 `session_ref` 必须与 `workspace` 成对持久化 |
 | 验收行是否都能落到 §5 某个契约？ | 是。A1→5.9；A2→5.5+5.13；A3/A8→5.4+5.8；A4→5.6；A5/A6/A13→5.10；A7→5.7；A9→3.3；A10/A11/A12→5.11；A14→5.8+5.4 |
