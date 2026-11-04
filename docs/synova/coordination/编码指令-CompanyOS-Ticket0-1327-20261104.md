@@ -1007,7 +1007,7 @@ set -u
 : "${GITEA_TOKEN:?GITEA_TOKEN 未设置（角色：hub token，只读）}"
 REPO=win-push/company-os-practice
 ONLY="${1:-}"
-FAIL=0
+FAIL=0; UNKNOWN=0
 TMPD="$(mktemp -d)"; BP="$TMPD/bp.json"
 
 api() {  # api <path> <outfile>；0=200, 2=判不了
@@ -1061,10 +1061,12 @@ fi
 
 # ③ 无自动合并（可单跑）
 if [ -z "$ONLY" ] || [ "$ONLY" = "--only=3" ]; then
-  [ -d .gitea/workflows ] || { echo "判不了：无 .gitea/workflows"; exit 2; }
+  [ -d .gitea/workflows ] || { echo "判不了：无 .gitea/workflows"; UNKNOWN=1; }
+  [ -d .gitea/workflows ] && {
   HITS=$(grep -rniE 'auto[_-]?merge|merge_queue' .gitea/workflows/ \
          | sed -E 's#^[^:]+:[0-9]+:##' | grep -vE '^[[:space:]]*#' || true)
   if [ -n "$HITS" ]; then echo "③ 红：CI 含自动合并配置："; echo "$HITS"; FAIL=1; else echo "③ OK"; fi
+  }
 fi
 
 # ④ 无 Synova 业务代码 / 无客户材料（判不了与空集分开）
@@ -1089,7 +1091,9 @@ PY
 fi
 
 rm -rf "$TMPD"
-[ "$FAIL" -eq 0 ] && exit 0 || exit 1
+[ "$FAIL" -ne 0 ] && exit 1
+[ "$UNKNOWN" -ne 0 ] && exit 2
+exit 0
 ```
 
    **判别力自检（逐行实跑并把命令＋exit code 贴回 PR；下表为最小集）**
@@ -1105,7 +1109,7 @@ rm -rf "$TMPD"
    | 只有 merge commit | `--only=2` | **0** | |
    | `origin` ≠ 目标仓 | `--only=2` | **2** | 身份盲区必须判不了，不得盲绿 |
    | 合并方式未冻结（当前仓） | `--only=5` | **1** | 目标仓实测 squash/rebase=true |
-   | 三态不压平 | 无参（当前仓） | **1** | ① 红后 ② 跳过，**不得**被 exit 2 覆盖 |
+   | 三态不压平 | 无参（当前仓） | **1** | ① 红优先于 ③ 的「无 workflows 判不了」（聚合：先红后判不了） |
    | T0.2 建好保护＋CI＋冻结合并 | 无参 | **0** | |
 
 4. Kimi 主链路可独立直接联系且通信不经过 DSH；WorkBuddy 未上线时明确标记辅助线未就绪；
