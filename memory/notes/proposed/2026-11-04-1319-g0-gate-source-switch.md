@@ -23,6 +23,7 @@
 3. `AGENTS.md` Q2 行：「pre-commit 组 6 强制」→「legacy 规范，已退役，不强制；对应机检按裁定 v1.0 §3.3 转报告」。
 4. `docs/authority/GATE-STANDARD.md` 首部加 2 行状态指针（同上口径），正文不动。
 5. 范围外一律不动：workflow、脚本、台账、`GATE-INVENTORY.yaml`、`check-doc-truth.sh` 机器真值行，以及 `AGENTS.md` 头部「真值，勿手改」块（含 `本件 23,154 B` —— 该自述值与实际字节本就有差，属「勿手改」范围，本批未动）。
+6. `AGENTS.md` §15 关卡 A 整节轻量化：标题由「所有包、所有派单，强制走 `devdoc-gate-a`」改为「仅新模块／高风险触发，一次独立复核」；删去三处无条件强制（「所有包、所有派单」「任何 L1（P1–P10）…必须」「未过关卡 A 不许开工（Win/Mac 同规）」），改为「**触发范围内**未过复核不许开工」；保留五问口径与「不得自审」。理由：裁定 v1.0 §5.2 —— 关卡 A 只对**新模块或高风险 DEV DOC** 做一次独立复核，普通小改由 CTO 自检，不强制独立会话；旧文本把一次性复核写成了对所有派单的常设门禁，与裁定冲突。
 
 ## 理由
 
@@ -40,3 +41,4 @@
 - 改前：`git show 49d9fee36:AGENTS.md | sed -n '3p'` 含 `**判据中枢 = [`docs/authority/GATE-STANDARD.md`](./docs/authority/GATE-STANDARD.md)（v3.1 / D763）**`（现场实测原文）。
 - 门禁：`bash scripts/doc-system/check-doc-truth.sh` 改前 rc=0（13 ✅ / 0 ❌ / 2 ⚠️）、改后 rc=0（13 ✅ / 0 ❌ / 2 ⚠️，⚠️ 为存量：C2 门禁组数(AGENTS.md)、W1 版本滞后），两次均为现场实跑。
 - 字节：`AGENTS.md` 改前 24,430 B → 改后 24,733 B（+303 B）；`docs/authority/GATE-STANDARD.md` 33,443 B → 33,731 B（+288 B）。
+- 改前：`git show gitea/main:AGENTS.md | sed -n '349p'` = `## 15. 🔴 关卡 A（dev doc 评审）——**所有包、所有派单，强制走 \`devdoc-gate-a\`**`
