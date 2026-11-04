@@ -1,0 +1,156 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1329,
+  "patch_fingerprint": "sha256:053a558663356af67ff52a9c7f9ff4614ad51242003e03a61e36966005c37172",
+  "author": "synova-coding Win 实施端（#1323）",
+  "reviewer": "零上下文独立复核（第 6 轮，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "head": "18030ab8ceeeaa645a5ecef89e1dcad316f0d799",
+  "base": "97da9b7c64f29283cad5f7ed38dbfd6218907be6",
+  "checks": [
+    {
+      "name": "B1 闭合：REPO_FILES=19（含两缺失件）",
+      "cmd": "grep -c '^  \"' deliverables/1323-preset-skill-revamp/apply-on-mac.sh",
+      "evidence": "19（第 74-92 行）；第 75 行 gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md、第 76 行 docs/authority/DOCS-REGISTRY.yaml 已在列表",
+      "result": "pass"
+    },
+    {
+      "name": "preimage 行数=19 且两文件在册",
+      "cmd": "grep -c . deliverables/1323-preset-skill-revamp/preimage.sha256；grep 两文件",
+      "evidence": "19 行；`NEW gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md`；`6699aa3e42c4... docs/authority/DOCS-REGISTRY.yaml`",
+      "result": "pass"
+    },
+    {
+      "name": "dry-run 在干净 main worktree：rc0 且打印 19",
+      "cmd": "git worktree add D:/tmp/rv1326-main --detach gitea/main；bash apply-on-mac.sh --repo /d/tmp/rv1326-main --no-cto",
+      "evidence": "worktree HEAD=97da9b7c、status 0 行；输出 `DRY-RUN: 将覆盖 19 个仓库文件`；EXIT=0",
+      "result": "pass"
+    },
+    {
+      "name": "--apply --no-cto：REPO-COPIED=19、两文件真落地",
+      "cmd": "SYNO_PROFILE_DIR=/d/tmp/rv1326-profile bash apply-on-mac.sh --repo /d/tmp/rv1326-main --no-cto --apply; echo EXIT=$?",
+      "evidence": "EXIT=0；grep -c '^REPO-COPIED:' = 19；落地 gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md（811 B）、docs/authority/DOCS-REGISTRY.yaml（95432 B）",
+      "result": "pass"
+    },
+    {
+      "name": "应用后 19/19 与仓库（HEAD=18030ab8c）逐字节一致",
+      "cmd": "for rel in <19 条 REPO_FILES>; do git show HEAD:$rel | cmp -s - /d/tmp/rv1326-main/$rel; done",
+      "evidence": "checked=19 diff=0",
+      "result": "pass"
+    },
+    {
+      "name": "应用后树门禁（doc-registry-gate / check-gate-protection）",
+      "cmd": "cd /d/tmp/rv1326-main && bash scripts/doc-system/doc-registry-gate.sh；bash scripts/control-tower/check-gate-protection.sh",
+      "evidence": "`检查 7 个文档，0 个未登记` + `✅ 登记门禁通过`（DOC-1323-01 ✅）；`结果: 3 通过, 0 失败`（清单 22 条、pin ef7c52a4 一致）",
+      "result": "pass"
+    },
+    {
+      "name": "Note 口径（基线/文件数/PR/#1324）",
+      "cmd": "cat memory/notes/proposed/2026-11-04-1323-preset-skill-revamp.md",
+      "evidence": "基线 `97da9b7c`（原 49d9fee36）｜25 文件（19 源＋6 镜像）｜PR #1326｜#1324(T1) 与 DOC-1323-01/豁免件为 CI 硬门所必需｜新会话行为：未验证；注：第 25 行\"7 个提交\"与实测 8 不符（见 finding）",
+      "result": "pass"
+    },
+    {
+      "name": "PR 内容未回退：8 提交 / 25 文件 / AGENTS 尺寸",
+      "cmd": "git log --oneline gitea/main..HEAD；git diff --name-status gitea/main..HEAD；git rev-list --count；git cat-file -s HEAD:AGENTS.md",
+      "evidence": "8 条提交（18030ab8c…581f01c2a）；diff 25 条（3 A＋22 M）；AGENTS.md=25821 B＝头部声明 `本件 25,821 B`（gitea/main 24753 B）",
+      "result": "pass"
+    },
+    {
+      "name": "doc-registry-gate（分支头，权威）",
+      "cmd": "bash scripts/doc-system/doc-registry-gate.sh",
+      "evidence": "`检查 59 个文档，0 个未登记`；245 条 DOC id 重号 0；DOC-1323-01 ← #2026 ✅",
+      "result": "pass"
+    },
+    {
+      "name": "check-gate-protection --changed-base gitea/main",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main",
+      "evidence": "16 通过 0 失败；diff 25 条；受保护路径 8 条全部有合规豁免；新增豁免件带复核件（# review: #1325）",
+      "result": "pass"
+    },
+    {
+      "name": "check-doc-truth",
+      "cmd": "bash scripts/doc-system/check-doc-truth.sh",
+      "evidence": "✅ 全部硬检查通过；2 项既有警告（C2 AGENTS 未写组数、W1 版本滞后）",
+      "result": "pass"
+    },
+    {
+      "name": "5 skill＋模板 .synova↔.dsh 一致",
+      "cmd": "diff -rq .synova/skills/{cto-handover,dev-doc-spec,devdoc-gate-a,squad-discipline,dsh-code-standards} .dsh/skills/…；bash scripts/workflow/sync-dsh-skills.sh --check",
+      "evidence": "5 组 diff 无输出（含 dev-doc-spec/template/编码指令模板.md）；--check 仅报 3 个本机额外技能（dsh-env-setup/preset-authoring/skill-authoring，基线 worktree 亦存在）",
+      "result": "pass"
+    },
+    {
+      "name": "运行态三预设与源一致",
+      "cmd": "Get-FileHash(SHA256) 对比 repo ↔ profile node_modules/@local/dsh-preset-*",
+      "evidence": "coding 65AF9B27…=65AF9B27…（13054 B）；squad-lead 9942FD2D…=9942FD2D…（14721 B）；CTO profile 副本 D9A84E46…＝包内 synova-cto-run-bundle（25775 B）；persona-block 105 条正文行全部命中运行 bundle",
+      "result": "pass"
+    },
+    {
+      "name": "{{cwd}} 仅出现在 README 禁止说明",
+      "cmd": "git grep -n '{{cwd}}'",
+      "evidence": "本 PR 改动文件中仅 docs/synova/presets/synova-coding/README.md:145 与 synova-cto/README.md:36-38（均为\"不能用\"说明）；其余命中属未改动文件与 tests",
+      "result": "pass"
+    },
+    {
+      "name": "CI 状态（total=2 两腿 success）",
+      "cmd": "GET /api/v1/repos/synova-agent/SynovaAgent/commits/18030ab8c/status",
+      "evidence": "state=success total=2：local-gates/gates(push) success 1m17s；local-gates/gates(pull_request) success 1m15s",
+      "result": "pass"
+    },
+    {
+      "name": "只读与纪律（tracked 干净 / 未直推 main / 无 force push）",
+      "cmd": "git status --porcelain -uno；git ls-remote gitea refs/heads/main；git reflog show gitea/main",
+      "evidence": "tracked 干净（工作树 35 项均为未跟踪、既有）；远端 main=97da9b7c 未变；reflog 仅 `fetch … fast-forward`，无 main force push；PR head=18030ab8c 与本地一致",
+      "result": "pass"
+    },
+    {
+      "name": "跨机包 patch 与分支一致、可在干净 base 应用",
+      "cmd": "cmp(git diff gitea/main..HEAD -- <19 源路径>, preset-skill-revamp-1323.patch)；git apply --check（干净 97da9b7c worktree）",
+      "evidence": "165092 B 逐字节相同；APPLY-CHECK-OK",
+      "result": "pass"
+    },
+    {
+      "name": "PR 正文诚实性（上下游区分 / 新会话未验证）",
+      "cmd": "GET /api/v1/repos/.../pulls/1326；git grep -n '新会话|已验证|#1321|#1324' docs/synova/presets memory/notes",
+      "evidence": "正文与 Note 均区分 #1321/#1322、#1324(T1) 与本支；明确写\"新会话行为：未验证\"；README 只给\"重启后新会话验收\"步骤，无已验收声称",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "non-blocking",
+      "where": "memory/notes/proposed/2026-11-04-1323-preset-skill-revamp.md:25",
+      "detail": "Note 写「7 个提交」，实测 `git rev-list --count gitea/main..HEAD` = 8（第 8 条 18030ab8c 即本口径对齐提交）。建议改为 8 或注明末条为口径对齐；不影响内容与门禁。"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "gate-exemptions/2026-11-04-1323-dsh-skill-mirrors.md:1",
+      "detail": "豁免件 `# review: #1325` 指向已关闭的 #1325，当前 PR 为 #1326。gate-protection 只要求\"有复核件\"故通过；建议改为 #1326 以免追溯错位。"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "PR #1326 正文「本地已跑证据」段",
+      "detail": "正文称「独立零上下文复核 4 轮，最终通过」与「check.py ALL-OK」：前者陈旧（第 5 轮查出 B1，本件为第 6 轮，正文未提 B1 修复）；后者仓库内无名为 check.py 的文件（全仓搜得仅 .venv 内 pip 的 check.py），该声称不可复现。建议删改或写实际命令。"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "docs/synova/presets/synova-cto/README.md:15",
+      "detail": "示例路径写死 `/Users/wane/src/dsh-preset-bundles/synova-cto`（他人机器路径）。仅为示例，且脚本以 profile package.json 的 file: 依赖解析，不影响落位。"
+    },
+    {
+      "severity": "non-blocking",
+      "where": "deliverables/1323-preset-skill-revamp/**",
+      "detail": "跨机包未入仓（`git ls-files deliverables` = 0），Mac 侧无法经 git 取得，须随包外传（README 已注明）。本轮回执的 B1 复现即依赖该工作树副本。"
+    },
+    {
+      "severity": "non-blocking",
+      "where": ".claude/claims/1323.yaml writeset",
+      "detail": "② 写集重叠：claim 声明含 AGENTS.md、docs/authority/DOCS-REGISTRY.yaml 等与上游 #1321/#1322 已改路径同域；按裁定 v1.0 §3.3 只报告、不作合并阻断（本件未复核其他在飞写集，未作裁定）。"
+    }
+  ],
+  "receipt_path": "docs/synova/reviews/1329.132900000000.json",
+  "issued_at": "2026-11-04T22:59:51+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}
