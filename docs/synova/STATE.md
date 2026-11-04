@@ -84,7 +84,7 @@ rule: 重写式维护 —— 每次更新整篇重写，不追加历史
 - 最近提交日期：`2026-10-22`（取数：`git log -1 --format=%ad --date=short 1924f761e`）
 - 控制塔版本（根件头部元信息）：`V5.2.7`（取数：`git show 1924f761e:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+\.[0-9]+'`）
 - 根件版本（AGENTS.md 头部）：`V7.1`（取数：`git show 1924f761e:AGENTS.md | grep -m1 -oE 'V[0-9]+\.[0-9]+'`）
-- DSH 工具版本（开发工具面，不进产品支持范围）：`0.2.1-rc.2`（取数：`git show 1924f761e:AGENTS.md | grep -m1 -oE '0\.2\.1-rc\.[0-9]+'`）
+- DSH 工具版本（开发工具面，不进产品支持范围）：`0.2.1-rc.5`（源码 `/Users/wane/src/dsh-src-0.2.1-rc.5` @ `b830ec950f`）
 - 产品代码 import DSH 包的命中数：`0`（取数：`grep -rn "from '@deepseek-ai/dsh'" src/ packages/ | wc -l`）
 - 本体图节点（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 data/synova.db "select count(*) from graph_nodes"`）
 - 本体图边（DB 实测，本机取数／仓外数据件）：`0`（取数：`sqlite3 data/synova.db "select count(*) from graph_triples"`）

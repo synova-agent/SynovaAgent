@@ -1,0 +1,9 @@
+# .claude/claims/1333.yaml — DSH rc5 源码与断面落位
+writeset:
+  - docs/synova/coordination/DSH-断面.json
+  - agents/P2-能部署/AGENTS.md
+  - docs/synova/STATE.md
+  - .claude/claims/1333.yaml
+done:
+  - verify: python3 scripts/control-tower/check-dsh-anchor.py --repo . --no-tree-check
+note: "#1333：DSH rc.2→rc.5；源码已 clone 到 /Users/wane/src/dsh-src-0.2.1-rc.5（HEAD b830ec950f）。"
