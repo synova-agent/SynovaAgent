@@ -28,7 +28,7 @@ CTO 预设的**运行载体**是 DSH profile 的 bundle 层，bundle 源不随�
 4. 覆盖 bundle 源与 profile 副本两处，二者须逐字节相同；
 5. 完全退出并重启 DSH，新开 CTO 会话验证（旧会话不能作为新预设生效的证据）。
 
-> 一键跨机同步包（含已生成的 bundle 与 `apply-on-mac.sh`）：
+> 一键跨机同步包（含已生成的 bundle 与 `apply-on-mac.sh`，**未入仓、随批次随包传输**）：
 > `deliverables/1323-preset-skill-revamp/`（#1323 实施端同步包，2026-11-04）。
 
 ## 硬约束
