@@ -1,10 +1,10 @@
 # DEV DOC · CompanyOS Ticket 0——最小多 Agent 协作闭环
 
-> **版本**：**v1.5**（v1.4 ＋ 第五次复审：§4.4 可判口径重写／advisor 去模板字段／K8 脚本补 ④⑤ 与清理）  
-> **日期**：2026-11-04（v1.5 修订 2026-11-05 02:20）  
+> **版本**：**v1.6**（v1.5 ＋ 第六次复审：围栏结构修正／迁移改为 7 目录 38 件／Pack 模板字段分角色／K8 聚合与空仓守卫）  
+> **日期**：2026-11-04（v1.6 修订 2026-11-05 02:50）  
 > **任务**：#1327  
 > **Issue**：`synova-agent/SynovaAgent#1327`  
-> **状态**：**T0.1 部分完成；关卡 A 已五轮（初审＋复验＋三次收缩复审），v1.5 已按第五次复审再修；待第六次复审；未通过不得写实现**  
+> **状态**：**T0.1 部分完成；关卡 A 已六轮（初审＋复验＋四次收缩复审），v1.6 已按第六次复审再修；待第七次复审；未通过不得写实现**  
 > **本版修订**：见 §0.2（K1–K12）、§0.2b（N1–N4）、§5.8（S1 变更落地：不新增 profile，角色走 Context Pack）
 > **模块**：CompanyOS 自用先行·最小协作控制面  
 > **目标施工仓**：`win-push/company-os-practice`（Gitea 私有仓，默认分支 `main`）  
@@ -266,7 +266,7 @@ Hub → 飞书 OpenAPI：100±20 个汉字完成汇报；证据链接另列
 - Kimi 默认只读，不写代码、不合并、不部署、不对外发送任务外内容；
 - Kimi 结论是独立意见，不自动覆盖 CTO 技术决定或创始人产品决定；
 - 没有可调接口时必须明确报“未接通”，不得伪称已介入。
-- 🔴 **Report 回流路径（N3：原"只读"与"回流"互相矛盾，此处定死）**：Kimi 侧由 `scripts/kimi/report.mjs`（待建，T0.2 交付） 包装脚本提交，凭证为 **`kimi-report` 域 token**，**只能**调 Hub 的 `POST /v1/reports`（Hub 侧只对该 token 放行这一条路由），**不给 Gitea 任何写权限**；Hub 收到后按 **§5.13b 顾问报告分支**校验（**不套**执行链的 Assignment/Lease/epoch 五步），再以 `hub` 身份把结论写成 Issue 评论（**不得**让创始人手工转贴，否则重回手工路由）。
+- 🔴 **Report 回流路径（N3：原"只读"与"回流"互相矛盾，此处定死）**：Kimi 侧由 `scripts/kimi/report.mjs`（新建，**T0.5 交付**） 包装脚本提交，凭证为 **`kimi-report` 域 token**，**只能**调 Hub 的 `POST /v1/reports`（Hub 侧只对该 token 放行这一条路由），**不给 Gitea 任何写权限**；Hub 收到后按 **§5.13b 顾问报告分支**校验（**不套**执行链的 Assignment/Lease/epoch 五步），再以 `hub` 身份把结论写成 Issue 评论（**不得**让创始人手工转贴，否则重回手工路由）。
 
 ### 3.4 WorkBuddy 独立巡检通道
 
@@ -369,23 +369,25 @@ synova-agent/docs/synova/presets/**  # 不重写人格
 
 **执行与核验**（T0.0 前置，未完成不得开 T0.2）：
 ```bash
-# 通过口径（唯一）：代码仓 41 件里，**每一件**在研究仓同前缀都有副本且 sha256 相等。
-# 不要求"两侧集合相等"——研究仓另有自有的历史件，不应因此判红。
-QR='-c core.quotepath=false'          # 必须：否则 38/41 中文名被 C-quote
+# 通过口径（唯一）：代码仓的 **7 个内容目录（38 件）** 逐件在研究仓同前缀都有副本且 sha256 相等。
+# 根件（README.md／MANIFEST.md／.gitignore）**不迁移**：前两者由代码仓重写为代码仓版，
+#   .gitignore 仅代码仓需要 —— 因此它们既不进复制集、也不进核验集（避免与"不迁移"自相矛盾）。
+QR='-c core.quotepath=false'          # 必须：否则中文名被 C-quote
 RESEARCH=<synova-research 克隆>
 PREFIX='02-商业研究/哇呢宝贝-FDE落地'
 DEST="$RESEARCH/$PREFIX"
 SRC=48580c5d
+DIRS='00-最终方案 01-体系与设计 02-方法与路线 03-基础信息与采集 04-复核与整改 05-参考 06-历史版'
 
-# 1) 代码仓清单（含 .gitignore 以便比对；.gitignore 本身不迁移，见下）
-git -C <code-repo> $QR ls-tree -r --name-only "$SRC" | sort > /tmp/src.list
-echo "src=$(wc -l < /tmp/src.list)"
+# 1) 清单：只列 7 个目录（38 件）
+git -C <code-repo> $QR ls-tree -r --name-only "$SRC" -- $DIRS | sort > /tmp/src.list
+echo "src=$(wc -l < /tmp/src.list)"; [ "$(wc -l < /tmp/src.list)" -eq 38 ] || { echo "判不了：清单不是 38 件"; exit 2; }
 
-# 2) 复制（幂等；本机无 rsync）
+# 2) 复制：只复制 7 个目录（不会碰研究仓既有的 README/MANIFEST）
 mkdir -p "$DEST"
-git -C <code-repo> -c core.quotepath=false archive "$SRC" | tar -x -C "$DEST" || exit 1
+git -C <code-repo> -c core.quotepath=false archive "$SRC" $DIRS | tar -x -C "$DEST" || exit 1
 
-# 3) 逐文件核验（缺件/不等即红，并逐条点名）
+# 3) 逐件核验（缺件/不等即红并点名）
 miss=0; diff=0; ok=0
 while IFS= read -r f; do
   if [ ! -f "$DEST/$f" ]; then echo "MISSING: $f"; miss=$((miss+1)); continue; fi
@@ -393,22 +395,22 @@ while IFS= read -r f; do
   b=$( sha256sum "$DEST/$f" | cut -d' ' -f1 )
   if [ "$a" = "$b" ]; then ok=$((ok+1)); else echo "DIFF: $f"; diff=$((diff+1)); fi
 done < /tmp/src.list
-echo "files=$((ok+diff+miss)) ok=$ok diff=$diff missing=$miss"
-[ "$diff" -eq 0 ] && [ "$miss" -eq 0 ] || { echo "核验未过：先出上述差异清单，由 CTO 裁哪版权威"; exit 1; }
+echo "files=$(wc -l < /tmp/src.list) ok=$ok diff=$diff missing=$miss"
+[ "$diff" -eq 0 ] && [ "$miss" -eq 0 ] || { echo "核验未过：先出上述 DIFF/MISSING 清单，由 CTO 裁哪版权威"; exit 1; }
 echo "SHA256-ALL-EQUAL"
 
-# 4) 删代码仓原件（走 PR；.gitignore 保留并重写为代码仓版，不删）
-git rm -r 00-最终方案 01-体系与设计 02-方法与路线 03-基础信息与采集 04-复核与整改 05-参考 06-历史版
-git rm -f MANIFEST.md README.md        # 由代码仓版重写替换
+# 4) 删代码仓原件（7 个目录 + 两个根件；.gitignore 保留）
+git rm -r $DIRS
+git rm -f MANIFEST.md README.md
 
-# 5) 验收：代码仓（含根件）不得再有客户材料
+# 5) 验收：代码仓不得再有客户材料
 git grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' | wc -l   # 必须 0
 ```
-- **`.gitignore` 不迁移**：代码仓保留并重写为代码仓版；研究仓不要求有它（上面的 step 3 会把它算进清单，若研究仓无副本即 `MISSING` ⇒ 因此 step 3 的清单在核验时**排除 `.gitignore`**：`grep -v '^\.gitignore$' /tmp/src.list > /tmp/src.verify`，用该文件喂 while）。
-- **权威裁定**：研究仓同前缀若已有同批副本 —— sha256 全等 ⇒ 以研究仓为准、只删代码仓原件；**不一致 ⇒ 先出差异清单（上面 DIFF/MISSING 行），由 CTO 裁哪版权威**，不得两边都留。**本件不写死差异件数**（会随研究仓状态漂移），以命令输出为准。
+- **`.gitignore`**：**不迁移、不复制、不核验**（代码仓保留）。上面 step 1/2/3 的清单都不含它。
+- **`README.md`／`MANIFEST.md`**：**不迁移**；代码仓改为代码仓版。这样 step 2 不会覆盖研究仓自有的 `README.md`（实测过：整目录 archive 会覆盖它，65+/117-）。
+- **权威裁定**：研究仓同前缀若已有同批副本 —— sha256 全等 ⇒ 以研究仓为准、只删代码仓原件；**不一致 ⇒ 先出 DIFF/MISSING 清单，由 CTO 裁哪版权威**，不得两边都留。**本件不写死差异件数**（会随研究仓状态漂移）。
 - **布局**：研究仓按代码仓的 7 层目录落位；研究仓既有的平铺件归位属其自身治理，不在本卡写集内。
-- **`.gitignore` 之外的根件**（`README.md`／`MANIFEST.md`）随迁移删除，代码仓重写为代码仓版。
-- 本机**无 rsync**（实测）；`tar`／`sha256sum`／`cp` 可用 ⇒ 只用上述命令。
+
 - 迁移后**必须回填本件头部的基线 SHA**
 - §0.3 窄映射引用的 8 处文档路径，迁移后统一指向研究仓（T0.0 完成时同步更新本表）。
 
@@ -535,7 +537,10 @@ role_template_version / role_template_hash / skill_set_version / template_versio
 **🔴 角色契约（2026-11-05 创始人裁定，S1 变更配套）**：
 
 - 角色 prompt（`role_template`）**只是行为约束，不是权限边界**。权限仍由 **Hub 服务端 ＋ Mandate ＋ scoped token ＋ 写集 ＋ Schema** 程序强制（§5.13）；prompt 里写"你只能做 X"不产生任何强制力。
-- Context Pack **必须版本化**：`role_template_version`（如 `v1`）＋ `role_template_hash`（模板正文的 sha256），二者随 Pack 一起入库、随 Report 一起回引。
+- Context Pack **按角色决定是否带模板字段**（口径唯一）：
+  · **执行链角色**（`cto`／`worker`／`auditor`）**必须**带 `role_template_version`（如 `v1`）＋ `role_template_hash`，二者随 Pack 入库、随 Report 回引；
+  · **`advisor`／`inspector` 不带**这两个字段（无角色模板，见 §5.2 映射表与 §5.13b）；其 Pack 只带 `role`＋任务范围。
+- **`role_template_hash` 口径（定死）**：对 `config/role-templates/<role>.md` 的**文件原始字节**做 `sha256`（含 front-matter，不做任何规范化、不 trim）。同一模板字节 ⇒ 同一 hash；模板任何改动 ⇒ 新 version ＋ 新 hash。
 - **Report 必须回引 `context_pack_id` ＋ `role_template_version` ＋ `role_template_hash`**；缺失即 §5.13 第 1 步 Schema 拒绝。
 - **禁止以"模型自称什么角色"作为验收证据**：A4/A9/T0.3 一律以 Hub 记录（pack id／hash／role 三元组）判定，模型口头声明无效。
 
@@ -912,20 +917,7 @@ Node／包管理器／操作系统：Node v24.16.0（实测）／npm 11.13.0＋p
    · 🔴 **Windows 陷阱（实测）**：`node --test tests/**` 在 cmd 下通配符不展开 → `Cannot find module '…\tests'` → **幻影失败 RC=1**。**必须**写 `"test": "node --test"`（自动发现 `**/*.test.*`）或 `"test": "node --test \"tests/**/*.test.js\""`（引号内由 Node 自行展开）
 Schema 校验器：ajv 8.20.0 严格模式（实测 `additionalProperties:false` 生效）
 持久化：`node:sqlite` DatabaseSync（内置，实测建表/插入/查询通过）——**不用 better-sqlite3**
-测试命令：`npm test` **不得直接写 `node --test`**（实测：空 `tests/` 时 `tests 0/pass 0/fail 0/RC=0` ⇒ 0 测试也全绿）。**必须**用守卫脚本 `scripts/accept/run-tests.sh`（待建，T0.2 交付）：
-
-```bash
-#!/usr/bin/env bash
-# scripts/accept/run-tests.sh（新建，T0.2 交付）——原样落盘，不要缩进
-set -u
-export PYTHONIOENCODING=utf-8
-out="$(node --test 2>&1)"; rc=$?
-echo "$out"
-[ "$rc" -eq 0 ] || exit 1
-grep -qE '^ℹ pass [1-9][0-9]*$' <<<"$out" || { echo "0 tests executed → exit 2（禁假绿）"; exit 2; }
-exit 0
-```
-   判据：**pass>0 且 fail=0**；空 `tests/` ⇒ **exit 2**（不是 0）；改坏用例 ⇒ exit 1。`package.json` 写 `"test": "bash scripts/accept/run-tests.sh"`。
+测试命令：`npm test` **不得直接写 `node --test`**（实测：空 `tests/` 时 `tests 0/pass 0/fail 0/RC=0` ⇒ 0 测试也全绿）。**必须**用守卫脚本 `scripts/accept/run-tests.sh`（新建，T0.2 交付）——脚本正文与判据见本节末的**顶层 bash 块**（可原样落盘）。
 本地启动命令：`npm run dev`（T0.2 首批提交建立；端口与命令须回填本节）
 Gitea 测试仓：win-push/company-os-practice（仅使用批准的合成对象）
 DSH 锁版：0.2.1-alpha.2；ACP profile＝**acp（出厂，唯一）**；角色＝Context Pack 的 `role_template`（版本化＋hash）
@@ -933,6 +925,22 @@ Kimi 通道版本／接口：Kimi Code CLI 0.34.0（kimi-platform/k3）＋Hub �
 WorkBuddy 版本／模型：自动化实物已确认；混元 3 与配置窗口仍待实测（辅助线，不阻塞）
 凭证：同账号 `win-push` 下 **5 枚 Gitea scoped token（hub／cto-bot／coding-bot／k3-bot／workbuddy-bot）＋ 2 枚 Hub-only token（`kimi-readonly`／`kimi-report`，均不下发 Gitea）**，共 7 枚，可区分、可单独吊销（下表）
 ```
+
+**测试守卫脚本（新建，T0.2 交付；**原样落盘，不要缩进**）**
+
+```bash
+#!/usr/bin/env bash
+# scripts/accept/run-tests.sh
+set -u
+command -v node >/dev/null 2>&1 || { echo "判不了：node 不可用（依赖缺失）"; exit 2; }
+out="$(node --test 2>&1)"; rc=$?
+echo "$out"
+[ "$rc" -eq 0 ] || exit 1
+grep -qE '^ℹ pass [1-9][0-9]*$' <<<"$out" || { echo "0 tests executed → exit 2（禁假绿）"; exit 2; }
+exit 0
+```
+
+判据：**pass>0 且 fail=0**；空 `tests/` ⇒ **exit 2**（不是 0）；改坏用例 ⇒ exit 1；node 缺失 ⇒ **exit 2**（依赖缺失＝判不了）。`package.json` 写 `"test": "bash scripts/accept/run-tests.sh"`。
 
 **scoped token 能力表（S8；scope 字符串以 Gitea 1.27.3 实测为准，T0.2 首批回填）**
 
@@ -1082,6 +1090,7 @@ if [ -z "$ONLY" ] || [ "$ONLY" = "--only=4" ]; then
   git rev-parse --git-dir >/dev/null 2>&1 || { echo "判不了：不在 git 仓库内（禁把看不见当没问题）"; UNKNOWN=1; }
   [ -n "$(git rev-parse --git-dir 2>/dev/null)" ] && {
   [ -d synova-agent/src ] && { echo "④ 红：Synova 业务代码混入"; FAIL=1; }
+  [ "$(git rev-list --count HEAD 2>/dev/null || echo 0)" -gt 0 ] || { echo "判不了：仓库无提交（禁把空仓当无客户材料）"; UNKNOWN=1; }
   if git grep -lE '南宁|员工简表|人效地图' -- ':!tests/fixtures' >/dev/null 2>&1; then
     echo "④ 红：客户材料仍在代码仓"; FAIL=1
   else echo "④ OK"; fi
@@ -1090,8 +1099,8 @@ fi
 
 # ⑤ 合并方式冻结（squash/rebase 关闭、default=merge）
 if [ -z "$ONLY" ] || [ "$ONLY" = "--only=5" ]; then
-  api "" "$TMPD/repo.json" || exit 2
-  python3 - "$TMPD/repo.json" <<'PY' || { echo "⑤ 红：合并方式未冻结"; exit 1; }
+  if api "" "$TMPD/repo.json"; then
+    python3 - "$TMPD/repo.json" <<'PY' || { echo "⑤ 红：合并方式未冻结"; FAIL=1; }
 import json,sys
 d=json.load(open(sys.argv[1],encoding="utf-8"))
 assert d.get("allow_squash_merge") is False, "allow_squash_merge=true"
@@ -1099,6 +1108,9 @@ assert d.get("allow_rebase") is False, "allow_rebase=true"
 assert d.get("default_merge_style")=="merge", "default_merge_style!=merge"
 print("⑤ OK")
 PY
+  else
+    echo "判不了：合并方式读取失败（不覆盖已判定的红）"; UNKNOWN=1
+  fi
 fi
 
 [ "$FAIL" -ne 0 ] && exit 1
