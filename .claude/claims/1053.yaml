@@ -9,7 +9,6 @@ writeset:
   - electron-renderer/src/components/MeasurementTrendContainer.tsx
   - electron-renderer/src/components/RightPanel.tsx
   - electron-renderer/AGENTS.md
-  - AGENTS.md
   - agents/P1-能跑通/AGENTS.md
   - memory/notes/proposed/2026-10-27-1051-m4-closeout.md
   - gate-exemptions/2026-10-27-t8-1051-pointer.md

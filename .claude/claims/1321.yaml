@@ -1,0 +1,10 @@
+# .claude/claims/1321.yaml — 宪章 v8.4 落位
+writeset:
+  - AGENTS.md
+  - docs/synova/产品宪章-v8.3-镜像.md
+  - docs/synova/产品宪章-v8.4-镜像.md
+  - .claude/claims/1053.yaml
+  - .claude/claims/1321.yaml
+done:
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+note: "#1321：宪章 v8.4 六项修订落位（权威原件＋镜像＋AGENTS 同步）；#1053 已关闭，释放陈旧 AGENTS.md 认领。"
