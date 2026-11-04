@@ -86,7 +86,8 @@
 以下任一未满足，**只允许补资料、执行已批准的配置动作或做合成探针，不允许写业务实现代码**：
 
 1. 本 DEV DOC 尚未由原关卡 A 复核者复验初审阻塞项；不得换作者自审，也不重开多角色流程；
-2. 角色 Context Pack 模板（`role_template` v1 ＋ sha256）尚未建好并版本化（由 **T0.3** 承接产出），或有人试图以「新建角色 profile」代替它；**统一用出厂 `acp` profile，不新增任何 profile**，不得删除旧 profile 或修改 Electron 独占的 `desktop`；
+2. 角色 Context Pack 模板（`role_template` v1 ＋ sha256）尚未建好并版本化（由 **T0.3** 承接产出），或有人试图以「新建角色 profile」代替它；**统一用出厂 `acp` profile，不新增任何 profile**，不得删除旧 profile 或修改 Electron 独占的 `desktop`。
+   · 🔴 **本项不阻断 T0.2**：T0.2 只建工程骨架／六份 Schema／SQLite／HTTP 骨架，**既不生成也不消费 Context Pack**；「永不可解除」的循环前置（T0.2 等 T0.3、T0.3 等 T0.2）由此消除——T0.2 只受硬停点 5（门禁）与 4（材料迁出）约束；
 3. 飞书 Synova 机器人尚无发送对象；等待创始人完成一次会话绑定并提供 `chat_id`；
 4. 客户实践材料仍与拟建代码同仓；须先按 S6 移入研究仓的哇呢宝贝客户目录，复制核验后再移除原文件；
 5. 目标仓尚无 main 分支保护和最小 CI；须在 T0.2 前按 S5 建好，禁止直推；
@@ -168,7 +169,7 @@ WorkBuddy 是独立辅助线，其实测缺口**不阻塞 T0.2–T0.5 研发主�
 本方案已实际读取：
 
 - `docs/synova/presets/synova-cto/persona-block.yml`：CTO 一个会话一个模块，产品方向归创始人，技术决策自决；
-- `docs/synova/presets/synova-cto/persona-block.yml` 与 `docs/synova/presets/synova-k3-audit/preset.yml`：模块 CTO／K3 的定位来源（`synova-coding` 在本 PR 基线 `local-main` 上**无仓内源**，其 bundle 在仓外；S1 变更后角色不再依赖预设，故不作引用）；
+- `docs/synova/presets/synova-cto/persona-block.yml`、`docs/synova/presets/synova-k3-audit/preset.yml`、`docs/synova/presets/synova-coding/preset.yml`：模块 CTO／K3／coding 的定位来源（三者在 PR 基枝 `main` 上均存在；S1 变更后角色不再依赖预设，但人格文本仍是 `role_template` 的**内容来源**）；
 - `docs/synova/presets/synova-k3-audit/preset.yml`：K3 独立审计定位；
 - `.dsh/skills/cto-handover/SKILL.md`：新会话或压缩后重读权威源，不把摘要当完整事实源；
 - `.dsh/skills/dev-doc-spec/SKILL.md`：零上下文可执行、真实入口、失败路径与验收；
@@ -306,7 +307,7 @@ WorkBuddy 是独立辅助验收线，不阻塞 T0.2–T0.5 研发主闭环；以
 T0.1 已确认目标仓当前只有文档，以下代码、工程与测试路径**全部为新建**。T0.2 首批提交先建立 Node `24.16.0`＋npm 工程、lockfile、最小 CI 和 main 分支保护；pnpm 实测 corepack 挂起，不作为首版前提。
 
 > 🔴 **口径说明（防误判）**：本节路径**相对目标仓根**（`company-os-practice`），不是 Synova 仓。在 `synova-agent` 里跑 `pre-dispatch-check.sh` 时，④ 会把它们全部报成"不存在"——**这是跨仓的预期结果，不是遗漏**；逐条核验请用：
-> `git -C <company-os-practice 克隆> ls-tree -r --name-only 48580c5d | grep -E '^(src/|schemas/|config/|tests/|scripts/)'` → 当前 **0 命中**（即 12 条全为新建）。
+> `git -C <company-os-practice 克隆> ls-tree -r --name-only 48580c5d | grep -E '^(src/|schemas/|config/|tests/|scripts/)'` → 当前 **0 命中**（即 §4.1 的 13 条运行时代码路径全为新建；另 4 项工程文件同样新建）。
 
 ```text
 package.json                # 固定 typecheck/build/test/dev 脚本
@@ -368,27 +369,31 @@ synova-agent/docs/synova/presets/**  # 不重写人格
 
 **执行与核验**（T0.0 前置，未完成不得开 T0.2）：
 ```bash
-# 0) 先查研究仓是否已有副本（实测：同前缀已有 41 件平铺件，其中 40 件与目标仓同名）
+# 顺序固定：复制 → 归位 → 集合相等 → 逐文件 sha256 → 删原件
 RESEARCH=<synova-research 克隆>
 PREFIX='02-商业研究/哇呢宝贝-FDE落地'
-git -C "$RESEARCH" ls-tree -r --name-only origin/main -- "$PREFIX" | head
+DEST="$RESEARCH/$PREFIX"
+QR='-c core.quotepath=false'          # 必须：否则 38/41 中文名被 C-quote，集合必不相等
 
-# 1) 集合相等校验（不是"≥41"）：代码仓文件清单 == 目的地文件清单（按相对路径）
-( cd <code-repo> && git ls-tree -r --name-only 48580c5d ) | sort > /tmp/src.list
-( cd "$RESEARCH/$PREFIX" && find . -type f | sed 's|^\./||' | grep -v '^交付-' | sort ) > /tmp/dst.list
-diff /tmp/src.list /tmp/dst.list && echo "SET-EQUAL"
+# 0) 清单（两侧同一口径；.gitignore 纳入清单——代码仓保留并重写，研究仓也留一份）
+git -C <code-repo> $QR ls-tree -r --name-only 48580c5d | sort > /tmp/src.list
+git -C "$RESEARCH" $QR ls-tree -r --name-only origin/main -- "$PREFIX" \
+  | sed "s|^$PREFIX/||" | grep -v '^交付-' | sort > /tmp/dst.list
 
-# 2) 逐文件 sha256 相等（41/41）
-while read -r f; do
-  a=$( cd <code-repo> && git show "48580c5d:$f" | sha256sum | cut -d' ' -f1 )
-  b=$( sha256sum "$RESEARCH/$PREFIX/$f" | cut -d' ' -f1 )
+# 1) 复制（仅当目的地缺件；本机无 rsync）
+mkdir -p "$DEST"
+git -C <code-repo> archive 48580c5d | tar -x -C "$DEST" || exit 1
+
+# 2) 集合相等（不是 ≥41）
+diff /tmp/src.list /tmp/dst.list && echo "SET-EQUAL ($(wc -l < /tmp/src.list)/$(wc -l < /tmp/src.list))"
+
+# 3) 逐文件 sha256（路径带 quotepath，git show 才能解析中文名）
+while IFS= read -r f; do
+  a=$( git -C <code-repo> $QR show "48580c5d:$f" | sha256sum | cut -d' ' -f1 )
+  b=$( sha256sum "$DEST/$f" | cut -d' ' -f1 )
   [ "$a" = "$b" ] || { echo "DIFF: $f"; exit 1; }
 done < /tmp/src.list
 echo "SHA256-ALL-EQUAL"
-
-# 3) 复制（仅当研究仓缺件时；本机无 rsync，用 git archive|tar，可复现）
-mkdir -p "$DEST"
-git -C <code-repo> archive 48580c5d | tar -x -C "$DEST"
 
 # 4) 删代码仓原件（走 PR，不直推 main）
 git rm -r 00-最终方案 01-体系与设计 02-方法与路线 03-基础信息与采集 04-复核与整改 05-参考 06-历史版
@@ -396,10 +401,11 @@ git rm -r 00-最终方案 01-体系与设计 02-方法与路线 03-基础信息�
 # 5) 验收：代码仓 grep 客户材料 0 命中
 git grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' | wc -l   # 必须 0
 ```
-- **权威裁定**：研究仓同前缀若已有副本且 sha256 全等 ⇒ **以研究仓为准，只删代码仓原件**；不一致 ⇒ 先裁哪版权威（**停点：由 CTO 定**），不得两边都留。
-- **布局**：目的地保持与代码仓相同的 7 层目录结构；研究仓现有的平铺件由 T0.0 一次性归位（同一 PR）。
+- **权威裁定**：研究仓同前缀若已有副本，且 **sha256 全等 ⇒ 以研究仓为准、只删代码仓原件**；不一致 ⇒ **先出差异清单（逐文件 sha256 对比），由 CTO 裁哪版权威**（实测现状：同前缀 93 件＝平铺 41＋交付子目录；与目标仓同基名 40 件中 **33 全等／7 不一致**，`.gitignore` 无副本 ⇒ 必落 CTO 停点，禁止两边都留）。
+- **布局**：目的地保持与代码仓相同的 7 层目录；研究仓现有平铺件由 T0.0 一次性归位（同一 PR）。
+- **`.gitignore`**：两侧都保留（代码仓重写业务版；研究仓存副本），已纳入上面的清单口径。
 - 本机**无 rsync**（实测）；`tar`／`sha256sum`／`cp` 可用 ⇒ 只用上述命令。
-- 迁移后**必须回填本件头部的基线 SHA**- 迁移后**必须回填本件头部的基线 SHA**；
+- 迁移后**必须回填本件头部的基线 SHA**
 - §0.3 窄映射引用的 8 处文档路径，迁移后统一指向研究仓（T0.0 完成时同步更新本表）。
 
 ---
@@ -682,6 +688,16 @@ GET  /attention                   # 本地降级页
 POST /v1/assignments/:id/stop     # A14「一键停止」：ACP close ＋ Hub 置 Lease 失效
 ```
 
+**🔴 `POST /v1/reports` 的按 token 分派（唯一口径；消除 A2 与 A9② 的撞车）**
+
+| 调用方 token | 走哪条校验 | 期望 |
+|---|---|---|
+| `coding-bot`／`cto-bot`／`k3-bot` | §5.13 执行链五步 | 2xx（A2） |
+| `kimi-report` | **§5.13b** 顾问分支 | **201**（A9①） |
+| 其余（含 `kimi-readonly`、未认证） | 拒绝 | **403**（A9②） |
+
+分派依据是 **token 身份**，不是 body 内容；两分支共用同一路由但互不重叠。
+
 所有写接口认证、鉴权、校验和失败可见；不存在“本机调用所以免鉴权”。
 
 ### 5.13 🔴 权限执行点与时序（K9）
@@ -702,10 +718,10 @@ Kimi 没有 Assignment／Lease／epoch，**不能**走 §5.13 的执行链五步
 
 | 步 | 校验 | 失败码 |
 |---|---|---|
-| 1 | Schema：`schemas/advisor-report.schema.json`（字段 `advisory_id`／`ticket_id`／`context_pack_id`／`role_template_version`／`role_template_hash`／`conclusion`／`evidence_refs`／`unverified`；`additionalProperties:false`） | 422 |
+| 1 | Schema：`schemas/advisor-report.schema.json`（字段 `advisory_id`／`ticket_id`／`context_pack_id`／`conclusion`／`evidence_refs`／`unverified`；**不含** `role_template_version/hash`——advisor 无角色模板，见 §5.2 映射表；`additionalProperties:false`） | 422 |
 | 2 | 凭证：token 必须是 `kimi-report`（Hub 侧只放行该 token 调本路由）；其他 token（含 `kimi-readonly`）调本路由 | **403** |
-| 3 | 上下文：`context_pack_id` 存在 ∧ 未过期 ∧ `pack.role == advisor` ∧ `role_template_hash` 与 Pack 一致 | 409 |
-| 4 | 落库 `advisories` → Hub 以 `hub` 身份写 Issue 评论 → **不推进 Ticket 状态**（顾问意见不改变 Ticket 真相） | — |
+| 3 | 上下文：`context_pack_id` 存在 ∧ 未过期 ∧ **`pack.role == advisor`**（advisor 不校验模板 hash） | 409 |
+| 4 | 落库 `advisories` → Hub 以 `hub` 身份写 Issue 评论 → **不推进 Ticket 状态**（顾问意见不改变 Ticket 真相）；成功返回 **201**（A9 ① 以此为准） | — |
 
 - **不校验**：Assignment／Lease／epoch／`base..head` diff／Mandate 路径求交（顾问不写代码）；
 - `kimi-readonly` 只能 `GET /v1/context-packs/:id`，**调 `POST /v1/reports` 必 403**（A9 必须实测这条）。
@@ -841,7 +857,7 @@ high ⇒ 必须派 K3 独立复核（A4）；medium ⇒ CTO 自行决定是否�
 
 - **模块锚**：同 §1；
 - **目标**：创始人直接联系 Kimi；关联 Ticket 时由本地 Kimi CLI 主动获取限定 Context Pack，在当前对话直接回复并回流 Report；
-- **范围／不做**：`src/adapters/kimi/**`、相应 Context／Report 接口和测试；不调用 DSH，不写代码，不预设 Kimi 自有飞书；
+- **范围／不做**：`src/adapters/kimi/**`、**`scripts/kimi/report.mjs`（新建，本任务交付；T0.2 不写它）**、相应 Context／Report 接口和测试；不调用 DSH，不写代码，不预设 Kimi 自有飞书；
 - **现状证据**：T0.1 Kimi Code CLI `0.34.0` 非交互与会话能力；
 - **关键契约**：§5.6、§5.10、§5.12；
 - **真实入口与验收**：从创始人与 Kimi 的直接对话发起，全程无 DSH；核对 CLI 调用、只读范围、报告回流和直接回复；
@@ -909,7 +925,7 @@ Gitea 测试仓：win-push/company-os-practice（仅使用批准的合成对象�
 DSH 锁版：0.2.1-alpha.2；ACP profile＝**acp（出厂，唯一）**；角色＝Context Pack 的 `role_template`（版本化＋hash）
 Kimi 通道版本／接口：Kimi Code CLI 0.34.0（kimi-platform/k3）＋Hub 只读 HTTP
 WorkBuddy 版本／模型：自动化实物已确认；混元 3 与配置窗口仍待实测（辅助线，不阻塞）
-凭证：同账号 `win-push` 下 **6 枚 Gitea scoped token ＋ 1 枚 Hub-only token（`kimi-report`，不下发 Gitea）**，共 7 枚，可区分、可单独吊销（下表）
+凭证：同账号 `win-push` 下 **5 枚 Gitea scoped token（hub／cto-bot／coding-bot／k3-bot／workbuddy-bot）＋ 2 枚 Hub-only token（`kimi-readonly`／`kimi-report`，均不下发 Gitea）**，共 7 枚，可区分、可单独吊销（下表）
 ```
 
 **scoped token 能力表（S8；scope 字符串以 Gitea 1.27.3 实测为准，T0.2 首批回填）**
@@ -924,7 +940,7 @@ WorkBuddy 版本／模型：自动化实物已确认；混元 3 与配置窗口�
 | `kimi-readonly` | Kimi（辅助） | 只读 Context Pack（Hub 侧 token，不给 Gitea） | 一切写 |
 | `kimi-report` | Kimi 报告回流（辅助） | **仅** `POST /v1/reports`（Hub 侧限该方法） | Gitea 任何写、合并 |
 
-上述 npm 脚本是 T0.2 首批提交必须建立的契约，**不是当前仓库已有命令**。分支保护、最小 CI、**角色 Context Pack 模板（`role_template` v1＋sha256）建好并版本化**、飞书 `chat_id`、客户材料迁移及最小授权未解除前，仍不得写业务实现。测试必须证明信号量非零，不能只报 `0 failed`。
+上述 npm 脚本是 T0.2 首批提交必须建立的契约，**不是当前仓库已有命令**。分支保护、最小 CI、**角色 Context Pack 模板（`role_template` v1＋sha256）建好并版本化**（**仅阻断 T0.3 及之后**；T0.2 不受此项阻断，理由见硬停点 2）、飞书 `chat_id`、客户材料迁移及最小授权未解除前，仍不得写业务实现。测试必须证明信号量非零，不能只报 `0 failed`。
 
 **Gitea 合并方式冻结（K8 ② 前提）**：`allow_squash_merge=false`、`allow_rebase=false`、`default_merge_style=merge` —— 否则 squash/rebase 会在 main 上产生非合并提交，② 的判据会永红。该三项属目标仓设置，T0.2 建保护时一并配置并回填本节。
 
@@ -980,87 +996,117 @@ WorkBuddy 版本／模型：自动化实物已确认；混元 3 与配置窗口�
 
 1. 主闭环必须通过 **A1–A9、A13、A14** 及 **B1–B13、B15、B16**；任一失败即主闭环不收口；
 2. WorkBuddy 只有通过 A10–A12 与 B14 才可宣称辅助巡检上线；其失败不阻塞主闭环，但必须列入回执；
-3. 🔴 **"无 main 直写"改为脚本可判（K8）**。放 `scripts/accept/check-main-integrity.sh`（待建，T0.2 交付），**三态退出码**（0 通过／1 真红／2 判不了）。
+3. 🔴 **"无 main 直写"改为脚本可判（K8）**。放 `scripts/accept/check-main-integrity.sh`（新建，T0.2 交付），**三态退出码**（0 通过／1 真红／2 判不了）。**下面这段是顶层 bash 块，原样落盘即可（不要再缩进）**：
 
-   ```bash
-   #!/usr/bin/env bash
-   # 用法: check-main-integrity.sh [--only=1|2|3|4]   （--only 供判别力自检逐项跑）
-   set -u
-   : "${GITEA:?GITEA 未设置（例 http://192.168.1.6:3000）}"
-   : "${GITEA_TOKEN:?GITEA_TOKEN 未设置（角色：hub token，只读）}"
-   REPO=win-push/company-os-practice
-   AUTH=(-H "Authorization: token $GITEA_TOKEN")
-   ONLY="${1:-}"
-   FAIL=0
+```bash
+#!/usr/bin/env bash
+# check-main-integrity.sh [--only=N]  N∈{1,2,3,4,5}
+# 三态：0=通过  1=真红  2=判不了（环境/依赖/权限）
+set -u
+: "${GITEA:?GITEA 未设置（例 http://192.168.1.6:3000）}"
+: "${GITEA_TOKEN:?GITEA_TOKEN 未设置（角色：hub token，只读）}"
+REPO=win-push/company-os-practice
+ONLY="${1:-}"
+FAIL=0
+TMPD="$(mktemp -d)"; BP="$TMPD/bp.json"
 
-   api() {  # api <path> <outfile> → 0=HTTP200, 2=判不了, 1=红
-     local url="$GITEA/api/v1/repos/$REPO/$1" out="$2" code
-     code=$(curl -sS -o "$out" -w '%{http_code}' "${AUTH[@]}" "$url") || return 2
-     case "$code" in
-       200|201) return 0 ;;
-       404) echo "判不了：$url → 404"; return 2 ;;
-       *)   echo "判不了：$url → HTTP $code"; return 2 ;;
-     esac
-   }
+api() {  # api <path> <outfile>；0=200, 2=判不了
+  local url="$GITEA/api/v1/repos/$REPO/$1" out="$2" code
+  code=$(curl -sS -o "$out" -w '%{http_code}' -H "Authorization: token $GITEA_TOKEN" "$url") || return 2
+  [ "$code" = "200" ] || { echo "判不了：$url → HTTP $code"; return 2; }
+  return 0
+}
 
-   # ① 分支保护存在、禁直推、启用状态检查
-   if [ -z "$ONLY" ] || [ "$ONLY" = "--only=1" ]; then
-     api "branch_protections" /tmp/bp.json || exit 2
-     python3 - /tmp/bp.json <<'PY' || { echo "① 红：main 保护缺失或不合规"; FAIL=1; }
-   import json,sys
-   d=json.load(open(sys.argv[1],encoding="utf-8"))
-   assert isinstance(d,list) and d, "branch_protections 为空"
-   m=[b for b in d if b.get("branch_name")=="main"]; assert m, "main 无保护"
-   b=m[0]
-   assert b.get("enable_push") is False, "main 仍允许直推"
-   assert b.get("enable_status_check") is True, "未启用状态检查"
-   assert b.get("status_check_contexts"), "status_check_contexts 为空"
-   print("① OK", b.get("status_check_contexts"))
-   PY
-   fi
+# ① 分支保护（空保护 ⇒ 红 1，不是判不了 2）
+if [ -z "$ONLY" ] || [ "$ONLY" = "--only=1" ]; then
+  api "branch_protections" "$BP" || exit 2
+  python3 - "$BP" <<'PY' || { echo "① 红：main 保护缺失或不合规"; FAIL=1; }
+import json,sys
+d=json.load(open(sys.argv[1],encoding="utf-8"))
+assert isinstance(d,list) and d, "branch_protections 为空"
+m=[b for b in d if b.get("branch_name")=="main"]; assert m, "main 无保护"
+b=m[0]
+assert b.get("enable_push") is False, "main 仍允许直推"
+assert b.get("enable_status_check") is True, "未启用状态检查"
+assert b.get("status_check_contexts"), "status_check_contexts 为空"
+print("① OK", b.get("status_check_contexts"))
+PY
+fi
 
-   # ② 保护生效后 main 无非合并提交（先 fetch，按远端 origin/main 判，不看本地 ref）
-   if [ -z "$ONLY" ] || [ "$ONLY" = "--only=2" ]; then
-     [ -f /tmp/bp.json ] || api "branch_protections" /tmp/bp.json || exit 2
-     SINCE=$(python3 -c "import json;d=json.load(open('/tmp/bp.json',encoding='utf-8'));print([b for b in d if b['branch_name']=='main'][0]['created_at'])") || exit 2
-     [ -n "$SINCE" ] || { echo "判不了：无保护创建时间"; exit 2; }
-     git fetch -q origin '+refs/heads/main:refs/remotes/origin/main' || { echo "判不了：fetch 失败"; exit 2; }
-     REF=refs/remotes/origin/main
-     TOTAL=$(git log --format=%H "$REF" | wc -l)
-     [ "$TOTAL" -gt 0 ] || { echo "判不了：远端 main 无提交"; exit 2; }
-     N=$(git log --first-parent --no-merges --since="$SINCE" --format=%H "$REF" | wc -l)
-     [ "$N" -eq 0 ] || { echo "② 红：保护生效后 $REF 仍有 $N 条非合并提交"; FAIL=1; }
-     [ "$N" -eq 0 ] && echo "② OK（自 $SINCE 起无非合并提交）"
-   fi
+# ② 保护生效后 main 无非合并提交（fetch 远端 + origin 身份校验；① 已红则跳过）
+if [ -z "$ONLY" ] || [ "$ONLY" = "--only=2" ]; then
+  if [ "$FAIL" -eq 0 ]; then
+    case "$(git config --get remote.origin.url 2>/dev/null || echo '')" in
+      *company-os-practice*) ;;
+      *) echo "判不了：origin 不是目标仓（$(git config --get remote.origin.url 2>/dev/null)）"; exit 2 ;;
+    esac
+    [ -s "$BP" ] || api "branch_protections" "$BP" || exit 2
+    SINCE=$(python3 - "$BP" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1],encoding="utf-8"))
+print([b for b in d if b["branch_name"]=="main"][0]["created_at"])
+PY
+    ) || exit 2
+    [ -n "$SINCE" ] || { echo "判不了：无保护创建时间"; exit 2; }
+    git fetch -q origin '+refs/heads/main:refs/remotes/origin/main' || { echo "判不了：fetch 失败"; exit 2; }
+    REF=refs/remotes/origin/main
+    [ "$(git log --format=%H "$REF" 2>/dev/null | wc -l)" -gt 0 ] || { echo "判不了：远端 main 无提交"; exit 2; }
+    N=$(git log --first-parent --no-merges --since="$SINCE" --format=%H "$REF" | wc -l)
+    [ "$N" -eq 0 ] || { echo "② 红：保护生效后 $REF 仍有 $N 条非合并提交"; FAIL=1; }
+    [ "$N" -eq 0 ] && echo "② OK（自 $SINCE 起无非合并提交）"
+  else
+    echo "② 跳过：① 已红（保护缺失时②无意义；三态不压平）"
+  fi
+fi
 
-   # ③ 无自动合并（可单跑：--only=3）
-   if [ -z "$ONLY" ] || [ "$ONLY" = "--only=3" ]; then
-     [ -d .gitea/workflows ] || { echo "判不了：无 .gitea/workflows"; exit 2; }
-     HITS=$(grep -rniE 'auto[_-]?merge|merge_queue' .gitea/workflows/ \
-            | sed -E 's#^[^:]+:[0-9]+:##' | grep -vE '^[[:space:]]*#' || true)
-     if [ -n "$HITS" ]; then echo "③ 红：CI 含自动合并配置："; echo "$HITS"; FAIL=1; else echo "③ OK"; fi
-   fi
+# ③ 无自动合并（可单跑）
+if [ -z "$ONLY" ] || [ "$ONLY" = "--only=3" ]; then
+  [ -d .gitea/workflows ] || { echo "判不了：无 .gitea/workflows"; exit 2; }
+  HITS=$(grep -rniE 'auto[_-]?merge|merge_queue' .gitea/workflows/ \
+         | sed -E 's#^[^:]+:[0-9]+:##' | grep -vE '^[[:space:]]*#' || true)
+  if [ -n "$HITS" ]; then echo "③ 红：CI 含自动合并配置："; echo "$HITS"; FAIL=1; else echo "③ OK"; fi
+fi
 
-   # ④ 无 Synova 业务代码 / 无客户材料
-   if [ -z "$ONLY" ] || [ "$ONLY" = "--only=4" ]; then
-     [ -d synova-agent/src ] && { echo "④ 红：Synova 业务代码混入"; FAIL=1; }
-     if git grep -lE '南宁|员工简表|人效地图' -- ':!tests/fixtures' >/dev/null 2>&1; then
-       echo "④ 红：客户材料仍在代码仓"; FAIL=1
-     else echo "④ OK"; fi
-   fi
+# ④ 无 Synova 业务代码 / 无客户材料（判不了与空集分开）
+if [ -z "$ONLY" ] || [ "$ONLY" = "--only=4" ]; then
+  [ -d synova-agent/src ] && { echo "④ 红：Synova 业务代码混入"; FAIL=1; }
+  if git grep -lE '南宁|员工简表|人效地图' -- ':!tests/fixtures' >/dev/null 2>&1; then
+    echo "④ 红：客户材料仍在代码仓"; FAIL=1
+  else echo "④ OK"; fi
+fi
 
-   [ "$FAIL" -eq 0 ] && exit 0 || exit 1
-   ```
+# ⑤ 合并方式冻结（squash/rebase 关闭、default=merge）
+if [ "$ONLY" = "--only=5" ]; then
+  api "" "$TMPD/repo.json" || exit 2
+  python3 - "$TMPD/repo.json" <<'PY' || { echo "⑤ 红：合并方式未冻结"; exit 1; }
+import json,sys
+d=json.load(open(sys.argv[1],encoding="utf-8"))
+assert d.get("allow_squash_merge") is False, "allow_squash_merge=true"
+assert d.get("allow_rebase") is False, "allow_rebase=true"
+assert d.get("default_merge_style")=="merge", "default_merge_style!=merge"
+print("⑤ OK")
+PY
+fi
 
-   **判别力自检（改坏必红；逐项分开跑，避免前项 exit 掩盖后项）**
-   | 注入/环境 | 跑法 | 期望 |
-   |---|---|---|
-   | 当前仓（保护为空） | `--only=1` | **exit 1** |
-   | 错 token | `--only=1`（`GITEA_TOKEN=bad`） | **exit 2** |
-   | 无 `.gitea/workflows` | `--only=3` | **exit 2** |
-   | main 注入一条非合并提交 | `--only=2` | **exit 1** |
-   | workflow 加 `auto_merge: true` | `--only=3` | **exit 1** |
-   | T0.2 建好保护＋CI 后 | 无参 | exit 0 |
+rm -rf "$TMPD"
+[ "$FAIL" -eq 0 ] && exit 0 || exit 1
+```
+
+   **判别力自检（逐行实跑并把命令＋exit code 贴回 PR；下表为最小集）**
+
+   | 场景 | 跑法 | 期望 | 说明 |
+   |---|---|---|---|
+   | 目标仓当前（保护为空） | `--only=1` | **1** | 空保护是红，不是判不了 |
+   | 错 token | `--only=1` | **2** | HTTP≠200 ⇒ 判不了 |
+   | 无 `.gitea/workflows` | `--only=3` | **2** | 依赖缺失 |
+   | workflow 含 `auto_merge` | `--only=3` | **1** | |
+   | 仅注释含该词 | `--only=3` | **0** | 不误报 |
+   | 造一条 main 非合并提交 | `--only=2` | **1** | |
+   | 只有 merge commit | `--only=2` | **0** | |
+   | `origin` ≠ 目标仓 | `--only=2` | **2** | 身份盲区必须判不了，不得盲绿 |
+   | 合并方式未冻结（当前仓） | `--only=5` | **1** | 目标仓实测 squash/rebase=true |
+   | 三态不压平 | 无参（当前仓） | **1** | ① 红后 ② 跳过，**不得**被 exit 2 覆盖 |
+   | T0.2 建好保护＋CI＋冻结合并 | 无参 | **0** | |
 
 4. Kimi 主链路可独立直接联系且通信不经过 DSH；WorkBuddy 未上线时明确标记辅助线未就绪；
 5. 每个 Ticket 完成均有 100±20 个汉字直接 IM，链接另列；WorkBuddy 上线后每次巡检也须符合该要求；
