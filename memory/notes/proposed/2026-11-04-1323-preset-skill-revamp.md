@@ -16,7 +16,7 @@
 | 2 | DEV DOC v4（八节）＋关卡 A 收缩（风险触发／一个复核者／五问）＋编码指令模板重写 | `.synova/skills/dev-doc-spec/SKILL.md`、`template/编码指令模板.md`、`.synova/skills/devdoc-gate-a/SKILL.md`（＋镜像） |
 | 3 | 执行端：队长接单核前提/按需协作规模/带证据退回；coding 开工四问＋单任务轻量流程/不冒充独立验收；两 skill 收缩；两份 preset 元数据与 coding README 同步 | `.synova/skills/{squad-discipline,dsh-code-standards}/SKILL.md`（＋镜像）｜`docs/synova/presets/synova-coding/{cordis.patch.yml,preset.yml,README.md}`｜`docs/synova/presets/synova-squad-lead/{cordis.patch.yml,preset.yml}` |
 
-**文件数（命令口径）**：`git status --porcelain` tracked 改动 = **21**（15 个源文件 ＋ 6 个 `.dsh/skills/**` 镜像）；另新增 claim＋本 Note。`git diff --stat` 汇总见提交回执。
+**文件数（命令口径）**：`git status --porcelain` tracked 改动 = **21**（15 个源文件 ＋ 6 个 `.dsh/skills/**` 镜像）；另新增 claim＋本 Note ⇒ **提交合计 23 个文件**（`git diff --name-status <base>..HEAD` = 23；排除 `.dsh` = 17）。`git diff --stat` 汇总见提交回执。
 
 ## 二、状态区分（不得合并成"全部完成"）
 
