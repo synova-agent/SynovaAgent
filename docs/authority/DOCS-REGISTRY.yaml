@@ -1905,3 +1905,10 @@ documents:
     status: active
     owner: CTO
     note: "#1323 实施端的 .dsh/skills 镜像门禁豁免件；含豁免件自覆盖与 DOCS-REGISTRY 登记行。"
+  # ---- #1333 2026-11-04：DSH rc.5 断面同步豁免登记 ----
+  - id: DOC-1333
+    type: decision
+    path: gate-exemptions/2026-11-04-1333-dsh-rc5.md
+    status: active
+    owner: CTO
+    note: "#1333：DSH 断面由 rc.2 升 rc.5（源码 /Users/wane/src/dsh-src-0.2.1-rc.5 @ b830ec950f）；仅版本入口同步，不改行为。"
