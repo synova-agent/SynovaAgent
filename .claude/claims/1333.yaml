@@ -4,6 +4,8 @@ writeset:
   - agents/P2-能部署/AGENTS.md
   - docs/synova/STATE.md
   - .claude/claims/1333.yaml
+  - gate-exemptions/2026-11-04-1333-dsh-rc5.md
+  - docs/authority/DOCS-REGISTRY.yaml
 done:
   - verify: python3 scripts/control-tower/check-dsh-anchor.py --repo . --no-tree-check
 note: "#1333：DSH rc.2→rc.5；源码已 clone 到 /Users/wane/src/dsh-src-0.2.1-rc.5（HEAD b830ec950f）。"
