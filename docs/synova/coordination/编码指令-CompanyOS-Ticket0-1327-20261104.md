@@ -1,10 +1,10 @@
 # DEV DOC · CompanyOS Ticket 0——最小多 Agent 协作闭环
 
-> **版本**：**v1.4**（v1.3 ＋ 第三次复审：K1／K8／N2／N3／N4 与 5 条必修发现）  
-> **日期**：2026-11-04（v1.4 修订 2026-11-05 01:55）  
+> **版本**：**v1.5**（v1.4 ＋ 第五次复审：§4.4 可判口径重写／advisor 去模板字段／K8 脚本补 ④⑤ 与清理）  
+> **日期**：2026-11-04（v1.5 修订 2026-11-05 02:20）  
 > **任务**：#1327  
 > **Issue**：`synova-agent/SynovaAgent#1327`  
-> **状态**：**T0.1 部分完成；关卡 A 已三轮（初审＋复验＋第三次），v1.4 已按最新复审再修；待第四次复审；未通过不得写实现**  
+> **状态**：**T0.1 部分完成；关卡 A 已五轮（初审＋复验＋三次收缩复审），v1.5 已按第五次复审再修；待第六次复审；未通过不得写实现**  
 > **本版修订**：见 §0.2（K1–K12）、§0.2b（N1–N4）、§5.8（S1 变更落地：不新增 profile，角色走 Context Pack）
 > **模块**：CompanyOS 自用先行·最小协作控制面  
 > **目标施工仓**：`win-push/company-os-practice`（Gitea 私有仓，默认分支 `main`）  
@@ -369,41 +369,45 @@ synova-agent/docs/synova/presets/**  # 不重写人格
 
 **执行与核验**（T0.0 前置，未完成不得开 T0.2）：
 ```bash
-# 顺序固定：复制 → 归位 → 集合相等 → 逐文件 sha256 → 删原件
+# 通过口径（唯一）：代码仓 41 件里，**每一件**在研究仓同前缀都有副本且 sha256 相等。
+# 不要求"两侧集合相等"——研究仓另有自有的历史件，不应因此判红。
+QR='-c core.quotepath=false'          # 必须：否则 38/41 中文名被 C-quote
 RESEARCH=<synova-research 克隆>
 PREFIX='02-商业研究/哇呢宝贝-FDE落地'
 DEST="$RESEARCH/$PREFIX"
-QR='-c core.quotepath=false'          # 必须：否则 38/41 中文名被 C-quote，集合必不相等
+SRC=48580c5d
 
-# 0) 清单（两侧同一口径；.gitignore 纳入清单——代码仓保留并重写，研究仓也留一份）
-git -C <code-repo> $QR ls-tree -r --name-only 48580c5d | sort > /tmp/src.list
-git -C "$RESEARCH" $QR ls-tree -r --name-only origin/main -- "$PREFIX" \
-  | sed "s|^$PREFIX/||" | grep -v '^交付-' | sort > /tmp/dst.list
+# 1) 代码仓清单（含 .gitignore 以便比对；.gitignore 本身不迁移，见下）
+git -C <code-repo> $QR ls-tree -r --name-only "$SRC" | sort > /tmp/src.list
+echo "src=$(wc -l < /tmp/src.list)"
 
-# 1) 复制（仅当目的地缺件；本机无 rsync）
+# 2) 复制（幂等；本机无 rsync）
 mkdir -p "$DEST"
-git -C <code-repo> archive 48580c5d | tar -x -C "$DEST" || exit 1
+git -C <code-repo> -c core.quotepath=false archive "$SRC" | tar -x -C "$DEST" || exit 1
 
-# 2) 集合相等（不是 ≥41）
-diff /tmp/src.list /tmp/dst.list && echo "SET-EQUAL ($(wc -l < /tmp/src.list)/$(wc -l < /tmp/src.list))"
-
-# 3) 逐文件 sha256（路径带 quotepath，git show 才能解析中文名）
+# 3) 逐文件核验（缺件/不等即红，并逐条点名）
+miss=0; diff=0; ok=0
 while IFS= read -r f; do
-  a=$( git -C <code-repo> $QR show "48580c5d:$f" | sha256sum | cut -d' ' -f1 )
+  if [ ! -f "$DEST/$f" ]; then echo "MISSING: $f"; miss=$((miss+1)); continue; fi
+  a=$( git -C <code-repo> $QR show "$SRC:$f" | sha256sum | cut -d' ' -f1 )
   b=$( sha256sum "$DEST/$f" | cut -d' ' -f1 )
-  [ "$a" = "$b" ] || { echo "DIFF: $f"; exit 1; }
+  if [ "$a" = "$b" ]; then ok=$((ok+1)); else echo "DIFF: $f"; diff=$((diff+1)); fi
 done < /tmp/src.list
+echo "files=$((ok+diff+miss)) ok=$ok diff=$diff missing=$miss"
+[ "$diff" -eq 0 ] && [ "$miss" -eq 0 ] || { echo "核验未过：先出上述差异清单，由 CTO 裁哪版权威"; exit 1; }
 echo "SHA256-ALL-EQUAL"
 
-# 4) 删代码仓原件（走 PR，不直推 main）
+# 4) 删代码仓原件（走 PR；.gitignore 保留并重写为代码仓版，不删）
 git rm -r 00-最终方案 01-体系与设计 02-方法与路线 03-基础信息与采集 04-复核与整改 05-参考 06-历史版
+git rm -f MANIFEST.md README.md        # 由代码仓版重写替换
 
-# 5) 验收：代码仓 grep 客户材料 0 命中
+# 5) 验收：代码仓（含根件）不得再有客户材料
 git grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' | wc -l   # 必须 0
 ```
-- **权威裁定**：研究仓同前缀若已有副本，且 **sha256 全等 ⇒ 以研究仓为准、只删代码仓原件**；不一致 ⇒ **先出差异清单（逐文件 sha256 对比），由 CTO 裁哪版权威**（实测现状：同前缀 93 件＝平铺 41＋交付子目录；与目标仓同基名 40 件中 **33 全等／7 不一致**，`.gitignore` 无副本 ⇒ 必落 CTO 停点，禁止两边都留）。
-- **布局**：目的地保持与代码仓相同的 7 层目录；研究仓现有平铺件由 T0.0 一次性归位（同一 PR）。
-- **`.gitignore`**：两侧都保留（代码仓重写业务版；研究仓存副本），已纳入上面的清单口径。
+- **`.gitignore` 不迁移**：代码仓保留并重写为代码仓版；研究仓不要求有它（上面的 step 3 会把它算进清单，若研究仓无副本即 `MISSING` ⇒ 因此 step 3 的清单在核验时**排除 `.gitignore`**：`grep -v '^\.gitignore$' /tmp/src.list > /tmp/src.verify`，用该文件喂 while）。
+- **权威裁定**：研究仓同前缀若已有同批副本 —— sha256 全等 ⇒ 以研究仓为准、只删代码仓原件；**不一致 ⇒ 先出差异清单（上面 DIFF/MISSING 行），由 CTO 裁哪版权威**，不得两边都留。**本件不写死差异件数**（会随研究仓状态漂移），以命令输出为准。
+- **布局**：研究仓按代码仓的 7 层目录落位；研究仓既有的平铺件归位属其自身治理，不在本卡写集内。
+- **`.gitignore` 之外的根件**（`README.md`／`MANIFEST.md`）随迁移删除，代码仓重写为代码仓版。
 - 本机**无 rsync**（实测）；`tar`／`sha256sum`／`cp` 可用 ⇒ 只用上述命令。
 - 迁移后**必须回填本件头部的基线 SHA**
 - §0.3 窄映射引用的 8 处文档路径，迁移后统一指向研究仓（T0.0 完成时同步更新本表）。
@@ -834,8 +838,8 @@ high ⇒ 必须派 K3 独立复核（A4）；medium ⇒ CTO 自行决定是否�
 ### T0.3 · DSH ACP Adapter、Session Router 与上下文交接
 
 - **模块锚**：同 §1；
-- **目标**：统一用出厂 `acp` profile 启动／恢复／close DSH 会话，持久化 `sessionId ↔ 物理 cwd`，维护 SessionRef／Lease／epoch；按角色生成**版本化 Context Pack**（`role_template_version` ＋ `role_template_hash`）并作为首条 prompt 投递，完成 CTO 交接；**并产出 `role_template` v1 三份正文（cto／coding／auditor）与 sha256，落 `config/role-templates/`（本任务承接，解决「硬停点 2 的前提无人承接」）**；
-- **范围／不做**：`src/adapters/dsh/**`、`src/context/**`、`src/policy/**`、对应测试；不接飞书、Kimi／WorkBuddy；
+- **目标**：统一用出厂 `acp` profile 启动／恢复／close DSH 会话，持久化 `sessionId ↔ 物理 cwd`，维护 SessionRef／Lease／epoch；按角色生成**版本化 Context Pack**（`role_template_version` ＋ `role_template_hash`）并作为首条 prompt 投递，完成 CTO 交接；**并产出 `role_template` v1 三份正文（cto／coding／auditor）与 sha256，落 `config/role-templates/`（本任务承接，解决「硬停点 2 的前提无人承接」）**；🔴 **本任务的第 1 步（只产模板＋sha256）属「补资料」，不受硬停点 2 阻断**——硬停点 2 阻断的是**写 Adapter／消费 Context Pack 的代码**；模板版本化之后方可继续第 2 步；
+- **范围／不做**：`src/adapters/dsh/**`、`src/context/**`、`src/policy/**`、**`config/role-templates/**`（新建：三份 `role_template` 正文＋`manifest.json` 记 sha256）**、对应测试；不接飞书、Kimi／WorkBuddy；
 - **现状证据**：T0.1 DSH ACP 实测；T0.2 核心接口；
 - **关键契约**：§5.2–§5.8；
 - **真实入口与验收**：真实 ACP 会话完成启动、同 cwd 补充指令恢复、`stopReason` 回合判定、失忆接回和旧 epoch 拒绝；close 不得冒充强制停止；
@@ -910,15 +914,17 @@ Schema 校验器：ajv 8.20.0 严格模式（实测 `additionalProperties:false`
 持久化：`node:sqlite` DatabaseSync（内置，实测建表/插入/查询通过）——**不用 better-sqlite3**
 测试命令：`npm test` **不得直接写 `node --test`**（实测：空 `tests/` 时 `tests 0/pass 0/fail 0/RC=0` ⇒ 0 测试也全绿）。**必须**用守卫脚本 `scripts/accept/run-tests.sh`（待建，T0.2 交付）：
 
-   ```bash
-   #!/usr/bin/env bash
-   set -u
-   out="$(node --test 2>&1)"; rc=$?
-   echo "$out"
-   [ "$rc" -eq 0 ] || exit 1
-   grep -qE '^ℹ pass [1-9][0-9]*$' <<<"$out" || { echo "0 tests executed → exit 2（禁假绿）"; exit 2; }
-   exit 0
-   ```
+```bash
+#!/usr/bin/env bash
+# scripts/accept/run-tests.sh（新建，T0.2 交付）——原样落盘，不要缩进
+set -u
+export PYTHONIOENCODING=utf-8
+out="$(node --test 2>&1)"; rc=$?
+echo "$out"
+[ "$rc" -eq 0 ] || exit 1
+grep -qE '^ℹ pass [1-9][0-9]*$' <<<"$out" || { echo "0 tests executed → exit 2（禁假绿）"; exit 2; }
+exit 0
+```
    判据：**pass>0 且 fail=0**；空 `tests/` ⇒ **exit 2**（不是 0）；改坏用例 ⇒ exit 1。`package.json` 写 `"test": "bash scripts/accept/run-tests.sh"`。
 本地启动命令：`npm run dev`（T0.2 首批提交建立；端口与命令须回填本节）
 Gitea 测试仓：win-push/company-os-practice（仅使用批准的合成对象）
@@ -956,7 +962,7 @@ WorkBuddy 版本／模型：自动化实物已确认；混元 3 与配置窗口�
 | **A6** | 等待／阻塞／高风险审批 | `waiting_input`、`blocked`、高风险各造一次 | 飞书卡片；`GET /v1/attentions` | §5.10 审批绑定六元组 | 缺审批卡／普通自修错误也发 |
 | **A7** | CTO 失忆接回 | 结束 CTO 会话，新会话只给 Context Pack | 新会话首个 Handoff Ack | §5.7＋§5.6 | 需人工补料／把旧摘要当事实 |
 | **A8** | 会话交接旧 epoch 拒绝 | 交接后旧会话再提交 Report | `POST /v1/reports` 返回码 | §5.4 epoch＋fencing | 旧 epoch 被接受（应 409） |
-| **A9** | Kimi 直接咨询 | 创始人跑 `kimi -p "…"` 并要求引用 Ticket | ①`kimi-report` 调 `POST /v1/reports` → **201**；②`kimi-readonly` 调同路由 → **403**；③Hub 日志 client 归属正确；④`%DSH_HOME%\sessions` 无新目录；⑤回流的 advisory 带 `context_pack_id`＋`role_template_hash` | §3.3；§5.13b；§5.6 角色契约 | ①非 201／②非 403／期间产生 DSH 会话／获得 `kimi-report` 之外的任何写权限／**以模型自称角色作为证据** |
+| **A9** | Kimi 直接咨询 | 创始人跑 `kimi -p "…"` 并要求引用 Ticket | ①`kimi-report` 调 `POST /v1/reports` → **201**；②`kimi-readonly` 调同路由 → **403**；③Hub 日志 client 归属正确；④`%DSH_HOME%\sessions` 无新目录；⑤回流的 advisory 带 `context_pack_id` 且 `pack.role==advisor`（**不带** `role_template_*`，见 §5.13b 步1） | §3.3；§5.13b；§5.6 角色契约 | ①非 201／②非 403／期间产生 DSH 会话／获得 `kimi-report` 之外的任何写权限／**以模型自称角色作为证据** |
 | **A10** | WorkBuddy 正常巡检（辅助） | 在 WorkBuddy 内触发一次固定批次 | 创始人 IM；`summary_100_chars` | §5.11 | 无消息／用邮件重复发 |
 | **A11** | WorkBuddy 异常巡检（辅助） | 造一个过期 Lease | 原 Issue 证据评论＋Hub Attention | §3.4 | 只发 IM 不留证据／自动"修复" |
 | **A12** | WorkBuddy IM 失败（辅助） | 断开 IM 通道后触发 | `im_delivery=failed`＋邮件或"降级不可用" | §5.11 | 记成 delivered／静默 |
@@ -1008,7 +1014,9 @@ set -u
 REPO=win-push/company-os-practice
 ONLY="${1:-}"
 FAIL=0; UNKNOWN=0
+export PYTHONIOENCODING=utf-8          # 让 python traceback 也走 UTF-8（N-5）
 TMPD="$(mktemp -d)"; BP="$TMPD/bp.json"
+trap 'rm -rf "$TMPD"' EXIT INT TERM    # 早退也清理（N-4）
 
 api() {  # api <path> <outfile>；0=200, 2=判不了
   local url="$GITEA/api/v1/repos/$REPO/$1" out="$2" code
@@ -1071,14 +1079,17 @@ fi
 
 # ④ 无 Synova 业务代码 / 无客户材料（判不了与空集分开）
 if [ -z "$ONLY" ] || [ "$ONLY" = "--only=4" ]; then
+  git rev-parse --git-dir >/dev/null 2>&1 || { echo "判不了：不在 git 仓库内（禁把看不见当没问题）"; UNKNOWN=1; }
+  [ -n "$(git rev-parse --git-dir 2>/dev/null)" ] && {
   [ -d synova-agent/src ] && { echo "④ 红：Synova 业务代码混入"; FAIL=1; }
   if git grep -lE '南宁|员工简表|人效地图' -- ':!tests/fixtures' >/dev/null 2>&1; then
     echo "④ 红：客户材料仍在代码仓"; FAIL=1
   else echo "④ OK"; fi
+  }
 fi
 
 # ⑤ 合并方式冻结（squash/rebase 关闭、default=merge）
-if [ "$ONLY" = "--only=5" ]; then
+if [ -z "$ONLY" ] || [ "$ONLY" = "--only=5" ]; then
   api "" "$TMPD/repo.json" || exit 2
   python3 - "$TMPD/repo.json" <<'PY' || { echo "⑤ 红：合并方式未冻结"; exit 1; }
 import json,sys
@@ -1090,7 +1101,6 @@ print("⑤ OK")
 PY
 fi
 
-rm -rf "$TMPD"
 [ "$FAIL" -ne 0 ] && exit 1
 [ "$UNKNOWN" -ne 0 ] && exit 2
 exit 0
@@ -1109,14 +1119,16 @@ exit 0
    | 只有 merge commit | `--only=2` | **0** | |
    | `origin` ≠ 目标仓 | `--only=2` | **2** | 身份盲区必须判不了，不得盲绿 |
    | 合并方式未冻结（当前仓） | `--only=5` | **1** | 目标仓实测 squash/rebase=true |
-   | 三态不压平 | 无参（当前仓） | **1** | ① 红优先于 ③ 的「无 workflows 判不了」（聚合：先红后判不了） |
+   | 三态不压平 | 无参（当前仓） | **1** | ① 红优先于 ③ 的「无 workflows 判不了」（聚合：先红后判不了）；且无参**也会跑 ⑤** |
+| 非 git 目录 | `--only=4` | **2** | 禁把 `git grep` 失败吞成通过（N-1） |
+| 早退清理 | 任一 `exit 2` 路径 | — | `trap` 清理 `mktemp -d`，不留垃圾（N-4） |
    | T0.2 建好保护＋CI＋冻结合并 | 无参 | **0** | |
 
 4. Kimi 主链路可独立直接联系且通信不经过 DSH；WorkBuddy 未上线时明确标记辅助线未就绪；
 5. 每个 Ticket 完成均有 100±20 个汉字直接 IM，链接另列；WorkBuddy 上线后每次巡检也须符合该要求；
 6. 所有失败、跳过和未验证项已列入回执；
 7. 关卡 A 初审 K1–K12 已由原复核者复验，并抽验三条；不重开完整评审。
-8. 🔴 **角色一致性有机器证据**：每个角色会话的 Report 均带 `context_pack_id`＋`role_template_version`＋`role_template_hash`，Hub 校验三元组一致；**验收材料中不得出现"模型自称某角色"作为证据**。
+8. 🔴 **角色一致性有机器证据**：**执行链角色会话（`cto`／`worker`／`auditor`）**的 Report 均带 `context_pack_id`＋`role_template_version`＋`role_template_hash`，Hub 校验三元组一致；`advisor`／`inspector` 不在本项范围（无角色模板，见 §5.2 映射表与 §5.13b）；**验收材料中不得出现"模型自称某角色"作为证据**。
 
 ---
 
