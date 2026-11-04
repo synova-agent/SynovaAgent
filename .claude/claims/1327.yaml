@@ -9,4 +9,4 @@ done:
   - verify: grep -n 'DOC-1330-01' docs/authority/DOCS-REGISTRY.yaml
   - verify: grep -n 'DOC-1332-01' docs/authority/DOCS-REGISTRY.yaml
   - verify: grep -n '^> \*\*任务\*\*：#1327' docs/synova/coordination/编码指令-CompanyOS-Ticket0-1327-20261104.md
-note: "CompanyOS Ticket 0 DEV DOC v1.7 ＋ T0.1 探针证据册 ＋ 受保护路径豁免（PR #1336；#1327 主卡 / #1330 证据 / #1332 豁免登记；registry 追加三条 DOC-1327-01/1330-01/1332-01）。"
+note: "CompanyOS Ticket 0 DEV DOC v1.8 ＋ T0.1 探针证据册 ＋ 受保护路径豁免（PR #1336；#1327 主卡 / #1330 证据 / #1332 豁免登记；registry 追加三条 DOC-1327-01/1330-01/1332-01）。"

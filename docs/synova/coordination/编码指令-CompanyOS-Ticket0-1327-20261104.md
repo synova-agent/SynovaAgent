@@ -1,10 +1,10 @@
 # DEV DOC · CompanyOS Ticket 0——最小多 Agent 协作闭环
 
-> **版本**：**v1.7**（v1.6 ＋ 第七次复审：迁移 step4/5 绑定目标仓／根件口径三处统一／Schema 与 Pack 措辞收口）  
-> **日期**：2026-11-04（v1.7 修订 2026-11-05 03:10）  
+> **版本**：**v1.8**（v1.7 ＋ 第八次复审：step5 三态守卫修正／判别力表按实测重写／schemas 七份口径）  
+> **日期**：2026-11-04（v1.8 修订 2026-11-05 03:40）  
 > **任务**：#1327  
 > **Issue**：`synova-agent/SynovaAgent#1327`  
-> **状态**：**T0.1 部分完成；关卡 A 已七轮（初审＋复验＋五次收缩复审），v1.7 已按第七次复审再修；待第八次复审；未通过不得写实现**  
+> **状态**：**T0.1 部分完成；关卡 A 已八轮（初审＋复验＋六次收缩复审），v1.8 已按第八次复审再修；待第九次复审；未通过不得写实现**  
 > **本版修订**：见 §0.2（K1–K12）、§0.2b（N1–N4）、§5.8（S1 变更落地：不新增 profile，角色走 Context Pack）
 > **模块**：CompanyOS 自用先行·最小协作控制面  
 > **目标施工仓**：`win-push/company-os-practice`（Gitea 私有仓，默认分支 `main`）  
@@ -323,7 +323,7 @@ src/adapters/feishu/**      # Hub 直连飞书 OpenAPI
 src/adapters/kimi/**        # 本地 Kimi CLI 与独立 Context／Report 接口
 src/adapters/workbuddy/**   # 辅助巡检报告、Attention 接收；不代替其定时器
 src/host/**                 # HTTP、SQLite、Outbox、本地 Attention 页
-schemas/**                  # 六份核心 Schema
+schemas/**                  # 六份核心 Schema ＋ advisor-report（顾问专用，见 §5.1/§5.13b）
 config/**                   # 非密钥路由与 Policy 示例
 tests/**                    # 单元、契约、集成与故障测试
 scripts/**                  # 最小开发／验收命令，不含 Synova 门禁
@@ -369,6 +369,7 @@ synova-agent/docs/synova/presets/**  # 不重写人格
 
 **执行与核验**（T0.0 前置，未完成不得开 T0.2）：
 ```bash
+# 先把 <code-repo> 与 <synova-research 克隆> 换成绝对路径（不替换会直接 bash 语法错）
 # 通过口径（唯一）：代码仓的 **7 个内容目录（38 件）** 逐件在研究仓同前缀都有副本且 sha256 相等。
 # 根件（README.md／MANIFEST.md／.gitignore）**不迁移**：前两者由代码仓重写为代码仓版，
 #   .gitignore 仅代码仓需要 —— 因此它们既不进复制集、也不进核验集（避免与"不迁移"自相矛盾）。
@@ -404,11 +405,19 @@ git -C <code-repo> rev-parse --git-dir >/dev/null 2>&1 || { echo "判不了：<c
 git -C <code-repo> rm -r $DIRS || { echo "红：删除 7 目录失败"; exit 1; }
 git -C <code-repo> rm -f MANIFEST.md README.md || { echo "红：删除根件失败"; exit 1; }
 
-# 5) 验收：代码仓不得再有客户材料（绑定目标仓；空集也必须真跑过）
-n=$(git -C <code-repo> grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' | wc -l) \
-  || { echo "判不了：git grep 执行失败"; exit 2; }
-[ "$n" -eq 0 ] || { echo "红：仍有 $n 个文件含客户材料"; exit 1; }
-echo "step5 OK（0 命中）"
+# 5) 验收：代码仓不得再有客户材料（绑定目标仓；无匹配与执行失败必须分开）
+#    ⚠️ 不能用 `n=$(... | wc -l)` 再判 `||`：管道退出码是 wc 的（恒 0）⇒ 守卫永不可达。
+#    git grep 语义：0=有匹配，1=无匹配，≥2=执行失败。据此三态。
+set +e
+out=$(git -C <code-repo> grep -lE '南宁|员工简表|人效地图|流程制度卡' -- ':!tests/fixtures' 2>/dev/null)
+rc=$?
+set -e
+case "$rc" in
+  0) n=$(printf '%s\n' "$out" | grep -c . || true)
+     echo "红：仍有 $n 个文件含客户材料"; exit 1 ;;
+  1) echo "step5 OK（0 命中）" ;;
+  *) echo "判不了：git grep 执行失败（rc=$rc）"; exit 2 ;;
+esac
 ```
 - **`.gitignore`**：**不迁移、不复制、不核验**（代码仓保留）。上面 step 1/2/3 的清单都不含它。
 - **`README.md`／`MANIFEST.md`**：**不迁移**；代码仓改为代码仓版。这样 step 2 不会覆盖研究仓自有的 `README.md`（实测过：整目录 archive 会覆盖它，65+/117-）。
@@ -932,7 +941,7 @@ WorkBuddy 版本／模型：自动化实物已确认；混元 3 与配置窗口�
 凭证：同账号 `win-push` 下 **5 枚 Gitea scoped token（hub／cto-bot／coding-bot／k3-bot／workbuddy-bot）＋ 2 枚 Hub-only token（`kimi-readonly`／`kimi-report`，均不下发 Gitea）**，共 7 枚，可区分、可单独吊销（下表）
 ```
 
-**测试守卫脚本（新建，T0.2 交付；**原样落盘，不要缩进**）**
+**测试守卫脚本（新建，T0.2 交付；**原样落盘，不要缩进**）**（另一段门禁脚本 `check-main-integrity.sh` 在 §7.5）
 
 ```bash
 #!/usr/bin/env bash
@@ -1139,7 +1148,11 @@ exit 0
    | 合并方式未冻结（当前仓） | `--only=5` | **1** | 目标仓实测 squash/rebase=true |
    | 三态不压平 | 无参（当前仓） | **1** | ① 红优先于 ③ 的「无 workflows 判不了」（聚合：先红后判不了）；且无参**也会跑 ⑤** |
 | 非 git 目录 | `--only=4` | **2** | 禁把 `git grep` 失败吞成通过（N-1） |
-| 迁移 step4/5 在错误 cwd | 在非目标仓目录跑 §4.4 step4/5 | **2 或 1** | 禁「什么都没删也返回 0」（F1） |
+| 迁移 step4 目标参数指向非 git 目录 | 传 `<code-repo>=非git` | **2** | 判不了，不得当通过（F1） |
+| 迁移 step4 目标参数指向非目标 git 仓 | 传 `<code-repo>=其他仓` | **1** | 红（pathspec 不匹配） |
+| 迁移 step5 单跑·非 git 目录 | 传 `<code-repo>=非git` | **2** | 必须真跑过；`git grep` rc≥2 ⇒ 判不了（F1 残留修复） |
+| 迁移 step5 单跑·有客户材料 | 有命中的仓 | **1** | 红 |
+| 迁移 step4/5 cwd 无关 | 错误 cwd + 正确目标 | **0** | 绑定后 cwd 不应影响结果 |
 | 早退清理 | 任一 `exit 2` 路径 | — | `trap` 清理 `mktemp -d`，不留垃圾（N-4） |
    | T0.2 建好保护＋CI＋冻结合并 | 无参 | **0** | |
 
@@ -1198,7 +1211,7 @@ exit 0
 
 | 检查项 | 结论 |
 |---|---|
-| 同一路径是否被两处要求互斥？ | 否。写集只在 §4.1；§4.2 全为 Synova 仓或"任何 main／客户数据"表述，无交集。**§4.4 根件三处口径已核一致**（§0.2b／§4.4 表／§4.4 命令均为"38 件迁出、根件不迁"） |
+| 同一路径是否被两处要求互斥？ | 否。写集只在 §4.1；§4.2 全为 Synova 仓或"任何 main／客户数据"表述，无交集。**§4.4 根件四处口径已核一致**（§0.2b／§4.4 判断口径／§4.4 表／§4.4 命令均为「38 件迁出、根件不迁」） |
 | 同一动作是否两处不同判据？ | 否。停止语义只在 §5.8 定义（`close` 只释放句柄，Lease 由 Hub 置位）；§5.4、§7.2 A14、§7.5 第 1 条引用同一处 |
 | SessionRef 是否一处说"不透明"、另一处又要求解析？ | 否。v1.0 的矛盾已修：§5.4 现明确 `session_ref` 必须与 `workspace` 成对持久化 |
 | 验收行是否都能落到 §5 某个契约？ | 是。A1→5.9；A2→5.5+5.13；A3/A8→5.4+5.8；A4→5.6；A5/A6/A13→5.10；A7→5.7；A9→3.3；A10/A11/A12→5.11；A14→5.8+5.4 |
