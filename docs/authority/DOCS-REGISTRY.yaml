@@ -9,6 +9,27 @@
 
 documents:
 
+  - id: DOC-1327-01
+    type: devdoc
+    path: docs/synova/coordination/编码指令-CompanyOS-Ticket0-1327-20261104.md
+    status: draft
+    owner: CTO
+    note: "CompanyOS Ticket 0 DEV DOC v1.4 (minimal multi-agent loop); gate A round 4 pending; implementation must not start before pass."
+
+  - id: DOC-1330-01
+    type: research
+    path: docs/synova/coordination/T0.1-探针证据-CompanyOS-20261104.md
+    status: draft
+    owner: CTO
+    note: "T0.1 probe evidence for CompanyOS Ticket 0: repo baseline, DSH ACP/headless, Feishu, Kimi, WorkBuddy, Gitea, Windows host; three verification rounds."
+
+  - id: DOC-1332-01
+    type: governance
+    path: gate-exemptions/2026-11-05-1327-docs-registry.md
+    status: active
+    owner: CTO
+    note: "Gate exemption: append-only registry entries for PR of #1327; self-covering line per #623."
+
     # ---- CTO 2026-11-02：#1266 gate-A 镜头 7 受保护路径豁免（D2 登记）----
     - id: DOC-1240
       type: decision
