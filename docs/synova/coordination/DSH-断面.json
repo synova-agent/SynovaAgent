@@ -1,13 +1,13 @@
 {
   "authority": "DSH 断面唯一事实源（D943，2026-09-24）",
   "current": {
-    "version": "0.2.1-rc.2",
-    "head": "687f282e86",
-    "tag": "dsh-v0.2.1-rc.2",
-    "path": "/Users/wane/src/dsh-src-0.2.1-rc.2",
-    "recorded_at": "2026-10-20T03:40:00+08:00",
+    "version": "0.2.1-rc.5",
+    "head": "b830ec950f",
+    "tag": "dsh-v0.2.1-rc.5",
+    "path": "/Users/wane/src/dsh-src-0.2.1-rc.5",
+    "recorded_at": "2026-11-04T00:00:00+08:00",
     "recorded_by": "synova-cto",
-    "note": "2026-10-20 重建：旧锚 path /Users/wane/src/deepseek-harness-017 已删除 ⇒ check-dsh-anchor 长期 DEGRADED。新锚指向 dsh-v0.2.1-rc.2 的独立 worktree（源码与实跑 app 版本对齐）。★ DSH 口径（2026-10-20 定）：DSH 是【开发工具】，不是产品运行时依赖 —— 本文件只服务开发侧断面，不得被引作『产品支持 DSH 某版本』。"
+    "note": "2026-11-04 按创始人令升 rc.5；源码 git clone 已核 HEAD=b830ec950faba0a46dda564be3e2d854afed94f1（tag dsh-v0.2.1-rc.5）。DSH 是开发工具面断面，不构成产品支持范围。"
   },
   "superseded": [
     {
@@ -21,6 +21,12 @@
       "head": "46a7f68b",
       "retired_at": "2026-10-20T03:40:00+08:00",
       "reason": "旧锚 path 已删（/Users/wane/src/dsh-src-0.2.1-rc.2 的上一代 /Users/wane/src/deepseek-harness-017 不存在）＋ DSH 已升至 0.2.1-rc.2。**该 path 不存在 ≠ 树被移动**，是环境已不存在 ⇒ 不得再作现状引用。"
+    },
+    {
+      "version": "0.2.1-rc.2",
+      "head": "687f282e86",
+      "retired_at": "2026-11-04T00:00:00+08:00",
+      "reason": "升 0.2.1-rc.5（创始人 2026-10-31/11-04 口径）；旧 path 与 commit 仅历史引用。"
     }
   ],
   "policy": {
@@ -46,6 +52,9 @@
     "0.1.7-alpha.2",
     "0.1.7-rc.1",
     "0.2.0-rc.2",
-    "0.2.1-rc.2"
+    "0.2.1-rc.2",
+    "0.2.1-rc.3",
+    "0.2.1-rc.4",
+    "0.2.1-rc.5"
   ]
 }
