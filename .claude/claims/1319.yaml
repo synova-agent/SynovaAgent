@@ -4,7 +4,7 @@ writeset:
   - docs/authority/GATE-STANDARD.md
   - .claude/claims/1319.yaml
   - memory/notes/proposed/2026-11-04-1319-g0-gate-source-switch.md
-  - docs/synova/reviews/1324.*.json
+  - docs/synova/reviews/1324.92fe95c784d1.json
 done:
   - verify: bash scripts/doc-system/check-doc-truth.sh
 note: "#1319 T1：AGENTS.md 三处（L3 判据源切至裁定 v1.0／L270 legacy Q2 退役／L305 四条件注）＋ docs/authority/GATE-STANDARD.md 首部 2 行状态指针；依据规格 §6 T1。"
