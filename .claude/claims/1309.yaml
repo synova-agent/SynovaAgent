@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1309.yaml
+  - scripts/pre-push-check.sh
+  - tests/control-tower/d331-split-warn.test.sh
+  - gate-exemptions/2026-11-02-1309-d331-split.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-11-02-1309-d331-split.md
+done:
+  - verify: "bash tests/control-tower/d331-split-warn.test.sh"
+note: "#1309 D331 拆分：L4-2 bypass 对账降为只报（强制点移服务端），L4-1 tag 校验保留。"

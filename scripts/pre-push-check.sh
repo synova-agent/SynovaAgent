@@ -542,10 +542,18 @@ if [[ ! -f "$D331_LIB" ]]; then
 fi
 # shellcheck source=/dev/null
 . "$D331_LIB"
+# ── D331 拆分（#1309，创始人 2026-11-02）：L4-2 对账**降为只报** ──────────────
+# 理由：① 防护重复——CI（SYNO_CI=1）已重跑全套 pre-commit，本地绕过毫无收益；
+#       ② 证据在仓外（.sessions/*/bypass.log 被 .gitignore 忽略）⇒ 不可 git cat-file 复跑、
+#          K3 结构性失明，违反"证据必须可复跑"纪律；
+#       ③ 本脚本注释自认打过三层补丁（D1145 停跟踪 → 空集 exit 0 → HASH= 前缀锚定）。
+# 处置：**失败只警告、不阻断**；强制点移到服务端（main 必须 PR ＋ local-gates 绿），
+#       追溯改走仓内 gate-exemptions/（可审计）。L4-1（版本 tag 祖先校验）完全不受影响。
 if ! d331_gate "$RESOLVER" "$CHECK_BYPASS"; then
   echo ""
-  echo -e "  ${RED}❌ bypass.log 对账未通过 — 推送已拒绝 (D331)${RESET}"
-  exit 1
+  echo -e "  ${YELLOW}⚠️  bypass.log 对账未通过 — **只报不拦**（#1309 D331 拆分）${RESET}"
+  echo -e "  ${YELLOW}    强制点在服务端：main 必须 PR ＋ local-gates 绿；追溯改走仓内 gate-exemptions/${RESET}"
+  echo -e "  ${YELLOW}    详见：派单件/2026-11-02-方案-D331-base陈旧误拦.md（base 陈旧另卡）${RESET}"
 fi
 
 echo ""
