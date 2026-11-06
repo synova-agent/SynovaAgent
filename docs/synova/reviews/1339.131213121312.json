@@ -1,0 +1,101 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1339,
+  "patch_fingerprint": "sha256:48fb89e703346fe93dc34d5fc2c27113951c4bad7cca9bce2398b8d5d817f36e",
+  "author": "squad-1165（#1312 实现会话）",
+  "reviewer": "review-1339b（fresh 独立复核会话 B，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "A 变更面＝6 文件(+103/−5)、与 Issue #1312 范围一致、无越范围改判据",
+      "cmd": "git diff --stat gitea/main...HEAD -- . ':(exclude)docs/synova/reviews/**' ＋ git diff --name-status gitea/main...HEAD",
+      "evidence": "剔除回执目录：6 files changed, 103 insertions(+), 5 deletions(-) —— A .claude/claims/1312.yaml、M docs/authority/DOCS-REGISTRY.yaml、A gate-exemptions/2026-11-02-1312-resolver-local-stale.md、A memory/notes/proposed/2026-11-02-1312-resolver-local-stale.md、M scripts/control-tower/resolve-ci-base.sh、M tests/control-tower/resolve-ci-base.test.sh；与 claim writeset 前 6 条一一对应（第 7 条＝本回执）；含回执目录的完整差分 7 文件 +198/−5（+95 行为旧回执 1339.e347b1e59c6b.json，本提交删除）；git diff --name-status gitea/main...HEAD -- scripts/audit/ 命中 0",
+      "result": "pass"
+    },
+    {
+      "name": "A 单远端/CI 路径零改动（hunk 计数＝1，唯一 hunk @@ -101,5 +101,17 @@）",
+      "cmd": "git diff -U0 gitea/main...HEAD -- scripts/control-tower/resolve-ci-base.sh | grep -c '^@@' ＋ diff <(git show gitea/main:scripts/control-tower/resolve-ci-base.sh | sed -n '82,99p') <(sed -n '82,99p' scripts/control-tower/resolve-ci-base.sh) ＋ diff <(旧 108,129p) <(新 120,141p)",
+      "evidence": "hunk 计数 = 1；唯一 hunk 头 `@@ -101,5 +101,17 @@ if [ \"$BARE\" -eq 1 ]; then`（落在 ④ 多远端 else 分支内部）；82–99 段 diff 空（SAME-82-99）；CI 段旧 108–129 ↔ 新 120–141 diff 空（SAME-CI-SEG）；PR 正文声称的 base 行号 85–99 / 110–124 亦逐字节相同（SAME-85-99 / SAME-CI-110-124-vs-HEAD-122-136）",
+      "result": "pass"
+    },
+    {
+      "name": "B T13 多远端＋本地 main 陈旧 ⇒ gitea/main（自建 /tmp 夹具，不采信 PR 正文）",
+      "cmd": "HELPER=<worktree>/scripts/control-tower/resolve-ci-base.sh bash /tmp/r1339b/fixture.sh（bare gitea.git + bare origin.git + 工作仓；本地 main=c826747 停旧点，gitea/main=ce4cd35；env -u SYNO_CI/GITHUB_ACTIONS/SYNO_BASE_REF/GITHUB_BASE_REF/SYNO_TRUNK_REF）",
+      "evidence": "T13 rc=0 stdout=[gitea/main]；stderr: `多远端（2 个）⇒ 本地分支 main 让位于远端跟踪 gitea/main（不 fetch、不猜）`",
+      "result": "pass"
+    },
+    {
+      "name": "B T14 多远端＋无任何远端跟踪 main ⇒ rc=2、stdout 空、E_BAD_BASE＋三条修复提示",
+      "cmd": "bash /tmp/r1339b/fixture.sh（夹具 B：仅 refs/heads/main、refs/heads/work；gitea/main=no、origin/main=no）",
+      "evidence": "T14 rc=2 stdout=[]；stderr: `::error title=resolve-ci-base::E_BAD_BASE: 多远端且 main 无远端跟踪 ref（gitea/origin）——本地分支不可作对账基（worktree 场景天然陈旧）；请 git fetch <remote>，或显式 SYNO_BASE_REF=<remote>/main，或 SYNO_BASE_REF=<sha>`；提示计数 E_BAD_BASE=1 / git fetch <remote>=1 / SYNO_BASE_REF=<remote>/main=1 / SYNO_BASE_REF=<sha>=1",
+      "result": "pass"
+    },
+    {
+      "name": "B T15 多远端＋SYNO_BASE_REF=<sha> ⇒ 原样返回（逃生缝未回归）",
+      "cmd": "env -u … SYNO_BASE_REF=ce4cd352865757e1c8ec7026e923050a26207463 bash <worktree>/scripts/control-tower/resolve-ci-base.sh",
+      "evidence": "T15 rc=0 stdout=[ce4cd352865757e1c8ec7026e923050a26207463] match=yes；stderr 走「非本地分支」分支：`多远端（2 个）⇒ 不 fetch、不猜；归一化 = ce4cd35…`（未走让位/exit 2 逻辑）",
+      "result": "pass"
+    },
+    {
+      "name": "B 存量测试全绿 24/24（T1–T12、T13–T15）",
+      "cmd": "env -u SYNO_CI -u GITHUB_ACTIONS -u SYNO_BASE_REF -u GITHUB_BASE_REF -u SYNO_TRUNK_REF bash tests/control-tower/resolve-ci-base.test.sh",
+      "evidence": "结果: 24 通过 / 0 失败，rc=0；末三行 ✅ T13（base=gitea/main 68863a1）/ ✅ T14（exit 2）/ ✅ T15（sha 原样）",
+      "result": "pass"
+    },
+    {
+      "name": "C 改坏必红（判别力）：④ 多远端块还原「本地优先」⇒ T13/T14 红、22/2、rc=1",
+      "cmd": "git show gitea/main:scripts/control-tower/resolve-ci-base.sh > scripts/control-tower/resolve-ci-base.sh && env -u … bash tests/control-tower/resolve-ci-base.test.sh ; git checkout -- scripts/control-tower/resolve-ci-base.sh",
+      "evidence": "变异体：`❌ T13. 期望 gitea/main，实得 'main' rc=0（本地 main=d53a04d，gitea/main=8e073e6）`、`❌ T14. 期望 rc=2 且无输出，实得 rc=0 out='main'`；`结果: 22 通过 / 2 失败`（测试 rc=1）；还原后 git status --porcelain 0 行、复跑 24 通过 / 0 失败 rc=0",
+      "result": "pass"
+    },
+    {
+      "name": "D 门禁豁免：受保护路径变更逐条有合规豁免（12 通过 0 失败）",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main",
+      "evidence": "结果: 12 通过, 0 失败（rc=0）；PATTERNS 22 条、pin 一致 ef7c52a4…；受保护路径变更 4 条：docs/authority/DOCS-REGISTRY.yaml、gate-exemptions/2026-11-02-1312-resolver-local-stale.md、scripts/control-tower/resolve-ci-base.sh、tests/control-tower/resolve-ci-base.test.sh 逐条「有合规豁免」；新增豁免件首行 `# review: #1312`",
+      "result": "pass"
+    },
+    {
+      "name": "D claim 覆盖回执固定路径（R1 可达、旧回执不留 tail 竞争）",
+      "cmd": "python3 scripts/control-tower/claim_store.py --coverage <<< \"docs/synova/reviews/1339.131213121312.json\"",
+      "evidence": "{\"status\": \"ok\", \"claims\": 155, \"covered\": [\"docs/synova/reviews/1339.131213121312.json\"], \"uncovered\": [], \"matched\": {\"1312\": [\"docs/synova/reviews/1339.131213121312.json\"]}, \"degraded\": false}（rc=0）；旧回执 1339.e347b1e59c6b.json 未被任何 claim 声明 ⇒ 本提交删除（D 不在 --diff-filter=ACMR 内，无需声明；留着会被 R1 的 tail 选中 ⇒ R3 红）",
+      "result": "pass"
+    },
+    {
+      "name": "D pre-commit 全组（本地模式；node 入 PATH）",
+      "cmd": "git rm -q docs/synova/reviews/1339.e347b1e59c6b.json && git add docs/synova/reviews/1339.131213121312.json && PATH=/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH bash scripts/pre-commit-check.sh",
+      "evidence": "见下方「回执自检」：全 12 组通过、组 12 claim 覆盖 1/1 暂存文件、rc=0；同一命令对全 PR 树（7 个 ACMR 文件，含 6 文件＋本回执）亦 12 组通过 rc=0",
+      "result": "pass"
+    },
+    {
+      "name": "E 正文声称逐条物理复现（#1315 逐字一致 / DOCS-REGISTRY 纯追加 / 真实入口）",
+      "cmd": "git diff gitea/ct/1312b:scripts/control-tower/resolve-ci-base.sh HEAD:scripts/control-tower/resolve-ci-base.sh ＋ git diff --numstat gitea/main...HEAD -- docs/authority/DOCS-REGISTRY.yaml ＋ d331_gate 同链复跑（pre-push 门禁 7）",
+      "evidence": "resolver 与 test 相对 #1315 head（gitea/ct/1312b=9d3d44346）diff 空（rc=0，两文件）；DOCS-REGISTRY numstat=7/0，新增块追加于表尾 1933 行之后、无删除；pre-push 门禁 7 同链 d331_gate 实跑：HEAD resolver ⇒ `对账基（resolver）= gitea/main`，base 版 resolver ⇒ `对账基（resolver）= main`（＋E_RECONCILE），与正文「修前为 main」一致",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "PR #1339 正文「问题（实测）」段与 Issue #1312 正文",
+      "note": "『共 12 条』『连续 5 个 session 被误拦』为 2026-11-02 现场数据，本次无法复现原始条数；已复现其机理（base 版 resolver 在夹具上 d331_gate 输出 `对账基（resolver）= main` + E_RECONCILE），不构成不实声称"
+    },
+    {
+      "severity": "info",
+      "where": "docs/synova/reviews/1339.131213121312.json（文件名）",
+      "note": "回执文件名用固定 12hex 字面（PR 号＋131213121312），与 docs/synova/reviews/README.md §2『fp 前 12 位』字面不同；符合仓内先例 02f157d35 / 1324.131913191319.json 与本次任务口径，且 R1 的 fallback（tail 选该 PR 唯一 12hex 回执）可命中；旧回执 1339.e347b1e59c6b.json 已删（字母序大于固定名，留着会被 tail 选中 ⇒ R3 红）"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1339 正文「改法」第 3 条",
+      "note": "所引行号 85–99 / 110–124 是 base 版行号；HEAD 侧因 +12 行位移，⑤ CI 断言实为 122–136。『零改动』结论成立（hunk 仅 1 个，两段逐字节相同）"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1339 正文「改法（CTO 已批 A 类，2026-11-06）」",
+      "note": "流程性声称：仓内无审批载体（Issue #1312 comments=0；豁免件只写『一次裁定』），本次未核到原始批准凭据 ⇒ 转 CTO 确认，不构成代码/判据阻塞"
+    }
+  ],
+  "issued_at": "2026-11-06T21:32:36+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步 ＋ .dsh/skills/squad-discipline/SKILL.md；R1–R9 契约 = scripts/control-tower/check-merge-conditions.sh）"
+}

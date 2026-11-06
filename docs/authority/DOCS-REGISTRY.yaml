@@ -1933,3 +1933,10 @@ documents:
     status: active
     owner: CTO
     note: "#1333：DSH 断面由 rc.2 升 rc.5（源码 /Users/wane/src/dsh-src-0.2.1-rc.5 @ b830ec950f）；仅版本入口同步，不改行为。"
+  # ---- CTO 2026-11-02：#1312 resolve-ci-base 多远端本地陈旧（R1 口径 id = DOC-<Issue#>）----
+  - id: DOC-1312
+    type: decision
+    path: gate-exemptions/2026-11-02-1312-resolver-local-stale.md
+    status: active
+    owner: CTO
+    note: "#1312 多远端时本地分支不作对账基（worktree 天然陈旧）；优先 gitea/origin 远端跟踪，皆无则 exit 2；sha/tag 逃生缝不变。"

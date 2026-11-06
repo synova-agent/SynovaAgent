@@ -190,6 +190,48 @@ okM=1
 [ "$okM" -eq 1 ] \
   && ok "T11b. 变异体 base=${OUTM} ⇒ 变更集 ${N_CHGM:-0} 文件（T11 断言必红）；变异点=${N_MUT}（单源）" || no "T11b. 变异体未被判红（变异点=${N_MUT} rc=${RCM} base=${OUTM} 变更集=${N_CHGM:-0}）"
 
+# ── #1311 T13–T15：多远端下「本地分支不可作对账基」（worktree 天然陈旧） ─────
+echo ""
+echo "── #1311 多远端：本地分支让位于远端跟踪 ──────────────────────"
+MR="$TMPD/mr"; GITEA="$TMPD/gitea.git"; ORIG="$TMPD/origin2.git"
+git init --bare -q "$GITEA"; git init --bare -q "$ORIG"
+git init -q "$MR"; git -C "$MR" config user.email t@t; git -C "$MR" config user.name t
+git -C "$MR" symbolic-ref HEAD refs/heads/work
+git -C "$MR" remote add gitea "$GITEA"; git -C "$MR" remote add origin "$ORIG"
+printf 'a\n' > "$MR/a.txt"; git -C "$MR" add -A; git -C "$MR" commit -q -m c1
+git -C "$MR" push -q gitea HEAD:refs/heads/main; git -C "$MR" fetch -q gitea
+# 本地 main 故意指旧点（模拟"新建 worktree 后本地 main 未更新"）
+git -C "$MR" branch -f main HEAD~0 2>/dev/null || git -C "$MR" branch main HEAD
+OLD="$(git -C "$MR" rev-parse --short main)"
+# 远端再前进一个提交（gitea/main 比本地 main 新）
+printf 'b\n' > "$MR/b.txt"; git -C "$MR" add -A; git -C "$MR" commit -q -m c2
+git -C "$MR" push -q gitea HEAD:refs/heads/main; git -C "$MR" fetch -q gitea
+NEW="$(git -C "$MR" rev-parse --short gitea/main)"
+
+OUT13="$(run_in "$MR" bash "$HELPER" 2>/dev/null)"; RC13=$?  # swallow-ok: 失败路径 stderr 由 rc 判定
+[ "${RC13}" -eq 0 ] && [ "${OUT13}" = "gitea/main" ] \
+  && ok "T13. 多远端＋本地 main(${OLD}) 陈旧 ⇒ base=gitea/main（${NEW}），不再返回本地 ref" \
+  || no "T13. 期望 gitea/main，实得 '${OUT13}' rc=${RC13}（本地 main=${OLD}，gitea/main=${NEW}）"
+
+# T14：多远端 ＋ 有本地 main 但无任何远端跟踪 main ⇒ fail-closed
+MR2="$TMPD/mr2"; git init --bare -q "$TMPD/g1.git"; git init --bare -q "$TMPD/g2.git"
+git init -q "$MR2"; git -C "$MR2" config user.email t@t; git -C "$MR2" config user.name t
+git -C "$MR2" symbolic-ref HEAD refs/heads/work
+git -C "$MR2" remote add gitea "$TMPD/g1.git"; git -C "$MR2" remote add origin "$TMPD/g2.git"
+printf 'x\n' > "$MR2/x.txt"; git -C "$MR2" add -A; git -C "$MR2" commit -q -m x1
+git -C "$MR2" branch main HEAD      # 只有本地 main，无 gitea/main、origin/main
+OUT14="$(run_in "$MR2" bash "$HELPER" 2>/dev/null)"; RC14=$?  # swallow-ok: T14 期望 rc=2
+[ "${RC14}" -eq 2 ] && [ -z "${OUT14}" ] \
+  && ok "T14. 多远端＋无远端跟踪 main ⇒ exit 2（本地分支不可作对账基）" \
+  || no "T14. 期望 rc=2 且无输出，实得 rc=${RC14} out='${OUT14}'"
+
+# T15：多远端 ＋ 显式 SYNO_BASE_REF=<sha>（裸 sha，非分支）⇒ 原样返回（逃生缝不回归）
+SHA15="$(git -C "$MR" rev-parse HEAD)"
+OUT15="$(run_in "$MR" SYNO_BASE_REF="${SHA15}" bash "$HELPER" 2>/dev/null)"; RC15=$?  # swallow-ok: 同上
+[ "${RC15}" -eq 0 ] && [ "${OUT15}" = "${SHA15}" ] \
+  && ok "T15. 多远端＋SYNO_BASE_REF=<sha> ⇒ 原样返回（显式逃生缝未回归）" \
+  || no "T15. 期望原样返回 sha，实得 '${OUT15}' rc=${RC15}"
+
 echo ""
 echo "结果: ${PASS} 通过 / ${FAIL} 失败"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
