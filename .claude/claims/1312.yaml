@@ -5,6 +5,9 @@ writeset:
   - gate-exemptions/2026-11-02-1312-resolver-local-stale.md
   - docs/authority/DOCS-REGISTRY.yaml
   - memory/notes/proposed/2026-11-02-1312-resolver-local-stale.md
+  # 复核回执走固定文件名（PR 号＋定长 12hex 字面，非指纹值）：claim 需精确匹配路径，
+  # 而指纹随 claim 自身内容变化 ⇒ 若用真指纹命名则循环依赖（R1/R3 永远对不上）。
+  - docs/synova/reviews/1339.131213121312.json
 done:
   - verify: "bash tests/control-tower/resolve-ci-base.test.sh   # 24/24；改坏(本地优先) ⇒ T13/T14 红"
 note: "#1312 多远端时本地分支不作对账基（worktree 天然陈旧）；sha 逃生缝不变。"
