@@ -1,0 +1,95 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1339,
+  "patch_fingerprint": "sha256:e347b1e59c6b8e38b951f46855d7fdbb6f92555d3cd88039023bc20436794c20",
+  "author": "squad-1165（#1312 实现会话）",
+  "reviewer": "review-1339（fresh 独立复核会话，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "A 变更面 = 6 文件、与 Issue #1312 范围一致",
+      "cmd": "git diff --stat gitea/main...HEAD ＋ git diff --name-status gitea/main...HEAD",
+      "evidence": "6 files changed, 100 insertions(+), 5 deletions(-)；A .claude/claims/1312.yaml、M docs/authority/DOCS-REGISTRY.yaml、A gate-exemptions/2026-11-02-1312-resolver-local-stale.md、A memory/notes/proposed/2026-11-02-1312-resolver-local-stale.md、M scripts/control-tower/resolve-ci-base.sh、M tests/control-tower/resolve-ci-base.test.sh —— 与 .claude/claims/1312.yaml 的 writeset 6 条一一对应，无第 7 处",
+      "result": "pass"
+    },
+    {
+      "name": "A 单远端/CI 路径零改动（hunk 计数 = 1）",
+      "cmd": "git diff -U0 gitea/main...HEAD -- scripts/control-tower/resolve-ci-base.sh | grep -c '^@@'",
+      "evidence": "hunk 计数 = 1，唯一 hunk 头 `@@ -101,5 +101,17 @@`（落在 base 101–105 = ④ 多远端 else 分支内部）；base 版 ④ 单远端块 85–99 与 ⑤ CI 新鲜度断言 110–124 未被触碰；旁证：单远端实跑 → stdout=origin/main rc=0",
+      "result": "pass"
+    },
+    {
+      "name": "B T13 多远端＋本地 main 陈旧 ⇒ gitea/main（自建夹具，不采信 PR 正文）",
+      "cmd": "bash /tmp/r1339/fixture.sh（自建 bare gitea.git + origin.git + 工作仓，本地 main=0cbae1f 停在旧点，gitea/main=440762a）",
+      "evidence": "stdout=[gitea/main] rc=0；stderr: `多远端（2 个）⇒ 本地分支 main 让位于远端跟踪 gitea/main（不 fetch、不猜）`。环境隔离：unset SYNO_CI/GITHUB_ACTIONS/SYNO_BASE_REF/GITHUB_BASE_REF/SYNO_TRUNK_REF",
+      "result": "pass"
+    },
+    {
+      "name": "B T14 多远端＋无任何远端跟踪 main ⇒ rc=2 + E_BAD_BASE + 三条修复提示",
+      "cmd": "bash /tmp/r1339/fixture.sh（夹具 B：仅 refs/heads/main、refs/heads/work，无 gitea/main、origin/main）",
+      "evidence": "stdout=[] rc=2；stderr 命中 `E_BAD_BASE`×1、`git fetch <remote>`×1、`SYNO_BASE_REF=<remote>/main`×1、`SYNO_BASE_REF=<sha>`×1（三条修复提示齐）",
+      "result": "pass"
+    },
+    {
+      "name": "B T15 多远端＋SYNO_BASE_REF=<sha> ⇒ 原样返回（逃生缝未回归）",
+      "cmd": "bash /tmp/r1339/fixture.sh（run repo SYNO_BASE_REF=440762a33dbfb6900d6cbe10d21302987d0aadc8 bash resolve-ci-base.sh）",
+      "evidence": "stdout=[440762a33dbfb6900d6cbe10d21302987d0aadc8] rc=0 match=yes；stderr 走「非本地分支」分支日志，未走分支让位逻辑",
+      "result": "pass"
+    },
+    {
+      "name": "B 存量测试全绿 24/24（T1–T12、T13–T15）",
+      "cmd": "bash tests/control-tower/resolve-ci-base.test.sh",
+      "evidence": "结果: 24 通过 / 0 失败，rc=0；含 T13（base=gitea/main）、T14（exit 2）、T15（原样返回 sha）、T9b、T11/T11b",
+      "result": "pass"
+    },
+    {
+      "name": "C 改坏必红（判别力）：④ 多远端块还原「本地优先」⇒ T13/T14 红",
+      "cmd": "git checkout gitea/main -- scripts/control-tower/resolve-ci-base.sh && bash tests/control-tower/resolve-ci-base.test.sh ; git checkout HEAD -- scripts/control-tower/resolve-ci-base.sh",
+      "evidence": "变异体：❌ T13. 期望 gitea/main，实得 'main' rc=0；❌ T14. 期望 rc=2 且无输出，实得 rc=0 out='main'；结果: 22 通过 / 2 失败（test rc=1）。还原后 cmp 与 HEAD 原文 identical、git status --porcelain 0 行、复跑 24 通过 / 0 失败 rc=0",
+      "result": "pass"
+    },
+    {
+      "name": "D 门禁自洽：受保护路径变更全部被豁免件覆盖",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main",
+      "evidence": "结果: 12 通过, 0 失败（rc=0）；受保护路径变更 4 条逐条「有合规豁免」= docs/authority/DOCS-REGISTRY.yaml、gate-exemptions/2026-11-02-1312-resolver-local-stale.md、scripts/control-tower/resolve-ci-base.sh、tests/control-tower/resolve-ci-base.test.sh；新增豁免件首行 `# review: #1312` 合规；pin 一致（ef7c52a4…）",
+      "result": "pass"
+    },
+    {
+      "name": "D pre-commit 全组（本地模式，PR 差分已入暂存）",
+      "cmd": "git reset --mixed gitea/main && git add -A && PATH=<nvm node v18.20.8>:$PATH bash scripts/pre-commit-check.sh",
+      "evidence": "先核对 git diff --cached --stat 与 git diff gitea/main...HEAD --stat 逐字节相同（6 文件 100/5）；rc=0，`✅ 全部 12 组通过`，wall_ms=18988 BUDGET: PASS；组 9 契约门禁实跑 1s（node 可用，无降级登记）；组 12 claim 覆盖 6/6 暂存文件",
+      "result": "pass"
+    },
+    {
+      "name": "E 正文声称逐条物理复现（#1315 关系 / 基座 / 纯追加）",
+      "cmd": "git diff --stat gitea/ct/1312b:scripts/control-tower/resolve-ci-base.sh HEAD:scripts/control-tower/resolve-ci-base.sh ＋ git diff gitea/main...HEAD -- docs/authority/DOCS-REGISTRY.yaml ＋ git merge-base --is-ancestor gitea/main HEAD",
+      "evidence": "resolve-ci-base.sh 与 resolve-ci-base.test.sh 相对 #1315 head（ct/1312b 9d3d44346）逐字一致（diff 空）；两分支间 scripts/ tests/ 仅 install-dsh-preset.sh / doc-registry-gate.sh 因 main 前进而差（非本 PR 文件）；DOCS-REGISTRY 为纯追加 7 行、删除 0 行、追加在表尾；main is ancestor=yes、behind=0 ahead=1、merge-base=4fea89114；#1315 mergeable=false 经 API 复核为真",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "PR #1339 正文「问题（实测）」段",
+      "note": "『共 12 条』为 2026-11-02 现场数据，本次复核无法复现原始条数；已复现其机理（变异体 base=main、下游按 main..HEAD 取范围），不构成不实声称"
+    },
+    {
+      "severity": "info",
+      "where": "gate-exemptions/2026-11-02-1312-resolver-local-stale.md:9",
+      "note": "豁免件称 .claude/claims/1312.yaml「属受保护路径」；check-gate-protection 实测受保护变更 4 条不含 claims（PATTERNS 22 条无 claims 项）⇒ 豁免多列一条无害，判定不受影响"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1339 正文「改法」第 3 条",
+      "note": "所引行号 85–99 / 110–124 是 base 版行号；HEAD 侧因 +12 行位移，⑤ CI 断言实为 122–136。『零改动』结论成立（hunk 仅 1 个，见 A 项）"
+    },
+    {
+      "severity": "info",
+      "where": "本机环境（非本 PR）",
+      "note": "pre-commit 组 9 块级 paths 对账在默认 PATH（无 node）下显式降级；本次把 nvm node v18.20.8 放入 PATH 后实跑通过。主树 better-sqlite3 为 node18 ABI，CI 模式 K12-21 梯子在本机属环境假红，未作为本 PR 判据"
+    }
+  ],
+  "issued_at": "2026-11-06T21:25:49+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步；recall 契约 = check-merge-conditions.sh R1–R9）"
+}
