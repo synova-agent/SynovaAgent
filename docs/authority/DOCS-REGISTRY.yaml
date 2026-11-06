@@ -1940,3 +1940,10 @@ documents:
     status: active
     owner: CTO
     note: "#1312 多远端时本地分支不作对账基（worktree 天然陈旧）；优先 gitea/origin 远端跟踪，皆无则 exit 2；sha/tag 逃生缝不变。"
+  # ---- CTO 2026-11-02：#1309 D331 拆分（L4-2 降为只报；R1 口径 id = DOC-<Issue#>-NN）----
+  - id: DOC-1309-01
+    type: decision
+    path: gate-exemptions/2026-11-02-1309-d331-split.md
+    status: active
+    owner: CTO
+    note: "#1309 D331 拆分：L4-1（版本 tag 祖先校验）保留；L4-2（bypass.log 对账）降为只报不拦，强制点移至服务端（main 必须 PR ＋ local-gates 绿），追溯改走仓内 gate-exemptions/。含豁免自覆盖与登记自登记行。"

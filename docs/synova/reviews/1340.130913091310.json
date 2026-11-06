@@ -1,0 +1,102 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1340,
+  "patch_fingerprint": "sha256:7e3abb656d7de185212b877a6249f567e060cd81b5ed42ebc5c80e331937f13f",
+  "author": "squad-1165（#1309 重建会话）",
+  "reviewer": "review-1340c（fresh 独立复核会话 C，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-11-06T22:43:14+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步 ＋ .dsh/skills/squad-discipline/SKILL.md ＋ .dsh/skills/ctrl-tower-change/SKILL.md；R1–R9 契约 = scripts/control-tower/check-merge-conditions.sh）",
+  "checks": [
+    {
+      "name": "范围：7 个内容文件＋1 回执；越范围两文件零差",
+      "cmd": "git diff --name-status gitea/main...HEAD; git diff gitea/main -- scripts/control-tower/resolve-ci-base.sh tests/control-tower/resolve-ci-base.test.sh",
+      "evidence": "name-status = 8 行：A .claude/claims/1309.yaml / M docs/authority/DOCS-REGISTRY.yaml / A docs/synova/reviews/1340.130913091309.json / A gate-exemptions/2026-11-02-1309-d331-split.md / A memory/notes/proposed/2026-11-02-1309-d331-split.md / M scripts/control-tower/gate-integrity-baseline.txt / M scripts/pre-push-check.sh / A tests/control-tower/d331-split-warn.test.sh；越范围两文件 diff 无输出（rc=0，lines=0）",
+      "result": "pass"
+    },
+    {
+      "name": "只改 L4-2：pre-push-check.sh 仅 544/547 两 hunk",
+      "cmd": "git diff -U0 gitea/main...HEAD -- scripts/pre-push-check.sh | grep '^@@'",
+      "evidence": "@@ -544,0 +545,7 @@ fi ；@@ -547,2 +554,3 @@ if ! d331_gate \"$RESOLVER\" \"$CHECK_BYPASS\"; then —— 两 hunk 均在门禁 7 块内（-2/+3 即 exit1 改警告文案；+7 为理由注释）",
+      "result": "pass"
+    },
+    {
+      "name": "L4-1（D319/D331 版本 tag 祖先校验）逐字不动",
+      "cmd": "diff <(git show gitea/main:scripts/pre-push-check.sh | sed -n '255,525p') <(sed -n '255,525p' scripts/pre-push-check.sh)",
+      "evidence": "无输出，slice_diff_rc=0（0 行差）；文件总行 553→561（+8 = 7 注释 + 1 行改 3 行）；bash -n 语法通过",
+      "result": "pass"
+    },
+    {
+      "name": "记账提交 701ad1e9a 仅 3 文件（claim／豁免件／baseline）",
+      "cmd": "git diff --name-status 5b9334254 701ad1e9a",
+      "evidence": "M .claude/claims/1309.yaml；M gate-exemptions/2026-11-02-1309-d331-split.md；M scripts/control-tower/gate-integrity-baseline.txt（无代码/门禁逻辑改动）",
+      "result": "pass"
+    },
+    {
+      "name": "FACE-TOTAL 212→213 为最小可过值；SLACK-CAP/QUARANTINE-TOTAL 未动；gate-integrity OK",
+      "cmd": "SYNO_BASE_REF=origin/main bash scripts/control-tower/sealed-tests.sh --list --root . >/dev/null 2>/tmp/r1340c.err; echo rc=$?; bash scripts/control-tower/sealed-tests.sh --slack; SYNO_BASE_REF=origin/main bash scripts/control-tower/check-gate-integrity.sh",
+      "evidence": "rc=0；stderr: 余量 slack=10（scan=223 − FACE-TOTAL=213）；算术：223−212=11 > SLACK-CAP=10（红）⇒ 213 是唯一最小可过值（223−213=10，判据为 > 上限才红）；数据行 FACE-TOTAL 212→213，QUARANTINE-TOTAL=77 / SLACK-CAP=10 两行 diff 未变；GATE-INTEGRITY: OK（rc=0）",
+      "result": "pass"
+    },
+    {
+      "name": "判别力单测 4/4",
+      "cmd": "bash tests/control-tower/d331-split-warn.test.sh",
+      "evidence": "✅ 只报不拦文案存在 / ✅ 对账失败不再 exit 1 / ✅ 缺件仍 fail-closed / ✅ L4-1 tag 校验仍在；D331-SPLIT: PASS (checks=4)，exit=0",
+      "result": "pass"
+    },
+    {
+      "name": "真入口①：真实 hook＋沙箱，对账失败只报不拦（exit 0）",
+      "cmd": "真 .git/hooks/pre-push → 沙箱；裸仓 clone 沙箱内提交 PR 版 pre-push-check.sh；git push origin test/warn",
+      "evidence": "对账基（resolver）= origin/main；❌ D331: 对账失败 [E_RECONCILE]；⚠️ bypass.log 对账未通过 — **只报不拦**（#1309 D331 拆分）；强制点在服务端：main 必须 PR ＋ local-gates 绿；✅ 全部门禁通过 — 允许推送；E1_EXIT=0，bare 收到 * [new branch] test/warn",
+      "result": "pass"
+    },
+    {
+      "name": "真入口②：改坏对照（换回 main 阻断版）exit 1",
+      "cmd": "同一沙箱 git show origin/main:scripts/pre-push-check.sh 覆盖并提交 → git push origin test/block",
+      "evidence": "❌ D331: 对账失败 [E_RECONCILE]；❌ bypass.log 对账未通过 — 推送已拒绝 (D331)；error: failed to push some refs；E2_EXIT=1，远端无 test/block",
+      "result": "pass"
+    },
+    {
+      "name": "真入口③：L4-1 反向（V9.9.9 为 HEAD 祖先但非 origin/main 祖先）exit 1",
+      "cmd": "沙箱 feature 分支造 C1＋tag V9.9.9＋C2（PR 版脚本）→ git push origin test/l41",
+      "evidence": "❌ D331: 版本 tag 锚点断裂: V9.9.9 是 HEAD 祖先但不在 origin/main 上；❌ 版本 tag 锚点校验未通过 — 推送已拒绝 (D331)；E3_EXIT=1（先验：merge-base --is-ancestor V9.9.9 HEAD=YES，对 origin/main=NO）",
+      "result": "pass"
+    },
+    {
+      "name": "门禁：check-gate-protection --changed-base gitea/main（0 失败）",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main",
+      "evidence": "结果: 13 通过, 0 失败（exit 0）；受保护路径变更 5 条逐条有合规豁免。较任务书预期 12 多 1 的原因已核实：记账提交新增 scripts/control-tower/gate-integrity-baseline.txt（受 `scripts/control-tower/**` 保护）⇒ 逐条豁免检查 +1；以 0 失败为判据",
+      "result": "pass"
+    },
+    {
+      "name": "门禁：pre-commit 12 组（PR 差分入暂存后跑）",
+      "cmd": "export PATH=/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH; git reset --mixed gitea/main; git add -A; bash scripts/pre-commit-check.sh; git reset --hard gitea/ct/1310b-1106",
+      "evidence": "staged_count=8（与 PR 差分一致）；✅ 全部 12 组通过；墙钟预算: wall_ms=11236 BUDGET: PASS；PRECOMMIT_RC=0；组 12: 覆盖 8/8 个暂存文件；跑完 reset 回 701ad1e9a，worktree 干净",
+      "result": "pass"
+    },
+    {
+      "name": "指纹复算：只认脚本，与实现方自算一致",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --pr 1340 --diff-fingerprint；另手工复算 git diff --no-color -M --full-index --binary $(git merge-base gitea/main HEAD) HEAD -- . ':(exclude)docs/synova/reviews/**' | sha256",
+      "evidence": "脚本输出=7e3abb656d7de185212b877a6249f567e060cd81b5ed42ebc5c80e331937f13f（rc=0）；手工复算=同值；MB=e90c7a0e228f…（= gitea/main tip）；与实现方自算值一致",
+      "result": "pass"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "title": "PR 正文数字早于最终记账提交（不是不实，属过期口径）",
+      "detail": "正文称「只保留 #1309 的 6 个文件」与「check-gate-protection ⇒ 12 通过, 0 失败」，均对应 701ad1e9a 之前的口径。最终 head 内容文件为 7 个（+gate-integrity-baseline.txt）＋回执；gate-protection 为 13 通过, 0 失败（含新增受保护路径逐条豁免检查）。按任务要求如实登记，不判不实。"
+    },
+    {
+      "severity": "info",
+      "title": "沙箱夹具数值差异",
+      "detail": "PR 正文沙箱夹具记「本机待记录提交 2 条」，本次复核新建沙箱夹具为 1 条（对账失败同构，输出同判据）。判据结论不受影响。"
+    },
+    {
+      "severity": "info",
+      "title": "R9 身份未分离（设计内告警）",
+      "detail": "回执提交作者邮箱与 PR 代码提交相同（本机 git 身份 squad-1165 <squad-1165@synova.local>）⇒ check-merge-conditions R9 会恒打印「身份未分离」告警；契约裁 B3-2 明示只告警不阻断。"
+    }
+  ]
+}

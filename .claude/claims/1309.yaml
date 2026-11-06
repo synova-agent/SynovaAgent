@@ -1,0 +1,15 @@
+writeset:
+  - .claude/claims/1309.yaml
+  - scripts/pre-push-check.sh
+  - scripts/control-tower/gate-integrity-baseline.txt
+  - tests/control-tower/d331-split-warn.test.sh
+  - gate-exemptions/2026-11-02-1309-d331-split.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-11-02-1309-d331-split.md
+  # 复核回执走固定文件名（PR 号＋定长 12hex 字面，非指纹值）：claim 需精确匹配路径，
+  # 而指纹随 claim 自身内容变化 ⇒ 若用真指纹命名则循环依赖（R1/R3 永远对不上）。
+  - docs/synova/reviews/1340.130913091309.json
+  - docs/synova/reviews/1340.130913091310.json
+done:
+  - verify: "bash tests/control-tower/d331-split-warn.test.sh"
+note: "#1309 D331 拆分：L4-2 bypass 对账降为只报（强制点移服务端），L4-1 tag 校验保留。"
