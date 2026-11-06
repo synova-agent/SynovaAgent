@@ -24,7 +24,13 @@
 #       bash scripts/control-tower/sealed-tests.sh --quarantine | wc -l   # → QUARANTINE-TOTAL 实况
 #       bash scripts/control-tower/sealed-tests.sh --list       | wc -l   # → ci.yml 两 job 实际执行数
 #     ⚠️ 行尾不得带 ` | owner=…` 之类后缀——本段是**路径清单**，解析器整行取路径。
-# FACE-TOTAL=212   # 2026-11-02 K12-ENG #1283：新增 probe-role-config 配对测试（.test.sh）⇒ 显式上调（211→212）   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# 2026-11-06 #1309（本 PR）: FACE-TOTAL 212 → **213**（scan=223；slack=10=SLAK-CAP，判据为 > 上限才红）。
+#   缘起: #1309 新增密封测试 tests/control-tower/d331-split-warn.test.sh（L4-2 判别力自检 .test.sh）⇒
+#         面扫描 222→223，余量 223−212=11 > SLACK-CAP=10 ⇒ Gitea 权威腿 ⑦ 实撞（run 3583）。
+#   口径: 按脚本要求**显式上调下界**（新增测试计入下界＝更严方向）；取**最小可过**值（+1），
+#         不预留富余 ⇒ 余量维持 10（不扩大净删除不可检面）；后续再加密封测试须再显式上调（一行、低频）。
+#   复算: bash scripts/control-tower/sealed-tests.sh --slack  → 10
+# FACE-TOTAL=213   # 2026-11-02 K12-ENG #1283：新增 probe-role-config 配对测试（.test.sh）⇒ 显式上调（211→212）   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #   2026-10-26 显式上调 173→197（CTO·裁 421）：P1–P12 期间新增密封测试（swallow-ratchet／契约测试接入等）
 #   使 scan=197、余量 24 > SLACK-CAP=10 ⇒ 按脚本要求**显式**登记全部现有夹具（slack=0，此后净删 1 个即红）。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
