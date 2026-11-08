@@ -13,17 +13,44 @@ on:
   workflow_dispatch:
 jobs:
   gates:
-    runs-on: macos
+    runs-on: win-ci
     timeout-minutes: 15
+    env:
+      # CI 里任何 git 操作都不该等交互输入：缺凭据要**快速失败**，不许挂死。
+      # （2026-11-08 实证：origin 无凭据时 `resolve-ci-base.sh` 的 git fetch 在私库上
+      #   弹凭据提示，8 分钟 0% CPU 挂死，CI 表现为"卡住"而非"红"。）
+      GIT_TERMINAL_PROMPT: "0"
+      # Electron 二进制的下载源（2026-11-08 实测：GitHub releases 97KB/s ⇒ 106MB 要一小时；
+      # npmmirror 11.4MB/s ⇒ 9 秒）。只改"从哪下"，不改"下什么"：版本仍由 package-lock 锁定，
+      # 校验仍走 @electron/get 的 SHASUMS256。macOS runner 同样可用。
+      # 🔴 必须放 **job 级**：④ 门禁复现器把「依赖」步正文抽出来在沙箱里重跑，step 级 env 不进沙箱
+      #   ⇒ 沙箱里的 npm ci 会回落到 GitHub 慢源，把 15 分钟预算吃光（2026-11-08 实测）。
+      ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
     steps:
       - name: 工作区（本机 Gitea 克隆；不用 actions/checkout）
         run: |
           set -e
           WS=/Users/wane/.ci-work/SynovaAgent
-          if [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi
-          git -C "$WS" fetch -q origin || true
-          git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD
-          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
+          # 私库必须带凭据克隆/取回（2026-11-08：#1346 实测匿名 clone 返 401 ⇒ 工作区步直接红）。
+          # 凭据来源＝工作流令牌（不依赖宿主机 git 凭据——Win/WSL runner 上没有 Mac 的凭据）。
+          REPO_URL_TOKEN="http://${{ github.token }}@127.0.0.1:3000/synova-agent/SynovaAgent.git"
+          REPO_URL_CLEAN="http://127.0.0.1:3000/synova-agent/SynovaAgent.git"
+          if [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q "$REPO_URL_TOKEN" "$WS"; fi
+          git -C "$WS" remote set-url origin "$REPO_URL_TOKEN"
+          # 🔴 显式 refspec（2026-11-08 实证）：本工作区的 origin 被配成**只取 HEAD**，
+          #   `git fetch origin` 只更新 FETCH_HEAD，分支提交根本不在本地 ⇒ 下面 checkout 静默失败、
+          #   回退到陈旧 FETCH_HEAD，CI 实际跑的是 main 而不是被检提交（假红/假绿都可能）。
+          git -C "$WS" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+          git -C "$WS" fetch -q --prune origin || { echo "cannot judge: git fetch 失败（私库凭据或网络）"; exit 2; }
+          # 缺本次提交 ⇒ 无法判定。**禁**回退到陈旧 FETCH_HEAD：那会让 CI 跑错树而不自知。
+          git -C "$WS" cat-file -e "${{ github.sha }}^{commit}" 2>/dev/null \
+            || { echo "cannot judge: 工作区缺本次提交 ${{ github.sha }}"; exit 2; }
+          git -C "$WS" checkout -q -f "${{ github.sha }}"
+          test "$(git -C "$WS" rev-parse HEAD)" = "${{ github.sha }}" \
+            || { echo "cannot judge: HEAD 与本次提交不一致（${{ github.sha }}）"; exit 2; }
+          # 令牌保留到 job 结束（门禁脚本内部还会 git fetch；提前擦掉会因私库无凭据而挂死）。
+          # 收尾由本 job 最后一步「清理」在 always() 下擦除。
+          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)（已核对 = 被检提交）"
       - name: 依赖（lock 哈希指纹：变了就重装，没变才跳过）
         run: |
           set -e
@@ -37,7 +64,7 @@ jobs:
           #   修法：以 lock 文件内容哈希作**缓存指纹** —— 指纹变了 ⇒ 强制重装。
           #   ⚠️ 只改"何时装"，不改"装什么"（仍是 `npm ci`，即严格按 lock 装）。
           HASH_FILE="$WS/.deps-lock-hash"
-          CUR_HASH="$(shasum -a 256 "$WS/package-lock.json" 2>/dev/null | awk '{print $1}')"
+          CUR_HASH="$( { shasum -a 256 "$WS/package-lock.json" 2>/dev/null || sha256sum "$WS/package-lock.json" 2>/dev/null; } | awk '{print $1}')"
           PREV_HASH="$(cat "$HASH_FILE" 2>/dev/null || true)"
           echo "lock 哈希 = ${CUR_HASH:-<无法计算>}（上次 ${PREV_HASH:-<无>}）"
           if [ ! -d "$WS/node_modules/vitest" ]; then
@@ -113,7 +140,7 @@ jobs:
           cd /Users/wane/.ci-work/SynovaAgent
           # 治「交付未回填」致看板失真：已合并 PR 的交付性引用所指 issue 仍 open ⇒ 红
           # 判别力自检：含交付性引用的 PR 数 == 0 ⇒ exit 2（禁把"看不见"当"没问题"）
-          export GITEA_TOKEN="$(cat /Users/wane/gitea/.win-push-token 2>/dev/null || true)"
+          export GITEA_TOKEN="${{ github.token }}"
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
             node_modules/.bin/tsx scripts/control-tower/check-board-truth.ts || exit 1
       - name: ①c 内容面耦合 CC1–CC4（K12-13/#196 · 存量棘轮／新增必拦）
@@ -596,6 +623,15 @@ jobs:
           esac
           bash scripts/workflow/check-brief-vs-code.sh --strict || exit $?
 
+
+      - name: 清理（令牌不落盘 · always）
+        if: always()
+        run: |
+          set +e
+          WS=/Users/wane/.ci-work/SynovaAgent
+          # 工作区在 runner 上跨 run 持久：令牌只在本次 job 期间留在 .git/config，收尾一律还原。
+          git -C "$WS" remote set-url origin http://127.0.0.1:3000/synova-agent/SynovaAgent.git 2>/dev/null || true
+          echo "origin 已还原为无凭据 URL（令牌未留在 .git/config）"
 # ═══════════════════════════════════════════════════════════════════════════════
 # #1234 · ci-step 证据映射（**仅登记注释；不改本文件任何逻辑、不建日志回流通道**）
 #   用途：总闸 G2 的分腿证据里，`evidence: ci-step` 的闸「跑过没」只能由 CI step 结局回答。
@@ -616,5 +652,3 @@ jobs:
 #       它跑的是 ci-emptygreen-sim.sh 模拟器，不是本闸）。映射以本文件 step 名原文为准。
 #   已知限制：本批不产 JSONL（无写方）⇒ 真仓这 5 项恒「判不了」（exit 2）；这是如实，不是 CI 没跑。
 # ═══════════════════════════════════════════════════════════════════════════════
-
-
