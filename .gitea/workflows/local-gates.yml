@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 jobs:
   gates:
-    runs-on: macos
+    runs-on: win-ci
     timeout-minutes: 15
     steps:
       - name: 工作区（本机 Gitea 克隆；不用 actions/checkout）
