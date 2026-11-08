@@ -20,6 +20,12 @@ jobs:
       # （2026-11-08 实证：origin 无凭据时 `resolve-ci-base.sh` 的 git fetch 在私库上
       #   弹凭据提示，8 分钟 0% CPU 挂死，CI 表现为"卡住"而非"红"。）
       GIT_TERMINAL_PROMPT: "0"
+      # Electron 二进制的下载源（2026-11-08 实测：GitHub releases 97KB/s ⇒ 106MB 要一小时；
+      # npmmirror 11.4MB/s ⇒ 9 秒）。只改"从哪下"，不改"下什么"：版本仍由 package-lock 锁定，
+      # 校验仍走 @electron/get 的 SHASUMS256。macOS runner 同样可用。
+      # 🔴 必须放 **job 级**：④ 门禁复现器把「依赖」步正文抽出来在沙箱里重跑，step 级 env 不进沙箱
+      #   ⇒ 沙箱里的 npm ci 会回落到 GitHub 慢源，把 15 分钟预算吃光（2026-11-08 实测）。
+      ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
     steps:
       - name: 工作区（本机 Gitea 克隆；不用 actions/checkout）
         run: |
@@ -46,11 +52,6 @@ jobs:
           # 收尾由本 job 最后一步「清理」在 always() 下擦除。
           echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)（已核对 = 被检提交）"
       - name: 依赖（lock 哈希指纹：变了就重装，没变才跳过）
-        env:
-          # Electron 二进制的下载源（2026-11-08 实测：GitHub releases 97KB/s ⇒ 106MB 要一小时；
-          # npmmirror 11.4MB/s ⇒ 9 秒）。只改"从哪下"，不改"下什么"：版本仍由 package-lock 锁定，
-          # 校验仍走 @electron/get 的 SHASUMS256。macOS runner 同样可用。
-          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
         run: |
           set -e
           WS=/Users/wane/.ci-work/SynovaAgent
@@ -651,4 +652,3 @@ jobs:
 #       它跑的是 ci-emptygreen-sim.sh 模拟器，不是本闸）。映射以本文件 step 名原文为准。
 #   已知限制：本批不产 JSONL（无写方）⇒ 真仓这 5 项恒「判不了」（exit 2）；这是如实，不是 CI 没跑。
 # ═══════════════════════════════════════════════════════════════════════════════
-
