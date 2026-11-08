@@ -1,4 +1,4 @@
-# DOCS-REGISTRY.yaml — 文档台账（治理锚点）
+﻿# DOCS-REGISTRY.yaml — 文档台账（治理锚点）
 
 # schema v1 (draft) | 维护：DSH 架构线 | 2026-08-19
 # 目的：每份文档有身份证（id/type/status/owner），新文档必须登记（登记门禁设计见 GOVERNANCE.md）
@@ -1947,3 +1947,10 @@ documents:
     status: active
     owner: CTO
     note: "#1309 D331 拆分：L4-1（版本 tag 祖先校验）保留；L4-2（bypass.log 对账）降为只报不拦，强制点移至服务端（main 必须 PR ＋ local-gates 绿），追溯改走仓内 gate-exemptions/。含豁免自覆盖与登记自登记行。"
+  # ---- CTO 2026-11-08：#1345 CI 运行面跨平台化（runs-on / 私库凭据 / 显式 refspec / 镜象源）----
+  - id: DOC-1345-01
+    type: governance
+    path: gate-exemptions/2026-11-08-1345-ci-runner-unify.md
+    status: active
+    owner: CTO
+    note: "#1345 CI 运行面跨平台化：local-gates 的 runs-on macos→win-ci；工作区改私库凭据克隆/显式 refspec/缺本次提交即 cannot judge（禁回退陈旧 FETCH_HEAD）；Linux 兼容（sha256sum 回退、ELECTRON_MIRROR）；新增 always() 收尾清理令牌。判据、job/workflow 名与必需 context 名均不变。含豁免自覆盖与登记自登记行。"
