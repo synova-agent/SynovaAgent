@@ -1,4 +1,4 @@
-﻿writeset:
+writeset:
   - .claude/claims/1345.yaml
   - .gitea/workflows/local-gates.yml
   - docs/authority/DOCS-REGISTRY.yaml

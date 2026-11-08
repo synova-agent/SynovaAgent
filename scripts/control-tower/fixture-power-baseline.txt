@@ -1,4 +1,4 @@
-﻿# fixture-power-baseline.txt — 面 3（夹具判别力，D1226 / 卡 #1295）**豁免白名单**
+# fixture-power-baseline.txt — 面 3（夹具判别力，D1226 / 卡 #1295）**豁免白名单**
 #
 # 为什么独立成文件（不并入 gate-integrity-baseline.txt）:
 #   实测——并入后该条目会被同文件内的 **REGISTRY-BASELINE 解析器** 当成隔离台账条目读取，

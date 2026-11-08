@@ -1,4 +1,4 @@
-﻿# DOCS-REGISTRY.yaml — 文档台账（治理锚点）
+# DOCS-REGISTRY.yaml — 文档台账（治理锚点）
 
 # schema v1 (draft) | 维护：DSH 架构线 | 2026-08-19
 # 目的：每份文档有身份证（id/type/status/owner），新文档必须登记（登记门禁设计见 GOVERNANCE.md）
