@@ -1,7 +1,10 @@
-writeset:
+﻿writeset:
   - .claude/claims/1345.yaml
   - .gitea/workflows/local-gates.yml
+  - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-08-1345-ci-runner-unify.md
+  - memory/notes/proposed/2026-11-08-1345-ci-cross-platform-runner.md
+  - scripts/control-tower/fixture-power-baseline.txt
 done:
   - verify: bash scripts/control-tower/check-gate-protection.sh
 note: "#1345 统一 CI 运行面：local-gates.yml 的 runs-on 由 macos 改为 win-ci（仅 1 行）。不改 job/workflow 名与任何 step ⇒ 必需 context local-gates / gates (pull_request) 名不变。原因：hub 迁到 Win 后 Mac runner 的 node 不在 PATH，local-gates 在 ① 步 1 秒环境红；Win 侧 WSL runner（win-host-runner，labels win-ci/ubuntu-latest）工具链齐备，CompanyOS 已用同一 label。"
