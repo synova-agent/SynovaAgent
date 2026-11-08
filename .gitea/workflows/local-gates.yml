@@ -1,4 +1,4 @@
-# 本机门禁 · 极简版（Gitea Actions · host 模式 · 无外部 action 依赖）
+﻿# 本机门禁 · 极简版（Gitea Actions · host 模式 · 无外部 action 依赖）
 #
 # 🔴 设计原则（2026-10-10 创始人明令：不得重犯"CI 又多又复杂 ⇒ 超时 ⇒ --no-verify"的历史病根）
 #   ① **少**：只留 3 步，且每步对应一条真会被绕过的风险
@@ -15,6 +15,11 @@ jobs:
   gates:
     runs-on: win-ci
     timeout-minutes: 15
+    env:
+      # CI 里任何 git 操作都不该等交互输入：缺凭据要**快速失败**，不许挂死。
+      # （2026-11-08 实证：origin 无凭据时 `resolve-ci-base.sh` 的 git fetch 在私库上
+      #   弹凭据提示，8 分钟 0% CPU 挂死，CI 表现为"卡住"而非"红"。）
+      GIT_TERMINAL_PROMPT: "0"
     steps:
       - name: 工作区（本机 Gitea 克隆；不用 actions/checkout）
         run: |
@@ -28,8 +33,8 @@ jobs:
           git -C "$WS" remote set-url origin "$REPO_URL_TOKEN"
           git -C "$WS" fetch -q origin || true
           git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD
-          # 取回后立刻把令牌从 .git/config 擦掉：工作区在 runner 上跨 run 持久，不留凭据落盘。
-          git -C "$WS" remote set-url origin "$REPO_URL_CLEAN"
+          # 令牌保留到 job 结束（门禁脚本内部还会 git fetch；提前擦掉会因私库无凭据而挂死）。
+          # 收尾由本 job 最后一步「清理」在 always() 下擦除。
           echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
       - name: 依赖（lock 哈希指纹：变了就重装，没变才跳过）
         env:
@@ -608,6 +613,15 @@ jobs:
           esac
           bash scripts/workflow/check-brief-vs-code.sh --strict || exit $?
 
+
+      - name: 清理（令牌不落盘 · always）
+        if: always()
+        run: |
+          set +e
+          WS=/Users/wane/.ci-work/SynovaAgent
+          # 工作区在 runner 上跨 run 持久：令牌只在本次 job 期间留在 .git/config，收尾一律还原。
+          git -C "$WS" remote set-url origin http://127.0.0.1:3000/synova-agent/SynovaAgent.git 2>/dev/null || true
+          echo "origin 已还原为无凭据 URL（令牌未留在 .git/config）"
 # ═══════════════════════════════════════════════════════════════════════════════
 # #1234 · ci-step 证据映射（**仅登记注释；不改本文件任何逻辑、不建日志回流通道**）
 #   用途：总闸 G2 的分腿证据里，`evidence: ci-step` 的闸「跑过没」只能由 CI step 结局回答。
@@ -628,5 +642,4 @@ jobs:
 #       它跑的是 ci-emptygreen-sim.sh 模拟器，不是本闸）。映射以本文件 step 名原文为准。
 #   已知限制：本批不产 JSONL（无写方）⇒ 真仓这 5 项恒「判不了」（exit 2）；这是如实，不是 CI 没跑。
 # ═══════════════════════════════════════════════════════════════════════════════
-
 
