@@ -20,9 +20,16 @@ jobs:
         run: |
           set -e
           WS=/Users/wane/.ci-work/SynovaAgent
-          if [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"; fi
+          # 私库必须带凭据克隆/取回（2026-11-08：#1346 实测匿名 clone 返 401 ⇒ 工作区步直接红）。
+          # 凭据来源＝工作流令牌（不依赖宿主机 git 凭据——Win/WSL runner 上没有 Mac 的凭据）。
+          REPO_URL_TOKEN="http://${{ github.token }}@127.0.0.1:3000/synova-agent/SynovaAgent.git"
+          REPO_URL_CLEAN="http://127.0.0.1:3000/synova-agent/SynovaAgent.git"
+          if [ ! -d "$WS/.git" ]; then mkdir -p "$(dirname "$WS")"; git clone -q "$REPO_URL_TOKEN" "$WS"; fi
+          git -C "$WS" remote set-url origin "$REPO_URL_TOKEN"
           git -C "$WS" fetch -q origin || true
           git -C "$WS" checkout -q -f "${{ github.sha }}" 2>/dev/null || git -C "$WS" checkout -q -f FETCH_HEAD
+          # 取回后立刻把令牌从 .git/config 擦掉：工作区在 runner 上跨 run 持久，不留凭据落盘。
+          git -C "$WS" remote set-url origin "$REPO_URL_CLEAN"
           echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
       - name: 依赖（lock 哈希指纹：变了就重装，没变才跳过）
         run: |
@@ -37,7 +44,7 @@ jobs:
           #   修法：以 lock 文件内容哈希作**缓存指纹** —— 指纹变了 ⇒ 强制重装。
           #   ⚠️ 只改"何时装"，不改"装什么"（仍是 `npm ci`，即严格按 lock 装）。
           HASH_FILE="$WS/.deps-lock-hash"
-          CUR_HASH="$(shasum -a 256 "$WS/package-lock.json" 2>/dev/null | awk '{print $1}')"
+          CUR_HASH="$( { shasum -a 256 "$WS/package-lock.json" 2>/dev/null || sha256sum "$WS/package-lock.json" 2>/dev/null; } | awk '{print $1}')"
           PREV_HASH="$(cat "$HASH_FILE" 2>/dev/null || true)"
           echo "lock 哈希 = ${CUR_HASH:-<无法计算>}（上次 ${PREV_HASH:-<无>}）"
           if [ ! -d "$WS/node_modules/vitest" ]; then
@@ -113,7 +120,7 @@ jobs:
           cd /Users/wane/.ci-work/SynovaAgent
           # 治「交付未回填」致看板失真：已合并 PR 的交付性引用所指 issue 仍 open ⇒ 红
           # 判别力自检：含交付性引用的 PR 数 == 0 ⇒ exit 2（禁把"看不见"当"没问题"）
-          export GITEA_TOKEN="$(cat /Users/wane/gitea/.win-push-token 2>/dev/null || true)"
+          export GITEA_TOKEN="${{ github.token }}"
           PATH="/Users/wane/.nvm/versions/node/v24.19.0/bin:$PATH" \
             node_modules/.bin/tsx scripts/control-tower/check-board-truth.ts || exit 1
       - name: ①c 内容面耦合 CC1–CC4（K12-13/#196 · 存量棘轮／新增必拦）
