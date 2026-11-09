@@ -104,7 +104,7 @@ git -C "$ORIGIN" config user.name 'Workflow Fixture'
 git -C "$ORIGIN" config user.email 'workflow@example.invalid'
 cp "$REPO/scripts/ci/core-tests.sh" "$ORIGIN/scripts/ci/core-tests.sh"
 cp "$REPO/package.json" "$REPO/package-lock.json" "$REPO/vitest.config.ts" "$ORIGIN/"
-printf "import { expect, test } from 'vitest';\ntest('contract', () => { expect(1).toBe(1); });\n" > "$ORIGIN/tests/contract/basic.test.ts"
+printf "import { expect, test } from 'vitest';\ntest('contract', () => { expect(['contract']).toContain('contract'); });\n" > "$ORIGIN/tests/contract/basic.test.ts"
 printf 'node_modules/\n' > "$ORIGIN/.gitignore"
 git -C "$ORIGIN" add -A
 git -C "$ORIGIN" commit -q -m 'fixture base'

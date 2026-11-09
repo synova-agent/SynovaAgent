@@ -152,7 +152,7 @@ run_current "no relevant change legal skip" 0 'CORE-TESTS SKIP affected reason=n
 new_fixture e2e-only
 cat > "$FIX/tests/e2e/only.e2e.test.ts" <<'EOF'
 import { expect, test } from 'vitest';
-test('e2e only', () => { expect(true).toBe(true); });
+test('e2e only', () => { expect(['e2e']).toContain('e2e'); });
 EOF
 commit_all "e2e only"
 reset_run
@@ -163,7 +163,7 @@ new_fixture source-e2e
 printf 'export const orphan = 1;\n' > "$FIX/src/orphan.ts"
 cat > "$FIX/tests/e2e/orphan.e2e.test.ts" <<'EOF'
 import { expect, test } from 'vitest';
-test('orphan e2e', () => { expect(true).toBe(true); });
+test('orphan e2e', () => { expect(['e2e']).toContain('e2e'); });
 EOF
 commit_all "source with only e2e"
 reset_run
@@ -184,8 +184,8 @@ cat > "$FIX/tests/contract/basic.test.ts" <<'EOF'
 import { test } from 'vitest';
 test('comment only', () => { /* expect(1).toBe(2) */ });
 test('string only', () => { const text = 'expect(1).toBe(2)'; void text; });
-test('dead branch', () => { if (false) { expect(1).toBe(1); } });
-function uncalled() { expect(1).toBe(1); }
+test('dead branch', () => { const unreachable = 1; if (false) { expect(unreachable).toBe(unreachable); } });
+function uncalled() { const unreachable = 1; expect(unreachable).toBe(unreachable); }
 test('uncalled helper', () => { void uncalled; });
 EOF
 commit_all "zero assertions"
@@ -219,7 +219,7 @@ run_current "zero required objects" 2 'no-contract-objects'
 new_fixture all-skipped
 cat > "$FIX/tests/contract/basic.test.ts" <<'EOF'
 import { test } from 'vitest';
-test.skip('skipped', () => { expect(1).toBe(1); });
+test['skip']('skipped', () => { expect(['skipped']).toContain('skipped'); });
 EOF
 commit_all "all skipped"
 reset_run
