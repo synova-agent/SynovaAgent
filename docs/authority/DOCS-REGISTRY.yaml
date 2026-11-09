@@ -1954,3 +1954,16 @@ documents:
     status: active
     owner: CTO
     note: "#1345 CI 运行面跨平台化：local-gates 的 runs-on macos→win-ci；工作区改私库凭据克隆/显式 refspec/缺本次提交即 cannot judge（禁回退陈旧 FETCH_HEAD）；Linux 兼容（sha256sum 回退、ELECTRON_MIRROR）；新增 always() 收尾清理令牌。判据、job/workflow 名与必需 context 名均不变。含豁免自覆盖与登记自登记行。"
+  # ---- CTO 2026-11-09：#1319 T1 最小核心门与限定过渡豁免 ----
+  - id: DOC-1319-01
+    type: devdoc
+    path: docs/synova/coordination/编码指令-1319-G1-G2最小核心门-20261109.md
+    status: active
+    owner: CTO
+    note: "#1319 revision 5：CTO 仅放行 T1 影子核心门；九文件写集、可信输入、两个配对 harness 与平台来源预证。T2/T3 未放行。"
+  - id: DOC-1319-02
+    type: governance
+    path: gate-exemptions/2026-11-09-1319-g1-core-gates.md
+    status: active
+    owner: CTO
+    note: "#1319 T1 四个受保护实现文件、豁免自覆盖与 registry 登记的限定过渡豁免；不扩大路径或权限。"

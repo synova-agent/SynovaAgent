@@ -1,10 +1,18 @@
-# .claude/claims/1319.yaml — G0 根入口最小同步（T1）
+# .claude/claims/1319.yaml — G1 最小核心门（T1）
 writeset:
-  - AGENTS.md
-  - docs/authority/GATE-STANDARD.md
+  - .gitea/workflows/core-gates.yml
+  - scripts/ci/core-tests.sh
+  - tests/control-tower/core-tests.test.sh
+  - tests/control-tower/core-gates-workflow.test.sh
   - .claude/claims/1319.yaml
-  - memory/notes/proposed/2026-11-04-1319-g0-gate-source-switch.md
-  - docs/synova/reviews/1324.131913191319.json
+  - gate-exemptions/2026-11-09-1319-g1-core-gates.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/synova/coordination/编码指令-1319-G1-G2最小核心门-20261109.md
+  - memory/notes/proposed/2026-11-09-1319-g1-core-gates.md
 done:
-  - verify: bash scripts/doc-system/check-doc-truth.sh
-note: "#1319 T1：AGENTS.md 三处（L3 判据源切至裁定 v1.0／L270 legacy Q2 退役／L305 四条件注）＋ docs/authority/GATE-STANDARD.md 首部 2 行状态指针；依据规格 §6 T1。"
+  - verify: python3 scripts/control-tower/claim_store.py --check 1319
+  - verify: CI=1 SYNO_CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319/workflow-degraded.jsonl bash tests/control-tower/core-gates-workflow.test.sh
+  - verify: CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319/core-tests-degraded.jsonl bash tests/control-tower/core-tests.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: git diff --cached --check
+note: "#1319 T1：新增影子核心门、安装前可信输入与工具链检查、两个真实配对 harness 及限定过渡豁免；不改 T2/T3、分支保护或旧门。"

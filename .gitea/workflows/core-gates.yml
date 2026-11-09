@@ -1,0 +1,258 @@
+name: core-gates
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: win-ci
+    timeout-minutes: 15
+    env:
+      CI: "1"
+      SYNO_CI: "1"
+      GIT_TERMINAL_PROMPT: "0"
+      ELECTRON_MIRROR: "https://npmmirror.com/mirrors/electron/"
+      CORE_HEAD_SHA: ${{ github.sha }}
+      CORE_EVENT_BEFORE: ${{ github.event.before }}
+      CORE_REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+      CORE_GITEA_TOKEN: ${{ github.token }}
+    steps:
+      - name: 工作区（独立临时树与 askpass）
+        shell: bash
+        run: |
+          set +x
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          degrade() {
+            printf 'cannot judge: %s: %s\n' "$1" "$2" >&2
+            printf '{"time":"%s","component":"core-gates-checkout","code":"%s","phase":"checkout","retryable":true}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$1" >> "$SYNO_GATE_DEGRADED_LOG"
+            exit 2
+          }
+          [ -n "${CORE_HEAD_SHA:-}" ] || degrade "missing-head" "github.sha missing"
+          [ -n "${CORE_GITEA_TOKEN:-}" ] || degrade "missing-token" "workflow token missing"
+          [ -n "${CORE_REPOSITORY_URL:-}" ] || degrade "missing-repository" "repository URL missing"
+          export CORE_WORKSPACE="$RUNNER_TEMP/core-gates-workspace"
+          export CORE_ASKPASS="$RUNNER_TEMP/core-gates-askpass.sh"
+          [ ! -e "$CORE_WORKSPACE" ] || degrade "stale-workspace" "$CORE_WORKSPACE already exists"
+          [ ! -e "$CORE_ASKPASS" ] || degrade "stale-credential" "$CORE_ASKPASS already exists"
+          printf 'CORE_WORKSPACE=%s\nCORE_ASKPASS=%s\n' "$CORE_WORKSPACE" "$CORE_ASKPASS" >> "$GITHUB_ENV"
+          cat > "$CORE_ASKPASS" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *[Uu]sername*) printf '%s\n' 'x-access-token' ;;
+            *) printf '%s\n' "$CORE_GITEA_TOKEN" ;;
+          esac
+          ASKPASS
+          chmod 700 "$CORE_ASKPASS"
+          export GIT_ASKPASS="$CORE_ASKPASS"
+          git clone --no-checkout "$CORE_REPOSITORY_URL" "$CORE_WORKSPACE" || degrade "clone-failed" "git clone failed"
+          git -C "$CORE_WORKSPACE" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+          git -C "$CORE_WORKSPACE" fetch --prune origin \
+            '+refs/heads/*:refs/remotes/origin/*' \
+            '+refs/pull/*/head:refs/remotes/origin/pull/*' \
+            '+refs/pull/*/merge:refs/remotes/origin/pull/*/merge' || degrade "fetch-failed" "explicit refspec fetch failed"
+          git -C "$CORE_WORKSPACE" cat-file -e "$CORE_HEAD_SHA^{commit}" 2>/dev/null || degrade "missing-reviewed-sha" "$CORE_HEAD_SHA unavailable; no FETCH_HEAD fallback"
+          git -C "$CORE_WORKSPACE" checkout --detach "$CORE_HEAD_SHA" || degrade "checkout-failed" "checkout reviewed SHA failed"
+          ACTUAL_HEAD="$(git -C "$CORE_WORKSPACE" rev-parse HEAD)" || degrade "head-unreadable" "rev-parse HEAD failed"
+          [ "$ACTUAL_HEAD" = "$CORE_HEAD_SHA" ] || degrade "wrong-head" "HEAD=$ACTUAL_HEAD expected=$CORE_HEAD_SHA"
+          printf 'CORE-WORKFLOW-MARKER=T1-r4-base\nHEAD=%s\n' "$ACTUAL_HEAD"
+
+      - name: 事件映射与安装前受信预检
+        shell: bash
+        run: |
+          set +x
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          degrade() {
+            printf 'cannot judge: %s: %s\n' "$1" "$2" >&2
+            printf '{"time":"%s","component":"core-gates-event","code":"%s","phase":"event-mapping","retryable":false}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$1" >> "$SYNO_GATE_DEGRADED_LOG"
+            exit 2
+          }
+          EVENT_ARGS=()
+          case "${GITHUB_EVENT_NAME:-}" in
+            pull_request)
+              [ -n "${GITHUB_BASE_REF:-}" ] || degrade "missing-base-ref" "GITHUB_BASE_REF missing"
+              BASE="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)" || degrade "bad-base" "merge-base failed"
+              EVENT_ARGS=(--event pull-request --base "$BASE")
+              ;;
+            push)
+              [ -n "${CORE_EVENT_BEFORE:-}" ] || degrade "missing-before" "CORE_EVENT_BEFORE missing"
+              EVENT_ARGS=(--event push --base "$CORE_EVENT_BEFORE")
+              ;;
+            workflow_dispatch)
+              EVENT_ARGS=(--event manual)
+              ;;
+            *)
+              degrade "unknown-event" "GITHUB_EVENT_NAME=${GITHUB_EVENT_NAME:-}"
+              ;;
+          esac
+          printf 'CORE_EVENT=%s\nCORE_BASE=%s\n' "${EVENT_ARGS[1]}" "${EVENT_ARGS[3]:-}" >> "$GITHUB_ENV"
+          set +e
+          bash scripts/ci/core-tests.sh --preflight "${EVENT_ARGS[@]}"
+          RC=$?
+          set -e
+          exit "$RC"
+
+      - name: 依赖（npm ci）
+        shell: bash
+        run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          set +e
+          OUT="$(npm ci 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUT"
+          if [ "$RC" -ne 0 ]; then
+            printf 'cannot judge: dependency-install: npm ci rc=%s\n' "$RC" >&2
+            printf '{"time":"%s","component":"core-gates-dependencies","code":"dependency-install","phase":"npm-ci","retryable":true}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$SYNO_GATE_DEGRADED_LOG"
+            exit 2
+          fi
+
+      - name: 安装后工具链核验
+        shell: bash
+        run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          degrade() {
+            printf 'cannot judge: installed-toolchain: %s\n' "$1" >&2
+            printf '{"time":"%s","component":"core-gates-toolchain","code":"installed-toolchain","phase":"postinstall","retryable":false}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$SYNO_GATE_DEGRADED_LOG"
+            exit 2
+          }
+          for tool in vitest tsc esbuild; do
+            [ -f "node_modules/.bin/$tool" ] && [ -x "node_modules/.bin/$tool" ] || degrade "node_modules/.bin/$tool missing"
+          done
+          node_modules/.bin/vitest --version || degrade "vitest version failed"
+          node_modules/.bin/tsc --version || degrade "tsc version failed"
+          node_modules/.bin/esbuild --version || degrade "esbuild version failed"
+          set +e
+          NPM_LS_OUT="$(npm ls vitest typescript esbuild patch-package --json 2>&1)"
+          NPM_LS_RC=$?
+          set -e
+          printf '%s\n' "$NPM_LS_OUT"
+          [ "$NPM_LS_RC" -eq 0 ] || degrade "npm ls rc=$NPM_LS_RC"
+          printf '%s\n' "$NPM_LS_OUT" > "$RUNNER_TEMP/core-gates-npm-ls.json"
+          set +e
+          node - "$RUNNER_TEMP/core-gates-npm-ls.json" <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (Array.isArray(report.problems) && report.problems.length) process.exit(2);
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          for (const name of ['vitest', 'typescript', 'esbuild', 'patch-package']) {
+            const versions = [];
+            const visit = (dependencies) => {
+              for (const [dependency, value] of Object.entries(dependencies || {})) {
+                if (dependency === name && typeof value.version === 'string') versions.push(value.version);
+                visit(value.dependencies);
+              }
+            };
+            visit(report.dependencies);
+            const expected = lock.packages?.[`node_modules/${name}`]?.version;
+            if (!expected || versions.length === 0 || versions.some((version) => version !== expected)) {
+              console.error(`cannot judge: ${name} actual=${versions.join(',') || '<missing>'} expected=${expected}`);
+              process.exit(2);
+            }
+            console.log(`CORE-TOOL-VERSION ${name}=${expected}`);
+          }
+          NODE
+          NODE_RC=$?
+          set -e
+          [ "$NODE_RC" -eq 0 ] || degrade "npm dependency tree differs from package-lock"
+
+      - name: 类型
+        shell: bash
+        run: |
+          cd "$CORE_WORKSPACE"
+          set +e
+          OUT="$(npm run lint 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUT"
+          [ "$RC" -eq 0 ] || { printf 'type check failed rc=%s\n' "$RC" >&2; exit 1; }
+
+      - name: 构建
+        shell: bash
+        run: |
+          cd "$CORE_WORKSPACE"
+          set +e
+          OUT="$(npm run build 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUT"
+          [ "$RC" -eq 0 ] || { printf 'build command failed rc=%s\n' "$RC" >&2; exit 1; }
+          [ -f dist/backend.mjs ] || { printf 'build artifact missing: dist/backend.mjs\n' >&2; exit 1; }
+          printf 'CORE-BUILD-ARTIFACT path=dist/backend.mjs\n'
+
+      - name: Secrets
+        shell: bash
+        run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          set +e
+          OUT="$(npm run check:secrets 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$OUT"
+          if [ "$RC" -eq 2 ]; then
+            printf '{"time":"%s","component":"core-gates-secrets","code":"secrets-cannot-judge","phase":"secrets","retryable":false}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$SYNO_GATE_DEGRADED_LOG"
+          fi
+          exit "$RC"
+
+      - name: workflow 配对反例
+        shell: bash
+        run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          set +e
+          CI=1 SYNO_CI=1 bash tests/control-tower/core-gates-workflow.test.sh
+          RC=$?
+          set -e
+          exit "$RC"
+
+      - name: runner 配对反例
+        shell: bash
+        run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          set +e
+          CI=1 bash tests/control-tower/core-tests.test.sh
+          RC=$?
+          set -e
+          exit "$RC"
+
+      - name: 实际核心测试
+        shell: bash
+        run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
+          cd "$CORE_WORKSPACE"
+          EVENT_ARGS=(--event "$CORE_EVENT")
+          [ -z "${CORE_BASE:-}" ] || EVENT_ARGS+=(--base "$CORE_BASE")
+          set +e
+          bash scripts/ci/core-tests.sh "${EVENT_ARGS[@]}"
+          RC=$?
+          set -e
+          exit "$RC"
+
+      - name: 清理（凭据与临时工作区 · always）
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          unset CORE_GITEA_TOKEN GIT_ASKPASS
+          rm -rf "${CORE_WORKSPACE:-${RUNNER_TEMP:?}/core-gates-workspace}" "${CORE_ASKPASS:-${RUNNER_TEMP:?}/core-gates-askpass.sh}"
