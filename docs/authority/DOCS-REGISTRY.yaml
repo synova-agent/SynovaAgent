@@ -1960,10 +1960,10 @@ documents:
     path: docs/synova/coordination/编码指令-1319-G1-G2最小核心门-20261109.md
     status: active
     owner: CTO
-    note: "#1319 revision 6：CTO 仅放行 T1 影子核心门；十文件写集、可信输入、两个配对 harness 与平台来源预证。T2/T3 未放行。"
+    note: "#1319 revision 7：CTO 仅放行 T1 影子核心门；十一文件写集、可信输入、两个配对 harness 与平台来源预证。T2/T3 未放行。"
   - id: DOC-1319-02
     type: governance
     path: gate-exemptions/2026-11-09-1319-g1-core-gates.md
     status: active
     owner: CTO
-    note: "#1319 T1 四个受保护实现文件、豁免自覆盖与 registry 登记的限定过渡豁免；不扩大路径或权限。"
+    note: "#1319 T1 四个受保护实现文件、scripts/control-tower/gate-integrity-baseline.txt 精确路径、豁免自覆盖与 registry 登记的限定过渡豁免；不扩大路径或权限。"
