@@ -112,7 +112,7 @@ esac
 
 if [ "$EVENT" != "manual" ]; then
   BASE="$(git rev-parse --verify "$BASE^{commit}" 2>/dev/null)" || degrade "bad-base" "base" "base commit is unreadable"
-  CHANGED_FILES="$(git diff --name-only --diff-filter=ACDMRTUXB "$BASE"...HEAD 2>&1)"
+  CHANGED_FILES="$(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "$BASE"...HEAD 2>&1)"
   DIFF_RC=$?
   [ "$DIFF_RC" -eq 0 ] || degrade "diff-failed" "base" "$CHANGED_FILES"
   TRUSTED_CHANGES="$(printf '%s\n' "$CHANGED_FILES" | grep -E '(^\.gitea/workflows/core-gates\.yml$|^scripts/ci/core-tests\.sh$|^tests/control-tower/core-tests\.test\.sh$|^tests/control-tower/core-gates-workflow\.test\.sh$|^scripts/check-secrets\.sh$|^scripts/desktop/build-backend\.sh$|^tsconfig\.json$|^tsconfig\..*\.json$|^vitest\.config\.ts$|^tests/contract/|^package\.json$|^package-lock\.json$|^patches/|(^|/)\.npmrc$)' || :)"
@@ -267,7 +267,7 @@ try {
   let excludedTestChanges = 0;
   for (const file of changed) {
     const testChange = /^tests\/.*\.(?:test|spec)\.tsx?$/.test(file) || /^tests\/.*\.integration\.test\.tsx?$/.test(file);
-    const sourceChange = /^(?:src|packages|scripts)\/.*\.tsx?$/.test(file) || /^(?:package\.json|package-lock\.json|tsconfig\.json|tsconfig\..*\.json|vitest\.config\.ts)$/.test(file);
+    const sourceChange = /^(?:src|packages|scripts)\/.*\.tsx?$/.test(file) || /^(?:app|electron|electron-renderer)\/.*\.(?:[cm]?js|tsx?)$/.test(file) || /^[^/]+\.(?:[cm]?js|ts)$/.test(file) || /^(?:package\.json|package-lock\.json|tsconfig\.json|tsconfig\..*\.json|vitest\.config\.ts)$/.test(file);
     if (testChange) {
       if (fs.existsSync(path.join(root, file)) && !collectible.has(file)) excludedTestChanges += 1;
       else collectibleTestChanges += 1;

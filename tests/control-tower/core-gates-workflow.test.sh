@@ -160,6 +160,64 @@ for kind in unknown missing-before; do
   fi
 done
 
+run_trusted_mutation() {
+  local kind="$1"
+  git -C "$CORE_WORKSPACE" reset --hard "$ORIGIN_HEAD" >/dev/null
+  git -C "$CORE_WORKSPACE" clean -fd >/dev/null
+  case "$kind" in
+    core-entry)
+      node - "$CORE_WORKSPACE/scripts/ci/core-tests.sh" <<'NODE'
+const fs = require('node:fs');
+const file = process.argv[2];
+const lines = fs.readFileSync(file, 'utf8').split('\n');
+lines.splice(1, 0, "printf 'CORE-MUTATED-HEAD-RUNNER-EXECUTED\\n'", 'exit 0');
+fs.writeFileSync(file, lines.join('\n'));
+NODE
+      ;;
+    rename)
+      mkdir -p "$CORE_WORKSPACE/moved"
+      git -C "$CORE_WORKSPACE" mv tests/contract/basic.test.ts moved/basic.test.ts
+      ;;
+  esac
+  git -C "$CORE_WORKSPACE" add -A
+  git -C "$CORE_WORKSPACE" commit -q -m "trusted mutation $kind"
+  local mutated_head
+  mutated_head="$(git -C "$CORE_WORKSPACE" rev-parse HEAD)"
+  local case_tmp="$TMP/trusted-$kind"
+  local marker="$case_tmp/npm-ci-executed"
+  local stub_bin="$case_tmp/bin"
+  mkdir -p "$case_tmp" "$stub_bin"
+  cat > "$stub_bin/npm" <<'EOF'
+#!/usr/bin/env bash
+printf 'executed\n' > "$NPM_CI_MARKER"
+exit 0
+EOF
+  chmod +x "$stub_bin/npm"
+  set +e
+  local out
+  out="$(env PATH="$stub_bin:$PATH" NPM_CI_MARKER="$marker" RUNNER_TEMP="$case_tmp" \
+    GITHUB_ENV="$case_tmp/github.env" CORE_WORKSPACE="$CORE_WORKSPACE" CORE_HEAD_SHA="$mutated_head" \
+    CORE_EVENT_BEFORE='' CI=1 GITHUB_EVENT_NAME=pull_request GITHUB_BASE_REF=main \
+    bash -e "$TMP/steps/event.sh" 2>&1)"
+  local rc=$?
+  set -e
+  printf '\n--- workflow trusted mutation %s (expected rc=2, actual rc=%s) ---\n%s\n' "$kind" "$rc" "$out"
+  if [ "$rc" -eq 0 ]; then
+    env PATH="$stub_bin:$PATH" NPM_CI_MARKER="$marker" RUNNER_TEMP="$case_tmp" \
+      CORE_WORKSPACE="$CORE_WORKSPACE" bash -e "$TMP/steps/deps.sh" >/dev/null 2>&1
+  fi
+  if [ "$rc" -eq 2 ] && printf '%s\n' "$out" | grep -q 'CORE-TRUSTED-INPUT-CHANGED' && \
+     ! printf '%s\n' "$out" | grep -q 'CORE-MUTATED-HEAD-RUNNER-EXECUTED' && \
+     [ ! -e "$marker" ] && check_degraded "$case_tmp/core-gates-degraded.jsonl" core-gates-event; then
+    ok "workflow rejects $kind before HEAD runner and npm ci with one degraded JSON"
+  else
+    no "workflow rejects $kind before HEAD runner and npm ci"
+  fi
+}
+
+run_trusted_mutation core-entry
+run_trusted_mutation rename
+
 set +e
 CLEAN_OUT="$(env RUNNER_TEMP="$CHECKOUT_TMP" CORE_WORKSPACE="$CORE_WORKSPACE" CORE_ASKPASS="$CORE_ASKPASS" bash -e "$TMP/steps/cleanup.sh" 2>&1)"
 CLEAN_RC=$?
@@ -220,7 +278,13 @@ run_stub() {
   fi
   if [ "$expected_rc" -eq 2 ]; then
     local component
-    case "$script" in deps) component=core-gates-dependencies ;; secrets) component=core-gates-secrets ;; *) component=core-gates-toolchain ;; esac
+    case "$script" in
+      deps) component=core-gates-dependencies ;;
+      lint) component=core-gates-lint ;;
+      build) component=core-gates-build ;;
+      secrets) component=core-gates-secrets ;;
+      *) component=core-gates-toolchain ;;
+    esac
     check_degraded "$CASE_TMP/core-gates-degraded.jsonl" "$component" || { no "$name degraded JSON"; return; }
   elif [ -s "$CASE_TMP/core-gates-degraded.jsonl" ]; then
     no "$name unexpected degraded log"
@@ -231,7 +295,9 @@ run_stub() {
 
 run_stub dependency-failure deps 2 'DELIBERATE_NPM_CI_FAILURE' 'DELIBERATE_NPM_CI_FAILURE' 26
 run_stub lint-failure lint 1 'src/probe.ts(1,1): error TS9999' 'src/probe.ts(1,1): error TS9999: deliberate' 2
-run_stub build-command-failure build 1 'DELIBERATE_BUILD_FAILURE' 'DELIBERATE_BUILD_FAILURE' 17
+run_stub lint-tool-failure lint 2 'DELIBERATE_LINT_TOOL_FAILURE' 'DELIBERATE_LINT_TOOL_FAILURE' 127
+run_stub build-command-failure build 1 'DELIBERATE_BUILD_FAILURE' 'x [ERROR] DELIBERATE_BUILD_FAILURE' 17
+run_stub build-tool-failure build 2 'DELIBERATE_BUILD_TOOL_FAILURE' 'DELIBERATE_BUILD_TOOL_FAILURE' 127
 run_stub build-artifact-missing build 1 'build artifact missing' '' 0
 run_stub build-normal build 0 'dist/backend.mjs' '' 0 1
 run_stub secrets-violation secrets 1 'DELIBERATE_SECRET_MATCH' 'DELIBERATE_SECRET_MATCH' 1

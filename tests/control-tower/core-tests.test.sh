@@ -41,7 +41,7 @@ commit_all() {
 
 new_fixture() {
   FIX="$TMP/fixture-$1"
-  mkdir -p "$FIX"/{scripts/ci,scripts/desktop,.gitea/workflows,tests/control-tower,tests/contract,tests/unit,tests/e2e,src,patches}
+  mkdir -p "$FIX"/{scripts/ci,scripts/desktop,.gitea/workflows,tests/control-tower,tests/contract,tests/unit,tests/e2e,src,app/js,patches}
   git -C "$FIX" init -q || harness_degrade "git init failed"
   git -C "$FIX" config user.name "Core Tests Fixture"
   git -C "$FIX" config user.email "fixture@example.invalid"
@@ -52,6 +52,7 @@ new_fixture() {
   cp "$REPO/scripts/check-secrets.sh" "$FIX/scripts/check-secrets.sh"
   cp "$REPO/scripts/desktop/build-backend.sh" "$FIX/scripts/desktop/build-backend.sh"
   cp "$REPO/package.json" "$REPO/package-lock.json" "$REPO/vitest.config.ts" "$FIX/"
+  cp "$REPO/app/js/chat-sse.js" "$FIX/app/js/chat-sse.js"
   printf 'node_modules/\nrunner-temp/\n' > "$FIX/.gitignore"
   node -e "require('node:fs').symlinkSync(process.argv[1], process.argv[2], 'junction')" "$REPO/node_modules" "$FIX/node_modules" || harness_degrade "node_modules junction failed"
   cat > "$FIX/tests/contract/basic.test.ts" <<'EOF'
@@ -72,7 +73,7 @@ EOF
 }
 
 run_current() {
-  local name="$1" expected_rc="$2" expected_text="$3" expected_degraded="${4:-yes}"
+  local name="$1" expected_rc="$2" expected_text="$3" expected_degraded="${4:-yes}" forbidden_text="${5:-}"
   local event="${EVENT:-manual}" base_arg="${BASE_ARG:-}"
   local args=(--event "$event")
   [ -z "$base_arg" ] || args+=(--base "$base_arg")
@@ -89,6 +90,10 @@ run_current() {
   printf '\n--- %s (expected rc=%s, actual rc=%s) ---\n%s\n' "$name" "$expected_rc" "$RC" "$OUT"
   if [ "$RC" -ne "$expected_rc" ] || ! printf '%s\n' "$OUT" | grep -Eq "$expected_text"; then
     no "$name rc/output"
+    return
+  fi
+  if [ -n "$forbidden_text" ] && printf '%s\n' "$OUT" | grep -Eq "$forbidden_text"; then
+    no "$name forbidden output"
     return
   fi
   if [ "$expected_rc" -eq 2 ] && [ "$expected_degraded" = "yes" ]; then
@@ -148,6 +153,13 @@ commit_all "docs only"
 reset_run
 EVENT="pull-request"; RUN_EVENT="pull_request"; RUN_BASE_REF="main"; BASE_ARG="$BASE"
 run_current "no relevant change legal skip" 0 'CORE-TESTS SKIP affected reason=no-relevant-change' no
+
+new_fixture production-js
+printf '\n// deliberate production change\n' >> "$FIX/app/js/chat-sse.js"
+commit_all "tracked production JS change"
+reset_run
+EVENT="pull-request"; RUN_EVENT="pull_request"; RUN_BASE_REF="main"; BASE_ARG="$BASE"
+run_current "tracked app production JS enters affected collection" 1 'CORE-TESTS RUN affected|affected-no-tests|affected-no-passed-tests' no 'CORE-TESTS SKIP affected reason=no-relevant-change'
 
 new_fixture e2e-only
 cat > "$FIX/tests/e2e/only.e2e.test.ts" <<'EOF'
@@ -298,15 +310,15 @@ reset_run
 EVENT="push"; RUN_EVENT="push"; BASE_ARG="$BASE"; RUN_BEFORE="0000000000000000000000000000000000000000"
 run_current "push all-zero before" 2 'bad-base'
 
-for kind in core-entry patched-vitest fake-tsc fake-esbuild lock patch; do
+for kind in patched-vitest fake-tsc fake-esbuild lock patch rename; do
   new_fixture "trusted-$kind"
   case "$kind" in
-    core-entry) printf '\nexit 0\n' >> "$FIX/scripts/ci/core-tests.sh" ;;
     patched-vitest) printf 'fixture patch for vitest\n' > "$FIX/patches/vitest+5.0.2.patch" ;;
     fake-tsc) node -e "const fs=require('fs');const file=process.argv[1];const p=JSON.parse(fs.readFileSync(file));p.scripts.lint='fake-tsc';fs.writeFileSync(file,JSON.stringify(p,null,2))" "$FIX/package.json" ;;
     fake-esbuild) printf '\necho fake-esbuild\n' >> "$FIX/scripts/desktop/build-backend.sh" ;;
     lock) printf '\n' >> "$FIX/package-lock.json" ;;
     patch) printf 'fixture dependency patch\n' > "$FIX/patches/dependency.patch" ;;
+    rename) mkdir -p "$FIX/moved"; git -C "$FIX" mv tests/contract/basic.test.ts moved/basic.test.ts ;;
   esac
   commit_all "tamper $kind"
   reset_run

@@ -93,6 +93,14 @@ jobs:
               degrade "unknown-event" "GITHUB_EVENT_NAME=${GITHUB_EVENT_NAME:-}"
               ;;
           esac
+          if [ "${EVENT_ARGS[1]}" != "manual" ]; then
+            CHANGED_FILES="$(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "${EVENT_ARGS[3]}"...HEAD 2>&1)" || degrade "diff-failed" "$CHANGED_FILES"
+            TRUSTED_CHANGES="$(printf '%s\n' "$CHANGED_FILES" | grep -E '(^\.gitea/workflows/core-gates\.yml$|^scripts/ci/core-tests\.sh$|^tests/control-tower/core-tests\.test\.sh$|^tests/control-tower/core-gates-workflow\.test\.sh$|^scripts/check-secrets\.sh$|^scripts/desktop/build-backend\.sh$|^tsconfig\.json$|^tsconfig\..*\.json$|^vitest\.config\.ts$|^tests/contract/|^package\.json$|^package-lock\.json$|^patches/|(^|/)\.npmrc$)' || :)"
+            if [ -n "$TRUSTED_CHANGES" ]; then
+              printf 'CORE-TRUSTED-INPUT-CHANGED\n%s\n' "$TRUSTED_CHANGES" >&2
+              degrade "core-trusted-input-changed" "core inputs changed in base...HEAD"
+            fi
+          fi
           printf 'CORE_EVENT=%s\nCORE_BASE=%s\n' "${EVENT_ARGS[1]}" "${EVENT_ARGS[3]:-}" >> "$GITHUB_ENV"
           set +e
           bash scripts/ci/core-tests.sh --preflight "${EVENT_ARGS[@]}"
@@ -173,24 +181,46 @@ jobs:
       - name: 类型
         shell: bash
         run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
           cd "$CORE_WORKSPACE"
           set +e
           OUT="$(npm run lint 2>&1)"
           RC=$?
           set -e
           printf '%s\n' "$OUT"
-          [ "$RC" -eq 0 ] || { printf 'type check failed rc=%s\n' "$RC" >&2; exit 1; }
+          if [ "$RC" -ne 0 ]; then
+            if printf '%s\n' "$OUT" | grep -qE 'error TS[0-9]+:'; then
+              printf 'type check failed rc=%s\n' "$RC" >&2
+              exit 1
+            fi
+            printf 'cannot judge: lint-command: npm run lint rc=%s without TypeScript diagnostics\n' "$RC" >&2
+            printf '{"time":"%s","component":"core-gates-lint","code":"lint-cannot-judge","phase":"lint","retryable":true}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$SYNO_GATE_DEGRADED_LOG"
+            exit 2
+          fi
 
       - name: 构建
         shell: bash
         run: |
+          export SYNO_GATE_DEGRADED_LOG="${RUNNER_TEMP:?}/core-gates-degraded.jsonl"
+          mkdir -p "$(dirname "$SYNO_GATE_DEGRADED_LOG")"
           cd "$CORE_WORKSPACE"
           set +e
           OUT="$(npm run build 2>&1)"
           RC=$?
           set -e
           printf '%s\n' "$OUT"
-          [ "$RC" -eq 0 ] || { printf 'build command failed rc=%s\n' "$RC" >&2; exit 1; }
+          if [ "$RC" -ne 0 ]; then
+            if printf '%s\n' "$OUT" | grep -qE 'error TS[0-9]+:|\[ERROR\]|ERROR:|Build failed with [0-9]+ error'; then
+              printf 'build command failed rc=%s\n' "$RC" >&2
+              exit 1
+            fi
+            printf 'cannot judge: build-command: npm run build rc=%s without compiler diagnostics\n' "$RC" >&2
+            printf '{"time":"%s","component":"core-gates-build","code":"build-cannot-judge","phase":"build","retryable":true}\n' \
+              "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$SYNO_GATE_DEGRADED_LOG"
+            exit 2
+          fi
           [ -f dist/backend.mjs ] || { printf 'build artifact missing: dist/backend.mjs\n' >&2; exit 1; }
           printf 'CORE-BUILD-ARTIFACT path=dist/backend.mjs\n'
 
