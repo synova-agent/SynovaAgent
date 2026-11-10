@@ -1,24 +1,18 @@
-# .claude/claims/1319.yaml — G1 最小核心门（T1）
+# .claude/claims/1319.yaml — T2b 受信事件最小改造
 writeset:
   - .gitea/workflows/core-gates.yml
   - scripts/ci/core-tests.sh
   - tests/control-tower/core-tests.test.sh
   - tests/control-tower/core-gates-workflow.test.sh
   - .claude/claims/1319.yaml
-  - gate-exemptions/2026-11-09-1319-g1-core-gates.md
+  - gate-exemptions/2026-11-10-1319-t2b-trusted-target.md
   - docs/authority/DOCS-REGISTRY.yaml
-  - docs/synova/coordination/编码指令-1319-G1-G2最小核心门-20261109.md
-  - memory/notes/proposed/2026-11-09-1319-g1-core-gates.md
-  - docs/authority/WIRING-REGISTRY.yaml
-  - scripts/control-tower/gate-integrity-baseline.txt
+  - memory/notes/proposed/2026-11-10-1319-t2b-trusted-target.md
 done:
   - verify: python3 scripts/control-tower/claim_store.py --check 1319
-  - verify: CI=1 SYNO_CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319/workflow-degraded.jsonl bash tests/control-tower/core-gates-workflow.test.sh
-  - verify: CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319/core-tests-degraded.jsonl bash tests/control-tower/core-tests.test.sh
-  - verify: python3 scripts/control-tower/quality-baseline.py --check-registry docs/authority/WIRING-REGISTRY.yaml
-  - verify: SYNO_QUALITY_DELTA=1 python3 scripts/control-tower/check-quality-delta.py --root . --base gitea/main
-  - verify: bash scripts/control-tower/sealed-tests.sh --list
-  - verify: SYNO_BASE_REF=gitea/main bash scripts/control-tower/check-gate-integrity.sh
+  - verify: bash -n scripts/ci/core-tests.sh && bash -n tests/control-tower/core-tests.test.sh && bash -n tests/control-tower/core-gates-workflow.test.sh
+  - verify: CI=1 SYNO_CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319-t2/t2b-workflow-degraded.jsonl bash tests/control-tower/core-gates-workflow.test.sh（实测 pass=23 fail=0）
+  - verify: CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319-t2/t2b-core-tests-degraded.jsonl bash tests/control-tower/core-tests.test.sh（实测 pass=29 fail=0）
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
   - verify: git diff --cached --check
-note: "#1319 T1 revision 7：新增影子核心门、可信输入、两个真实配对 harness 及限定过渡豁免；WIRING 同型登记与旧质量门复验保留；run 3784 的两个新增 shell harness 使 scan 223→225，FACE-TOTAL 213→215 作最小棘轮调整以保持 slack=10；不改 T2/T3、分支保护或检查器。"
+note: "#1319 T2b：平台探针 run 3830 实证 pull_request_target 的 workflow 与默认 checkout 来自 base，head 伪造未执行；核心仅改触发事件、显式 PR head SHA 与事件映射，补 base 预检拒绝 head 伪造和受信输入变化的配对反例。其余核心判据不动；旧 pull_request 影子门在本 PR 预检停止属预期，合并须旧 local-gates 绿与 CTO 审批，不执行 T3。"

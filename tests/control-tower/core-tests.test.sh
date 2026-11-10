@@ -144,8 +144,8 @@ run_current "source change runs real affected test" 0 'CORE-TESTS RESULT rc=0.*a
 
 new_fixture preflight
 reset_run
-EVENT="pull-request"; RUN_EVENT="pull_request"; RUN_BASE_REF="main"; BASE_ARG="$BASE"; PREFLIGHT_MODE=1
-run_current "clean preflight before installation" 0 'CORE-PREFLIGHT RESULT rc=0' no
+EVENT="pull-request"; RUN_EVENT="pull_request_target"; RUN_BASE_REF="main"; BASE_ARG="$BASE"; PREFLIGHT_MODE=1
+run_current "pull_request_target clean preflight before installation" 0 'CORE-PREFLIGHT RESULT rc=0' no
 
 new_fixture docs-only
 printf 'documentation only\n' > "$FIX/README.md"

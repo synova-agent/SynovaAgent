@@ -1,6 +1,6 @@
 name: core-gates
 on:
-  pull_request:
+  pull_request_target:
     branches: [ main ]
   push:
     branches: [ main ]
@@ -16,7 +16,7 @@ jobs:
       SYNO_CI: "1"
       GIT_TERMINAL_PROMPT: "0"
       ELECTRON_MIRROR: "https://npmmirror.com/mirrors/electron/"
-      CORE_HEAD_SHA: ${{ github.sha }}
+      CORE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       CORE_EVENT_BEFORE: ${{ github.event.before }}
       CORE_REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
       CORE_GITEA_TOKEN: ${{ github.token }}
@@ -77,7 +77,7 @@ jobs:
           }
           EVENT_ARGS=()
           case "${GITHUB_EVENT_NAME:-}" in
-            pull_request)
+            pull_request|pull_request_target)
               [ -n "${GITHUB_BASE_REF:-}" ] || degrade "missing-base-ref" "GITHUB_BASE_REF missing"
               BASE="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)" || degrade "bad-base" "merge-base failed"
               EVENT_ARGS=(--event pull-request --base "$BASE")

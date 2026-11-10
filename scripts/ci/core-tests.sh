@@ -76,7 +76,12 @@ case "$EVENT" in
   *) degrade "unknown-event" "arguments" "unsupported --event '$EVENT'" ;;
 esac
 require_value "GITHUB_EVENT_NAME" "missing-event-env" "environment"
-[ "$GITHUB_EVENT_NAME" = "$EXPECTED_EVENT" ] || degrade "event-mismatch" "environment" "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME does not match --event $EVENT"
+if [ "$EVENT" = "pull-request" ]; then
+  [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "pull_request_target" ] || \
+    degrade "event-mismatch" "environment" "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME does not match --event $EVENT"
+else
+  [ "$GITHUB_EVENT_NAME" = "$EXPECTED_EVENT" ] || degrade "event-mismatch" "environment" "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME does not match --event $EVENT"
+fi
 require_value "CORE_HEAD_SHA" "missing-head-env" "environment"
 
 for tool in git node npm bash; do
