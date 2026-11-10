@@ -1973,3 +1973,9 @@ documents:
     status: active
     owner: CTO
     note: "#1319 T2b 受信事件最小改造：pull_request_target、显式 PR head SHA、事件映射与配对 harness；仅限四个受保护实现文件、豁免自覆盖和本登记，不改其他核心判据。"
+  - id: DOC-1319-04
+    type: governance
+    path: gate-exemptions/2026-11-09-1319-g2-old-trigger-retire.md
+    status: active
+    owner: CTO
+    note: "#1319 T3 旧 local-gates 触发退役：仅保留 workflow_dispatch，旧步骤不变；覆盖受保护工作流、豁免自覆盖与本登记，不改新门、分支保护或 GitHub。"

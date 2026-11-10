@@ -1,18 +1,13 @@
-# .claude/claims/1319.yaml — T2b 受信事件最小改造
+# .claude/claims/1319.yaml — T3 旧门触发退役
 writeset:
-  - .gitea/workflows/core-gates.yml
-  - scripts/ci/core-tests.sh
-  - tests/control-tower/core-tests.test.sh
-  - tests/control-tower/core-gates-workflow.test.sh
+  - .gitea/workflows/local-gates.yml
   - .claude/claims/1319.yaml
-  - gate-exemptions/2026-11-10-1319-t2b-trusted-target.md
+  - gate-exemptions/2026-11-09-1319-g2-old-trigger-retire.md
   - docs/authority/DOCS-REGISTRY.yaml
-  - memory/notes/proposed/2026-11-10-1319-t2b-trusted-target.md
 done:
+  - verify: python3 -c "import yaml;w=yaml.load(open('.gitea/workflows/local-gates.yml',encoding='utf-8'),Loader=yaml.BaseLoader);assert w.get('on')=='workflow_dispatch',w.get('on')"
   - verify: python3 scripts/control-tower/claim_store.py --check 1319
-  - verify: bash -n scripts/ci/core-tests.sh && bash -n tests/control-tower/core-tests.test.sh && bash -n tests/control-tower/core-gates-workflow.test.sh
-  - verify: CI=1 SYNO_CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319-t2/t2b-workflow-degraded.jsonl bash tests/control-tower/core-gates-workflow.test.sh（实测 pass=23 fail=0）
-  - verify: CI=1 SYNO_GATE_DEGRADED_LOG=.codex-tmp/1319-t2/t2b-core-tests-degraded.jsonl bash tests/control-tower/core-tests.test.sh（实测 pass=29 fail=0）
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
   - verify: git diff --cached --check
-note: "#1319 T2b：平台探针 run 3830 实证 pull_request_target 的 workflow 与默认 checkout 来自 base，head 伪造未执行；核心仅改触发事件、显式 PR head SHA 与事件映射，补 base 预检拒绝 head 伪造和受信输入变化的配对反例。其余核心判据不动；旧 pull_request 影子门在本 PR 预检停止属预期，合并须旧 local-gates 绿与 CTO 审批，不执行 T3。"
+  - verify: git diff --name-only gitea/main...HEAD
+note: "#1319 T3：旧 local-gates 仅保留 workflow_dispatch，PR/push 不再自动运行；core-gates / core (pull_request_target) 继续作为唯一必需 context，新门日志、判据与 GitHub 运行面均不变。保留旧步骤与手动入口，不清理历史文件。"
