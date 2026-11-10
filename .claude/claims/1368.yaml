@@ -1,0 +1,26 @@
+# .claude/claims/1368.yaml — #1368（W3 骨架配套）写集声明（S0 源，issue 号卡）
+# 纪律：只列本 PR 真改动的文件，不预授权；写集外改动 ⇒ 退回。
+writeset:
+  - AGENTS.md
+  - .synova/skills/squad-discipline/SKILL.md
+  - .synova/skills/dsh-code-standards/SKILL.md
+  - .synova/skills/dev-doc-spec/SKILL.md
+  - .synova/skills/dev-doc-spec/template/编码指令模板.md
+  - .dsh/skills/squad-discipline/SKILL.md
+  - .dsh/skills/dsh-code-standards/SKILL.md
+  - .dsh/skills/dev-doc-spec/SKILL.md
+  - .dsh/skills/dev-doc-spec/template/编码指令模板.md
+  - docs/synova/presets/synova-coding/cordis.patch.yml
+  - docs/synova/presets/synova-coding/preset.yml
+  - docs/synova/presets/synova-coding/README.md
+  - docs/synova/presets/synova-squad-lead/cordis.patch.yml
+  - gate-exemptions/2026-11-10-1368-guard-skeleton.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-11-10-1368-guard-skeleton.md
+  - .claude/claims/1368.yaml
+done:
+  - verify: bash scripts/doc-system/check-doc-truth.sh ⇒ 改前改后均 exit 0
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check ⇒ SYNC-OK exit 0
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base 764c1274a ⇒ 受保护路径全部有合规豁免
+  - verify: wc -c AGENTS.md ⇒ ≤ 65536
+note: "#1368 W3 骨架配套：AGENTS.md §8 新门禁事实／两技能验收口径／两预设指针／DEV DOC 模板回归字段；只改文档与技能镜像，不碰 scripts/** 与门禁本体。"
