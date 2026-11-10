@@ -1,4 +1,4 @@
-# review: #1319
+# review: #1364
 # 豁免说明：旧 local-gates 触发退役需修改受保护工作流，并同步登记本豁免。
 # 授权：#1319 T3 任务放行；G2 已由 #1319 评论 11575 收口，main 唯一必需 context 为 core-gates / core (pull_request_target)。
 # 边界：仅移除旧 push/pull_request 自动触发，保留 workflow_dispatch 与全部旧步骤；不改新门、分支保护或 GitHub，不清理历史文件。
