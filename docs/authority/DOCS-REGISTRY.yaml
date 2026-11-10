@@ -1967,3 +1967,9 @@ documents:
     status: active
     owner: CTO
     note: "#1319 T1 四个受保护实现文件、scripts/control-tower/gate-integrity-baseline.txt 精确路径、豁免自覆盖与 registry 登记的限定过渡豁免；不扩大路径或权限。"
+  - id: DOC-1319-03
+    type: governance
+    path: gate-exemptions/2026-11-10-1319-t2b-trusted-target.md
+    status: active
+    owner: CTO
+    note: "#1319 T2b 受信事件最小改造：pull_request_target、显式 PR head SHA、事件映射与配对 harness；仅限四个受保护实现文件、豁免自覆盖和本登记，不改其他核心判据。"

@@ -33,7 +33,7 @@ validate_workflow() {
 import sys
 p=sys.argv[1]
 s=open(p,encoding='utf-8').read()
-required=['name: core-gates','  core:','runs-on: win-ci','timeout-minutes: 15','contents: read','pull_request:','push:','workflow_dispatch:','if: always()','CORE-WORKFLOW-MARKER=T1-r4-base']
+required=['name: core-gates','  core:','runs-on: win-ci','timeout-minutes: 15','contents: read','pull_request_target:','push:','workflow_dispatch:','if: always()','CORE-WORKFLOW-MARKER=T1-r4-base','CORE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}']
 missing=[x for x in required if x not in s]
 forbidden=['continue-on-error','scripts/pre-commit-check.sh','/Users/wane','|| true','FETCH_HEAD fallback']
 # The final phrase is allowed only in the explicit no-fallback diagnostic.
@@ -131,15 +131,15 @@ EVENT_ENV="$TMP/event.env"
 : > "$EVENT_ENV"
 set +e
 EVENT_OUT="$(env RUNNER_TEMP="$CHECKOUT_TMP" GITHUB_ENV="$EVENT_ENV" CORE_WORKSPACE="$CORE_WORKSPACE" \
-  CORE_HEAD_SHA="$ORIGIN_HEAD" CORE_EVENT_BEFORE='' CI=1 GITHUB_EVENT_NAME=pull_request GITHUB_BASE_REF=main \
+  CORE_HEAD_SHA="$ORIGIN_HEAD" CORE_EVENT_BEFORE='' CI=1 GITHUB_EVENT_NAME=pull_request_target GITHUB_BASE_REF=main \
   bash -e "$TMP/steps/event.sh" 2>&1)"
 EVENT_RC=$?
 set -e
-printf '\n--- pull_request preflight ---\n%s\n' "$EVENT_OUT"
+printf '\n--- pull_request_target preflight ---\n%s\n' "$EVENT_OUT"
 if [ "$EVENT_RC" -eq 0 ] && grep -q '^CORE_EVENT=pull-request$' "$EVENT_ENV" && grep -q "^CORE_BASE=$ORIGIN_HEAD$" "$EVENT_ENV"; then
-  ok "pull_request event resolves merge-base and preflight"
+  ok "pull_request_target event resolves merge-base and preflight"
 else
-  no "pull_request event resolves merge-base and preflight"
+  no "pull_request_target event resolves merge-base and preflight"
 fi
 
 for kind in unknown missing-before; do
@@ -174,6 +174,10 @@ lines.splice(1, 0, "printf 'CORE-MUTATED-HEAD-RUNNER-EXECUTED\\n'", 'exit 0');
 fs.writeFileSync(file, lines.join('\n'));
 NODE
       ;;
+    workflow-forgery)
+      mkdir -p "$CORE_WORKSPACE/.gitea/workflows"
+      printf 'name: core-gates\njobs:\n  core:\n    steps:\n      - run: echo FORGED_TARGET_HEAD_WORKFLOW\n' > "$CORE_WORKSPACE/.gitea/workflows/core-gates.yml"
+      ;;
     rename)
       mkdir -p "$CORE_WORKSPACE/moved"
       git -C "$CORE_WORKSPACE" mv tests/contract/basic.test.ts moved/basic.test.ts
@@ -197,7 +201,7 @@ EOF
   local out
   out="$(env PATH="$stub_bin:$PATH" NPM_CI_MARKER="$marker" RUNNER_TEMP="$case_tmp" \
     GITHUB_ENV="$case_tmp/github.env" CORE_WORKSPACE="$CORE_WORKSPACE" CORE_HEAD_SHA="$mutated_head" \
-    CORE_EVENT_BEFORE='' CI=1 GITHUB_EVENT_NAME=pull_request GITHUB_BASE_REF=main \
+    CORE_EVENT_BEFORE='' CI=1 GITHUB_EVENT_NAME=pull_request_target GITHUB_BASE_REF=main \
     bash -e "$TMP/steps/event.sh" 2>&1)"
   local rc=$?
   set -e
@@ -208,14 +212,16 @@ EOF
   fi
   if [ "$rc" -eq 2 ] && printf '%s\n' "$out" | grep -q 'CORE-TRUSTED-INPUT-CHANGED' && \
      ! printf '%s\n' "$out" | grep -q 'CORE-MUTATED-HEAD-RUNNER-EXECUTED' && \
+     ! printf '%s\n' "$out" | grep -q 'FORGED_TARGET_HEAD_WORKFLOW' && \
      [ ! -e "$marker" ] && check_degraded "$case_tmp/core-gates-degraded.jsonl" core-gates-event; then
-    ok "workflow rejects $kind before HEAD runner and npm ci with one degraded JSON"
+    ok "trusted base rejects $kind before HEAD workflow or runner and npm ci"
   else
-    no "workflow rejects $kind before HEAD runner and npm ci"
+    no "trusted base rejects $kind before HEAD workflow or runner and npm ci"
   fi
 }
 
 run_trusted_mutation core-entry
+run_trusted_mutation workflow-forgery
 run_trusted_mutation rename
 
 set +e
