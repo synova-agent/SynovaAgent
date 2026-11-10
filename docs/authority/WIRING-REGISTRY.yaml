@@ -437,3 +437,11 @@ entries:
     status: wired
     owner: P4
     notes: "冲突标记机检（A 类，创始人 2026-11-02 批）：open/base(diff3)/sep/close 四形态行首判据＋扩展名白名单；0/1/2 三态＋@降级；pre-commit 组 1 硬阻断。实证依据：带 <<<<<<< 的合并提交曾在 CI 判 success。"
+  - capability: ci.coreTests
+    defined_at: "scripts/ci/core-tests.sh:1"
+    provider: "scripts/ci/core-tests.sh:1"
+    consumer: null
+    test: "tests/control-tower/core-tests.test.sh:1"
+    status: declared-only
+    owner: CTO
+    notes: "#1319 T1 核心测试 runner；真实消费者为 .gitea/workflows/core-gates.yml 的安装前预检和实际核心测试步骤。旧 R1.2 只扫描 src/packages/scripts，看不见 .gitea，与 ci.emptyGreen 同型，故按 declared-only 作旧门过渡登记；consumer 为空不表示 workflow 未接线。G2 后随旧门退役。"
