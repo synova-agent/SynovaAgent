@@ -10,13 +10,14 @@ EVENT=""
 BASE=""
 PREFLIGHT=0
 CONTRACT_PASSED=0
+USER_VISIBLE_PASSED=0
 AFFECTED="skipped"
 AFFECTED_PASSED=0
 COMPONENT="core-tests"
 
 result() {
-  printf 'CORE-TESTS RESULT rc=%s contract_passed=%s affected=%s affected_passed=%s reason=%s\n' \
-    "$1" "$CONTRACT_PASSED" "$AFFECTED" "$AFFECTED_PASSED" "$2"
+  printf 'CORE-TESTS RESULT rc=%s contract_passed=%s user_visible_passed=%s affected=%s affected_passed=%s reason=%s\n' \
+    "$1" "$CONTRACT_PASSED" "$USER_VISIBLE_PASSED" "$AFFECTED" "$AFFECTED_PASSED" "$2"
 }
 
 degrade() {
@@ -120,7 +121,7 @@ if [ "$EVENT" != "manual" ]; then
   CHANGED_FILES="$(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "$BASE"...HEAD 2>&1)"
   DIFF_RC=$?
   [ "$DIFF_RC" -eq 0 ] || degrade "diff-failed" "base" "$CHANGED_FILES"
-  TRUSTED_CHANGES="$(printf '%s\n' "$CHANGED_FILES" | grep -E '(^\.gitea/workflows/core-gates\.yml$|^scripts/ci/core-tests\.sh$|^tests/control-tower/core-tests\.test\.sh$|^tests/control-tower/core-gates-workflow\.test\.sh$|^scripts/check-secrets\.sh$|^scripts/desktop/build-backend\.sh$|^tsconfig\.json$|^tsconfig\..*\.json$|^vitest\.config\.ts$|^tests/contract/|^package\.json$|^package-lock\.json$|^patches/|(^|/)\.npmrc$)' || :)"
+  TRUSTED_CHANGES="$(printf '%s\n' "$CHANGED_FILES" | grep -E '(^\.gitea/workflows/core-gates\.yml$|^scripts/ci/core-tests\.sh$|^tests/control-tower/core-tests\.test\.sh$|^tests/control-tower/core-user-visible\.test\.sh$|^tests/control-tower/core-gates-workflow\.test\.sh$|^scripts/check-secrets\.sh$|^scripts/desktop/build-backend\.sh$|^tsconfig\.json$|^tsconfig\..*\.json$|^vitest\.config\.ts$|^tests/contract/|^package\.json$|^package-lock\.json$|^patches/|(^|/)\.npmrc$)' || :)"
   if [ -n "$TRUSTED_CHANGES" ]; then
     printf 'CORE-TRUSTED-INPUT-CHANGED\n%s\n' "$TRUSTED_CHANGES" >&2
     degrade "core-trusted-input-changed" "trusted-input" "core inputs changed in base...HEAD"
@@ -131,10 +132,13 @@ fi
 
 CONTRACT_SOURCES="$(git ls-files 'tests/contract/*.test.ts' 'tests/contract/**/*.test.ts')"
 [ -n "$CONTRACT_SOURCES" ] || degrade "no-contract-objects" "preflight" "tests/contract/**/*.test.ts is empty"
+USER_VISIBLE_SOURCES="$(git ls-files 'tests/user-visible/*.test.ts' 'tests/user-visible/**/*.test.ts')"
+[ -n "$USER_VISIBLE_SOURCES" ] || degrade "no-user-visible-objects" "preflight" "tests/user-visible/**/*.test.ts is empty"
 printf 'CORE-ENV event=%s HEAD=%s BASE=%s\n' "$EVENT" "$HEAD" "${BASE:-<none>}"
 node --version || degrade "missing-tool" "preflight" "node --version failed"
 npm --version || degrade "missing-tool" "preflight" "npm --version failed"
 printf 'CORE-CONTRACT-OBJECTS count=%s\n' "$(printf '%s\n' "$CONTRACT_SOURCES" | grep -c .)"
+printf 'CORE-USER-VISIBLE-OBJECTS count=%s\n' "$(printf '%s\n' "$USER_VISIBLE_SOURCES" | grep -c .)"
 
 if [ "$PREFLIGHT" -eq 1 ]; then
   printf 'CORE-PREFLIGHT RESULT rc=0 event=%s base=%s\n' "$EVENT" "${BASE:-<none>}"
@@ -238,6 +242,30 @@ if [ "$CONTRACT_RC" -ne 0 ]; then
 fi
 [ "$CONTRACT_FAILED" -eq 0 ] || degrade "contract-result-invalid" "contract" "rc=0 with failed tests"
 [ "$CONTRACT_TOTAL" -gt 0 ] && [ "$CONTRACT_PASSED" -gt 0 ] || degrade "contract-no-passed-tests" "contract" "total=$CONTRACT_TOTAL passed=$CONTRACT_PASSED skipped=$CONTRACT_SKIPPED"
+
+printf 'CORE-TESTS RUN user-visible command=%s run tests/user-visible/ --reporter=default --reporter=json\n' "$VITEST"
+set +e
+USER_VISIBLE_OUT="$(CI=1 "$VITEST" run tests/user-visible/ --config "$CONFIG" --reporter=default --reporter=json --outputFile.json="$TMP/user-visible.json" 2>&1)"
+USER_VISIBLE_RC=$?
+set -e
+printf '%s\n' "$USER_VISIBLE_OUT"
+if printf '%s\n' "$USER_VISIBLE_OUT" | grep -q 'CORE_ASSERTION_API_UNAVAILABLE'; then
+  degrade "assertion-api-unavailable" "user-visible" "expect.getState().assertionCalls is unavailable"
+fi
+[ -f "$TMP/user-visible.json" ] || degrade "user-visible-json-missing" "user-visible" "JSON reporter produced no file"
+USER_VISIBLE_STATS="$(parse_results "$TMP/user-visible.json")" || degrade "user-visible-json-invalid" "user-visible" "$USER_VISIBLE_STATS"
+read -r USER_VISIBLE_TOTAL USER_VISIBLE_PASSED USER_VISIBLE_SKIPPED USER_VISIBLE_FAILED USER_VISIBLE_SUITES <<< "$USER_VISIBLE_STATS"
+printf 'CORE-USER-VISIBLE-COUNTS total=%s passed=%s skipped=%s failed=%s suites=%s\n' \
+  "$USER_VISIBLE_TOTAL" "$USER_VISIBLE_PASSED" "$USER_VISIBLE_SKIPPED" "$USER_VISIBLE_FAILED" "$USER_VISIBLE_SUITES"
+if printf '%s\n' "$USER_VISIBLE_OUT" | grep -q 'CORE_ZERO_ASSERTIONS'; then
+  fail_test "user-visible contains executed tests without runtime assertions" "user-visible-zero-assertions"
+fi
+if [ "$USER_VISIBLE_RC" -ne 0 ]; then
+  [ "$USER_VISIBLE_FAILED" -gt 0 ] || degrade "user-visible-result-invalid" "user-visible" "Vitest rc=$USER_VISIBLE_RC without failed tests"
+  fail_test "user-visible tests failed rc=$USER_VISIBLE_RC" "user-visible-failed"
+fi
+[ "$USER_VISIBLE_FAILED" -eq 0 ] || degrade "user-visible-result-invalid" "user-visible" "rc=0 with failed tests"
+[ "$USER_VISIBLE_TOTAL" -gt 0 ] && [ "$USER_VISIBLE_PASSED" -gt 0 ] || degrade "user-visible-no-passed-tests" "user-visible" "total=$USER_VISIBLE_TOTAL passed=$USER_VISIBLE_PASSED skipped=$USER_VISIBLE_SKIPPED"
 
 if [ "$EVENT" = "manual" ]; then
   AFFECTED="skipped"

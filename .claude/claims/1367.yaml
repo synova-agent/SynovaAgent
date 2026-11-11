@@ -1,0 +1,27 @@
+writeset:
+  - .claude/claims/1367.yaml
+  - scripts/ci/core-tests.sh
+  - scripts/control-tower/gate-integrity-baseline.txt
+  - tests/control-tower/core-tests.test.sh
+  - tests/control-tower/core-user-visible.test.sh
+  - tests/user-visible/support/http.ts
+  - tests/user-visible/support/environment.ts
+  - tests/user-visible/support/model-endpoint.ts
+  - tests/user-visible/llm-config.integration.test.ts
+  - tests/user-visible/onboarding.integration.test.ts
+  - tests/user-visible/conversations.integration.test.ts
+  - tests/user-visible/domain-output.integration.test.ts
+  - tests/user-visible/actions-feedback.integration.test.ts
+  - gate-exemptions/2026-11-11-1367-user-visible-core.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/2026-11-11-1367-user-visible-regression.md
+done:
+  - verify: ./node_modules/.bin/vitest run tests/user-visible/ --reporter=default
+  - verify: bash tests/control-tower/core-user-visible.test.sh
+  - verify: bash tests/control-tower/core-tests.test.sh
+  - verify: bash scripts/control-tower/sealed-tests.sh --slack
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: python3 scripts/control-tower/claim_store.py --check 1367
+  - verify: npm run lint
+  - verify: git diff --check
+note: "#1367 W2：九条用户可见行为真实入口回归，外部模型仅本地 HTTP 协议夹具；core-tests 独立无条件运行，tests/user-visible 不进 trusted regex；新增一个 shell 配对测试，FACE-TOTAL 215→216 保持 slack=10。"
