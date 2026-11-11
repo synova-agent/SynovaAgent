@@ -1986,3 +1986,10 @@ documents:
     status: active
     owner: CTO
     note: "#1368 W3 骨架配套：仅覆盖 .dsh/skills/** 镜像同步、本豁免自覆盖与 DOCS-REGISTRY 登记行；不改门禁脚本、工作流或分支保护。"
+  # ---- CTO 2026-11-11：#1366 镜像隐私回合与 win-ci 迁移 ----
+  - id: DOC-1366-01
+    type: governance
+    path: gate-exemptions/2026-11-11-1366-mirror-sync.md
+    status: active
+    owner: CTO
+    note: "#1366 回合 GitHub 隐私删除 6ad002b；dual-repo-sync 迁到 win-ci，独立临时 clone、Win token 文件、ssh-agent 与 always 清理；保留 schedule、mirror ff 与核 SHA。含豁免自覆盖与本登记行。"

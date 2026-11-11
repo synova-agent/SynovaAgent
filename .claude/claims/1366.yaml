@@ -8,9 +8,7 @@ writeset:
   - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-11-1366-mirror-sync.md
   - memory/notes/proposed/2026-11-11-1366-mirror-sync.md
-  - scripts/control-tower/mirror-sync-push.sh
-  - tests/control-tower/mirror-sync-push.test.sh
 done:
   - verify: bash tests/control-tower/mirror-sync-push.test.sh
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
-note: "#1366 先以 run 3791 与 macOS launchd 原始日志定位断流，再保持 mirror ff 与 SSH deploy key 唯一推送通道；GitHub 隐私提交须合回 Gitea 历史，禁止 non-ff 强推。最终写集以实际 PR diff 为准。"
+note: "#1366 以 Win HTTPS fetch 的原始 6ad002b 回合 Gitea，经 PR + CTO 审批保留三项隐私删除；dual-repo-sync 迁到 win-ci，私钥只读 Win 安全路径，schedule 每日驱动；不改 mirror ff 安全阀、不强推。"
