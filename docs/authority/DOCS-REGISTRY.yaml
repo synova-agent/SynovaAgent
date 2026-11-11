@@ -1979,6 +1979,12 @@ documents:
     status: active
     owner: CTO
     note: "#1319 T3 旧 local-gates 触发退役：仅保留 workflow_dispatch，旧步骤不变；覆盖受保护工作流、豁免自覆盖与本登记，不改新门、分支保护或 GitHub。"
+  - id: DOC-1367-01
+    type: governance
+    path: gate-exemptions/2026-11-11-1367-user-visible-core.md
+    status: active
+    owner: CTO
+    note: "#1367 W2 用户可见回归接入核心门：独立无条件运行、外部模型仅本地 HTTP 协议夹具、tests/user-visible 不进 trusted regex；含最小 SEALED 棘轮、豁免自覆盖与本登记。"
   # ---- CTO 2026-11-10：#1368 W3 骨架配套（AGENTS.md／SKILL／预设按新门禁对齐）----
   - id: DOC-1368-01
     type: governance

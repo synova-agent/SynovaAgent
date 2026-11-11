@@ -41,7 +41,7 @@ commit_all() {
 
 new_fixture() {
   FIX="$TMP/fixture-$1"
-  mkdir -p "$FIX"/{scripts/ci,scripts/desktop,.gitea/workflows,tests/control-tower,tests/contract,tests/unit,tests/e2e,src,app/js,patches}
+  mkdir -p "$FIX"/{scripts/ci,scripts/desktop,.gitea/workflows,tests/control-tower,tests/contract,tests/user-visible,tests/unit,tests/e2e,src,app/js,patches}
   git -C "$FIX" init -q || harness_degrade "git init failed"
   git -C "$FIX" config user.name "Core Tests Fixture"
   git -C "$FIX" config user.email "fixture@example.invalid"
@@ -58,6 +58,10 @@ new_fixture() {
   cat > "$FIX/tests/contract/basic.test.ts" <<'EOF'
 import { describe, expect, test } from 'vitest';
 describe('contract', () => { test('real assertion', () => { expect(1 + 1).toBe(2); }); });
+EOF
+  cat > "$FIX/tests/user-visible/basic.test.ts" <<'EOF'
+import { expect, test } from 'vitest';
+test('user visible behavior', () => { expect('visible').toBe('visible'); });
 EOF
   cat > "$FIX/src/value.ts" <<'EOF'
 export const value = 1;
