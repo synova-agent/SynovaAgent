@@ -1,0 +1,16 @@
+writeset:
+  - .claude/claims/1374.yaml
+  - .dsh/skills/dev-doc-spec/SKILL.md
+  - .dsh/skills/dev-doc-spec/template/compute-contract.test.ts.template
+  - .dsh/skills/dev-doc-spec/template/vertical-slice-acceptance.integration.test.ts.template
+  - .synova/skills/dev-doc-spec/SKILL.md
+  - .synova/skills/dev-doc-spec/template/compute-contract.test.ts.template
+  - .synova/skills/dev-doc-spec/template/vertical-slice-acceptance.integration.test.ts.template
+done:
+  - verify: 临时 LLM 配置真实路由实例 2 passed；隔离改坏 maskedKey 后原断言失败，还原后 2 passed；临时实例已删除
+  - verify: 临时 computeWorkingCapital 实例正常／边界／降级 3 passed；临时实例已删除
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: npm run lint
+  - verify: npm run build
+  - verify: python3 scripts/control-tower/claim_store.py --check 1374 --root .
+note: "#1374：垂直切片验收与 compute 契约测试模板、dev-doc-spec §7 两条使用指针及 .dsh 镜像；最终写集为 claim＋六份交付文件，不修改旧 #1227 claim。"
