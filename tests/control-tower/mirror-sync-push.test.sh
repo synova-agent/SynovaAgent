@@ -12,7 +12,7 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #   ③ 分叉 non-ff   ⇒ exit 1 / verdict=FORK / 远端 main 不变 / 无新 merge 提交
 #   ④ 推后核 SHA    ⇒ 远端停旧 sha ⇒ exit 2 / verdict=VERIFY_MISMATCH / degraded=true
 #   ⑤ 失败必出声    ⇒ ③④⑧ 失败时信号记录 ≥1 条且含 verdict（不许只写 log）
-#   ⑥ 触发器        ⇒ 本测试只核脚本侧；launchd 侧由现场命令核（不在此假绿）
+#   ⑥ 触发器        ⇒ 本测试只核脚本侧；win-ci schedule 由真实 run 核（不在此假绿）
 #   ⑦ 红线自检      ⇒ 可执行行内 0 命中 SYNO_ALLOW_MAIN_PUSH / --force / --no-verify / git merge
 #   ⑧ 判别力        ⇒ 注入非法 sha ⇒ exit 2（禁把「看不见」当「没问题」）
 #   ⑨ 改坏必红      ⇒ 五个变异体各跑**同一套断言**且必须被判红（每个变异体在独立沙箱里，
@@ -210,9 +210,9 @@ echo "── GitHub 集成测试观察（推完不只看 sha，还要看测试�
 setup10; assert_case c10 "CI 红 ⇒ exit 2 ＋ 点名失败 job ＋ 出信号"
 setup11; assert_case c11 "CI 等不出结论 ⇒ exit 2（禁当通过）＋ 出信号"
 
-echo "── ⑥ 触发器（本测试只核脚本侧；launchd 侧见现场命令）──"
+echo "── ⑥ 触发器（本测试只核脚本侧；win-ci schedule 见真实 run）──"
 grep -q "SYNO_PUSH_VERIFY_TRIES" "$SUT" && pass "⑥ 执行器可被每日任务直接调用（无可交互等待）" || fail "⑥ 执行器缺可调用契约"
-echo "  ℹ️  launchd 真跑证据（现场跑）: launchctl print gui/\$(id -u)/com.synova.mirror-sync ＋ ~/Library/Logs/synova-mirror-sync.launchd.log"
+echo "  ℹ️  win-ci 真跑证据：Gitea dual-repo-sync 的 schedule / workflow_dispatch run 日志"
 
 echo "── ⑦ 红线自检：可执行行 0 命中逃生舱／强推／绕过 ──"
 HITS="$(grep -vE '^[[:space:]]*#' "$SUT" | grep -cE 'SYNO_ALLOW_MAIN_PUSH|--force|--no-verify|git[[:space:]]+merge' || true)"
