@@ -1,0 +1,75 @@
+/**
+ * 垂直切片验收测试模板：真实入口 → 用户动作 → 客户可见结果 → 行为断言。
+ *
+ * 实例化：
+ * 1. 复制为 tests/user-visible/<slice>.integration.test.ts；模板扩展名不会被 Vitest 收集。
+ * 2. 搜索 __，逐项替换全部占位符；删除本说明。__APP_WIRING__、__ENV_SETUP__ 无额外配置时
+ *    替换为空行，__READ_INPUT__ 无参数时替换为空。权限、数据库等装配必须复制生产入口的真实链路，不得绕过。
+ * 3. __EXPECTED_*__ 必须来自 DEV DOC／接口契约或人工推导，禁止用当前响应反填快照。
+ *    FORBIDDEN_OUTPUT 填响应中不得出现的秘密或内部值；没有此类契约时才删除常量及两条泄露断言。
+ * 4. 运行 npx vitest run tests/user-visible/<slice>.integration.test.ts。
+ *    正常路径与关键失败路径都必须真实执行；环境不满足时抛错，禁止 skip 假绿。
+ *
+ * “改坏 A ⇒ 必红”反例：
+ * 在独立临时工作树改坏一个客户可见行为 A（例如保存响应的脱敏值），保持实例测试逐字不变，
+ * 重跑同一命令；必须失败，并保留指向该行为断言的原始输出。随后还原实现、重跑变绿，删除临时实例。
+ * 不得通过修改期望值、跳过用例或拆除真实路由让测试变绿。
+ */
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import express from 'express';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { __ROUTE_EXPORT__ } from '__ROUTE_MODULE__';
+import { __USER_ACTION__, __READ_VISIBLE_RESULT__ } from '__USER_CLIENT_MODULE__';
+import { isRecord, listen, request, type RunningHttpServer } from './support/http';
+import { installRendererWindow, saveEnvironment } from './support/environment';
+
+const FORBIDDEN_OUTPUT = '__FORBIDDEN_OUTPUT__';
+const restoreEnv = saveEnvironment(__ENV_KEYS__);
+let tempDir = '';
+let running: RunningHttpServer;
+
+beforeAll(async () => {
+  tempDir = mkdtempSync(join(tmpdir(), '__TEMP_PREFIX__'));
+  process.env.SYNOVA_DATA_DIR = tempDir;
+  __ENV_SETUP__
+  const app = express();
+  app.use(express.json());
+  __APP_WIRING__
+  app.use(__ROUTE_EXPORT__);
+  running = await listen(app);
+  installRendererWindow(running.baseUrl);
+});
+
+afterAll(async () => {
+  vi.unstubAllGlobals();
+  await running.close();
+  restoreEnv();
+  rmSync(tempDir, { recursive: true, force: true });
+});
+
+describe('__SLICE_ID__ __SLICE_NAME__', () => {
+  it('正常路径：用户动作产生契约规定的客户可见结果', async () => {
+    const actionResult = await __USER_ACTION__(__ACTION_INPUT__);
+    expect(actionResult).toEqual(__EXPECTED_ACTION_RESULT__);
+
+    const visible = await __READ_VISIBLE_RESULT__(__READ_INPUT__);
+    expect(visible).toMatchObject(__EXPECTED_VISIBLE_RESULT__);
+    expect(JSON.stringify(visible)).not.toContain(FORBIDDEN_OUTPUT);
+  });
+
+  it('关键失败路径：真实入口返回稳定错误且不改写客户状态', async () => {
+    const before = await __READ_VISIBLE_RESULT__(__READ_INPUT__);
+    const failed = await request(running.baseUrl, '__FAILURE_METHOD__', '__FAILURE_PATH__', {
+      body: __FAILURE_BODY__,
+    });
+
+    expect(failed.status).toBe(__EXPECTED_FAILURE_STATUS__);
+    expect(isRecord(failed.body) && failed.body.code).toBe('__EXPECTED_FAILURE_CODE__');
+    expect(failed.raw).not.toContain(FORBIDDEN_OUTPUT);
+
+    const after = await __READ_VISIBLE_RESULT__(__READ_INPUT__);
+    expect(after).toEqual(before);
+  });
+});

@@ -1,0 +1,49 @@
+/**
+ * compute 契约测试模板：输入／输出／错误与降级。
+ *
+ * 实例化：
+ * 1. 复制为 tests/compute/<compute-name>.test.ts；模板扩展名不会被 Vitest 收集。
+ * 2. 搜索 __，替换全部占位符并删除本说明。先在 compute 的 JSDoc 确认输入、输出、错误与降级，
+ *    再把相同契约写成下面的四段说明；测试不得从当前输出反推期望值。
+ * 3. 正常路径至少断言一个精确计算值和关键业务分类；边界路径断言契约规定的精确边界语义；
+ *    降级路径断言 degraded、稳定 warnings 和明确回退值，禁止只写 toBeTruthy()、“不崩溃”或空 expect。
+ * 4. 只有 compute 契约明确声明抛错时才保留“错误路径”用例，并替换为稳定错误类型／消息／code；
+ *    不抛错的 compute 删除该用例，禁止为套模板新增抛错行为。纯降级 compute 的“失败路径”由降级用例覆盖。
+ * 5. 运行 npx vitest run tests/compute/<compute-name>.test.ts；正常、边界、失败路径必须全部实际执行。
+ *
+ * 契约：
+ * @input __INPUT_CONTRACT__
+ * @output __OUTPUT_CONTRACT__
+ * @error __ERROR_CONTRACT__
+ * @degraded __DEGRADED_CONTRACT__
+ */
+import { describe, expect, it } from 'vitest';
+import { __COMPUTE_NAME__ } from '__COMPUTE_MODULE__';
+
+describe('__COMPUTE_NAME__ 契约', () => {
+  it('正常路径：按独立推导返回精确结果', () => {
+    const result = __COMPUTE_NAME__(__NORMAL_INPUT__);
+
+    expect(result).toMatchObject(__EXPECTED_NORMAL_RESULT__);
+    expect(result.degraded).toBe(false);
+  });
+
+  it('边界路径：保留契约规定的边界语义', () => {
+    const result = __COMPUTE_NAME__(__BOUNDARY_INPUT__);
+
+    expect(result).toMatchObject(__EXPECTED_BOUNDARY_RESULT__);
+    expect(result.degraded).toBe(__EXPECTED_BOUNDARY_DEGRADED__);
+  });
+
+  it('失败路径（降级）：返回可归因信号与明确回退值', () => {
+    const result = __COMPUTE_NAME__(__DEGRADED_INPUT__);
+
+    expect(result).toMatchObject(__EXPECTED_DEGRADED_RESULT__);
+    expect(result.degraded).toBe(true);
+    expect(result.warnings).toEqual(__EXPECTED_WARNINGS__);
+  });
+
+  it('错误路径（仅契约声明抛错时保留）：暴露稳定错误契约', () => {
+    expect(() => __COMPUTE_NAME__(__ERROR_INPUT__)).toThrow(__EXPECTED_ERROR__);
+  });
+});
