@@ -9,7 +9,7 @@
 > 🔴 **DSH 口径（2026-11-04，v8.4）**：DSH 是**当前确定采用的固定版本通用运行时依赖**（不是仅开发工具）；Synova 领域资产不绑定 DSH。具体版本/commit 由施工基线与部署包管理，**禁写入产品支持范围**。
 > **版本锚＝当前锁版实物**（以 `dsh --version`／实际源码核验为准，**禁写死旧路径／旧 SHA**）｜ **禁把 DSH 版本写进「产品支持范围」**（客户装的是 Synova）。
 > 🔴 **Win 侧读这两份镜像**（Mac 院方目录读不到）：宪章 `docs/synova/产品宪章-v8.4-镜像.md`｜② 本体层执行规范 `docs/specs/ontology/本体层规范-v2.11.md`
-> **任务唯一编号 = Issue 号**（**D 号已退役**）｜ **本件 25,821 B**（**本批实测**；**硬上限 = 65,536 B**）
+> **任务唯一编号 = Issue 号**（**D 号已退役**）｜ **本件 26,859 B**（**本批实测**；**硬上限 = 65,536 B**）
 
 > 组织数字孪生诊断 + 持续增长导航系统。诊断是手段，目的是增长。
 > 核心问题：这家企业的增长卡在哪里？现在该做什么？
@@ -236,11 +236,16 @@
 
 
 ```
-【提交端】`bash scripts/pre-commit-check.sh` —— **pre-commit 全组**（组数以脚本 `── 组 N:` 横幅为准；本地软提示）
-【CI 权威】`.gitea/workflows/local-gates.yml` —— **`SYNO_CI=1` 时转硬阻断**
+【CI 权威 · main 唯一必需 context】`core-gates / core (pull_request_target)`
+  · 载体 = `.gitea/workflows/core-gates.yml` 的 `core` job；`pull_request_target` **从 base 取工作流**、显式检出 PR head SHA ⇒ **被审 head 无法伪造自己的门**
+  · 判据面 = 受信预检 ｜ 类型 ｜ 构建 ｜ Secrets ｜ 契约测试 ＋ 受影响测试（由 `scripts/ci/core-tests.sh` 执行）
+  · 零有效回归／零断言 ⇒ 红；结果不可解析 ⇒ 判不了（`2`）；受信输入在同 PR 内变更 ⇒ 先判 `cannot judge`（**不以本 PR 自证**，处置按裁定 v1.0）
+【提交端 · 本地软提示】`bash scripts/pre-commit-check.sh` —— 组数以脚本 `── 组 N:` 横幅为准；**不是 CI 阻断腿、不进必需 context**
+【旧门 · 仅手动】`.gitea/workflows/local-gates.yml` 只保留 `workflow_dispatch`：**不再随 PR／push 自动触发、不再阻断、不再是必需 context**（旧步骤保留，复现器自检为 report-only，裁 409）
 【独立审计】**K3**（`scripts/audit/**` 归 K3 专属，**任何人禁碰**）
-【复现器】两个门禁复现器接进 CI（条件跳过 <1s）
 ```
+🔴 **分支保护只挂这一条必需 context**；改 workflow `name:` 或 job `name:` ＝ 改合并门名 ⇒ 与平台设置同步改。
+🔴 **旧口径只作历史**：「`local-gates / gates (...)` 是必需 context」「`SYNO_CI=1` 时转硬阻断」两说均已过期，不得再据此判断「PR 能不能合」。
 🔴 **判据三态退出码**：`0` 通过 ｜ `1` 真红（业务阻断）｜ **`2` 环境/检查自身失败**。
 🔴 **判据必须给"改坏确实红"的原始输出 ＋ 具体失败点**（不是笼统 exit 1）。
 🔴 **门禁须有判别力自检**（含信号量 == 0 ⇒ **exit 2** —— **禁把"看不见"当"没问题"**）。

@@ -1979,3 +1979,10 @@ documents:
     status: active
     owner: CTO
     note: "#1319 T3 旧 local-gates 触发退役：仅保留 workflow_dispatch，旧步骤不变；覆盖受保护工作流、豁免自覆盖与本登记，不改新门、分支保护或 GitHub。"
+  # ---- CTO 2026-11-10：#1368 W3 骨架配套（AGENTS.md／SKILL／预设按新门禁对齐）----
+  - id: DOC-1368-01
+    type: governance
+    path: gate-exemptions/2026-11-10-1368-guard-skeleton.md
+    status: active
+    owner: CTO
+    note: "#1368 W3 骨架配套：仅覆盖 .dsh/skills/** 镜像同步、本豁免自覆盖与 DOCS-REGISTRY 登记行；不改门禁脚本、工作流或分支保护。"
