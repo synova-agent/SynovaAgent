@@ -1,53 +1,94 @@
-# dual-repo-sync.yml — 双仓镜像自动同步（对账→门禁放行→推送→核 SHA→信号）· 任务 #740
+# dual-repo-sync.yml — 双仓镜像自动同步（对账→门禁放行→推送→核 SHA→信号）· 任务 #740/#1366
 #
 # 判据：scripts/control-tower/mirror-sync-push.sh（三态退出码）
 #   0 = 一致（NOOP）／推送且核 SHA 相等（PUSHED）｜ 1 = 真红（分叉拒推 FORK／推送被拒）｜
 #   2 = 降级（远端读不到／核 SHA 不等／信号发不出）—— 2 绝不等于通过
-#   🔴 失败必须出可见信号（判据⑤）：执行器自动开/评 Gitea issue；本件再叠一条 ::error annotation。
+#   失败必须出可见信号：执行器自动开/评 Gitea issue；本件再叠一条 ::error annotation。
 #
-# 🔴 已知真相（2026-10-20 实测，禁把"配了 cron"当"每天在跑"）：
-#   · 本件 `on.schedule`（2026-10-20 实测）**从不起火**：Gitea 只登记**默认分支**上的 schedule，
-#     当时默认分支 = audit/k3-20260904-line1-desktop（本件不在其上）⇒ action_schedule 无本件登记、
-#     全历史 event='schedule' 计数 = 0。迁移后默认分支 = main（2026-10-29 `git ls-remote --symref`
-#     实取）⇒ 登记前提已变，**须重核后再宣称「在跑」**；真跑载体仍是 launchd（见下）。
-#   · ⇒ **每日真跑的载体 = 本机 launchd** `com.synova.mirror-sync`（每日 10:00，
-#     证据：~/Library/Logs/synova-mirror-sync.launchd.log 逐日一条）。
-#   · 本件保留 `workflow_dispatch` **仅供人工复跑**，不是每日驱动。
+# 运行面（#1366）：win-ci（Win WSL）；每日驱动 = 默认分支 main 上的 schedule。
+#   · 工作区 = runner 独立临时目录；取不到目标 main 即 exit 2，禁回退陈旧 FETCH_HEAD。
+#   · deploy key 只读 Win 安全路径；经 ssh-agent 标准输入装载，不复制进工作区或仓库。
+#   · Gitea token 只走 Win 既有文件通道与 askpass，不写进 clone URL、日志或仓库。
+#   · Mac launchd 仅为历史备用通道，不再是本 workflow 的验收前置。
 #
 # 边界：不改分支、不碰 scripts/audit/**；推送只走门禁 0-2 mirror ff 通道（禁逃生舱）。
 name: dual-repo-sync
 on:
   schedule:
-    - cron: "0 1 * * *"        # 每日 01:00 UTC（北京 09:00）—— 迁移后是否登记须重核，见上
+    - cron: "0 1 * * *"
   workflow_dispatch:
 permissions:
-  contents: read               # 最小集：推送用 deploy key，不用 token
-  issues: write                # 判据⑤：失败/恢复要能开单/关单
+  contents: read
+  issues: write
 jobs:
   sync:
-    runs-on: macos
+    runs-on: win-ci
     timeout-minutes: 15
+    env:
+      GIT_TERMINAL_PROMPT: "0"
+      # GitHub CI 只报告；唯一权威门 = Gitea core-gates。镜像同步只以 ff + 核 SHA 判成败。
+      SYNO_PUSH_WATCH_CI: "off"
     steps:
-      - name: 工作区（持久 clone；取 main 新鲜树，避免陈旧树误判）
+      - name: 准备 Win/WSL 凭据（私钥不落工作区）
+        shell: bash
+        run: |
+          set +x
+          set -e
+          SYNC_WORKSPACE="${RUNNER_TEMP:?}/SynovaAgent-dualrepo"
+          SYNC_ASKPASS="$RUNNER_TEMP/synova-dualrepo-askpass.sh"
+          KEY=/mnt/c/Users/Administrator/.ssh/synova_gh_deploy
+          TOKEN_FILE=/mnt/d/gitea/agent-tokens/win-synova-coding-Synova-push.token
+          GH_TOKEN_FILE=/mnt/c/Users/Administrator/.dsh/.credentials.yaml
+          for path in "$KEY" "$KEY.pub" "$TOKEN_FILE" "$GH_TOKEN_FILE"; do
+            [ -r "$path" ] || { echo "::error title=MIRROR-SYNC::凭据文件不可读：$path"; exit 2; }
+          done
+          [ ! -e "$SYNC_WORKSPACE" ] || { echo "::error title=MIRROR-SYNC::临时工作区已存在：$SYNC_WORKSPACE"; exit 2; }
+          [ ! -e "$SYNC_ASKPASS" ] || { echo "::error title=MIRROR-SYNC::askpass 已存在：$SYNC_ASKPASS"; exit 2; }
+          mkdir -p /mnt/d/gitea/logs
+          eval "$(ssh-agent -s)" >/dev/null
+          ssh-add -q - < "$KEY"
+          ssh-add -l
+          cat > "$SYNC_ASKPASS" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *[Uu]sername*) printf '%s\n' 'x-access-token' ;;
+            *) tr -d '\r\n' < /mnt/d/gitea/agent-tokens/win-synova-coding-Synova-push.token ;;
+          esac
+          ASKPASS
+          chmod 700 "$SYNC_ASKPASS"
+          SSH_CMD="ssh -i $KEY.pub -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+          {
+            printf 'SYNC_WORKSPACE=%s\n' "$SYNC_WORKSPACE"
+            printf 'SYNC_ASKPASS=%s\n' "$SYNC_ASKPASS"
+            printf 'GIT_ASKPASS=%s\n' "$SYNC_ASKPASS"
+            printf 'SSH_AUTH_SOCK=%s\n' "$SSH_AUTH_SOCK"
+            printf 'SSH_AGENT_PID=%s\n' "$SSH_AGENT_PID"
+            printf 'GIT_SSH_COMMAND=%s\n' "$SSH_CMD"
+            printf 'SYNO_PUSH_SSH_CMD=%s\n' "$SSH_CMD"
+            printf 'SYNO_PUSH_GITEA_TOKEN_FILE=%s\n' "$TOKEN_FILE"
+            printf 'SYNO_PUSH_GH_TOKEN_FILE=%s\n' "$GH_TOKEN_FILE"
+            printf 'SYNO_PUSH_STATUS_HIST=%s\n' /mnt/d/gitea/logs/synova-mirror-sync-history.jsonl
+          } >> "$GITHUB_ENV"
+
+      - name: 工作区（独立临时 clone；钉住 Gitea main）
+        shell: bash
         run: |
           set -e
-          WS=/Users/wane/.ci-work/SynovaAgent-dualrepo
-          if [ ! -d "$WS/.git" ]; then
-            mkdir -p "$(dirname "$WS")"
-            git clone -q http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$WS"
-          fi
-          git -C "$WS" fetch -q origin "${SYNO_TRUNK_REF:-main}"
-          git -C "$WS" checkout -q -f FETCH_HEAD
-          git -C "$WS" remote get-url mirror >/dev/null 2>&1 \
-            || git -C "$WS" remote add mirror git@github.com:synova-agent/SynovaAgent.git
-          echo "HEAD=$(git -C "$WS" rev-parse --short HEAD)"
+          git clone -q --no-checkout http://127.0.0.1:3000/synova-agent/SynovaAgent.git "$SYNC_WORKSPACE"
+          git -C "$SYNC_WORKSPACE" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+          git -C "$SYNC_WORKSPACE" fetch -q --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          TARGET="$(git -C "$SYNC_WORKSPACE" rev-parse origin/main)"
+          git -C "$SYNC_WORKSPACE" checkout -q --detach "$TARGET"
+          ACTUAL="$(git -C "$SYNC_WORKSPACE" rev-parse HEAD)"
+          [ "$ACTUAL" = "$TARGET" ] || { echo "::error title=MIRROR-SYNC::HEAD=$ACTUAL 与目标 $TARGET 不等"; exit 2; }
+          git -C "$SYNC_WORKSPACE" remote add mirror git@github.com:synova-agent/SynovaAgent.git
+          echo "HEAD=$ACTUAL（已核对 = Gitea main）"
 
       - name: 对账 → 门禁放行 → 推送 → 核 SHA → 信号（三态）
+        shell: bash
         run: |
           set +e
-          cd /Users/wane/.ci-work/SynovaAgent-dualrepo
-          PATH="/Users/wane/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH" \
-          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/synova_gh_deploy -o IdentitiesOnly=yes -o BatchMode=yes" \
+          cd "$SYNC_WORKSPACE"
           SYNO_PUSH_GITEA_URL=origin \
           SYNO_PUSH_RUN_URL="${GITHUB_SERVER_URL:-http://127.0.0.1:3000}/${GITHUB_REPOSITORY:-synova-agent/SynovaAgent}/actions/runs/${GITHUB_RUN_ID:-manual}" \
             bash scripts/control-tower/mirror-sync-push.sh
@@ -59,3 +100,13 @@ jobs:
               echo "::error title=MIRROR-SYNC::失败或降级 — 见上方 verdict 与 JSON；判据⑤ 要求同时在 Gitea issue 可见"
               exit "$rc" ;;
           esac
+
+      - name: 清理（临时工作区与 ssh-agent · always）
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          rm -rf "${SYNC_WORKSPACE:-${RUNNER_TEMP:?}/SynovaAgent-dualrepo}" \
+            "${SYNC_ASKPASS:-$RUNNER_TEMP/synova-dualrepo-askpass.sh}"
+          [ -z "${SSH_AGENT_PID:-}" ] || ssh-agent -k >/dev/null 2>&1
+          exit 0

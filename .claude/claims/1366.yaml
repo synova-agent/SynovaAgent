@@ -1,0 +1,15 @@
+writeset:
+  - .claude/claims/1366.yaml
+  - .claude/task-briefs/2026-11-11-1366-mirror-sync.md
+  - .gitea/workflows/dual-repo-sync.yml
+  - customer-config/ontology-instances/wani-baby/activity-production.json
+  - data/golden/checksums/wani-baby-v1-checksums.json
+  - data/golden/wani-baby-v1.json
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-11-11-1366-mirror-sync.md
+  - memory/notes/proposed/2026-11-11-1366-mirror-sync.md
+  - tests/control-tower/mirror-sync-push.test.sh
+done:
+  - verify: bash tests/control-tower/mirror-sync-push.test.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+note: "#1366 以 Win HTTPS fetch 的原始 6ad002b 回合 Gitea，经 PR + CTO 审批保留三项隐私删除；dual-repo-sync 迁到 win-ci，私钥只读 Win 安全路径，schedule 每日驱动；不改 mirror ff 安全阀、不强推。"
