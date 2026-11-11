@@ -8,6 +8,7 @@ writeset:
   - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-11-1366-mirror-sync.md
   - memory/notes/proposed/2026-11-11-1366-mirror-sync.md
+  - tests/control-tower/mirror-sync-push.test.sh
 done:
   - verify: bash tests/control-tower/mirror-sync-push.test.sh
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main

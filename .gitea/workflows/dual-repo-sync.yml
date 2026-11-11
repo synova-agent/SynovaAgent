@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 15
     env:
       GIT_TERMINAL_PROMPT: "0"
+      # GitHub CI 只报告；唯一权威门 = Gitea core-gates。镜像同步只以 ff + 核 SHA 判成败。
+      SYNO_PUSH_WATCH_CI: "off"
     steps:
       - name: 准备 Win/WSL 凭据（私钥不落工作区）
         shell: bash

@@ -39,7 +39,7 @@ chk()  { CHK_N=$((CHK_N + 1)); if eval "$1"; then echo "      · ok: $2"; else e
 
 TMPROOT="$(mktemp -d)"; trap 'rm -rf "$TMPROOT"' EXIT
 CI_DEFAULT='echo "1|success|http://x"'   # 默认注入"CI 绿"；CI_CMD 前缀可覆盖（空串=回落默认）
-FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC10=""; RC11=""; RC12a=""; RC12b=""; VERDICT=""; O1=""; BASE_N=""
+FX=""; WORK=""; GITEA=""; MIRROR=""; SIG=""; ST=""; HIST=""; OUT=""; A1=""; A2=""; RC=""; RC1=""; RC2=""; RC9=""; RC12a=""; RC12b=""; VERDICT=""; O1=""; BASE_N=""
 
 # ── 夹具：work（工作仓）+ gitea.git + mirror.git；产 A1/A2 两提交 ────────────────
 new_fixture() {  # $1=名字；默认 Gitea main=A1、GitHub main=A1（一致）
@@ -69,8 +69,8 @@ run_sut() {  # $1=github_sha  [$2..=额外环境赋值]  → stdout: 退出码
   echo $?
 }
 
-verdict_of()  { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("verdict"))' "$1" 2>/dev/null || true; }   # swallow-ok: 夹具解析失败 ⇒ 空 ⇒ 断言必红
-field_of()    { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2]))' "$1" "$2" 2>/dev/null || true; }   # swallow-ok: 同上
+verdict_of()  { python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("verdict"))' "$1" 2>/dev/null || true; }   # swallow-ok: 夹具解析失败 ⇒ 空 ⇒ 断言必红
+field_of()    { python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get(sys.argv[2]))' "$1" "$2" 2>/dev/null || true; }   # swallow-ok: 同上
 mirror_main() { git -C "$MIRROR" rev-parse refs/heads/main 2>/dev/null || true; }   # swallow-ok: 远端不存在 ⇒ 空 ⇒ 断言必红
 sig_has()     { grep -q "\"verdict\": \"$1\"" "$SIG" 2>/dev/null; }   # grep -q 探测型（不匹配即假）
 sig_fail_n()  { grep -c '"kind": "failure"' "$SIG" 2>/dev/null || true; }
@@ -150,10 +150,10 @@ setup4() { new_fixture "c4"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
 setup5() { new_fixture "c5"; RC1="$(run_sut "deadbeef")"; RC2="$(run_sut "$A1")"; }
 setup10() { new_fixture "c10"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
             CI_CMD='echo "9|failure|http://x/run/9|All Checks Passed / Gate Integrity"' \
-            RC10="$(run_sut "$A1")"; CI_CMD=""
+            RC="$(run_sut "$A1")"; CI_CMD=""
             VERDICT="$(verdict_of "$OUT")"; }
 setup11() { new_fixture "c11"; git -C "$WORK" push -q gitea "$A2:refs/heads/main"
-            CI_CMD='echo ""' RC11="$(run_sut "$A1")"; CI_CMD=""; VERDICT="$(verdict_of "$OUT")"; }
+            CI_CMD='echo ""' RC="$(run_sut "$A1")"; CI_CMD=""; VERDICT="$(verdict_of "$OUT")"; }
 setup12() { new_fixture "c12"
             RC12a="$(run_sut "deadbeef")"; RC12b="$(run_sut "deadbeef")"; }
 setup13() { new_fixture "c13"
