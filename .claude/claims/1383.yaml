@@ -1,0 +1,30 @@
+# .claude/claims/1383.yaml — 历史门禁残余首批删除
+writeset:
+  - .claude/claims/1383.yaml
+  - scripts/pre-commit-check.sh
+  - .gitea/workflows/local-gates.yml
+  - scripts/control-tower/ci-emptygreen-sim.sh
+  - scripts/control-tower/ci-deps-step-sim.sh
+  - scripts/control-tower/check-ci-empty-green.sh
+  - scripts/control-tower/fixture-requires-baseline.txt
+  - tests/control-tower/ci-emptygreen-sim.test.sh
+  - tests/control-tower/ci-deps-step-sim.test.sh
+  - tests/control-tower/check-ci-empty-green.test.sh
+  - tests/control-tower/precommit-groups-injection.test.sh
+  - tests/control-tower/gate-count-acceptance.test.sh
+  - LOOP.md
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-11-13-1383-retire-batch1.md
+  - memory/notes/proposed/2026-11-13-1383-retire-batch1.md
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1383 --root .
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-fixture-requires.sh
+  - verify: bash tests/control-tower/gate-count-acceptance.test.sh
+  - verify: bash tests/control-tower/precommit-groups-injection.test.sh
+  - verify: bash scripts/pre-commit-check.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: git -c core.whitespace=cr-at-eol diff --check
+note: "#1383 仅执行 CTO 裁定 A 与旧④⑤首批删除：pre-commit 组 10 及 CP3 写入、组 9 空 .codex/contracts 声明块、旧 local-gates ④⑤步，以及三件配套脚本和各自配对测试。同步现役测试、组数、fixture 基线和最小退役登记；经用户明确批准，仅将 CT-check-ci-empty-green 从现役登记移入 retired，PC-G10 仅改 decision 状态行。不改 core-gates、core-tests.sh、tests/user-visible/**、tests/contract/**、scripts/audit/**、sealed-tests 链、⑦⑧、all-checks-passed、verify-governance、quality-baseline 或遥测批，不自行合并。"

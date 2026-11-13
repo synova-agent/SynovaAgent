@@ -7,13 +7,13 @@
 #
 # ═══ 契约（铁律 47）═══
 #   @input  — 无参数。被测对象 = 本仓库 HEAD 的 scripts/pre-commit-check.sh。
-#             环境开关: SYNO_PRE_COMMIT_INJECT_FULL=1 → 跑全部 12 组；
+#             环境开关: SYNO_PRE_COMMIT_INJECT_FULL=1 → 跑全部现存注入场景；
 #                       缺省（CI 与人工默认）→ 抽检 4 组（组 1/2/7/12）+ 1 绿基线；
 #                       SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 → 基线 HOST_STATE 也判红（严格守门）。
 #   @output — 逐组结果行 + 耗时汇总表 + 收尾残留断言 + 末行机器可读汇总:
 #             GATE_INJECTION_SUMMARY: scenarios=<n> red_confirmed=<n> structural_not_red=<n>
 #                                     not_red=<n> baseline=<ok|host_state|FAIL> probe=<状态>(rc=<n>)
-#                                     residue_code=<n> residue_repo=<n> shim=<0|1>
+#                                     residue_code=<n> residue_repo=<n>
 #   @exit   — 0 = 全部期望红组均 RED_CONFIRMED（structural_not_red 须带**已验证**的结构性理由），
 #                且绿基线 rc=0（或 baseline=host_state 且有因果隔离探针证据），且残留断言过；
 #             1 = 任一期望红组未红 / 基线不绿且不可归因 / 残留断言失败（业务失败）；
@@ -22,10 +22,9 @@
 #   @degraded — exit 2 + stderr "degraded: <原因>"（铁律 11/24）
 #
 # ═══ 组标签映射（**冻结事实，勿假设 1..13 连续**）═══
-#   实测: `grep -c '── 组 ' scripts/pre-commit-check.sh` = 12
-#   标签为 组 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13 —— **组 11 不存在**（#595 起标签无分母）
-#   （无 `── 组 11` echo；组号沿用脚本历史 echo，不重排）。本夹具按 echo 标签定位断言，
-#   不按 1..13 循环，避免把不存在的组 11 当失败。
+#   实测: `grep -c '── 组 ' scripts/pre-commit-check.sh` = 11
+#   标签为 组 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13 —— 组 10 已退役，**组 11 不存在**。
+#   本夹具按 echo 标签定位断言，不按连续组号循环，避免把缺号当失败。
 #
 # ═══ 隔离（hermetic）═══
 #   🔴 #665b（裁 223）: 子进程一律 `env -i` **白名单**（PATH/HOME/LANG/TMPDIR + 门禁三件套），
@@ -49,13 +48,6 @@
 #      不依赖副本里是否存在 origin/main。
 #   4) 不设 SYNO_TEST_ARM / SYNO_GIT_CACHED_* / SYNO_SECRETS_ROOT / SYNO_BRIEF_DIR
 #      → _SANDBOX=0（decl_check 走硬阻断），且注入缝 fail-closed 保持关闭。
-#
-# ═══ python shim 与组 9（实测发现，见回报与注释）═══
-#   本机（macOS）无 `python`（仅 python3）。组 9 契约门禁 L1099 用 `python -c` 解析
-#   .codex/contracts/*.json → 无 python 时 DECLARED 恒空 → 该组**恒定假绿**（结构性 fail-open）。
-#   夹具在宿主无 python 时启用 PATH shim（python→python3），仅为让组 9 的判定逻辑可执行
-#   （CI runner 有 python）。shim 路径与启用标志全部打印在输出里，不静默。
-#   ⚠️ 该 shim 不改被测脚本一个字节；无 shim 时的假绿现象由回报单独记录（CTO 裁定）。
 #
 # ═══ 既有红基线相关 ═══
 #   本夹具不读 scripts/control-tower/ci-red-baseline.txt（那是 --ci-reds 的输入，属另一件）。
@@ -96,8 +88,6 @@
 #   g6  组 6:   暂存代码 + 认领 brief 的 Q0/Q1/Q3/架构层/Done 全空   → 6 核心字段
 #   g7  组 7:   暂存新增行含 "Diagnostic"+"Module"（拼接，非注释）    → 禁止新 "Diagnostic"+"Module"
 #   g8  组 8:   暂存新增 extensions/<新目录>/probe.txt（无 manifest）→ 目录结构
-#   g9  组 9:   .codex/contracts/*.json 声明产出不在暂存区           → 契约门禁
-#   g10 组 10:  端到端 brief + 无暂存 .test.ts                      → G10/G11 条件区域
 #   g12 组 12:  暂存 scripts/*.sh 无任何今日 brief 认领               → Q2 范围一致性
 #   g13 → 组 13:  暂存改动 .synova/skills/**（与 .dsh/skills 漂移）     → 技能同步
 #
@@ -149,23 +139,8 @@ echo "REPO_DIR   = $REPO_DIR"
 echo "BASE_SHA   = $BASE_SHA"
 echo "BRANCH     = $BRANCH"
 echo "TMP        = $TMP  （hermetic 副本；注入只发生在此）"
-echo "MODE       = $([ "${SYNO_PRE_COMMIT_INJECT_FULL:-0}" = "1" ] && echo FULL-12-组 || echo SAMPLED-抽检-4-组)"
+echo "MODE       = $([ "${SYNO_PRE_COMMIT_INJECT_FULL:-0}" = "1" ] && echo FULL-现存注入场景 || echo SAMPLED-抽检-4-组)"
 echo ""
-
-# ── python shim（仅为组 9 可执行；见头部注释）──
-HOST_PATH="$PATH"   # 保存宿主原始 PATH（组 9 结构性探针要用真实状态，不能用 shim 后的）
-SHIM_USED=0
-if ! command -v python >/dev/null 2>&1; then
-  mkdir -p "$TMP/shim"
-  printf '#!/bin/bash\nexec python3 "$@"\n' > "$TMP/shim/python"
-  chmod +x "$TMP/shim/python"
-  PATH="$TMP/shim:$PATH"; export PATH
-  SHIM_USED=1
-  echo "[ENV] 宿主无 python → 启用 PATH shim（python→python3），使组 9 契约门禁可执行（CI runner 有 python）"
-  echo "[ENV] 无此 shim 时组 9 在本机恒假绿（pre-commit-check.sh L1099 用 python -c）—— 已单独记录为实测发现"
-  echo ""
-fi
-
 
 # ── #665b: hermetic 运行（env -i 白名单）──
 #   外层 CI 环境（CI / GITHUB_EVENT_NAME / GITHUB_* …）会让门禁某些组走 strict 分支
@@ -234,8 +209,6 @@ LBL_g5="── 组 5: 架构边界 + 桥接文件 ──"
 LBL_g6="── 组 6: Task Brief (6 核心字段) ──"
 LBL_g7="── 组 7: 架构合规 ──"
 LBL_g8="── 组 8: 文件驱动架构完整性 (V3.9) ──"
-LBL_g9="── 组 9: 契约门禁 ──"
-LBL_g10="── 组 10: V3 流水线健康度 ──"
 LBL_g12="── 组 12: Task Scope 一致性 ──"
 LBL_g13="── 组 13: 技能同步一致性 ──"
 
@@ -342,62 +315,6 @@ EOF
   git -C "$CLONE" add extensions/m9-fixture-g8/probe.txt
 }
 
-inj_g9() {
-  mkdir -p "$CLONE/.codex/contracts"
-  cat > "$CLONE/.codex/contracts/m9-fixture-g9.json" <<EOF
-[{"filePath": "src/m9-fixture-g9-not-staged.ts", "note": "$MARK group-9 声明产出不在暂存区"}]
-EOF
-  cat > "$CLONE/src/m9-fixture-g9.ts" <<EOF
-// $MARK group-9 (仅为让暂存区非空)
-export const m9InjectG9 = 9;
-EOF
-  git -C "$CLONE" add .codex/contracts/m9-fixture-g9.json src/m9-fixture-g9.ts
-}
-
-inj_g10() {
-  cat > "$CLONE/scripts/m9-fixture-g10.sh" <<EOF
-#!/bin/bash
-# $MARK group-10 (端到端声明但暂存区无 .test.ts)
-exit 0
-EOF
-  chmod +x "$CLONE/scripts/m9-fixture-g10.sh"
-  cat > "$CLONE/.claude/task-briefs/${TODAY}-m9-fixture-g10-e2e-no-tests.md" <<EOF
-# Task Brief — 夹具场景 G10（声明端到端验收但暂存区无测试文件）
-
-## Q0: 定位 — 项目拼图 + 文件审计
-夹具占位：G10/G11 条件区域与测试覆盖判定的注入场景。
-
-## Q1: 调研 — 业界最佳实践 / Anthropic 决策链 / memory 历史教训
-参考：第一性原理 + 注入即验证（本夹具语境，无外部最佳实践可引）。
-
-## Q2: 范围 — 正确的最简方案
-做什么（逐条精确路径）：
-- scripts/m9-fixture-g10.sh — 夹具注入脚本
-
-不做什么（含文件路径）：
-- 不改 scripts/pre-commit-check.sh
-
-## Q3: 验收 — 入口 → 交互 → 结果
-入口：bash scripts/m9-fixture-g10.sh（端到端占位）
-处理：占位
-结果：exit 0
-
-## 架构层
-L1（夹具占位，不触五层依赖）
-
-## Done 标准
-- [x] 端到端占位命令可执行（verify: bash scripts/m9-fixture-g10.sh）
-EOF
-  git -C "$CLONE" add scripts/m9-fixture-g10.sh
-  local resolved
-  resolved="$(cd "$CLONE" && bash scripts/workflow/resolve-commit-brief.sh "scripts/m9-fixture-g10.sh" 2>/dev/null || true)"
-  if ! echo "$resolved" | grep -q "m9-fixture-g10-e2e-no-tests"; then
-    INJ_PREFLIGHT_FAIL="g10 认领预检失败：resolve-commit-brief 返回 '${resolved:-<空>}'，未指向夹具 brief"
-  else
-    INJ_NOTE="认领预检: $(basename "$resolved")"
-  fi
-}
-
 inj_g12() {
   cat > "$CLONE/scripts/m9-fixture-g12.sh" <<EOF
 #!/bin/bash
@@ -443,20 +360,6 @@ assert_g12_structural() {
   return 1
 }
 
-assert_g10_structural() {
-  local pc="$CLONE/scripts/pre-commit-check.sh"
-  local defs usages
-  # 定义数：`CHANGED_FILES=` / `STAGED_FILES=` / `export ...=` 一律算定义
-  defs="$(grep -cE '(^|[[:space:]])(export[[:space:]]+)?(CHANGED_FILES|STAGED_FILES)=' "$pc" 2>/dev/null || true)"
-  usages="$(grep -cE '\$(CHANGED_FILES|\{CHANGED_FILES\}|STAGED_FILES|\{STAGED_FILES\})' "$pc" 2>/dev/null || true)"
-  defs="${defs//[^0-9]/}"; usages="${usages//[^0-9]/}"
-  echo "    [structural g10] pre-commit-check.sh: 定义 ${defs:-0} 处 / 使用 ${usages:-0} 处"
-  if [ "${defs:-0}" -eq 0 ] && [ "${usages:-0}" -gt 0 ]; then
-    return 0   # 使用存在但从未定义 → G10/G11 判定恒走 soft_pass（结构性不可达）
-  fi
-  return 1
-}
-
 # 组 7：7a（"Diagnostic"+"Module"）排除正则含 `^+++` = **非法 ERE** → `grep -Ev` 直接报错
 #   （BSD grep 实测 rc=2: "repetition-operator operand invalid"）→ 管道输出为空、又有 `|| true`
 #   → NEW_DIAG 恒空 → 该子检查恒定"✅"（fail-open）。
@@ -480,15 +383,6 @@ assert_g7_structural() {
     echo "    [structural g7] 7d HAS_HARD 反例探针（行含 'marketing'，期望 cnt>0 即该子检查活着）: cnt=${cnt:-0}"
   fi
   [ "$hit" -eq 1 ]
-}
-
-# 组 9：宿主无 python 时 L1099 `python -c` 恒失败 → DECLARED 恒空 → 契约门禁恒绿（结构性假绿）。
-# 用**未启用 shim 的原始 PATH**证明宿主真实状态。
-assert_g9_structural() {
-  local out rc
-  out="$(PATH="$HOST_PATH" python -c 'print(1)' 2>&1)"; rc=$?
-  echo "    [structural g9] 原始 PATH 下 python 探针: rc=$rc 输出='${out}'"
-  [ "$rc" -ne 0 ]
 }
 
 # ═══ 场景执行 ═══
@@ -582,8 +476,8 @@ fi
 echo ""
 
 if [ "${SYNO_PRE_COMMIT_INJECT_FULL:-0}" = "1" ]; then
-  SCEN="g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g12 g13"
-  echo "[MODE] FULL：跑全部 12 组（组 11 不存在，不跑）"
+  SCEN="g1 g2 g3 g4 g5 g6 g7 g8 g12 g13"
+  echo "[MODE] FULL：跑全部现存注入场景（组 10 已退役，组 11 不存在）"
 else
   SCEN="g1 g2 g7 g12"
   echo "[MODE] SAMPLED：抽检 4 组（1/2/7/12）——全量请设 SYNO_PRE_COMMIT_INJECT_FULL=1"
@@ -984,7 +878,7 @@ if [ "${SYNO_INJECT_REQUIRE_CLEAN_BASELINE:-0}" = "1" ] && [ "$BASE_STATUS" = "h
   echo "   [STRICT] SYNO_INJECT_REQUIRE_CLEAN_BASELINE=1 且基线=HOST_STATE → 判红（严格守门模式）"
 fi
 
-echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE shim=$SHIM_USED decl_gates=${D1148_FAIL:-0} fixture_mode=$FIXTURE_MODE_STATUS d1193_regression=$D1193_REGRESSION_STATUS no_marker_notred=$NO_MARKER_NOTRED clone_status=$([ "$CLONE_DIRTY_N" -eq 0 ] && echo clean || echo "DIRTY($CLONE_DIRTY_N)")"
+echo "GATE_INJECTION_SUMMARY: scenarios=${#NAMES[@]} red_confirmed=$RED_N structural_not_red=$STRUCT_N not_red=$NOTRED_N baseline=$BASE_STATUS probe=$PROBE_STATUS(rc=$PROBE_RC) residue_code=$CODE_RESIDUE residue_repo=$REPO_RESIDUE decl_gates=${D1148_FAIL:-0} fixture_mode=$FIXTURE_MODE_STATUS d1193_regression=$D1193_REGRESSION_STATUS no_marker_notred=$NO_MARKER_NOTRED clone_status=$([ "$CLONE_DIRTY_N" -eq 0 ] && echo clean || echo "DIRTY($CLONE_DIRTY_N)")"
 if [ "$RC" -eq 0 ]; then
   echo "✅ 注入自测结果：期望红组全部 RED_CONFIRMED，残留断言满足，baseline=${BASE_STATUS}（结论归自验/独立审计，本夹具只出证据）"
   [ "$BASE_STATUS" = "host_state" ] && echo "   ⚠️ 注意：基线非天然绿（宿主 /tmp marker 绝对路径读取，已由探针因果确认）——CI 上新 runner 应为 BASELINE_OK"

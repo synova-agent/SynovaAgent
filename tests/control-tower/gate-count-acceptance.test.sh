@@ -1,11 +1,11 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# gate-count-acceptance.test.sh — #595 门禁组数口径自证（真值 = 数出来的 12 组）
+# gate-count-acceptance.test.sh — #595 门禁组数口径自证（真值 = 数出来的 11 组）
 #
 # 批次: P4 · #595 ｜ 写集: tests/control-tower/gate-count-acceptance.test.sh（新建）
-# 治的病: 文档/脚本/夹具/CI 自称 13 组，脚本实际只执行 12 组；C2 拿脚本里的
+# 治的病: 文档/脚本/夹具/CI 自称 13 组，脚本实际只执行 11 组；C2 拿脚本里的
 #         「全部 13 组通过」字串当真相 ⇒ 文档与脚本写同一个错数即恒绿（自指）。
-# 本件立场: 真值只有一个来源 —— 脚本里实际会被执行的 `── 组 N:` 横幅数（=12）；
+# 本件立场: 真值只有一个来源 —— 脚本里实际会被执行的 `── 组 N:` 横幅数（=11）；
 #         文档/夹具/CI step 名必须跟随它；任何硬编码总数都是回潮，必红。
 #
 # 契约（铁律 47）
@@ -23,9 +23,9 @@
 # 设计哲学: 一个分离（真值 = 数横幅）＋ 三条承诺（文档跟随真值／硬编码必红／改坏必红）。
 #
 # Known Limitations（做不到什么）:
-#   1. 不跑全量 pre-commit（单次 ~50s；终态由验证据单跑一次并对末行「全部 12 组通过」负责）。
+#   1. 不跑全量 pre-commit（单次 ~50s；终态由验证据单跑一次并对末行「全部 11 组通过」负责）。
 #   2. 不跑 5 个控制塔夹具全量（DS-8 由独立验证据逐件跑；本件只做静态文本断言）。
-#   3. DS-10 判红范围仅限「现行声明白名单（14 文件）」。全仓其余 `13 组` 只打印文件数、
+#   3. DS-10 判红范围仅限「现行声明白名单（13 文件）」。全仓其余 `13 组` 只打印文件数、
 #      分类计数与路径，一律不判红。不判红的排除类别：CHRONICLE.md（历史）、docs/plans/**
 #      （冻结 dev doc）、docs/synova/**＋docs/evidence/**（历史证据/批次记录）、memory/**
 #      （四态 Note 引述）、task-state、.claude、.handbook-mirror、.github（非权威）、
@@ -59,7 +59,7 @@ gcount() { # $1=文件 $2=ERE → 行计数；无命中/文件缺失一律回 "0
 }
 hexists() { [ -f "$1" ] && echo 1 || echo 0; }
 
-echo "═══ gate-count-acceptance.test.sh — #595 门禁组数口径自证（真值=12）═══"
+echo "═══ gate-count-acceptance.test.sh — #595 门禁组数口径自证（真值=11）═══"
 echo "  root: $ROOT"
 echo "  用途: 12 项判据 ＋ R1/R2/R3 反例；只读仓库、只写 mktemp 沙箱"
 
@@ -93,47 +93,46 @@ echo "  ✅ 环境前置满足（文件/命令/UTF-8/git）"
 # B. 12 项判据（逐项打印命令＋原始输出＋✅/❌）
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ── 判据 1: 横幅数（真值）= 12 ────────────────────────────────────────────────
+# ── 判据 1: 横幅数（真值）= 11 ────────────────────────────────────────────────
 echo ""
-echo "── 判据 1: 横幅数（真值）= 12 ──"
+echo "── 判据 1: 横幅数（真值）= 11 ──"
 N1=$(gcount "$PCC" '── 组 [0-9]+:')
 show "grep -cE '── 组 [0-9]+:' scripts/pre-commit-check.sh" "$N1"
 F1=0
-[ "$N1" -eq 12 ] || { echo "  ↳ 期望 12，实际 $N1"; F1=1; }
+[ "$N1" -eq 11 ] || { echo "  ↳ 期望 11，实际 $N1"; F1=1; }
 if [ "$N1" -eq 0 ]; then
   SIGNAL_ZERO=1
   echo "  ↳ [E_SIGNAL_ZERO] 新口径横幅数=0 —— 看不见 ≠ 没问题（终局 exit 2）"
 fi
-crit 1 "横幅数 = 12（DS-1）" "$F1"
+crit 1 "横幅数 = 11（DS-1）" "$F1"
 
-# ── 判据 2: 组号集合 = {1..10,12,13} ─────────────────────────────────────────
+# ── 判据 2: 组号集合 = {1..9,12,13} ─────────────────────────────────────────
 echo ""
-echo "── 判据 2: 组号集合 = {1..10,12,13}（组 11 已并入组 4，非缺功能）──"
+echo "── 判据 2: 组号集合 = {1..9,12,13}（组 11 已并入组 4，非缺功能）──"
 IDS=$(grep -oE '── 组 [0-9]+' "$PCC" 2>/dev/null | grep -oE '[0-9]+' | sort -n | uniq | tr '\n' ' ' | sed 's/ *$//')  # swallow-ok: 测试内受控 grep（结果由计数/断言兜底）
 show "grep -oE '── 组 [0-9]+' scripts/pre-commit-check.sh | grep -oE '[0-9]+' | sort -n | uniq" "$IDS"
-EXPECT_IDS="1 2 3 4 5 6 7 8 9 10 12 13"
+EXPECT_IDS="1 2 3 4 5 6 7 8 9 12 13"
 F2=0
 [ "$IDS" = "$EXPECT_IDS" ] || { echo "  ↳ 期望「$EXPECT_IDS」，实际「$IDS」"; F2=1; }
-crit 2 "组号集合 = {1..10,12,13}" "$F2"
+crit 2 "组号集合 = {1..9,12,13}" "$F2"
 
-# ── 判据 3: 脚本＋5 夹具无 `组 N/13` 分母 ────────────────────────────────────
+# ── 判据 3: 脚本＋4 夹具无 `组 N/13` 分母 ────────────────────────────────────
 echo ""
-echo "── 判据 3: 脚本＋5 夹具无 \`组 N/13\` 分母（DS-4）──"
+echo "── 判据 3: 脚本＋4 夹具无 \`组 N/13\` 分母（DS-4）──"
 F3=(scripts/pre-commit-check.sh \
     tests/control-tower/precommit-groups-injection.test.sh \
     tests/control-tower/fastlane-bypass-only.test.sh \
     tests/control-tower/check-pr-budget.test.sh \
-    tests/control-tower/gate-failopen-net.test.sh \
-    tests/control-tower/ci-deps-step-sim.test.sh)
+    tests/control-tower/gate-failopen-net.test.sh)
 N3=0; RAW3=""
 for f in "${F3[@]}"; do
   c=$(gcount "$ROOT/$f" '组 [0-9]+/13')
   N3=$((N3+c)); RAW3="${RAW3}${f}: ${c}"$'\n'
 done
-show "grep -cE '组 [0-9]+/13' <脚本＋5 夹具>（逐文件）" "$(printf '%s' "$RAW3")"
+show "grep -cE '组 [0-9]+/13' <脚本＋4 夹具>（逐文件）" "$(printf '%s' "$RAW3")"
 F3F=0
 [ "$N3" -eq 0 ] || { echo "  ↳ 合计 $N3 处 ≠ 0"; F3F=1; }
-crit 3 "无 /13 分母（脚本＋5 夹具）" "$F3F"
+crit 3 "无 /13 分母（脚本＋4 夹具）" "$F3F"
 
 # ── 判据 4: 脚本内无 `全部 N 组通过` 字面量 ─────────────────────────────────
 echo ""
@@ -146,7 +145,7 @@ F4=0
 [ "$N4" -eq 0 ] || { echo "  ↳ 期望 0，实际 $N4"; F4=1; }
 crit 4 "脚本内无字面总数" "$F4"
 
-# ── 判据 5: 汇总行运行时计数（12 次自增 ＋ 汇总引用变量）───────────────────
+# ── 判据 5: 汇总行运行时计数（11 次自增 ＋ 汇总引用变量）───────────────────
 echo ""
 echo "── 判据 5: 汇总行运行时计数（DS-2 DS-12）──"
 INC5=$(grep -cF 'GROUP_DONE=$((GROUP_DONE+1))' "$PCC" 2>/dev/null | tr -d '\n\r')  # swallow-ok: 测试内受控 grep（结果由计数/断言兜底）
@@ -159,37 +158,37 @@ show "grep -cF '全部 \${GROUP_DONE} 组通过' scripts/pre-commit-check.sh（�
 show "汇总行（非注释可执行行）计数" "$SUM5"
 show "（参考·不判红）grep -cE 'GROUP_DONE=0' scripts/pre-commit-check.sh" "$INIT5"
 F5=0
-[ "$INC5" -eq 12 ] || { echo "  ↳ 自增期望 12，实际 $INC5"; F5=1; }
+[ "$INC5" -eq 11 ] || { echo "  ↳ 自增期望 11，实际 $INC5"; F5=1; }
 [ "$SUM5" -eq 1 ]  || { echo "  ↳ 汇总行（非注释）引用变量期望 1，实际 $SUM5"; F5=1; }
-crit 5 "运行时计数（12 增 ＋ 汇总引用变量）" "$F5"
+crit 5 "运行时计数（11 增 ＋ 汇总引用变量）" "$F5"
 
-# ── 判据 6: C2 真值（数横幅）⇒ exit 0 ＋ 两行 12 = 12 ──────────────────────
+# ── 判据 6: C2 真值（数横幅）⇒ exit 0 ＋ 两行 11 = 11 ──────────────────────
 echo ""
-echo "── 判据 6: C2 真值（数横幅）⇒ exit 0 ＋ 两行 12 = 12（DS-3）──"
+echo "── 判据 6: C2 真值（数横幅）⇒ exit 0 ＋ 两行 11 = 11（DS-3）──"
 OUT6=$(cd "$ROOT" && bash "$C2" 2>&1); RC6=$?
 show "bash scripts/doc-system/check-doc-truth.sh; echo exit=\$?" "$(printf '%s\nexit=%s' "$OUT6" "$RC6")"
-C2LINES=$(printf '%s\n' "$OUT6" | grep -cE 'C2 门禁组数.*12 = .*12')
-show "grep -cE 'C2 门禁组数.*12 = .*12'（对 C2 输出）" "$C2LINES"
+C2LINES=$(printf '%s\n' "$OUT6" | grep -cE 'C2 门禁组数.*11 = .*11')
+show "grep -cE 'C2 门禁组数.*11 = .*11'（对 C2 输出）" "$C2LINES"
 F6=0
 [ "$RC6" -eq 0 ] || { echo "  ↳ C2 exit=$RC6 ≠ 0"; F6=1; }
-[ "$C2LINES" -eq 2 ] || { echo "  ↳ 期望 2 行「12 = 12」口径，实际 $C2LINES 行"; F6=1; }
-crit 6 "C2 真值 = 12（两行）" "$F6"
+[ "$C2LINES" -eq 2 ] || { echo "  ↳ 期望 2 行「11 = 11」口径，实际 $C2LINES 行"; F6=1; }
+crit 6 "C2 真值 = 11（两行）" "$F6"
 
-# ── 判据 7: 6 处文档声明均 = 12（C2 同款正则；F7 覆盖不全由本项兜）──────────
+# ── 判据 7: 6 处文档声明均 = 11（C2 同款正则；F7 覆盖不全由本项兜）──────────
 echo ""
-echo "── 判据 7: 6 处文档声明均 = 12（C2 同款正则）──"
+echo "── 判据 7: 6 处文档声明均 = 11（C2 同款正则）──"
 D_AG=$(grep -vE '第.*组硬阻断' "$ROOT/AGENTS.md" 2>/dev/null | grep -oE '[0-9]+ 组 pre-commit|pre-commit [0-9]+ 组|[0-9]+ 组硬阻断' | grep -oE '[0-9]+' | tr -d '\r')  # swallow-ok: 测试内受控 grep（结果由计数/断言兜底）
 D_LO=$(grep -vE '第.*组硬阻断' "$ROOT/LOOP.md" 2>/dev/null | grep -oE '[0-9]+ 组 pre-commit|pre-commit [0-9]+ 组|[0-9]+ 组硬阻断' | grep -oE '[0-9]+' | tr -d '\r')  # swallow-ok: 测试内受控 grep（结果由计数/断言兜底）
 show "C2 同款正则提取 AGENTS.md → $(printf '%s' "$D_AG" | tr '\n' ' ')" "$(printf '%s' "$D_AG" | tr '\n' ' ')"
 show "C2 同款正则提取 LOOP.md → $(printf '%s' "$D_LO" | tr '\n' ' ')" "$(printf '%s' "$D_LO" | tr '\n' ' ')"
 ALL7=$( { printf '%s\n' "$D_AG"; printf '%s\n' "$D_LO"; } | grep -E '^[0-9]+$' )
 N7=$(printf '%s\n' "$ALL7" | grep -cE '^[0-9]+$')
-BAD7=$(printf '%s\n' "$ALL7" | grep -E '^[0-9]+$' | grep -vcE '^12$')
-show "声明总数 / 非 12 个数" "$N7 / $BAD7"
+BAD7=$(printf '%s\n' "$ALL7" | grep -E '^[0-9]+$' | grep -vcE '^11$')
+show "声明总数 / 非 11 个数" "$N7 / $BAD7"
 F7=0
 [ "$N7" -eq 6 ]  || { echo "  ↳ 期望 6 处，实际 $N7"; F7=1; }
-[ "$BAD7" -eq 0 ] || { echo "  ↳ 存在 $BAD7 处 ≠ 12"; F7=1; }
-crit 7 "6 处声明均 = 12" "$F7"
+[ "$BAD7" -eq 0 ] || { echo "  ↳ 存在 $BAD7 处 ≠ 11"; F7=1; }
+crit 7 "6 处声明均 = 11" "$F7"
 
 # ── 判据 8: workflow step 名与注释同口径 ────────────────────────────────────
 echo ""
@@ -220,20 +219,19 @@ F9F=0
 [ "$N9" -eq 0 ] || { echo "  ↳ 合计 $N9 处 ≠ 0"; F9F=1; }
 crit 9 "W6 四文件无 13 组" "$F9F"
 
-# ── 判据 10: 5 控制塔夹具 ＋ 2 doc-system 夹具 ─────────────────────────────
+# ── 判据 10: 4 控制塔夹具 ＋ 2 doc-system 夹具 ─────────────────────────────
 echo ""
-echo "── 判据 10: 7 夹具同口径（DS-8）──"
+echo "── 判据 10: 6 夹具同口径（DS-8）──"
 F10A=(tests/control-tower/precommit-groups-injection.test.sh \
       tests/control-tower/fastlane-bypass-only.test.sh \
       tests/control-tower/check-pr-budget.test.sh \
-      tests/control-tower/gate-failopen-net.test.sh \
-      tests/control-tower/ci-deps-step-sim.test.sh)
+      tests/control-tower/gate-failopen-net.test.sh)
 N10A=0; RAW10A=""
 for f in "${F10A[@]}"; do
   c=$(gcount "$ROOT/$f" '13 组')
   N10A=$((N10A+c)); RAW10A="${RAW10A}${f}: ${c}"$'\n'
 done
-show "grep -cE '13 组' <5 控制塔夹具>（逐文件）" "$(printf '%s' "$RAW10A")"
+show "grep -cE '13 组' <4 控制塔夹具>（逐文件）" "$(printf '%s' "$RAW10A")"
 F10B=(tests/doc-system/check-doc-truth.test.sh tests/doc-system/doc-truth-probe.test.sh)
 RAW10B=""; F10Bf=0
 for f in "${F10B[@]}"; do
@@ -245,13 +243,13 @@ for f in "${F10B[@]}"; do
 done
 show "grep -cF '全部 5 组通过' ／ grep -oF '── 组 ' | wc -l（2 doc-system 夹具）" "$(printf '%s' "$RAW10B")"
 F10=0
-[ "$N10A" -eq 0 ] || { echo "  ↳ 5 控制塔夹具合计 $N10A 处 13 组 ≠ 0"; F10=1; }
+[ "$N10A" -eq 0 ] || { echo "  ↳ 4 控制塔夹具合计 $N10A 处 13 组 ≠ 0"; F10=1; }
 [ "$F10Bf" -eq 0 ] || { echo "  ↳ doc-system 夹具期望「0 处字面 / 各 5 条横幅」，见上"; F10=1; }
-crit 10 "7 夹具同口径" "$F10"
+crit 10 "6 夹具同口径" "$F10"
 
-# ── 判据 11: 现行声明白名单 14 文件 = 0 ＋ 全仓清单打印（不判红）───────────
+# ── 判据 11: 现行声明白名单 13 文件 = 0 ＋ 全仓清单打印（不判红）───────────
 echo ""
-echo "── 判据 11: 现行声明白名单 14 文件无 13 组（DS-10）＋ 全仓残留清单 ──"
+echo "── 判据 11: 现行声明白名单 13 文件无 13 组（DS-10）＋ 全仓残留清单 ──"
 WL=(AGENTS.md LOOP.md \
     scripts/pre-commit-check.sh scripts/doc-system/check-doc-truth.sh \
     .gitea/workflows/local-gates.yml \
@@ -260,14 +258,13 @@ WL=(AGENTS.md LOOP.md \
     tests/control-tower/precommit-groups-injection.test.sh \
     tests/control-tower/fastlane-bypass-only.test.sh \
     tests/control-tower/check-pr-budget.test.sh \
-    tests/control-tower/gate-failopen-net.test.sh \
-    tests/control-tower/ci-deps-step-sim.test.sh)
+    tests/control-tower/gate-failopen-net.test.sh)
 N11=0; RAW11=""
 for f in "${WL[@]}"; do
   c=$(gcount "$ROOT/$f" '13 组')
   N11=$((N11+c)); RAW11="${RAW11}${f}: ${c}"$'\n'
 done
-show "grep -cE '13 组' <白名单 14 文件>（逐文件）" "$(printf '%s' "$RAW11")"
+show "grep -cE '13 组' <白名单 13 文件>（逐文件）" "$(printf '%s' "$RAW11")"
 F11=0
 [ "$N11" -eq 0 ] || { echo "  ↳ 白名单合计 $N11 处 ≠ 0"; F11=1; }
 # 全仓清单：只打印，不判红（DS-10 白名单口径；历史/过程件有意保留）
@@ -292,7 +289,7 @@ echo "  排除规则（B 类，不判红）: CHRONICLE.md｜docs/plans/**（冻�
 if [ -n "$OTHERLIST" ]; then
   show "其余现行文件（不判红；残留清单交 L1/独立复核裁决）" "$(printf '%s' "$OTHERLIST")"
 fi
-crit 11 "白名单 14 文件无 13 组" "$F11"
+crit 11 "白名单 13 文件无 13 组" "$F11"
 
 # ── 判据 12: DS-11 组号集合 ＋ 组块数（互补，确认无增删）─────────────────
 echo ""
@@ -303,9 +300,9 @@ CNT12=$(printf '%s\n' "$IDS12" | tr ' ' '\n' | grep -cE '^[0-9]+$')
 show "组号集合" "$IDS12"
 show "横幅数 / 去重组号数" "$N12 / $CNT12"
 F12=0
-[ "$IDS12" = "$EXPECT_IDS" ] || { echo "  ↳ 组号集合 ≠ {1..10,12,13}"; F12=1; }
-[ "$N12" -eq 12 ]  || { echo "  ↳ 横幅数期望 12，实际 $N12"; F12=1; }
-[ "$CNT12" -eq 12 ] || { echo "  ↳ 去重组号数期望 12，实际 $CNT12"; F12=1; }
+[ "$IDS12" = "$EXPECT_IDS" ] || { echo "  ↳ 组号集合 ≠ {1..9,12,13}"; F12=1; }
+[ "$N12" -eq 11 ]  || { echo "  ↳ 横幅数期望 11，实际 $N12"; F12=1; }
+[ "$CNT12" -eq 11 ] || { echo "  ↳ 去重组号数期望 11，实际 $CNT12"; F12=1; }
 crit 12 "DS-11 组号集合＋组块数" "$F12"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -377,7 +374,7 @@ fi
 
 # ── R2: 文档声明改回 13 ⇒ C2 必红；恢复 ⇒ 绿 ───────────────────────────────
 echo ""
-echo "── 反例 R2: 文档声明 12→13 ⇒ C2 必红；恢复 ⇒ 绿（DS-6）──"
+echo "── 反例 R2: 文档声明 11→13 ⇒ C2 必红；恢复 ⇒ 绿（DS-6）──"
 mksbx "$SBX"
 RC=$(run_c2 "$SBX"); OUT=$(c2out)
 show "DOC_TRUTH_ROOT=<sbx> bash scripts/doc-system/check-doc-truth.sh（基线）" "$(printf '%s\nexit=%s' "$OUT" "$RC")"
@@ -390,7 +387,7 @@ else
 import sys
 p = sys.argv[1]
 s = open(p, encoding='utf-8').read()
-old, new = '12 组 pre-commit', '13 组 pre-commit'
+old, new = '11 组 pre-commit', '13 组 pre-commit'
 if old not in s:
     print(f'ERROR: 副本 AGENTS.md 未找到 `{old}`（W3 未完成？）')
     sys.exit(3)
@@ -399,7 +396,7 @@ print(f'已改：`{old}` → `{new}`（替换 1 处）')
 PY
 )
   RCmod=$?
-  show "python3 把副本 AGENTS.md 首个 12 组 pre-commit → 13 组 pre-commit" "$(printf '%s\nexit=%s' "$MOD_OUT" "$RCmod")"
+  show "python3 把副本 AGENTS.md 首个 11 组 pre-commit → 13 组 pre-commit" "$(printf '%s\nexit=%s' "$MOD_OUT" "$RCmod")"
   if [ "$RCmod" -ne 0 ]; then
     F_R2=1
   else
@@ -415,14 +412,14 @@ PY
 fi
 [ "$F_R2" -eq 0 ] && ok "反例 R2 — 改数必红，恢复必绿" || no "反例 R2 — 改数必红，恢复必绿"
 
-# ── R3: 硬编码回潮（${GROUP_DONE} → 字面 12）⇒ 判据 4 同款断言必 >0 ──────
+# ── R3: 硬编码回潮（${GROUP_DONE} → 字面 11）⇒ 判据 4 同款断言必 >0 ──────
 echo ""
 echo "── 反例 R3: 汇总行硬编码回潮 ⇒ 判据 4 同款 grep 必 >0（DS-7）──"
 cp "$PCC" "$SBX/scripts/pre-commit-check.sh"
 MOD_OUT=$(python3 - "$SBX/scripts/pre-commit-check.sh" <<'PY'
 import sys
 p = sys.argv[1]
-old, new = '全部 ${GROUP_DONE} 组通过', '全部 12 组通过'
+old, new = '全部 ${GROUP_DONE} 组通过', '全部 11 组通过'
 lines = open(p, encoding='utf-8').read().splitlines(keepends=True)
 for i, line in enumerate(lines):
     # 只改可执行汇总行（非注释）；注释里的自承引用不算回潮
@@ -437,7 +434,7 @@ else:
 PY
 )
 RCmod=$?
-show "python3 把副本汇总行改为字面 12" "$(printf '%s\nexit=%s' "$MOD_OUT" "$RCmod")"
+show "python3 把副本汇总行改为字面 11" "$(printf '%s\nexit=%s' "$MOD_OUT" "$RCmod")"
 F_R3=0
 if [ "$RCmod" -ne 0 ]; then
   F_R3=1

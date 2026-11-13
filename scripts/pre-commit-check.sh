@@ -43,7 +43,7 @@ _grp_report() {  # 结果段调用：结算最后一组并打印最慢 5 组
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Loop Engineering V4.5.1 — pre-commit 12 组硬阻断 (全部 <10s) + 免疫系统
+# Loop Engineering V4.5.1 — pre-commit 11 组硬阻断 (全部 <10s) + 免疫系统
 # D515 / V5.0.0: 提交端硬阻断收敛到 4 道质量根（as any / 测试配对+expect / Secrets /
 #   接线物理事实）+ 特例 G12d 生成物单点（D458）与 G13 技能同步（D370）保持硬阻断。
 #   其余检查 hard_check → soft_check：判定代码与输出原样保留（--check 报告与 K3
@@ -60,7 +60,7 @@ _grp_report() {  # 结果段调用：结算最后一组并打印最慢 5 组
 #   + bash 退位: 只做物理验证 (符号存在? 文件存在? 语法合法?)
 #   + agent 进位: 语义判断 (调用链正确? 降级诚实? 阶段合理?)
 #
-# 12 组:
+# 11 组:
 #   1. 类型安全 + 硬编码数据    (as any / as never / as unknown as 跳过注释行 + 硬编码业务字段)
 #   2. 测试质量                  (catch 无 log + 测试配对[可 deferred] + 桩测试)
 #   3. Secrets                   (全工作区 + .claude/ + 暂存区 + .env)
@@ -69,7 +69,7 @@ _grp_report() {  # 结果段调用：结算最后一组并打印最慢 5 组
 #   6. Task Brief                (存在 + 6 核心字段: Q0/Q1/Q2/Q3/架构层/Done)
 #   7. 架构合规                  (DiagnosticModule + 专家配置 + 数据流)
 #   8. 文件驱动架构完整性       (manifest/tags/回归/目录/feature-flag)
-#   9. 契约门禁 NEW (D257)       (.codex/contracts/*.json 声明 vs staged 比对)
+#   9. 契约门禁                  (块级 paths 快照对账)
 #  13. 技能同步一致性            (.synova/skills ↔ .dsh/skills 漂移, 调用 sync-dsh-skills.sh --check)
 #
 # 设计哲学:
@@ -116,15 +116,15 @@ GROUP_DONE=0
 #   退役（删检查点 + 本注释留痕）: opt_check「PRD 对照: Done 标准引用 PRD 章节」（261 命中/0 阻断）。
 #   降噪手段: 成功路径静默（SYNO_QUIET_SUCCESS，缺省 1）——保留失败点名与 CI annotation；
 #     组 7a 以 QUIET_SUCCESS=0 前缀显式保留 ✅ 行（gate-failopen-net.test.sh 判据输入）。
-#   不动的接线（夹具依赖，改前 grep 实证）: 12 个 `── 组 N` 标签、汇总行为运行时计数（`全部 ${GROUP_DONE} 组通过`）、
-#     `跳过 12 组` 横幅、组 7a ✅ 行、D1/D2 调用点（doc-registry-gate.test.sh W1/W2）、
+#   不动的接线（夹具依赖，改前 grep 实证）: 11 个 `── 组 N` 标签、汇总行为运行时计数（`全部 ${GROUP_DONE} 组通过`）、
+#     `跳过 11 组` 横幅、组 7a ✅ 行、D1/D2 调用点（doc-registry-gate.test.sh W1/W2）、
 #     G12c 调用点（doc-commit-exempt.test.sh T11）、Notes 迁移调用点、check-pr-budget 调用点。
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ═══ 裁 409（2026-10-25）: 降级清单 —— 这些组在 CI 上**只报不拦** ═══
 #   背景：创始人「别让实施把时间全花在应付门禁上」；裁 409 定 5 条降 report。
-#   实现：降级一律由**组界开关 GROUP_DOWN** 决定（组界八行 —— 组5/6、组8、组9/10、
+#   实现：降级一律由**组界开关 GROUP_DOWN** 决定（组界八行 —— 组5/6、组8、组9、
 #         **#912 质量增量闸**（#912 为 #1227 W3 独立包裹，用途=保原态）；
 #         **组 13 已于 #1227 W3 退出降级区** ⇒ CI 硬阻断 / 本地软提示）；
 #         **降级只摘计数，❌ 与点名一律保留**。
@@ -476,7 +476,7 @@ fi
 # V4.5.1: 缓存 git diff 结果 — 本机每次 git 调用 ~1s，脚本内 10+ 次调用是超时主因
 # D387 (CT-34): 测试注入缝 (只读, 默认真实 git, fail-closed)
 # D390 (CT-P1-1, K3 D387 P1-1): 武装守卫 — 注入缝仅 SYNO_TEST_ARM=1 时生效。
-# 生产环境缝关闭: 组合 SYNO_SECRETS_ROOT 的无痕迹全 12 组旁路被堵死
+# 生产环境缝关闭: 组合 SYNO_SECRETS_ROOT 的无痕迹全 11 组旁路被堵死
 # (K3 实测: SYNO_GIT_CACHED_*=docs/x.md + SYNO_SECRETS_ROOT=/tmp/empty → 全部门禁跳过且零审计)。
 if [ "${SYNO_TEST_ARM:-0}" = "1" ]; then
   # 测试/审计注入缝 (SYNO_TEST_ARM=1 双确认才可注入)
@@ -507,7 +507,7 @@ STAGED=$(echo "$GIT_CACHED_NAMES" | grep '\.ts$' | grep -v node_modules || true)
 
 # ═══ CT-34 (D387): 纯文档提交豁免 — 创始人 2026-08-16 决策 ═══
 # 文档(docs/、.claude/task-briefs/、memory/、task-state/、根级 *.md/*.html/*.txt)
-# 仅为跨机同步信息, 不与代码同跑全量门禁。豁免 12 组, 仅保留 Secrets(D312)。
+# 仅为跨机同步信息, 不与代码同跑全量门禁。豁免 11 组, 仅保留 Secrets(D312)。
 # 白名单 = 目录 + 扩展名双约束:
 #   ✅ docs/ 下仅 *.md|*.html|*.txt; .claude/task-briefs/ 下 *.md; memory/ 下 *.md;
 #      task-state/ 下 *.json|*.md(任务登记); 根级 *.md|*.html|*.txt
@@ -518,7 +518,7 @@ STAGED=$(echo "$GIT_CACHED_NAMES" | grep '\.ts$' | grep -v node_modules || true)
 # 契约 (铁律 47):
 #   @input  — $1: STAGED_ALL（git diff --cached --name-only 全暂存文件, 换行分隔）
 #   @output — stdout: 1 = 纯文档提交; 0 = 非纯文档（含任一白名单外文件/空输入）
-#   @fail-closed — 正则匹配失败/空输入 → 0（走全量 12 组, 不静默放行, D328）
+#   @fail-closed — 正则匹配失败/空输入 → 0（走全量 11 组, 不静默放行, D328）
 #   @error  — 无异常路径（纯 bash 字符串匹配）
 DOC_PREFIX_RE='^(docs/.*\.(md|html|txt)$|\.claude/task-briefs/.*\.(md|html|txt)$|memory/.*\.(md|html|txt)$|task-state/.*\.(json|md)$|[^/]+\.(md|html|txt)$)'
 is_doc_only() {
@@ -576,13 +576,13 @@ else
   fi
 fi
 
-# ── CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 12 组 ──
+# ── CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 11 组 ──
 # 早退分支置于 par_start 之前: 纯文档提交零 par 启动、秒过 (V4.5.1 性能教训)。
 # GATEKEEPER bypass 阻断 (L99-111) 在早退之前 — 绕过审计先于豁免, 不放行 --no-verify 滥用。
 if [ "$DOC_ONLY" -eq 1 ]; then
   echo ""
   echo "═══════════════════════════════════════════════════════════"
-  echo "  纯文档提交 (CT-34/D387): 豁免 12 组 — 仅 Secrets 扫描"
+  echo "  纯文档提交 (CT-34/D387): 豁免 11 组 — 仅 Secrets 扫描"
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   # D390 (CT-P1-1, K3 D387 P1-1): 豁免事件审计落盘 — 无痕迹豁免 = M4 执行证据链断裂。
@@ -625,7 +625,7 @@ fi
 if [ "${SYNO_FASTLANE:-0}" = "1" ]; then
   echo ""
   echo "═══════════════════════════════════════════════════════════"
-  echo "  ✅ V5 纯补记快速通道：仅 bypass.log + Secrets，跳过 12 组"
+  echo "  ✅ V5 纯补记快速通道：仅 bypass.log + Secrets，跳过 11 组"
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   log_gate "fastlane-bypass-only" hit
@@ -766,7 +766,7 @@ DECL_SRC="$STAGED_SRC"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
-echo "  Loop Engineering V4.5.1 — pre-commit (12 组 + 免疫 + plan-integrity)"
+echo "  Loop Engineering V4.5.1 — pre-commit (11 组 + 免疫 + plan-integrity)"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
@@ -1611,38 +1611,12 @@ par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构�
 # ═══ 组 9: 契约门禁 (D257) ═══
 GROUP_DOWN=0  # 组 8 降级范围结束
 echo -e "${CYAN}── 组 9: 契约门禁 ──${RESET}"
-GROUP_DOWN=1  # 裁 409：组9/10 降级（块级 paths 由 CI ①d 承担）
+GROUP_DOWN=1  # 裁 409：组9 降级（块级 paths 由 CI ①d 承担）
 
 # 裁 409 确定性自检缝（K3 方向A：hard_check 注入，不用 exit）
-if [ "${SYNO_DOWN_SELFTEST:-}" = "9" ] || [ "${SYNO_DOWN_SELFTEST:-}" = "10" ]; then hard_check "SELFTEST-组9/10 注入（应只报不拦）" "injected"; fi
+if [ "${SYNO_DOWN_SELFTEST:-}" = "9" ]; then hard_check "SELFTEST-组9 注入（应只报不拦）" "injected"; fi
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 9"
-CONTRACT_DIR="$ROOT/.codex/contracts"
-CONTRACT_FAIL=""
-if [ -d "$CONTRACT_DIR" ] && [ "$(ls -A "$CONTRACT_DIR" 2>/dev/null)" ]; then
-  for cf in "$CONTRACT_DIR"/*.json; do
-    [ ! -f "$cf" ] && continue
-    # 从 contract.json 提取声明产出文件列表
-    DECLARED=$(python -c "
-import json, sys
-try:
-    d = json.load(open('$cf'))
-    items = d if isinstance(d, list) else [d]
-    for i in items:
-        fp = i.get('filePath', '')
-        if fp: print(fp)
-except: pass
-" 2>/dev/null || true)
-    for df in $DECLARED; do
-      [ -z "$df" ] && continue
-      if ! echo "$STAGED_ALL" | grep -qF "$df"; then
-        CONTRACT_FAIL="${CONTRACT_FAIL}  ${cf##*/}: 声明产出 $df — 不在暂存区\n"
-      fi
-    done
-  done
-fi
-soft_check "契约门禁: 声明产出须在暂存区" "${CONTRACT_FAIL:-}"
-
 # ── 组 9 附加块: 块级 paths 快照对账（CTO 裁定 074 步 1b；治理线交付）──
 #   治什么: 真源 `ConstructionBlock.paths`（快照）是**手工跑脚本写死**的 ⇒ 施工项一变它就过时。
 #           实证（2026-10-13）: 该漂移**真的发生过** —— K10 少 4 条 / K12 多 2 条，
@@ -1693,84 +1667,9 @@ else
   echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%S+00:00)\", \"component\": \"pre-commit-group9-block-paths\", \"reason\": \"node 不可用 — 块级 paths 对账跳过 (degraded)\"}" >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
 fi
 
-# ═══ 组 10: V3 CP3 — 条件区域 + 测试覆盖 (D260) ═══
-echo -e "${CYAN}── 组 10: V3 流水线健康度 ──${RESET}"
-GROUP_DONE=$((GROUP_DONE+1))
-_grp_tick "组 10"
-
-CRITERIA_MAP="$ROOT/.codex/criteria-code-map.json"
-if [ -f "$CRITERIA_MAP" ]; then
-  # V3 CP3-1: G10 条件区域检查 — 暂存的文件是否在声明的条件区域内
-  BRIEF_FILE=$(echo "$CHANGED_FILES" | grep -m1 "\.claude/task-briefs/" || true)
-  if [ -n "$BRIEF_FILE" ]; then
-    BRIEF_PATH="$ROOT/$BRIEF_FILE"
-    CRITERIA=$(grep -oE '#CRITERIA[[:space:]]*[:=][[:space:]]*[A-D]' "$BRIEF_PATH" 2>/dev/null | sed -E 's/.*[=:][[:space:]]*//' || true)
-    if [ -n "$CRITERIA" ]; then
-      # 读取条件代码映射
-      CRITERIA_GLOBS=$(python -c "
-import json
-with open('$CRITERIA_MAP') as f:
-    m = json.load(f)
-g = m.get('criteria', {}).get('$CRITERIA', {}).get('glob', [])
-for gx in g:
-    print(gx)
-" 2>/dev/null || true)
-      REGEX_GLOBS=""
-      while IFS= read -r gx; do
-        [ -z "$gx" ] && continue
-        # 转换 glob 到 grep 正则
-        REGEX=$(echo "$gx" | sed 's/\*/.*/g; s/?/./g')
-        REGEX_GLOBS="${REGEX_GLOBS}|${REGEX}"
-      done <<< "$CRITERIA_GLOBS"
-      REGEX_GLOBS="${REGEX_GLOBS#|}"
-      if [ -n "$REGEX_GLOBS" ]; then
-        MISMATCH=""
-        for sf in $STAGED_FILES; do
-          if ! echo "$sf" | grep -qE "($REGEX_GLOBS)"; then
-            MISMATCH="${MISMATCH}  $sf (不在条件 $CRITERIA 的映射区域内)\n"
-          fi
-        done
-        if [ -n "$MISMATCH" ]; then
-          warn_check "G10: 条件区域不匹配" "$MISMATCH"
-        else
-          soft_pass "G10: 条件区域检查通过 ($CRITERIA)"
-        fi
-      else
-        soft_pass "G10: 条件 $CRITERIA 无映射区域(跳过)"
-      fi
-    else
-      soft_pass "G10: 无条件归属(跳过)"
-    fi
-  else
-    soft_pass "G10: 无 task brief 变更(跳过)"
-  fi
-
-  # V3 CP3-2: G11 测试覆盖检查
-  HAS_E2E=0; HAS_TESTS=0
-  BRIEF_ID=$(echo "$STAGED_FILES" | grep -oE '\.claude/task-briefs/[^.]+' | sed -E 's|^\.claude/task-briefs/||' | head -1 || true)
-  if [ -n "$BRIEF_ID" ]; then
-    BRIEF_PATH="$ROOT/.claude/task-briefs/${BRIEF_ID}.md"
-    if [ -f "$BRIEF_PATH" ]; then
-      HAS_E2E=$(grep -c "端到端\|e2e\|curl.*200\|HTTP.*200" "$BRIEF_PATH" 2>/dev/null | tr -d '\n\r' || true)
-      HAS_TESTS=$(echo "$STAGED_FILES" | grep -c "\.test\.ts" 2>/dev/null | tr -d '\n\r' || true)
-      if [ "$HAS_E2E" -gt 0 ] && [ "$HAS_TESTS" -eq 0 ]; then
-        warn_check "G11: 声明的端到端验收但无测试文件" "$BRIEF_ID 声明了端到端验收，但暂存区无测试文件"
-      else
-        soft_pass "G11: 测试覆盖检查通过"
-      fi
-    else
-      soft_pass "G11: task brief 不存在(跳过)"
-    fi
-  else
-    soft_pass "G11: 无 task brief 变更(跳过)"
-  fi
-else
-  soft_pass "G10/G11: criteria-code-map.json 不存在(跳过)"
-fi
-
 # ═══ 组 12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
 echo -e "${CYAN}── 组 12: Task Scope 一致性 ──${RESET}"
-GROUP_DOWN=0  # 组9/10 降级范围结束
+GROUP_DOWN=0  # 组9 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 12"
 
@@ -2149,7 +2048,7 @@ else
 fi
 GROUP_DOWN=0  # 质量增量闸降级范围结束（#1227 W3 保持原态）
 
-# ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 12 组编号——同 D734 接入模式）═══
+# ═══ D782: 文档真相防线 D1/D2（附加检查；不并入 11 组编号——同 D734 接入模式）═══
 # 背景: K3 2026-09-14 权威文档一致性专项审计 §7.2 收割 2/3——D1 check-doc-truth.sh
 #   与 D2 doc-registry-gate.sh 2026-08 建成即零调用（M3「机制建成未接线」第 3 次复发：
 #   D329 P2-2 首次），W1/W2 接线断言（tests/doc-system/doc-registry-gate.test.sh L64-65）
@@ -2199,7 +2098,7 @@ else
   self_fail_missing_script "D782 D2 登记门禁" "scripts/doc-system/doc-registry-gate.sh"
 fi
 
-# ═══ D734: PR 预算门禁（附加检查；不并入传统 12 组编号）═══
+# ═══ D734: PR 预算门禁（附加检查；不并入传统 11 组编号）═══
 # 背景: 冲突概率 ∝ 改动大小 × 分支存活时间 —— D721 一个 PR 背三类门禁问题挂半天；
 #   K3 审计分支落后 main 差点回退他人成果。
 # 接线取舍（派单 §二.2 要求执行方给理由）: 派单给的是「pre-commit 新增一组 或 CI quality job
@@ -2231,7 +2130,7 @@ fi
 # 依据：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义。
 #   本地 CI 的基线是 GitHub 的旧 main（停在 05a6591c4），拿"集成分支账本总额"去判（实测 100 件/115 件白名单外）
 #   ⇒ **必然恒红** ⇒ 红灯失去信息量 ⇒ "被绕过的门禁 = 没有门禁"（历史病根）。
-# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（12 组其余照常硬判）。
+# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（11 组其余照常硬判）。
 # ⚠️ 实测教训：上一版只在 workflow 里设了 SYNO_SKIP_PR_BUDGET=1，**但本文件从未读它** ⇒ 开关形同虚设（本次修复补上）。
 if [ "${SYNO_SKIP_PR_BUDGET:-0}" = "1" ]; then
   echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
@@ -2292,7 +2191,7 @@ else
   soft_check "DSH 断面一致性 (D943)" "${_DSH_ANCHOR_HITS}" "check-dsh-anchor"
 fi
 
-# ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 12 组编号——同 D782/D734 接入模式）──
+# ═── K12-13（#196）内容面耦合门禁 CC1–CC4（附加检查；不并入 11 组编号——同 D782/D734 接入模式）──
 # 门禁: scripts/check-content-coupling.sh（判据源: 院方《extensions内容面规范-v0.1》§3.5）
 # 为何接入: 既有 check-architecture.sh 对 extensions/ **零覆盖**
 #   （门禁头注释实测 `grep -c extensions scripts/check-architecture.sh` = 0）⇒ 引擎/内容边界无执法方。
@@ -2351,21 +2250,6 @@ else
     hard_check "#915 工具入参校验增量闸: 检查自身失败 rc=${_TAD_RC}（fail-closed，不等于通过）" "$_TAD_MSG" "check-tool-args-delta"
   fi
 fi
-
-# V3: 写 CP3 检查点
-mkdir -p "$ROOT/.codex/checkpoints"
-G10_FAIL=$([ -n "$MISMATCH" ] && echo "true" || echo "false")
-G11_FAIL=$([ "$HAS_E2E" -gt 0 ] && [ "$HAS_TESTS" -eq 0 ] && echo "true" || echo "false")
-CP3_STATUS="pass"; CP3_REASON="全部通过"
-if [ "$G10_FAIL" = "true" ]; then CP3_STATUS="warn"; CP3_REASON="有条件区域不匹配"; fi
-if [ "$G11_FAIL" = "true" ]; then CP3_STATUS="warn"; CP3_REASON="有验收无测试"; fi
-python -c "
-import json, os
-d = {'name':'CP3: 预提交检查','status':'$CP3_STATUS','reason':'$CP3_REASON','checkedAt':'$(date -u +%Y-%m-%dT%H:%M:%SZ)'}
-os.makedirs('$ROOT/.codex/checkpoints', exist_ok=True)
-with open('$ROOT/.codex/checkpoints/cp3-commit-check.json','w') as f:
-    json.dump(d, f)
-" 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════════════
 # 附: 三段契约兜底（#1101 / W7-L0）—— 新增 src/**/*.ts(x) 缺 @input/@output/@degraded 任一段 ⇒ 红
