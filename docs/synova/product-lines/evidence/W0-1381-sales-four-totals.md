@@ -38,6 +38,14 @@ extensions/sentinels/revenue-health/aggregate.ts: import { computeSalesFourTotal
 extensions/sentinels/revenue-health/aggregate.ts: const salesResult = computeSalesFourTotals({
 ```
 
+### D803 修复：ERP 图字段映射（评论 11966）
+
+- 仅以 `props.receivables != null` 识别 ERP 销售／应收行，普通营收节点不误入。
+- `orderId ← props.standardKey`；`orderAmount ← props.total_revenue`；`receivedAmount ← total_revenue - receivables`。
+- 因此纯计算的 `outstandingAmount = orderAmount - receivedAmount` 仍等于 `receivables`；应收大于营收形成负 received 时保持降级，不钳零。
+- 不读取 `props.salesBaseline`。写侧暂无独立人工基线时传 `baseline: null`，使 `SALES_BASELINE_MISSING` 可见并拒绝对账；不从同批计算行伪造 baseline 或 `matched=true`。
+- 本修复只改变图字段到纯计算输入的映射；compute 接口、合成 fixture、纯 derive、无 persistence、无 outbound call 均不变。不声称真实客户业务结果已验证。
+
 ## 3. Mandate v2 原生验收
 
 ### 定向 Vitest：通过
