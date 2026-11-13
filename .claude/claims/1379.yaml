@@ -1,0 +1,18 @@
+# .claude/claims/1379.yaml — 历史门禁残余只读盘点与退役候选清单
+writeset:
+  - .claude/claims/1379.yaml
+  - docs/authority/GATE-RETIREMENT-INVENTORY-1379.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/authority/GATE-INVENTORY.yaml
+  - scripts/control-tower/gen-gate-meta.sh
+  - tests/control-tower/gen-gate-meta.test.sh
+  - gate-exemptions/2026-11-13-1379-gate-inventory.md
+  - memory/notes/proposed/2026-11-13-1379-gate-inventory.md
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1379 --root .
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: git diff --check
+  - verify: git diff --name-only gitea/main...HEAD
+  - verify: grep -nE '^## |^\| ' docs/authority/GATE-RETIREMENT-INVENTORY-1379.md
+note: "#1379 第一阶段只盘点；交付一份退役候选清单，以及必要文档登记、限定豁免、四态 Note 与本 claim。经用户批准仅向 GATE-INVENTORY 补登现存 gitea/core-gates 并给 gen-gate-meta.sh 的 WF_IDS 增加一行兼容，配对测试按实际 workflow／run_by 数断言并修正 N2 作用域夹具，不新增门禁、不改退役状态。不删除文件，不修改产品代码、core-gates、core-tests.sh、tests/user-visible/**、现有契约测试或 scripts/audit/**，不自行合并。"

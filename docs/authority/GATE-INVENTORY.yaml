@@ -3003,6 +3003,12 @@ retired:
 # （双向对账：登记的 id 须有真 yml；两仓目录里的每个 yml 都须在册，否则判账外腿）
 # ═══════════════════════════════════════════════════════════════════════════════
 workflows:
+  - id: gitea/core-gates
+    repo: gitea
+    trigger: "pull_request_target[main] / push[main] / workflow_dispatch"
+    state: 阻断
+    category: mixed
+    reason: "当前唯一必需核心门：类型、构建、Secrets、契约、用户可见与受影响测试"
   - id: gitea/local-gates
     repo: gitea
     trigger: "push / pull_request[main] / workflow_dispatch"
