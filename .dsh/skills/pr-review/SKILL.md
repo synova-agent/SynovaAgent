@@ -6,7 +6,7 @@ description: PR 合并前审查流程（DeepSeek Harness 专属职责）。收�
 # pr-review — PR 合并前审查
 
 ## 使用时机
-收到 PR 合并请求（TASK-ROUTING：Claude Code 的 PR 先过 DeepSeek Harness）。PR 审查 ≠ 审计——不下审计结论，审计只认 K3 报告；但审查必须物理复现，不凭 PR 描述。
+收到 PR 合并请求（TASK-ROUTING：Claude Code 的 PR 先过 DeepSeek Harness）。PR 审查 ≠ 审计——不下审计结论；独立审计只由创始人／CTO／任务明确要求触发，结论写任务卡／Issue／PR 评论。审查必须物理复现，不凭 PR 描述。
 
 ## 审查五步（每步输出物理证据，不写"看起来没问题"）
 

@@ -1,0 +1,26 @@
+# .claude/claims/1378.yaml — 门禁文档一致性最小修正
+writeset:
+  - .claude/claims/1378.yaml
+  - AGENTS.md
+  - .gitea/AGENTS.md
+  - docs/authority/ARCHITECTURE.md
+  - .synova/skills/synova-audit/SKILL.md
+  - .dsh/skills/synova-audit/SKILL.md
+  - .synova/skills/pr-review/SKILL.md
+  - .dsh/skills/pr-review/SKILL.md
+  - .synova/skills/deliverable-acceptance/SKILL.md
+  - .dsh/skills/deliverable-acceptance/SKILL.md
+  - docs/synova/coordination/TASK-ROUTING.md
+  - docs/synova/presets/synova-k3-audit/persona-block.yml
+  - docs/synova/presets/synova-k3-audit/cordis.patch.yml
+  - docs/synova/presets/synova-k3-audit/preset.yml
+  - memory/notes/proposed/2026-11-13-1378-gate-doc-consistency.md
+done:
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: PYTHONIOENCODING=utf-8 bash tests/control-tower/k3-preset-bundle-sync.test.sh
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: python scripts/control-tower/claim_store.py --check 1378
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: git diff --check
+  - verify: grep -RInE "local-gates.*(权威|必需|硬阻断)|SYNO_CI=1.*硬阻断|K3 终审|首审缺位|审计报告.*git 跟踪|pre-commit 13 组硬阻断" AGENTS.md .gitea docs .synova/skills docs/synova/coordination
+note: "#1378 只统一现行门禁与按需评论式审计口径；历史材料不改。额外同步活跃 synova-k3-audit 预设，避免运行时仍要求固定终审和审计报告文件；不改 workflows、分支保护、产品代码、核心 runner 或 scripts/audit/**。"

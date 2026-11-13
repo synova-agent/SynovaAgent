@@ -4,8 +4,8 @@
 > ⇒ **本表的"角色域归属"不再是派单依据。** 派单只按**写集**排期：
 >    **同写集 ⇒ 串行；不同写集 ⇒ 并行。** 不再因为"这个文件不归你的线"而退回或改派。
 > ⇒ 本表**保留**的用途只剩两个：① 历史追溯（当时为什么这么分）② 熟悉度参考（谁改过这个面）。
-> ⇒ **仍生效的四条**（与"域"无关）：① `scripts/audit/**` 归 K3（审计独立性）
->    ② 改「哪条检查阻断合并」须 提案→K3→CTO　③ 禁 `--no-verify`/`--admin`/force　④ 量真值用 ref，禁读工作树
+> ⇒ **仍生效的四条**（与"域"无关）：① `scripts/audit/**` 归 K3（审计独立性），禁止自审，审计标准不得由被审方编写
+>    ② 改「哪条检查阻断合并」须提案→CTO；独立审计仅由创始人／CTO／任务明确要求触发　③ 禁 `--no-verify`/`--admin`/force　④ 量真值用 ref，禁读工作树
 > ⇒ 详见 `2026-10-07-CTO-裁定-取消分域.md`（库外档案仓）。
 
 
@@ -48,14 +48,14 @@
 | docs/计划库（Claude 线 dev doc） | **Codex (Win)** | Claude 线 dev doc + Claude 线 D# 分配 + 任务登记 |
 | scripts/audit/ + 审计标准 | **Kimi K3** | 红线：其他角色禁碰 |
 
-### 审计双轨（各自独立）
+### 审计双轨（各自独立、按需触发）
 
 | 轨 | 壳 | 脑 | 说明 |
 |---|---|---|---|
 | Win | Kimi code CLI | K3 | 已有 |
 | Mac | DSH（🔍 synova-k3-audit 预设） | K3 | DSH 当壳、K3 当脑，零上下文，独立工作区 |
 
-两轨产物都进 `docs/synova/audit-reports/`；红线不变（`scripts/audit/` + 标准 = K3 专属）。
+仅创始人／CTO／任务明确要求时启用；结论写任务卡／Issue／PR 评论，不生成审计报告文件。红线不变（`scripts/audit/` = K3 专属；禁止自审；审计标准不得由被审方编写）。
 
 ### CTO 主从
 
@@ -93,14 +93,14 @@
 
 - Claude 的 PR → **DSH 预审**（PR 审查 ≠ 审计）+ 创始人 Merge
 - DSH 的 PR → **Codex 预审**（写集/范围/门禁）+ 创始人 Merge
-- 合并后 → **K3 审计**（红线 3：无豁免）
+- 独立审计仅由创始人／CTO／任务明确要求触发；结论写任务卡／Issue／PR 评论，不是普通任务固定合并前置
 
 ### DSH 自出 dev doc 的护栏（不变，防"自我闭环"）
 
 1. 结构门禁：过 dev-doc-gatekeeper（Q0-Q3/写集/DS 清单/Done 可证伪）
 2. 任务编号：**DSH 线自定**，格式 `SYNOVA-IMPL-DSH-{任务名}-{YYYYMMDD}.md`（不再向 Codex 拿 D#）；Claude 线继续 Codex 的 D#
 3. PR 预审：DSH 的 PR → Codex 预审
-4. K3 审计：无豁免
+4. 独立审计：仅创始人／CTO／任务明确要求时触发；禁止自审
 5. 写集契约：声明写集，verify-parallel 查重叠
 
 ---
@@ -123,7 +123,7 @@
 周一/三：Codex 出 Claude 线 dev doc + DSH 自出 DSH 线 dev doc
 周中：两条线同时实现（一人一事一分支）
 周五：创始人批量看 PR + 看 CTO 周报（双轨效率/质量/成本对照）
-下周初：K3 逢绿必验
+下周初：按创始人／CTO／任务明确要求安排独立审计（普通任务不固定安排）
 ```
 
 ## 四、当前模块认领状态
@@ -162,12 +162,12 @@
    - 规格来源：**CTO 派单件 = 规格**（"派单即规格"口径，D821 起）；复杂任务触发式启用 skill `dev-doc-spec`。
    - **独立性硬要求不变**：写了规格的成员不得实现该规格；队长不得兼任规格撰写。
 2. **执行形态 = 小队（🎽 synova-squad-lead）**：队长 + ≤2 编码（走 🛠 synova-dsh 纪律模式）+ 1 自验；自验不得由编码兼任。
-3. **制衡提示（承重墙）**：规格与协调同归 CTO 后，独立环节只剩 K3 → **K3 必经合并门禁（D923）不是可选项**，是该形态的制衡承重墙。
-4. **长任务形状**：程序卡（1）+ 子卡（N）+ Wave 门（K3 审 + CTO 收件闸），见 `docs/synova/coordination/派单-W1-双DSH提升-20260923.md`。
+3. **历史／旧口径**：当时曾把 K3 设为必经合并门禁（D923）；该固定审计腿已由 #1378 新口径取代，不再作为现行规则。
+4. **历史／旧口径**：当时的程序卡（1）+ 子卡（N）+ Wave 门（K3 审 + CTO 收件闸），见 `docs/synova/coordination/派单-W1-双DSH提升-20260923.md`；现行审计按创始人／CTO／任务明确要求触发。
 
 ---
 
 ## 域归属的唯一源（D943，2026-09-24）
 
 **`docs/synova/coordination/ownership.yaml` 是「路径 → 域（mac/win/k3）」的唯一机器可读源**；本文中任何归属描述（含「Mac 域／Win 域」字样）均为导航性说明，**冲突时以该表的机器裁决为准**。
-判定命令：`python3 scripts/control-tower/check-ownership.py <文件...> --owner mac|win`。改表属**门禁语义变更**：须同批 `--emit-codeowners` + 逐字节 drift 断言 + 判别性夹具，并**必过 K3**。
+判定命令：`python3 scripts/control-tower/check-ownership.py <文件...> --owner mac|win`。改表属**门禁语义变更**：须同批 `--emit-codeowners` + 逐字节 drift 断言 + 判别性夹具；独立审计仅由创始人／CTO／任务明确要求触发，禁止自审。
