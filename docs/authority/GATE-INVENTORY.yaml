@@ -772,7 +772,7 @@ checkers:
     wired_to: []
     orphan: true
     blocking: false
-    decision: keep
+    decision: retire
     reason: "C10 复算孤儿（wired_to=[]）；K3 审计报告形式保险，有审计报告才跑（事件形态）⇒ 守卫，不据零命中退役"
     replacement: ""
   - id: CT-check-merge-conditions
@@ -1079,15 +1079,6 @@ classification:
     entrypoint: scripts/control-tower/check-fixture-requires.sh
     required_ci: false
     confirmed_by: pending-cto
-  - id: CT-check-gate-inventory
-    class: P1
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-gate-inventory.sh
-    required_ci: true
-    evidence: telemetry
-    telemetry_key: check-gate-inventory
-    confirmed_by: pending-cto
   - id: CT-check-gate-protection
     class: P0
     owner: P4
@@ -1101,13 +1092,6 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-gitlinks.sh
-    required_ci: false
-    confirmed_by: pending-cto
-  - id: CT-check-k3-report
-    class: P1
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-k3-report.py
     required_ci: false
     confirmed_by: pending-cto
   - id: CT-check-merge-conditions
@@ -1175,13 +1159,6 @@ classification:
     owner: P4
     review_after: 2026-11-27
     entrypoint: scripts/control-tower/check-preset-bundles.sh
-    required_ci: false
-    confirmed_by: pending-cto
-  - id: CT-check-project-coordinates
-    class: P2
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-project-coordinates.sh
     required_ci: false
     confirmed_by: pending-cto
   - id: CT-check-quality-delta
@@ -1290,13 +1267,6 @@ classification:
 # 生成：逐件从盘上枚举（禁手写），与 check-gate-inventory.sh 的双向对齐判据配套。
 # ═══════════════════════════════════════════════════════════════════════════════
   # ---- P4 2026-10-28：#1122 Step 1 总闸最小可跑版（纯追加；class P1 ＝ 质量类汇总判据，未接线故 required_ci: false）----
-  - id: CT-verify-governance
-    class: P1
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/verify-governance.sh
-    required_ci: false
-    confirmed_by: pending-cto
 
   # ---- P4 2026-10-31：#1210 W0 附通道 B 耗时预算机检（纯追加；旁路未接线故 required_ci: false）----
   - id: CT-check-gate-budget
@@ -1306,14 +1276,6 @@ classification:
     entrypoint: scripts/control-tower/check-gate-budget.sh
     required_ci: true
     confirmed_by: pending-cto
-  - id: CT-check-ledger-budget
-    class: P2
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-ledger-budget.sh
-    required_ci: false
-    confirmed_by: pending-cto
-    note: "#1254 T4：台账三判据（行数 <=800／跨段无重复／measured_at=当前基准）出数与点名；本批不接线，W5 收口后再接"
 
   - id: CT-check-conflict-markers
     class: P1
@@ -1368,16 +1330,10 @@ run_by:
   - entrypoint: scripts/control-tower/check-fixture-requires.sh
     run_by: "无"
     quota: false
-  - entrypoint: scripts/control-tower/check-gate-inventory.sh
-    run_by: pre-commit
-    quota: true
   - entrypoint: scripts/control-tower/check-gate-protection.sh
     run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-gitlinks.sh
-    run_by: "无"
-    quota: false
-  - entrypoint: scripts/control-tower/check-k3-report.py
     run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/check-merge-conditions.sh
@@ -1405,9 +1361,6 @@ run_by:
     run_by: pre-commit
     quota: false
   - entrypoint: scripts/control-tower/check-preset-bundles.sh
-    run_by: "无"
-    quota: false
-  - entrypoint: scripts/control-tower/check-project-coordinates.sh
     run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/check-quality-delta.py
@@ -1697,14 +1650,8 @@ run_by:
 # ---- run_by=无 的退役候选清单（M-15：无主件必须在此可见；与上方 run_by 段双向对齐）----
 # 口径：本段 ≡ run_by="无" 的件集合（多一条/少一条由 check-gate-inventory.sh 判红）。
 # 进本段 ≠ 判死：Step 3 逐条裁「补接线 / 并更强件 / 真退役」，本段只把暗处拖到明处。
-  - entrypoint: scripts/control-tower/verify-governance.sh
-    run_by: "无"
-    quota: false
   - entrypoint: scripts/control-tower/check-gate-budget.sh
     run_by: pre-commit
-    quota: false
-  - entrypoint: scripts/control-tower/check-ledger-budget.sh
-    run_by: "无"
     quota: false
   - entrypoint: scripts/control-tower/check-conflict-markers.sh
     run_by: pre-commit
@@ -1719,7 +1666,6 @@ run_by_candidates:
   - entrypoint: scripts/control-tower/check-dual-repo-sync.sh
   - entrypoint: scripts/control-tower/check-fixture-requires.sh
   - entrypoint: scripts/control-tower/check-gitlinks.sh
-  - entrypoint: scripts/control-tower/check-k3-report.py
   - entrypoint: scripts/control-tower/check-merge-conditions.sh
   - entrypoint: scripts/control-tower/check-name-allocation.sh
   - entrypoint: scripts/control-tower/check-ontology-fields.sh
@@ -1727,7 +1673,6 @@ run_by_candidates:
   - entrypoint: scripts/control-tower/check-ownership.py
   - entrypoint: scripts/control-tower/check-package-selfsufficiency.py
   - entrypoint: scripts/control-tower/check-preset-bundles.sh
-  - entrypoint: scripts/control-tower/check-project-coordinates.sh
   - entrypoint: scripts/control-tower/check-sentinel-type-net.sh
   - entrypoint: scripts/control-tower/verify-claims-table.sh
     why: "pre-commit 注释明写「K3/CTO 复核时手工跑」，无自动执行点 ⇒ 记 无"
@@ -1793,8 +1738,6 @@ run_by_candidates:
   - entrypoint: scripts/workflow/sop-gate.sh
   - entrypoint: scripts/workflow/verify-incremental.sh
     why: "实际运行腿=scripts/hooks/hook-enforce-loop.sh（PostToolUse 钩子），不在本五值枚举内 ⇒ 记 无 待裁"
-  - entrypoint: scripts/control-tower/verify-governance.sh
-    why: "#1122 总闸最小可跑版：尚未接线（写集不含 pre-commit/CI），显式调用才跑 ⇒ 记 无；接线后改 wired 并补真实腿"
   - entrypoint: scripts/doc-system/check-doc-g3-datestamp.sh
     why: "B3 批1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
   - entrypoint: scripts/doc-system/check-doc-g5-bare-filename.sh
@@ -1803,9 +1746,6 @@ run_by_candidates:
     why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡；接前核 §七 ≤90 s）"
   - entrypoint: scripts/doc-system/verify-doc-gate-effectiveness.sh
     why: "#1238 W0-1 写集不含 pre-commit/CI ⇒ 已建成未接线；显式调用才跑（接线另立卡）"
-  - entrypoint: scripts/control-tower/check-ledger-budget.sh
-    why: "#1254 T4 判据工具（台账三判据：行数/跨段重复/measured_at）；本批只出数不接线 —— W5 收口（台账 ≤800 与去重）后再接 pre-commit/CI ⇒ 记 无"
-
 gate_meta:
   measured_at: 4b5a9d399
   class_default: P2  # 非 classification 条目（无 class 声明）的默认级；P0/P1 只来自 classification
@@ -2096,13 +2036,6 @@ gate_meta:
       quota: false
       quota_scope: non-doc
       nature: mechanical
-    - entrypoint: scripts/control-tower/check-gate-inventory.sh
-      class: P1
-      run_by: pre-commit
-      orphan: false
-      quota: true
-      quota_scope: non-doc
-      nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-protection.sh
       class: P0
       run_by: gitea-ci
@@ -2112,20 +2045,6 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-gitlinks.sh
       class: P1
-      run_by: 无
-      orphan: true
-      quota: false
-      quota_scope: non-doc
-      nature: mechanical
-    - entrypoint: scripts/control-tower/check-k3-report.py
-      class: P1
-      run_by: 无
-      orphan: true
-      quota: false
-      quota_scope: non-doc
-      nature: mechanical
-    - entrypoint: scripts/control-tower/check-ledger-budget.sh
-      class: P2
       run_by: 无
       orphan: true
       quota: false
@@ -2196,13 +2115,6 @@ gate_meta:
       nature: mechanical
     - entrypoint: scripts/control-tower/check-preset-bundles.sh
       class: P1
-      run_by: 无
-      orphan: true
-      quota: false
-      quota_scope: non-doc
-      nature: mechanical
-    - entrypoint: scripts/control-tower/check-project-coordinates.sh
-      class: P2
       run_by: 无
       orphan: true
       quota: false
@@ -2475,13 +2387,6 @@ gate_meta:
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/verify-claims-table.sh
-      class: P1
-      run_by: 无
-      orphan: true
-      quota: false
-      quota_scope: non-doc
-      nature: mechanical
-    - entrypoint: scripts/control-tower/verify-governance.sh
       class: P1
       run_by: 无
       orphan: true
@@ -2961,6 +2866,84 @@ retired:
     date: 2026-11-13
     replacement: .gitea/workflows/core-gates.yml
     evidence: "生产调用先删除；检查器、配对测试与 required-checks-baseline 随后物理删除；all-checks-passed 聚合 job 同批删除且无悬空 needs"
+    observation_until: 2026-11-13
+
+  - id: RET-1385-check-gate-inventory
+    path: scripts/control-tower/check-gate-inventory.sh
+    reason: "#1385 pre-commit 三分类登记调用已退出，元门禁无核心替代"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-gen-gate-meta
+    path: scripts/control-tower/gen-gate-meta.sh
+    reason: "#1385 唯一生产消费者 check-gate-inventory 已同批退役"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-gate-inventory-invariant
+    path: scripts/control-tower/gate-inventory.invariant.sh
+    reason: "#1385 仅旧治理链与配对测试消费，整闭包退役"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-gate-assert
+    path: scripts/control-tower/gate-assert.sh
+    reason: "#1385 check-gate-inventory 与 verify-governance 均已退出，无幸存生产消费者"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-verify-governance
+    path: scripts/control-tower/verify-governance.sh
+    reason: "#1385 无生产自动入口，旧治理总闸不设替代"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-check-ledger-budget
+    path: scripts/control-tower/check-ledger-budget.sh
+    reason: "#1385 无生产自动入口，旧台账预算工具退役"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-gate-retirement-report
+    path: scripts/control-tower/gate-retirement-report.sh
+    reason: "#1385 无生产自动入口，退役报告工具及两件配对测试退役"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-quality-baseline-py
+    path: scripts/control-tower/quality-baseline.py
+    reason: "#1385 历史质量扫描器无生产自动入口，WIRING 登记簿保留"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-quality-baseline-json
+    path: scripts/control-tower/quality-baseline.json
+    reason: "#1385 随 quality-baseline.py 的历史基线同批退役"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-check-k3-report
+    path: scripts/control-tower/check-k3-report.py
+    reason: "#1385 审计结论现写评论，不再生成旧审计报告文件；scripts/audit 未改"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+  - id: RET-1385-check-project-coordinates
+    path: scripts/control-tower/check-project-coordinates.sh
+    reason: "#1385 无生产消费者，旧预演坐标检查器退役"
+    date: 2026-11-13
+    replacement: none
+    evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
     observation_until: 2026-11-13
 
 # ═══════════════════════════════════════════════════════════════════════════════

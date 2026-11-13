@@ -20,7 +20,6 @@ tests/control-tower/check-package-selfsufficiency.test.sh
 tests/control-tower/check-pr-budget.test.sh
 tests/control-tower/check-preset-bundles.test.sh
 tests/control-tower/check-progress-freshness.test.sh
-tests/control-tower/check-project-coordinates.test.sh
 tests/control-tower/claim-gate-drill.test.sh
 tests/control-tower/claim-identity-v2.test.py
 tests/control-tower/claim_store.test.sh
@@ -37,7 +36,6 @@ tests/control-tower/gate-count-acceptance.test.sh
 tests/control-tower/gate-helper-precondition.test.sh
 tests/control-tower/gate-identity-display.test.sh
 tests/control-tower/gate-protection-acceptance.test.sh
-tests/control-tower/gate-retirement-report.test.sh
 tests/control-tower/gate-stats.test.sh
 tests/control-tower/gen-cto-health-batch-report.test.py
 tests/control-tower/gen-cto-health-migration.test.sh

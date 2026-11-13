@@ -861,7 +861,7 @@ documents:
   - id: DOC-0243
     type: registry
     path: docs/authority/GATE-INVENTORY.yaml
-    status: active
+    status: archived
     owner: P4
     note: "旧门禁盘点（35 行 ＝ G12 ＋ B9 ＋ X5 ＋ CI9；32 检查器 ＋ pairing 5 行 ＋ excluded_headers 19）；C1–C10b 机器可核。"
   - id: DOC-0244
@@ -2026,3 +2026,10 @@ documents:
     status: active
     owner: CTO
     note: "#1385 A 批历史门禁删除的限定豁免；仅覆盖裁定 B、⑦⑧、GitHub 聚合、配套删除与必要同步；保留密封链，不碰核心门、观察期对象或后续批次。"
+  # ---- #1385 第二批 B：治理工具链退役 ----
+  - id: DOC-1385-02
+    type: governance
+    path: gate-exemptions/2026-11-13-1385-retire-batch2-b.md
+    status: active
+    owner: CTO
+    note: "#1385 B 批旧治理工具链删除的限定豁免；仅覆盖 pre-commit 摘调用、整闭包删除、fixture 与登记状态同步；登记簿留档，不碰核心门、观察期对象或 C 批。"
