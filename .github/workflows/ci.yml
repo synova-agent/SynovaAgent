@@ -217,8 +217,8 @@ jobs:
       #   ⇒ 已改为 `(?<![0-9A-Za-z])[Dd]\d+(?![0-9A-Za-z])`（同一 subject → findall []）
       #   ⇒ 实测真 `refs/pull/872/merge`（d1ba4905）由 EXIT=2 → **EXIT=0**（推断回 D1039）。
       #   ⚠️ **禁止**把本 step 的 `--head` 改成引用 PR head 的表达式（即 event 的 PR head 字段）：
-      #      那是 K3 定罪的「空转取数形态」，`tests/control-tower/check-gate-integrity.test.sh:641-643`
-      #      有**接线回退**硬断言 —— 该断言是**字面 grep**，连注释里出现该字面串都会 FAIL（本批实撞）。
+      #      那是 K3 当时定罪的「空转取数形态」；原 `tests/control-tower/check-gate-integrity.test.sh:641-643`
+      #      曾有**接线回退**硬断言（字面 grep，连注释命中都会 FAIL），该测试已于 #1385 退役。
       #      且**不必要** —— 根治后 `--head HEAD`（merge ref 形态）自身即可正确推断。
       #   回归夹具: `tests/control-tower/merge_writeset_gate.test.sh` ⑩b（真 merge subject 零误判）
       #      与 ⑩c（还原旧正则即失效 ⇒ 判别性）。
@@ -658,8 +658,8 @@ jobs:
         #   ① 该文件尚未在本树/main（只在 team/a4b-vitest-log）⇒ 若放进上面 for 清单，循环里那句
         #      `bash "$t"` 会真去执行它 ⇒ **EXIT=127** ⇒ FAIL=1 ⇒ 本 job 红 ⇒ 两必需 context 红；
         #   ② 该测试要 `npx vitest run`，而本 job **无 npm ci**/无 node_modules ⇒ 即使文件到位也不可能过；
-        #   ③ 本行仅为满足 Gate Integrity 密封面 ratchet —— check-gate-integrity.sh:618 的 matcher
-        #      扫 ci.yml **全文**（`for t in` 或任意 `run:` 步骤均计登记），故注释形即计登记；
+        #   ③ 本行历史上仅为满足 Gate Integrity 密封面 ratchet —— 原 check-gate-integrity.sh:618
+        #      的 matcher 曾扫 ci.yml **全文**（`for t in` 或任意 `run:` 步骤均计登记）；该脚本已于 #1385 退役；
         #      **真执行**落点 = 有 npm 依赖的 job（quality/test），不在此处。
         #   幽灵副作用（已知并接受）: 在文件尚未落 main 的树上，check-canary-drift.sh 会报一条
         #      **自愈** ::warning（A4-b 落 main 后消失；该脚本恒 exit 0 ⇒ 不阻断）。
@@ -696,15 +696,12 @@ jobs:
           # tests/control-tower/check-citations.test.sh
           # tests/control-tower/check-doc-contract.test.sh
           # tests/control-tower/check-dsh-anchor.test.sh
-          # tests/control-tower/check-gate-integrity.test.sh
           # tests/control-tower/check-gitlinks.test.sh
-          # tests/control-tower/check-k3-report.test.sh
           # tests/control-tower/check-name-allocation.test.sh
           # tests/control-tower/check-ontology-fields.test.sh
           # tests/control-tower/check-preset-bundles.test.sh
           # tests/control-tower/check-progress-freshness.test.sh
           # tests/control-tower/check-project-coordinates.test.sh
-          # tests/control-tower/check-required-contexts.test.sh
           # tests/control-tower/ci-ratchet-base.test.sh
           # tests/control-tower/ci-signal-classify.test.sh
           # tests/control-tower/ci-strict-visible.test.sh
@@ -720,7 +717,6 @@ jobs:
           # tests/control-tower/g12-day-window.test.sh
           # tests/control-tower/gate-failopen-net.test.sh
           # tests/control-tower/gate-retirement-report.test.sh
-          # tests/control-tower/gate-stats.test.sh
           # tests/control-tower/grep-oP-regression.test.sh
           # tests/control-tower/incident-loop.test.sh
           # tests/control-tower/install-deps.test.sh
@@ -1067,12 +1063,12 @@ jobs:
   #      docs/synova/coordination/周报-20260922.md:58）。⇒ 路径触发与必需集**不可共存**。
   #   ③ 恒 success（**绝不产 failure 结论**）: 重活 step 用 `continue-on-error: true`，失败经
   #      `steps.*.outcome` 检查 + `::error` 注解 + `::warning` 摘要上看板。
-  #      🔴 为什么不能"非必需但可以红"（本卡实测发现的跨机制相互作用）: C 段棘轮
-  #      （scripts/control-tower/check-gate-integrity.sh `run_ci_reds`，L676+）对账时统计 base
+  #      🔴 历史上不能"非必需但可以红"（本卡实测发现的跨机制相互作用）: 原 C 段棘轮
+  #      （已退役的 scripts/control-tower/check-gate-integrity.sh `run_ci_reds`，L676+）曾统计 base
   #      commit 上**全部** `conclusion == failure` 的 check-run（**不问是否必需**）⇒ 一条非必需但
-  #      会红的腿，经 merge_group / 周期 run 落在 main tip 上 ⇒ 下一个 PR 的 C 段判「未登记 CI
-  #      失败」⇒ 把**已入必需的 Gate Integrity** 拖红 ⇒ 间接阻断。顾问红变相成阻断 = 比不做更坏。
-  #      ⇒ 本卡取"恒 success + 注解"；根治（C 段排除非必需 context）属判据变更，须 K3，另立卡。
+  #      会红的腿，经 merge_group / 周期 run 落在 main tip 上 ⇒ 当时下一个 PR 的 C 段判「未登记 CI
+  #      失败」⇒ 把**当时已入必需的 Gate Integrity** 拖红 ⇒ 间接阻断。顾问红变相成阻断 = 比不做更坏。
+  #      ⇒ 本卡当时取"恒 success + 注解"；该治理脚本已于 #1385 退役。
   #   看板取数（无需 token，M9 task-11 同款公开注解面，见 gate-integrity 证据步注释）:
   #     GET /repos/{owner}/{repo}/check-runs/{id}/annotations   ← ::error / ::warning 都在这里
   # ══════════════════════════════════════════════════════════════════════════════════════════
@@ -1213,15 +1209,12 @@ jobs:
           # tests/control-tower/check-citations.test.sh
           # tests/control-tower/check-doc-contract.test.sh
           # tests/control-tower/check-dsh-anchor.test.sh
-          # tests/control-tower/check-gate-integrity.test.sh
           # tests/control-tower/check-gitlinks.test.sh
-          # tests/control-tower/check-k3-report.test.sh
           # tests/control-tower/check-name-allocation.test.sh
           # tests/control-tower/check-ontology-fields.test.sh
           # tests/control-tower/check-preset-bundles.test.sh
           # tests/control-tower/check-progress-freshness.test.sh
           # tests/control-tower/check-project-coordinates.test.sh
-          # tests/control-tower/check-required-contexts.test.sh
           # tests/control-tower/ci-ratchet-base.test.sh
           # tests/control-tower/ci-signal-classify.test.sh
           # tests/control-tower/ci-strict-visible.test.sh
@@ -1237,7 +1230,6 @@ jobs:
           # tests/control-tower/g12-day-window.test.sh
           # tests/control-tower/gate-failopen-net.test.sh
           # tests/control-tower/gate-retirement-report.test.sh
-          # tests/control-tower/gate-stats.test.sh
           # tests/control-tower/grep-oP-regression.test.sh
           # tests/control-tower/incident-loop.test.sh
           # tests/control-tower/install-deps.test.sh
