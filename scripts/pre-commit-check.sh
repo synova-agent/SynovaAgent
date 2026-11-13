@@ -2299,22 +2299,9 @@ else
 fi
 # ═══ CONTRACT-BACKSTOP-END ═══
 
-# ═══ 附: 治理面自检（W0/#1093）—— 三分类登记（硬）＋ 镜象新鲜度（只报告） ═══
-#   判据源：W1（#1089）三态登记校验器；W5（#1087）镜象新鲜度（规格明定"只报告不阻断"）。
-#   为什么 freshness 不阻断：① 判不了（exit 2）不应卡住他人提交；② 落后只告警（W5 语义）。
-#   为什么放在末尾：前面组若先红，本组不执行（与其余组同语义）。
-echo -e "${CYAN}── 附: 治理面自检（三分类 ＋ 镜象新鲜度·只报告）──${RESET}"
-if [ -x "$ROOT/scripts/control-tower/check-gate-inventory.sh" ]; then
-  _GOV_RC=0; _GOV_OUT="$(bash "$ROOT/scripts/control-tower/check-gate-inventory.sh" --root "$ROOT" 2>&1)" || _GOV_RC=$?
-  if [ "$_GOV_RC" -eq 0 ]; then
-    echo "  ✅ 门禁三分类登记（37 件/P0 棘轮）"
-    # #1234: 成功路径此前**只 echo**（不进 gate-hits）⇒ G2 判不了；补一条 miss（稳定键）
-    log_gate "治理面自检·门禁三分类登记 (W1/#1089)" miss "check-gate-inventory"
-  else
-    _GOV_BAD="$(printf '%s\n' "$_GOV_OUT" | grep -E '❌|degraded|VIOLATION' || true)"  # swallow-ok: 无匹配即空 ⇒ 由 hard_check 判 0 处
-    hard_check "治理面自检·门禁三分类登记 (W1/#1089)" "$_GOV_BAD" "check-gate-inventory"
-  fi
-fi
+# ═══ 附: 镜象新鲜度（W5/#1087，只报告） ═══
+#   判不了（exit 2）不卡住他人提交；落后只告警。旧三分类登记已按 #1385 退役。
+echo -e "${CYAN}── 附: 镜象新鲜度（只报告）──${RESET}"
 if [ -x "$ROOT/scripts/control-tower/check-mirror-freshness.sh" ]; then
   _FRC=0; _FRESH="$(bash "$ROOT/scripts/control-tower/check-mirror-freshness.sh" --canonical "${SYNO_CANONICAL_REF:-gitea/${SYNO_TRUNK_REF:-main}}" --mirror-ref origin/main 2>&1)" || _FRC=$?  # swallow-ok: 判不了由脚本自身打印；本处只报告不改判定
   printf '%s\n' "$_FRESH" | grep -E '结果:|degraded:' | sed 's/^/  ℹ️  /' || true  # swallow-ok: 无匹配即安静

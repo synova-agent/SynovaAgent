@@ -1,28 +1,58 @@
-# .claude/claims/1385.yaml — 历史门禁残余第二批 A：⑦⑧与 GitHub 聚合退役
+# .claude/claims/1385.yaml — 历史门禁残余第二批 A+B：⑦⑧、聚合与治理工具链退役
 writeset:
   - .claude/claims/1385.yaml
   - .gitea/workflows/local-gates.yml
   - .github/workflows/ci.yml
+  - scripts/pre-commit-check.sh
   - scripts/control-tower/check-gate-integrity.sh
   - scripts/control-tower/check-required-contexts.py
   - scripts/control-tower/ci-red-baseline.txt
   - scripts/control-tower/required-checks-baseline.txt
+  - scripts/control-tower/check-gate-inventory.sh
+  - scripts/control-tower/gen-gate-meta.sh
+  - scripts/control-tower/gate-inventory.invariant.sh
+  - scripts/control-tower/gate-assert.sh
+  - scripts/control-tower/verify-governance.sh
+  - scripts/control-tower/check-ledger-budget.sh
+  - scripts/control-tower/gate-retirement-report.sh
+  - scripts/control-tower/quality-baseline.py
+  - scripts/control-tower/quality-baseline.json
+  - scripts/control-tower/check-k3-report.py
+  - scripts/control-tower/check-project-coordinates.sh
   - scripts/control-tower/fixture-requires-baseline.txt
+  - scripts/control-tower/gate-integrity-baseline.txt
   - tests/control-tower/check-gate-integrity.test.sh
   - tests/control-tower/check-gate-integrity-selfexclude.test.sh
   - tests/control-tower/check-required-contexts.test.sh
   - tests/control-tower/ci-signal-classify.test.sh
+  - tests/control-tower/check-gate-inventory.test.sh
+  - tests/control-tower/gen-gate-meta.test.sh
+  - tests/control-tower/gate-inventory.invariant.test.sh
+  - tests/control-tower/gate-assert.test.sh
+  - tests/control-tower/verify-governance.test.sh
+  - tests/control-tower/check-ledger-budget.test.sh
+  - tests/control-tower/gate-retirement-report.test.sh
+  - tests/control-tower/gate-retirement-batch1.test.sh
+  - tests/control-tower/quality-baseline.test.sh
+  - tests/control-tower/quality-standard.test.sh
+  - tests/control-tower/check-k3-report.test.sh
+  - tests/control-tower/check-project-coordinates.test.sh
   - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/WIRING-REGISTRY.yaml
   - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-13-1385-retire-batch2-a.md
+  - gate-exemptions/2026-11-13-1385-retire-batch2-b.md
   - memory/notes/proposed/2026-11-13-1385-retire-batch2-a.md
+  - memory/notes/proposed/2026-11-13-1385-retire-batch2-b.md
 done:
   - verify: python scripts/control-tower/claim_store.py --check 1385 --root .
-  - verify: SYNO_P0_FLOOR=6 bash scripts/control-tower/check-gate-inventory.sh --root .
-  - verify: bash scripts/control-tower/check-fixture-requires.sh
-  - verify: bash tests/control-tower/ci-signal-classify.test.sh
   - verify: bash scripts/doc-system/check-doc-truth.sh
-  - verify: SYNO_P0_FLOOR=6 bash scripts/pre-commit-check.sh
+  - verify: bash tests/control-tower/gate-count-acceptance.test.sh
+  - verify: bash tests/control-tower/precommit-groups-injection.test.sh
+  - verify: bash tests/control-tower/core-gates-workflow.test.sh
+  - verify: bash tests/control-tower/core-tests.test.sh
+  - verify: bash scripts/pre-commit-check.sh
+  - verify: bash scripts/control-tower/check-fixture-requires.sh
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
   - verify: git -c core.whitespace=cr-at-eol diff --check
-note: "#1385 A 批依据 #1379 评论 11882 裁定 B，先摘 local-gates ⑦⑧、GitHub gate-integrity 与 all-checks-passed，再删除两件检查器、三件配对测试和两份专属基线；同步现役 CI 配对断言、fixture 基线与最小退役登记，并清理③步已退役④复现器的死兼容分支。保留 sealed-tests.sh、gate-integrity-baseline.txt 及密封执行段，不碰 core-gates、core-tests.sh、tests/user-visible/**、tests/contract/**、scripts/audit/**、观察期对象或 B/C 批对象，不自行合并。"
+note: "#1385 B 批在 A 之上先摘 pre-commit 三分类调用并同步横幅，再删除十一件旧治理脚本／基线和十二件配对测试；fixture 基线只减两项。GATE-INVENTORY 现役条目转退役，WIRING 六项转 retired，GATE-INVENTORY 的 DOCS 状态转 archived；登记簿不删行，观察期记录不改。保留核心门、契约／用户可见测试、scripts/audit 与 C 批对象；sealed-tests.sh 及执行逻辑不改，gate-integrity-baseline.txt 按密封链要求显式下调 FACE-TOTAL 216→208，不自行合并。"

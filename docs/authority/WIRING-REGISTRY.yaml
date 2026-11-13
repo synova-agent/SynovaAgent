@@ -168,9 +168,10 @@ entries:
     provider: "scripts/control-tower/gate-assert.sh:1"
     consumer: "scripts/control-tower/check-gate-inventory.sh:98"
     test: "tests/control-tower/gate-assert.test.sh"
-    status: wired
+    status: retired
     owner: P4
     notes: "#1096 W6 判据自检库 ＋ #1112 W6 接线（本行由 declared-only 改 wired）。**已接线（两个生产消费者）**：① `scripts/control-tower/check-gate-inventory.sh:98` —— 判据子进程经 `ga_run` 归一（本行 consumer 取该主调用点；R5 只容单条 path:line）；② `scripts/control-tower/check-ci-empty-green.sh:259/260/261` —— file／env／selfcheck 三个出口各经 `ga_run` 包装。归一语义＝0/1/2 原样透传，128／137／126／白名单外码一律归 2 并打 `判据故障: <code>`（绝不归 0、也不原样穿透成本器退出码）；两器在归一库缺失时均 exit 2（fail-closed）。改坏即红：把归一里 128 分支改成 0 ⇒ `tests/control-tower/check-gate-inventory.test.sh` ⑮ 与 `tests/control-tower/check-ci-empty-green.test.sh` ⑮ 的 rc=2 断言必红。"
+    retired_reason: "#1385：两件生产消费者均同批退役，共享归一库无幸存消费者"
   - capability: gate.telemetry
     defined_at: "scripts/control-tower/gate-telemetry.sh:1"
     provider: "scripts/control-tower/gate-telemetry.sh:1"
@@ -222,9 +223,10 @@ entries:
     provider: "scripts/control-tower/check-gate-inventory.sh:1"
     consumer: "scripts/pre-commit-check.sh:2224"
     test: "tests/control-tower/check-gate-inventory.test.sh"
-    status: wired
+    status: retired
     owner: P4
     notes: "#1089 W1：三态登记校验器。**已接线**（W0/#1093）：`scripts/pre-commit-check.sh` 的「附: 治理面自检」段以 `hard_check` 调用（本地软提示/CI strict 硬阻断）；接线首日即抓出 `CT-check-gate-inventory` 自身 `required_ci:false` 的账实不符（已改 true）。"
+    retired_reason: "#1385：pre-commit 调用已先摘除，旧三分类登记器退役"
   - capability: content.rolePackApproval
     defined_at: "src/init/role-pack-approval.ts:1"
     provider: "src/init/role-pack-approval.ts:651"
@@ -249,9 +251,10 @@ entries:
     provider: "scripts/control-tower/verify-governance.sh:1"
     consumer: null
     test: "tests/control-tower/verify-governance.test.sh"
-    status: declared-only
+    status: retired
     owner: P4
     notes: "#1122 Step 1（规格 §4 G2/G6/G10 最小可跑版）：逐项 PASS/FAIL/SKIP ＋ 末行 `GOVERNANCE: x/4 PASS（y 判不了）`，判不了 exit 2。#1234（v3）起 G2 改分腿证据源（evidence: telemetry|ci-step|none；--ci-evidence 注入缝），末行固定带「y 判不了」。#1122 批**未接线**（写集不含 scripts/pre-commit-check.sh 与 .gitea/workflows/**）⇒ 只有显式调用才跑；consumer 空是实测不是遗漏。接线后改 wired 并填真实调用点。"
+    retired_reason: "#1385：旧治理总闸无生产自动入口，整闭包退役"
   - capability: content.rolePackPersona
     defined_at: "src/init/role-pack-persona.ts:1"
     provider: "src/init/role-pack-persona.ts:442"
@@ -292,9 +295,10 @@ entries:
     provider: "scripts/control-tower/gen-gate-meta.sh:1"
     consumer: "scripts/control-tower/check-gate-inventory.sh:129"
     test: "tests/control-tower/gen-gate-meta.test.sh"
-    status: wired
+    status: retired
     owner: P4
     notes: "#1147 T2.5：门禁元数据生成器（gate_meta 六字段机械产出，--emit/--check，三态 0/1/2，孤儿与配额非法组合即违规）。唯一生产消费者＝check-gate-inventory.sh 的 R10 同源校验；生成器缺失或判不了归 2。"
+    retired_reason: "#1385：唯一生产消费者 check-gate-inventory 已退役"
 
   # ---- P2 2026-10-29：#1075 P2-4b-B · 角色会话内知识权限（系统工具 search_knowledge）----
   - capability: knowledge.roleSessionSearch
@@ -388,9 +392,10 @@ entries:
     provider: "scripts/control-tower/gate-inventory.invariant.sh:1"
     consumer: null
     test: "tests/control-tower/gate-inventory.invariant.test.sh:1"
-    status: declared-only
+    status: retired
     owner: P4
     notes: "#1210：GATE-INVENTORY 不变式伴生件（39=35+2+2／id 唯一／workflows 账外=0／disk↔registry）；本批不接 pre-commit/CI ⇒ 无生产调用点，按 declared-only 显式豁免 R1.2 登记（接线另批）。"
+    retired_reason: "#1385：旧 GATE-INVENTORY 治理闭包退役，登记簿本身留档"
   # ---- R 2026-10-31：#1211 S0-2c 图命名空间口径统一（唯一来源；4 个业务消费点）----
   - capability: graph-scope
     defined_at: "src/l2/graph-scope.ts:68"
@@ -425,9 +430,10 @@ entries:
     provider: "scripts/control-tower/check-ledger-budget.sh:1"
     consumer: null
     test: "tests/control-tower/check-ledger-budget.test.sh:1"
-    status: declared-only
+    status: retired
     owner: P4
     notes: "台账三判据机检（#1254 T4）：行数 <=800／跨段无重复／measured_at=当前基准，三态 0/1/2 ＋ --advisory/--json。本批**只出数不接线**（接线＝W5 出口判据：先做台账 <=800 与去重，否则接上即恒红）⇒ 无生产调用点，按 declared-only 登记。"
+    retired_reason: "#1385：旧台账预算工具无生产入口，退役"
   # ---- CTO 2026-11-02：冲突标记机检（真实接线：pre-commit 组 1 硬阻断）----
   - capability: gate.conflictMarkers
     defined_at: "scripts/control-tower/check-conflict-markers.sh:1"
