@@ -48,7 +48,7 @@ while IFS= read -r sf; do
     MISSING="${MISSING}  ${sf} → 缺配对测试 tests/control-tower/${bn}.test.sh\n"
   elif [ -f "$ROOT/tests/control-tower/.ct40-baseline" ] && tr -d '\r' < "$ROOT/tests/control-tower/.ct40-baseline" | grep -vE '^[[:space:]]*(#|$)' | grep -qxF "$bn"; then
     # #1299（A 类·创始人 2026-11-02 批）基线已知红：**直接跳过执行**（不跑、不阻断、只告警）。
-    #   为什么跳过而不是"跑完再告警"：known-red 里 check-pr-budget 单跑要 421s，每提交都付这个成本
+    #   为什么跳过而不是"跑完再告警"：已知红夹具每次提交都重复付费会拖死提交链。
     #   等于把提交链拖死（实测一次 commit >7 分钟）。跳过=省时间；红仍在表里可见。
     KNOWN_RED="${KNOWN_RED}  ${sf} 已知红(基线，跳过不阻断): tests/control-tower/${bn}.test.sh\n"
   elif ! ( cd "$ROOT" && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE bash "$t" >/dev/null 2>&1 ); then

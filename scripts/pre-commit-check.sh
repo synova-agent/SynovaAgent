@@ -10,17 +10,6 @@
 # D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true
-# ═══ #1255-T3（W6 接线）: pre-commit 墙钟预算计时起点 ═══
-# 判据源: GATE-STANDARD §七「pre-commit ≤90 s」＋ §十二 ⑨（墙钟 ≤90s 由 check-gate-budget.sh 出数）。
-# 只读取数不阻断：超预算在本层**只告警**（W6 出口判据写的是"破则告警"；是否转阻断由后续裁定），
-# 数值与判定一律来自 check-gate-budget.sh（0/1/2 三态），本处不另造一套算法。
-_now_ms() {
-  if command -v python3 >/dev/null 2>&1; then python3 -c 'import time;print(int(time.time()*1000))'
-  elif command -v python >/dev/null 2>&1; then python -c 'import time;print(int(time.time()*1000))'
-  else printf '%s000' "$(date +%s)"; fi
-}
-_GATE_T0_MS="$(_now_ms)"
-
 # ═══ #1296（K3 例外 4 / W6 真出口）: 逐组耗时 ═══
 # 为什么需要：⑨ 只落一个聚合 wall_ms（445 s / 117.6 s），耗散在哪一组**完全不可归因**。
 # 做法：每组起点结算上一组耗时，写入 .claude/precommit-groups.log（`<秒>\t<组名>`，每次运行覆盖）。
@@ -50,8 +39,6 @@ _grp_report() {  # 结果段调用：结算最后一组并打印最慢 5 组
 #   审计依赖），只是本地不再阻断——CI Iron Laws job 为权威（ci.yml 已有）。
 #   保留理由（防未来误删）：G12d 防 CI 单点产物污染（D429/D452/D455 实证）、
 #   G13 防双目录漂移（误报率低、命中即真事故）。
-#   命中统计（项4）：hard_check/soft_check 每次触发追加 JSONL 到 .claude/gate-hits.log，
-#   由 scripts/control-tower/gate-stats.sh 汇总（月度清理数据地基）。
 #
 # v3.6 → v3.8 核心变化 (2026-06-23):
 #   + plan.json 支持: 分阶段任务可 deferred wiring/test_pairing 检查
@@ -118,7 +105,7 @@ GROUP_DONE=0
 #     组 7a 以 QUIET_SUCCESS=0 前缀显式保留 ✅ 行（gate-failopen-net.test.sh 判据输入）。
 #   不动的接线（夹具依赖，改前 grep 实证）: 11 个 `── 组 N` 标签、汇总行为运行时计数（`全部 ${GROUP_DONE} 组通过`）、
 #     `跳过 11 组` 横幅、组 7a ✅ 行、D1/D2 调用点（doc-registry-gate.test.sh W1/W2）、
-#     G12c 调用点（doc-commit-exempt.test.sh T11）、Notes 迁移调用点、check-pr-budget 调用点。
+#     G12c 调用点（doc-commit-exempt.test.sh T11）与 Notes 迁移调用点。
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -141,14 +128,14 @@ GROUP_DONE=0
 #     `git grep` 判据"死码零残留"=0 命中、不被本注释自命中。
 GROUP_DOWN="${GROUP_DOWN:-0}"
 hard_check() {
-  local name="$1" matches="$2" key="${3:-$1}"
+  local name="$1" matches="$2"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -gt 0 ] && [ "$GROUP_DOWN" = "1" ] && [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then
     # 裁 409 + K3 根因：降级只摘「计数/阻断」，**❌ 与点名一律保留**（夹具只认 ❌）
     echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级 —— 只报不拦]${RESET}"
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-    log_gate "$name" hit "$key"; return 0
+    return 0
   fi
   if [ "$count" -gt 0 ]; then
     echo -e "  ${RED}❌ ${name}: ${count} 处  [硬阻断]${RESET}"
@@ -160,75 +147,23 @@ hard_check() {
       echo "::error title=IronLaws:${name}::${_first}"
     fi
     HARD_FAIL=$((HARD_FAIL + 1))
-    log_gate "$name" hit "$key"
   else
-    # D1148 降噪: 成功静默（缺省）——成功只登记 gate-hits miss，不占输出行。
+    # D1148 降噪: 成功静默（缺省），不占输出行。
     #   写成**自包含条件**（不调外部函数）: ci-strict-visible.test.sh 用 sed 提取本函数
     #   源码后单独 source，缺省 must-print 语义保 ✅（该夹具断言 miss → ✅）。
     #   组 7a 以 `QUIET_SUCCESS=0 hard_check|soft_check …` 前缀显式保留 ✅ 行。
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
-    log_gate "$name" miss "$key"
   fi
 }
 
 # D1148: 成功静默缺省值（1=静默）。可在调用点以前缀赋值覆盖（组 7a 用 0）。
 #   注: 不在此处 export——保持"调用点展开"，供夹具提取函数片段独立 source 时仍打印 ✅。
 
-# #1234（W3）: soft_pass 可选 <gate_key>（本函数原本只有 1 个必填参 ⇒ 稳定键落在第 2 位）。
-#   给 key ⇒ 记一条 miss（gate 字段 = 稳定键）；不给 ⇒ 保持 D1148 静默、**零新增遥测**。
-#   为什么不做"缺省=显示名"兜底: ① 全仓 20+ 个 soft_pass 站点每次提交会各多起一个
-#   gate-telemetry 子进程（提交端超时史 = --no-verify 的根因，V4.5.1）；②「跳过」≠「真跑」，
-#   给跳过也记 "miss" 会让 G2 分腿证据源把"没判"读成"判过"。故只让**指定证据点**显式传键。
+# D1148: soft_pass 只负责成功路径输出；旧遥测已按 #1385 退役。
 soft_pass() {
-  local name="$1" key="${2:-}"
+  local name="$1"
   # D1148 降噪: 成功静默（同 hard_check）。soft_pass 只在成功路径被调用，无失败语义。
   [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
-  [ -n "$key" ] && log_gate "$name" miss "$key"
-  return 0
-}
-
-# D515 项4 / D1094（W2 运行遥测）: 门禁命中统计 — 每次检查触发经 gate-telemetry.sh 追加 JSONL
-# 契约(铁律47):
-#   @input  $1=检查点名（显示名） $2=hit|miss|warn|degraded [$3=gate_key（稳定键；缺省=显示名）]
-#           为什么显示名/稳定键分离（#1234 / W3）: 显示名是给人读的文案（含中文/上下文/卡号），
-#           随文案改而漂移；遥测要的是**稳定键** = 判据脚本 entrypoint stem（如 check-gate-inventory），
-#           否则 G2 分腿证据源无法把「某闸真跑过」与登记件对上（改名即断链）。
-#   @output 追加 JSONL 行 {time,gate,result,branch,duration_ms,hits}（gate 字段 = gate_key）
-#           **唯一写入器 = scripts/control-tower/gate-telemetry.sh**（本函数不再自拼 JSON）
-#   @exit   恒 0（遥测不是门禁：写失败**不改**本次提交结论，也不计 HARD_FAIL/SOFT_COUNT）
-#   @degraded 写失败 ⇒ gate-telemetry.sh 自行 stderr ＋ degraded-events.log ＋ exit 2；
-#             本函数只补一行可见提示（禁静默，铁律 11），并把该 2 与门禁判定解耦
-#   duration_ms 口径 = **距上一检查点间隔**（本进程内；首个检查点无基准 ⇒ 0=未测得）。
-#     为什么不是"本组精确耗时": 检查计算发生在 hard_check/soft_check 被调用**之前**，
-#     本函数内取不到该检查的起点。本批写集限定只改本埋点（不动各检查点调用链），
-#     gate-stats 只把 >0 的样本计入中位耗时，并在表尾明示口径（不把它当精确单组计时）。
-#   hits 口径 = 本次判定是否命中（hit=1 / miss=0；warn/degraded=0）。
-#     精确"命中条数"在 hard_check/soft_check 的局部变量 count 内；本批按写集约束不外传，
-#     故记 1/0 而非编造数字（gate-telemetry 接受任意非负整数，后续批次可传真实条数）。
-log_gate() {
-  local g="$1" r="$2" k="${3:-$1}"
-  [ -z "$g" ] && return 0
-  local _tel="$ROOT/scripts/control-tower/gate-telemetry.sh"
-  local _now_us="${EPOCHREALTIME:-}" _dur=0 _hits=0 _rc=0
-  [ "$r" = "hit" ] && _hits=1
-  if [ -n "$_now_us" ]; then
-    _now_us="${_now_us/./}"
-    if [ -n "${_GATE_LAST_US:-}" ]; then
-      _dur=$(( (_now_us - _GATE_LAST_US) / 1000 ))
-      [ "$_dur" -lt 0 ] && _dur=0
-    fi
-  fi
-  if [ -f "$_tel" ]; then
-    bash "$_tel" --emit "$k" "$r" "$_dur" "$_hits" --log "${GATE_HITS_LOG}" --branch "${_GATE_BRANCH}" || _rc=$?  # swallow-ok: 遥测非门禁；失败已由 gate-telemetry stderr＋degraded-events.log 留痕
-    [ "$_rc" -ne 0 ] && echo "  ⚠️  遥测降级: gate-telemetry rc=${_rc}（不阻断提交；详见 stderr / degraded-events.log）"
-  else
-    [ -z "${_GATE_TEL_WARNED:-}" ] && echo "  ⚠️  遥测降级: 缺 scripts/control-tower/gate-telemetry.sh（本进程不再重复提示；检查判定不受影响）"
-    _GATE_TEL_WARNED=1
-  fi
-  # 基准取**写入之后** ⇒ 下一检查点的 duration_ms 不含遥测自身开销
-  if [ -n "${EPOCHREALTIME:-}" ]; then
-    _GATE_LAST_US="${EPOCHREALTIME/./}"
-  fi
   return 0
 }
 
@@ -254,7 +189,7 @@ decl_check() {
 }
 
 soft_check() {
-  local name="$1" matches="$2" key="${3:-$1}"
+  local name="$1" matches="$2"
   local count=0
   [ -n "$matches" ] && count=$(echo "$matches" | grep -c . 2>/dev/null) || count=0
   if [ "$count" -gt 0 ]; then
@@ -262,7 +197,6 @@ soft_check() {
     if [ "${SYNO_CI:-0}" = "1" ] && [ "${GROUP_DOWN:-0}" = "1" ] && [ "${SYNO_GATE_STRICT_LEGACY:-0}" != "1" ]; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [裁 409 降级——只报不拦]${RESET}"
       echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-      log_gate "$name" hit "$key"
     elif [ "${SYNO_CI:-0}" = "1" ]; then
       echo -e "  ${RED}❌ ${name}: ${count} 处  [CI strict——软提示在 CI 上为硬阻断]${RESET}"
       HARD_FAIL=$((HARD_FAIL + 1))  # D516 CI strict
@@ -271,11 +205,9 @@ soft_check() {
       SOFT_COUNT=$((SOFT_COUNT + 1))
     fi
     echo "$matches" | head -8 | while read -r line; do [ -n "$line" ] && echo "     ${line}"; done
-    log_gate "$name" hit "$key"
   else
     # D1148 降噪: 成功静默（同 hard_check；自包含条件见 hard_check 注释）
     [ "${QUIET_SUCCESS:-0}" != "1" ] && echo -e "  ${GREEN}✅ ${name}${RESET}"
-    log_gate "$name" miss "$key"
   fi
 }
 
@@ -322,7 +254,6 @@ self_fail_missing_script() {
   echo "     修复: 恢复该脚本；或若已合法退役，同 PR 移除本调用点 + 过 K3（判据变更）"
   HARD_FAIL=$((HARD_FAIL + 1))
   [ "${SYNO_CI:-0}" = "1" ] && echo "::error title=IronLaws:${_name}::检查自身失败（脚本缺失）: ${_path}"
-  log_gate "$_name" hit
   mkdir -p "$ROOT/.codex/control-tower/logs" 2>/dev/null || true
   echo "{\"time\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"component\": \"pre-commit-${_name}\", \"reason\": \"script-missing\", \"path\": \"${_path}\"}" \
     >> "$ROOT/.codex/control-tower/logs/degraded-events.log" 2>/dev/null || true
@@ -330,8 +261,6 @@ self_fail_missing_script() {
 
 # D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
 v5_soft() {
-  # #1234（W3）: 可选 <gate_key>（本函数原本只有 1 个必填参 ⇒ 稳定键落在第 2 位；缺省=显示名）
-  local _v5_key="${2:-$1}"
   # D516/K3 P0-1: SYNO_CI strict 模式——CI 上（SYNO_CI=1）软提示转硬阻断。
   # 这才是"本地减负 + CI 权威"的物理落地：本地快速通过（软提示），CI 同一检查
   # 变硬（K3 D515 审计实证：无此转换则约 20 项检查本地+CI 双放行=门禁虚设，
@@ -340,23 +269,15 @@ v5_soft() {
     echo -e "  ${RED}❌ ${1}: 检查未过 [CI strict——本地软提示在 CI 上为硬阻断]${RESET}"
     echo "::error title=IronLaws:${1}::检查未过（CI strict 转硬）"
     HARD_FAIL=$((HARD_FAIL + 1))
-    log_gate "$1" hit "$_v5_key"
     return
   fi
   echo -e "  ${YELLOW}⚠️  ${1}: 检查未过 [V5 软提示——CI 为权威(SYNO_CI)，本地不阻断]${RESET}"
   SOFT_COUNT=$((SOFT_COUNT + 1))
-  log_gate "$1" hit "$_v5_key"
 }
 
-# D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
-# 契约(铁律47): @input $1=检查点名 $2=hit|miss; @output 追加 JSONL 行
-# @degraded 写失败静默（统计非门禁，不阻断提交——但 GATE_HITS_LOG 默认在仓库内可写）
 # D515 项3 / V5.0.0: 软提示检查 — 输出格式与 hard_check 一致（报告完整，--check/K3 可见），
 # 但只计 SOFT_COUNT 不计 HARD_FAIL：本地不阻断，CI Iron Laws job 为权威。
 # D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
-# D515 项4: 门禁命中统计 — 每次检查触发追加 JSONL 到 .claude/gate-hits.log
-# 契约(铁律47): @input $1=检查点名 $2=hit|miss; @output 追加 JSONL 行
-# @degraded 写失败静默（统计非门禁，不阻断提交——但 GATE_HITS_LOG 默认在仓库内可写）
 # D515 项3 / V5.0.0: 软提示检查 — 输出格式与 hard_check 一致（报告完整，--check/K3 可见），
 # 但只计 SOFT_COUNT 不计 HARD_FAIL：本地不阻断，CI Iron Laws job 为权威。
 # D515 项3: par_collect 类软门禁失败时统一提示（判定脚本输出原样打印，不阻断）
@@ -420,15 +341,6 @@ plan_aware_check() {
 }
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-# D515 项4: 命中统计落点（gitignore 运行态；SYNO_GATE_HITS_LOG 供测试注入）
-GATE_HITS_LOG="${SYNO_GATE_HITS_LOG:-$ROOT/.claude/gate-hits.log}"
-_GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-# D515 项4: 命中统计落点（gitignore 运行态；SYNO_GATE_HITS_LOG 供测试注入）
-GATE_HITS_LOG="${SYNO_GATE_HITS_LOG:-$ROOT/.claude/gate-hits.log}"
-_GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-# D515 项4: 命中统计落点（gitignore 运行态；SYNO_GATE_HITS_LOG 供测试注入）
-GATE_HITS_LOG="${SYNO_GATE_HITS_LOG:-$ROOT/.claude/gate-hits.log}"
-_GATE_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 
 
 # ═══ D201 L3: bypass 阻断 — 今日任何绕过记录 → 硬阻断 ═══
@@ -601,10 +513,8 @@ if [ "$DOC_ONLY" -eq 1 ]; then
       if bash "$ROOT/scripts/control-tower/check-notes-lifecycle.sh"; then
         echo -e "  ${GREEN}✅ Notes 迁移门禁: proposed/ 无僵尸条目${RESET}"
         # #1234: 本早退分支此前**零遥测**（只 echo）⇒ G2 判不了该闸跑没跑；成功=miss，失败=hit
-        log_gate "Notes 迁移门禁 (D472)" miss "check-notes-lifecycle"
       else
         echo -e "  ${RED}❌ Notes 迁移门禁: proposed/ 存在僵尸条目（实现已落地未迁移） [硬阻断]${RESET}"
-        log_gate "Notes 迁移门禁 (D472)" hit "check-notes-lifecycle"
         echo "  修复: git mv 到 implemented/ 或 rejected/，或删除测试残留"
         exit 1
       fi
@@ -628,7 +538,6 @@ if [ "${SYNO_FASTLANE:-0}" = "1" ]; then
   echo "  ✅ V5 纯补记快速通道：仅 bypass.log + Secrets，跳过 11 组"
   echo "═══════════════════════════════════════════════════════════"
   echo ""
-  log_gate "fastlane-bypass-only" hit
   if bash "$ROOT/scripts/check-secrets.sh" 2>&1; then
     echo -e "  ${GREEN}✅ Secrets 扫描通过 — 纯补记提交放行${RESET}"
     exit 0
@@ -1313,7 +1222,6 @@ if [ -n "$NOTES_TOUCHED" ]; then
     echo -e "  ${YELLOW}⚠️  Notes 迁移门禁: proposed/ 存在僵尸条目（实现已落地未迁移） [V5 软提示——CI 为权威，本地不阻断]${RESET}"
     echo "  修复: git mv 到 implemented/ 或 rejected/，或删除测试残留"
     SOFT_COUNT=$((SOFT_COUNT + 1))
-    log_gate "Notes 迁移门禁 (D472)" hit "check-notes-lifecycle"
   fi
 else
   soft_pass "Notes 迁移门禁: 无 proposed/ 变更（跳过）"
@@ -1461,7 +1369,6 @@ if [ "$_DIAG_RC" -ge 2 ]; then
   else
     SOFT_COUNT=$((SOFT_COUNT + 1))
   fi
-  log_gate "禁止 DiagnosticModule: 新模块须实现 Sentinel 接口" degraded
 else
   # D1148: 组 7a 唯一**显式保留 ✅ 行**的检查点（QUIET_SUCCESS=0 前缀赋值）——
   #   gate-failopen-net.test.sh 的 seven_a_lines() 以「含被禁模块名 + ✅/❌/⚠️ 行首标记」
@@ -1654,7 +1561,6 @@ if [ "$_tsx_ok" = "yes" ]; then
   BP_OUT="$(cat /tmp/.syno-blockpaths.out 2>/dev/null || true)"
   rm -f /tmp/.syno-blockpaths.out
   case "$BP_RC" in
-    0) log_gate "块级 paths 快照对账" miss "check-block-paths" ;;  # #1234: 一致 ⇒ 输出保持静默，但**记一条 miss**（此前完全无记录 ⇒ G2 判不了）
     1) soft_check "块级 paths 快照对账" "$(printf '%s' "$BP_OUT" | head -30)\n" "check-block-paths" ;;
     *) # 🔴 非 0/1 = 判不了或超时 ⇒ **显式**报（不得与"通过"混同），且不吞原始输出
        printf '%s\n' "$BP_OUT" | head -10 | sed 's/^/     /'
@@ -1786,7 +1692,6 @@ if [ "${CLAIM_V2:-0}" = "1" ] && [ -n "$STAGED_ALL" ]; then
     printf '%s\n' "$_G12_C_OUT" | head -3 | sed 's/^/     /'
     echo -e "     ${YELLOW}⇒ 处置（CTO 2026-10-11）：畸形 claim 只告警不阻断；请修复下列条目（列入待修清单）${RESET}"
     echo "$(date +%s) | CLAIM_MALFORMED_WARN | rc=${_G12_C_RC} | 见上（作用域收窄，不阻断）" >> "$ROOT/.claude/claim-malformed.log" 2>/dev/null || true
-    log_gate "组 12 claim 覆盖判定（自身失败·作用域收窄·仅告警）" warn
   else
     _G12_CLAIM_STATUS="on"
     _G12_C_REASON="$(printf '%s' "$_G12_C_OUT" | python3 -c "import json,sys;print(json.load(sys.stdin).get('reason',''))" 2>/dev/null || echo "")"
@@ -2098,60 +2003,6 @@ else
   self_fail_missing_script "D782 D2 登记门禁" "scripts/doc-system/doc-registry-gate.sh"
 fi
 
-# ═══ D734: PR 预算门禁（附加检查；不并入传统 11 组编号）═══
-# 背景: 冲突概率 ∝ 改动大小 × 分支存活时间 —— D721 一个 PR 背三类门禁问题挂半天；
-#   K3 审计分支落后 main 差点回退他人成果。
-# 接线取舍（派单 §二.2 要求执行方给理由）: 派单给的是「pre-commit 新增一组 或 CI quality job
-#   一步」二选一 —— 派单红区已明列 .github/workflows/ci.yml（#520 刚改过，避免撞车）→
-#   CI 侧不可用，故选 pre-commit。
-# 为何不并入组编号: 改总组数会打破 tests/control-tower/fastlane-bypass-only.test.sh 对
-#   「跳过 12 组」的断言（pre-commit-check.sh:343 的快速通道横幅），而那个测试文件不在
-#   D734 写集白名单内（创始人硬要求「写集白名单外一律不动」）→ 以额外命名的检查块接入，
-#   组数与横幅语义均不变。
-# D1148 转旁路（语义变更，如实记录）: 原 soft_check（本地软 + CI strict 转硬）→ bypass_run。
-#   ⚠️ 与 #1017（D734 预算与 D708/G12 阈值互斥）的关系: 本卡只把 D734 从**阻断路径**移出，
-#      不修改 check-pr-budget.sh 的任何阈值/判据（该件归 #1017，另卡）。
-#      即「越守规矩越红」的三个门禁（D708/D734/G12）中，D734 不再参与提交端阻断；
-#      路径级口径（同构 ≥10 文件零逻辑改动）仍待 #1017 裁决。
-#   ⚠️ 豁免 ≠ 停用: check-pr-budget.sh 继续执行并打印观测（限额内零输出；超限 ℹ️ 明示）。
-#   接线保留: check-pr-budget.test.sh 依赖本文件含 `check-pr-budget.sh` 字面量 + 横幅未改。
-#   代价（如实记录，2026-10-05 撤回后口径）: PR 预算超限**不再被任何门禁阻断**。
-#     ⚠️ 撤回留痕（CTO 裁决：撤回表述 + 立卡，不补完再合）:
-#       原句：「…PR 级预算仍可由 check-pr-budget.sh 独立运行/CI 侧接入。」
-#       改后：现无阻断执行方 —— 全树**没有第二个阻断调用点**。
-#       依据（逐半句核）: 「独立运行」= 任何脚本都能手工跑（同义反复，无信息量）；
-#             「**CI 侧接入**」= **无据** —— `git grep -n check-pr-budget -- .github scripts/ci`
-#             **零命中**（rc=1，CTO/K3 实测同结论）⇒ CI 侧不存在任何接入。
-#             ⇒ 本文件的 bypass_run 调用点是**唯一**执行点，且已不判红 ⇒ 该门禁当前无阻断执行方。
-#       📌 依据源（本次补注）: K3 报告 §一 Q1（同报告，P1，归因 devdoc，原文「D734 check-pr-budget.sh 独立运行/CI 侧接入」声称无据）。
-#       立卡：D734 预算门禁 CI 侧接入（另卡 A，内容见 D1148 PR 正文 §九）。
-#   ↳ D1171（P0-5）已执行撤回: 本块 bypass_run → v5_soft（本地软/CI strict 硬），撤回留痕见上方。
-# ═══ CTO 2026-10-11 裁定：**本地 CI 显式跳过 D734**（禁静默）═══
-# 依据：D734 是"PR 预算"——对着 **PR 的 base** 判才有意义。
-#   本地 CI 的基线是 GitHub 的旧 main（停在 05a6591c4），拿"集成分支账本总额"去判（实测 100 件/115 件白名单外）
-#   ⇒ **必然恒红** ⇒ 红灯失去信息量 ⇒ "被绕过的门禁 = 没有门禁"（历史病根）。
-# 执法位置改回：① 提交时软提示 ② 开 PR 时由审查人/CTO 人工判（11 组其余照常硬判）。
-# ⚠️ 实测教训：上一版只在 workflow 里设了 SYNO_SKIP_PR_BUDGET=1，**但本文件从未读它** ⇒ 开关形同虚设（本次修复补上）。
-if [ "${SYNO_SKIP_PR_BUDGET:-0}" = "1" ]; then
-  echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
-  echo -e "  ${YELLOW}ⓘ 本地 CI 显式跳过（CTO 2026-10-11 裁定；执法位置=提交时软提示 + 开 PR 时人工判）${RESET}"
-else
-echo -e "${CYAN}── PR 预算门禁 (D734) ──${RESET}"
-if [ -x "$ROOT/scripts/control-tower/check-pr-budget.sh" ] || [ -f "$ROOT/scripts/control-tower/check-pr-budget.sh" ]; then
-  _D734_OUT="$(bash "$ROOT/scripts/control-tower/check-pr-budget.sh" --quiet 2>&1)"; _D734_RC=$?
-  if [ "$_D734_RC" -ne 0 ]; then
-    printf '%s\n' "$_D734_OUT" | head -5 | sed 's/^/     /'
-    v5_soft "D734 PR 预算（D1171 撤旁路复执法）" "check-pr-budget"
-  else
-    # #1234: 限额内原本**零输出、零记录**（旁路语义）⇒ G2 无法证明该闸跑过 ⇒ 补一条 miss
-    log_gate "D734 PR 预算" miss "check-pr-budget"
-  fi
-else
-  # D1219（卡 #1225）: 存在性另有 check-pr-budget.test.sh 保证，但那不能替代**运行期** fail-closed。
-  self_fail_missing_script "D734 PR 预算" "scripts/control-tower/check-pr-budget.sh"
-fi
-fi   # ← SYNO_SKIP_PR_BUDGET 分支结束（CTO 2026-10-11）
-
 # ── D520/任务3: 平台敏感命令软检查（V5 软提示——新增脚本须对照 PLATFORM-CHECKLIST.md）──
 # 只查本次新增（A）的 scripts/control-tower|workflow 下的 .sh/.py 文件：
 #   裸 python3（非 PYBIN 模式）/ date +%s / date -v / grep -P → 提示见 checklist。
@@ -2306,12 +2157,6 @@ if [ -x "$ROOT/scripts/control-tower/check-mirror-freshness.sh" ]; then
   _FRC=0; _FRESH="$(bash "$ROOT/scripts/control-tower/check-mirror-freshness.sh" --canonical "${SYNO_CANONICAL_REF:-gitea/${SYNO_TRUNK_REF:-main}}" --mirror-ref origin/main 2>&1)" || _FRC=$?  # swallow-ok: 判不了由脚本自身打印；本处只报告不改判定
   printf '%s\n' "$_FRESH" | grep -E '结果:|degraded:' | sed 's/^/  ℹ️  /' || true  # swallow-ok: 无匹配即安静
   if [ "$_FRC" -ne 0 ]; then echo "  ⚠️ 镜象新鲜度 rc=$_FRC（0=新鲜 1=不新鲜 2=判不了）—— 只报告，不阻断（W5）"; fi
-  # #1234: 本块原**完全无 log_gate** ⇒ G2 判不了；三态各记一条（0 新鲜=miss ／ 2 判不了=degraded ／ 1 落后=warn）
-  case "$_FRC" in
-    0) log_gate "镜象新鲜度 (W5/#1087)" miss "check-mirror-freshness" ;;
-    2) log_gate "镜象新鲜度 (W5/#1087)" degraded "check-mirror-freshness" ;;
-    *) log_gate "镜象新鲜度 (W5/#1087)" warn "check-mirror-freshness" ;;
-  esac
 fi
 
 # ── W10/#1108：Unicode 同形字分级门禁（只判变更集新增行；A/B/C 阻断，D 只提醒）──
@@ -2372,34 +2217,6 @@ if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${SYNO_
   fi
 fi
 
-# ═══════════════════════════════════════════════════════════════════
-# #1255-T3: 墙钟预算（GATE-STANDARD §七 ≤90 s ／ §十二 ⑨）
-#   落盘 `wall_ms=<n>` → 交给 check-gate-budget.sh 判定（0/1/2 三态），本层**只告警不阻断**。
-#   为什么必须先落盘再判：check-gate-budget.sh 的契约是"读日志最后一条 wall_ms"，不在本脚本里另造算法。
-#   @authority: 本函数只由 pre-commit-check.sh 自身在**结果段**调用（两条出口：失败/通过各一次）；
-#     任何本地会话与 CI job 都会经过它；**只读计时 + 追加一行日志**，不改提交结果、不写仓库受版本管理文件
-#     （日志落在 ignored 的 .claude/ 下）。已知限制：计时不含 git hook 派发前的耗时（只量"脚本内"）。
-# ═══════════════════════════════════════════════════════════════════
-gate_budget_report() {
-  local now_ms elapsed log out rc
-  now_ms="$(_now_ms)"; elapsed=$(( now_ms - ${_GATE_T0_MS:-now_ms} ))
-  [ "$elapsed" -ge 0 ] 2>/dev/null || elapsed=0   # swallow-ok: 非数字则按 0（只告警层，不影响提交结果）
-  log="${SYNO_GATE_BUDGET_LOG:-$ROOT/.claude/gate-budget.log}"
-  mkdir -p "$(dirname "$log")" 2>/dev/null || true   # swallow-ok: 日志目录建不了不阻断（只告警层）
-  printf 'wall_ms=%s  # pre-commit @ %s（#1255-T3 接线）\n' "$elapsed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$log" 2>/dev/null || true   # swallow-ok: 落盘失败不影响判定（--log 读取时会 E_NO_DATA 显式降级）
-  if [ ! -f "$ROOT/scripts/control-tower/check-gate-budget.sh" ]; then
-    echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（check-gate-budget.sh 缺失）—— 本次 wall_ms=${elapsed}${RESET}"
-    return 0
-  fi
-  out="$(bash "$ROOT/scripts/control-tower/check-gate-budget.sh" --log "$log" 2>&1)"; rc=$?
-  case "$rc" in
-    0) echo -e "  ${GREEN}⏱ 墙钟预算: $(printf '%s' "$out" | tr '\n' ' ')${RESET}" ;;
-    1) echo -e "  ${YELLOW}⏱ 墙钟预算: $(printf '%s' "$out" | tr '\n' ' ')（告警不阻断；标准 §七 目标 ≤90 s）${RESET}" ;;
-    *) echo -e "  ${YELLOW}⏱ 墙钟预算: 判不了（rc=${rc}）—— $(printf '%s' "$out" | tr '\n' ' ')${RESET}" ;;
-  esac
-  return 0
-}
-
 _grp_report
 # ═══════════════════════════════════════════════════════════════════
 # 结果
@@ -2411,7 +2228,6 @@ if [ "$HARD_FAIL" -gt 0 ]; then
   [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::error title=IronLaws:提交已拒绝::${HARD_FAIL} 组未通过（详见上方 ❌ 行）"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
-  gate_budget_report
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   exit 1
@@ -2419,7 +2235,6 @@ else
   echo -e "  ${GREEN}✅ 全部 ${GROUP_DONE} 组通过${RESET}"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告 (不阻断)${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
-  gate_budget_report
   echo "═══════════════════════════════════════════════════════════"
   echo ""
   exit 0

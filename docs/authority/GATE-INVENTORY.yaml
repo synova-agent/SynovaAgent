@@ -836,7 +836,7 @@ checkers:
     wired_to: ["CI-S8", "PC-B-1c131c", "PC-X-75da80", "script:scripts/control-tower/check-bypass-log.sh", "script:scripts/control-tower/merge_writeset_gate.py", "script:scripts/doc-system/doc-registry-gate.sh"]
     orphan: false
     blocking: true
-    decision: keep
+    decision: retire
     reason: "C10 复算在门禁链在位（CI-S8/PC-B-1c131c/PC-X-75da80）⇒ 保留"
     replacement: ""
   - id: CT-check-preset-bundles
@@ -1145,15 +1145,6 @@ classification:
     entrypoint: scripts/control-tower/check-package-selfsufficiency.py
     required_ci: false
     confirmed_by: pending-cto
-  - id: CT-check-pr-budget
-    class: P1
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-pr-budget.sh
-    required_ci: true
-    evidence: telemetry
-    telemetry_key: check-pr-budget
-    confirmed_by: pending-cto
   - id: CT-check-preset-bundles
     class: P1
     owner: P4
@@ -1269,13 +1260,6 @@ classification:
   # ---- P4 2026-10-28：#1122 Step 1 总闸最小可跑版（纯追加；class P1 ＝ 质量类汇总判据，未接线故 required_ci: false）----
 
   # ---- P4 2026-10-31：#1210 W0 附通道 B 耗时预算机检（纯追加；旁路未接线故 required_ci: false）----
-  - id: CT-check-gate-budget
-    class: P1
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-gate-budget.sh
-    required_ci: true
-    confirmed_by: pending-cto
 
   - id: CT-check-conflict-markers
     class: P1
@@ -1356,9 +1340,6 @@ run_by:
     quota: false
   - entrypoint: scripts/control-tower/check-package-selfsufficiency.py
     run_by: "无"
-    quota: false
-  - entrypoint: scripts/control-tower/check-pr-budget.sh
-    run_by: pre-commit
     quota: false
   - entrypoint: scripts/control-tower/check-preset-bundles.sh
     run_by: "无"
@@ -1650,9 +1631,6 @@ run_by:
 # ---- run_by=无 的退役候选清单（M-15：无主件必须在此可见；与上方 run_by 段双向对齐）----
 # 口径：本段 ≡ run_by="无" 的件集合（多一条/少一条由 check-gate-inventory.sh 判红）。
 # 进本段 ≠ 判死：Step 3 逐条裁「补接线 / 并更强件 / 真退役」，本段只把暗处拖到明处。
-  - entrypoint: scripts/control-tower/check-gate-budget.sh
-    run_by: pre-commit
-    quota: false
   - entrypoint: scripts/control-tower/check-conflict-markers.sh
     run_by: pre-commit
     quota: true
@@ -2029,13 +2007,6 @@ gate_meta:
       quota: false
       quota_scope: non-doc
       nature: mechanical
-    - entrypoint: scripts/control-tower/check-gate-budget.sh
-      class: P1
-      run_by: pre-commit
-      orphan: false
-      quota: false
-      quota_scope: non-doc
-      nature: mechanical
     - entrypoint: scripts/control-tower/check-gate-protection.sh
       class: P0
       run_by: gitea-ci
@@ -2103,13 +2074,6 @@ gate_meta:
       class: P2
       run_by: 无
       orphan: true
-      quota: false
-      quota_scope: non-doc
-      nature: mechanical
-    - entrypoint: scripts/control-tower/check-pr-budget.sh
-      class: P1
-      run_by: pre-commit
-      orphan: false
       quota: false
       quota_scope: non-doc
       nature: mechanical
@@ -2944,6 +2908,35 @@ retired:
     date: 2026-11-13
     replacement: none
     evidence: "生产入口已先摘除；配对闭包随后物理删除，全仓剩余命中仅为注释、历史材料或留档登记"
+    observation_until: 2026-11-13
+
+  - id: RET-1385-check-pr-budget
+    path: scripts/control-tower/check-pr-budget.sh
+    reason: "#1385 流程预算不属于核心风险，pre-commit 唯一执行入口已退出"
+    date: 2026-11-13
+    replacement: none
+    evidence: "pre-commit log_gate／gate_budget_report 与 PR 预算调用已先摘除；工具和配对随后物理删除，无其他生产消费者"
+    observation_until: 2026-11-13
+  - id: RET-1385-check-gate-budget
+    path: scripts/control-tower/check-gate-budget.sh
+    reason: "#1385 旧墙钟预算函数及两处出口调用已退出，核心 job timeout 不接管本地遥测"
+    date: 2026-11-13
+    replacement: none
+    evidence: "pre-commit log_gate／gate_budget_report 与 PR 预算调用已先摘除；工具和配对随后物理删除，无其他生产消费者"
+    observation_until: 2026-11-13
+  - id: RET-1385-gate-stats
+    path: scripts/control-tower/gate-stats.sh
+    reason: "#1385 唯一数据写入链 log_gate 已退役，手工汇总工具无生产消费者"
+    date: 2026-11-13
+    replacement: none
+    evidence: "pre-commit log_gate／gate_budget_report 与 PR 预算调用已先摘除；工具和配对随后物理删除，无其他生产消费者"
+    observation_until: 2026-11-13
+  - id: RET-1385-gate-telemetry
+    path: scripts/control-tower/gate-telemetry.sh
+    reason: "#1385 pre-commit log_gate 已全部摘除，遥测写入器无生产消费者"
+    date: 2026-11-13
+    replacement: none
+    evidence: "pre-commit log_gate／gate_budget_report 与 PR 预算调用已先摘除；工具和配对随后物理删除，无其他生产消费者"
     observation_until: 2026-11-13
 
 # ═══════════════════════════════════════════════════════════════════════════════

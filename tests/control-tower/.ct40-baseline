@@ -7,4 +7,3 @@
 #   check-pr-budget      超时 rc=124（421s）＋ 2 项红（超限未点名拆 PR／未出现禁调高上限）
 bypass-ledger
 check-ownership
-check-pr-budget

@@ -17,7 +17,6 @@ tests/control-tower/check-merge-conditions.test.sh
 tests/control-tower/check-ontology-fields.test.sh
 tests/control-tower/check-ownership.test.sh
 tests/control-tower/check-package-selfsufficiency.test.sh
-tests/control-tower/check-pr-budget.test.sh
 tests/control-tower/check-preset-bundles.test.sh
 tests/control-tower/check-progress-freshness.test.sh
 tests/control-tower/claim-gate-drill.test.sh

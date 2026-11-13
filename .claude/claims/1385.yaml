@@ -1,4 +1,4 @@
-# .claude/claims/1385.yaml — 历史门禁残余第二批 A+B：⑦⑧、聚合与治理工具链退役
+# .claude/claims/1385.yaml — 历史门禁残余第二批 A+B+C：⑦⑧、聚合、治理工具链、预算与遥测退役
 writeset:
   - .claude/claims/1385.yaml
   - .gitea/workflows/local-gates.yml
@@ -21,6 +21,11 @@ writeset:
   - scripts/control-tower/check-project-coordinates.sh
   - scripts/control-tower/fixture-requires-baseline.txt
   - scripts/control-tower/gate-integrity-baseline.txt
+  - scripts/control-tower/check-pr-budget.sh
+  - scripts/control-tower/check-gate-budget.sh
+  - scripts/control-tower/gate-stats.sh
+  - scripts/control-tower/gate-telemetry.sh
+  - scripts/control-tower/ct-test-gate.sh
   - tests/control-tower/check-gate-integrity.test.sh
   - tests/control-tower/check-gate-integrity-selfexclude.test.sh
   - tests/control-tower/check-required-contexts.test.sh
@@ -37,13 +42,21 @@ writeset:
   - tests/control-tower/quality-standard.test.sh
   - tests/control-tower/check-k3-report.test.sh
   - tests/control-tower/check-project-coordinates.test.sh
+  - tests/control-tower/check-pr-budget.test.sh
+  - tests/control-tower/check-gate-budget.test.sh
+  - tests/control-tower/gate-stats.test.sh
+  - tests/control-tower/gate-telemetry.test.sh
+  - tests/control-tower/.ct40-baseline
+  - tests/control-tower/gate-count-acceptance.test.sh
   - docs/authority/GATE-INVENTORY.yaml
   - docs/authority/WIRING-REGISTRY.yaml
   - docs/authority/DOCS-REGISTRY.yaml
   - gate-exemptions/2026-11-13-1385-retire-batch2-a.md
   - gate-exemptions/2026-11-13-1385-retire-batch2-b.md
+  - gate-exemptions/2026-11-13-1385-retire-batch2-c.md
   - memory/notes/proposed/2026-11-13-1385-retire-batch2-a.md
   - memory/notes/proposed/2026-11-13-1385-retire-batch2-b.md
+  - memory/notes/proposed/2026-11-13-1385-retire-batch2-c.md
 done:
   - verify: python scripts/control-tower/claim_store.py --check 1385 --root .
   - verify: bash scripts/doc-system/check-doc-truth.sh
@@ -51,8 +64,10 @@ done:
   - verify: bash tests/control-tower/precommit-groups-injection.test.sh
   - verify: bash tests/control-tower/core-gates-workflow.test.sh
   - verify: bash tests/control-tower/core-tests.test.sh
+  - verify: bash tests/control-tower/sealed-tests.test.sh
+  - verify: bash tests/control-tower/ct-test-gate.test.sh
   - verify: bash scripts/pre-commit-check.sh
   - verify: bash scripts/control-tower/check-fixture-requires.sh
   - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
   - verify: git -c core.whitespace=cr-at-eol diff --check
-note: "#1385 B 批在 A 之上先摘 pre-commit 三分类调用并同步横幅，再删除十一件旧治理脚本／基线和十二件配对测试；fixture 基线只减两项。GATE-INVENTORY 现役条目转退役，WIRING 六项转 retired，GATE-INVENTORY 的 DOCS 状态转 archived；登记簿不删行，观察期记录不改。保留核心门、契约／用户可见测试、scripts/audit 与 C 批对象；sealed-tests.sh 及执行逻辑不改，gate-integrity-baseline.txt 按密封链要求显式下调 FACE-TOTAL 216→208，不自行合并。"
+note: "#1385 C 批在 A+B 之上先删除 pre-commit 的 PR 预算块、log_gate 全部调用、gate_budget_report 及两处出口，再删除 check-pr-budget、check-gate-budget、gate-stats、gate-telemetry 及四件配对；同步 local-gates 死导出、ct40／fixture／组数白名单和退役登记。sealed-tests.sh 及执行逻辑不改，FACE-TOTAL 按链要求 208→204，失效 check-pr-budget 隔离项移除。核心门、契约／用户可见测试、scripts/audit、观察期记录不动，不自行合并。"
