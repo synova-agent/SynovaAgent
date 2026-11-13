@@ -32,7 +32,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true  # swallow-ok: 语言环境设不上�
 #           --json 追加一行机器可读摘要（--quota 含三桶、rows 与全部超编条目；--regen 含 mode/rows）
 # @exit   — 0 一致/产出成功/配额未超/重放成功 ｜ 1 违规（缺段/缺行/不一致/六字段非法/orphan∧quota/
 #           [N1] scope=github-only-integration 却 quota=true/[N2] 缺 na_cmd/
-#           workflows 段违规（缺段/条数≠10/必填缺/四态或 category 非法/出现账外/
+#           workflows 段违规（缺段/条数≠WF_IDS/必填缺/四态或 category 非法/出现账外/
 #           阻断态非 gitea/advisory 无理由/github/ci jobs≠12/dual-repo-sync 非阻断/
 #           登记的 yml 不存在或目录里有未登记的 yml））
 #           或配额超编（non_doc>30 ∨ total>45 ∨ bypass>8）｜
@@ -415,7 +415,7 @@ def current_section():
 # 只做「登记面 vs 实况」的机械对账：账外腿（盘上有/清单没有）与幻影腿（清单有/盘上没有）
 # 双向都判 —— 否则「无账外」这句判据无法被检验。
 WF_IDS = (
-    "gitea/local-gates", "gitea/dual-repo-sync", "gitea/asset-sync", "gitea/trunk-freeze-watch",
+    "gitea/core-gates", "gitea/local-gates", "gitea/dual-repo-sync", "gitea/asset-sync", "gitea/trunk-freeze-watch",
     "github/ci", "github/dashboard-auto", "github/desktop-build", "github/product-progress",
     "github/progress-freshness-watchdog", "github/project-coordinates",
 )
@@ -464,7 +464,7 @@ def wf_entries():
     return entries
 
 def check_workflows():
-    """--check 专用：10 条 workflow 定态。违规 ⇒ 打印 WORKFLOWS: VIOLATION 后 exit 1。"""
+    """--check 专用：WF_IDS 登记的 workflow 定态。违规 ⇒ 打印 WORKFLOWS: VIOLATION 后 exit 1。"""
     entries = wf_entries()
     viol = []
     if entries is None:

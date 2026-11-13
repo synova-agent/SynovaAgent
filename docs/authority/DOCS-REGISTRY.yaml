@@ -1999,3 +1999,16 @@ documents:
     status: active
     owner: CTO
     note: "#1366 回合 GitHub 隐私删除 6ad002b；dual-repo-sync 迁到 win-ci，独立临时 clone、Win token 文件、ssh-agent 与 always 清理；保留 schedule、mirror ff 与核 SHA。含豁免自覆盖与本登记行。"
+  # ---- #1379 第一阶段：历史门禁残余只读盘点 ----
+  - id: DOC-1379-01
+    type: registry
+    path: docs/authority/GATE-RETIREMENT-INVENTORY-1379.md
+    status: active
+    owner: CTO
+    note: "#1379 第一阶段退役候选清单与机器证据；只盘点，不授权删除，不改核心门、契约／用户可见测试或 scripts/audit/**。"
+  - id: DOC-1379-02
+    type: governance
+    path: gate-exemptions/2026-11-13-1379-gate-inventory.md
+    status: active
+    owner: CTO
+    note: "#1379 第一阶段清单与必要登记的限定豁免；含豁免自覆盖及经批准的 core-gates 登记与旧校验器一行兼容；不授权任何门禁删除。"
