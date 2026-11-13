@@ -2033,3 +2033,10 @@ documents:
     status: active
     owner: CTO
     note: "#1385 B 批旧治理工具链删除的限定豁免；仅覆盖 pre-commit 摘调用、整闭包删除、fixture 与登记状态同步；登记簿留档，不碰核心门、观察期对象或 C 批。"
+  # ---- #1385 第二批 C：流程预算与遥测退役 ----
+  - id: DOC-1385-03
+    type: governance
+    path: gate-exemptions/2026-11-13-1385-retire-batch2-c.md
+    status: active
+    owner: CTO
+    note: "#1385 C 批预算与遥测删除的限定豁免；仅覆盖 pre-commit 摘调用、四件工具及配对、必要基线与登记同步；保留核心门、观察期对象和密封执行逻辑。"

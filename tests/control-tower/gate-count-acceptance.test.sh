@@ -122,7 +122,6 @@ echo "── 判据 3: 脚本＋4 夹具无 \`组 N/13\` 分母（DS-4）──"
 F3=(scripts/pre-commit-check.sh \
     tests/control-tower/precommit-groups-injection.test.sh \
     tests/control-tower/fastlane-bypass-only.test.sh \
-    tests/control-tower/check-pr-budget.test.sh \
     tests/control-tower/gate-failopen-net.test.sh)
 N3=0; RAW3=""
 for f in "${F3[@]}"; do
@@ -224,8 +223,7 @@ echo ""
 echo "── 判据 10: 6 夹具同口径（DS-8）──"
 F10A=(tests/control-tower/precommit-groups-injection.test.sh \
       tests/control-tower/fastlane-bypass-only.test.sh \
-      tests/control-tower/check-pr-budget.test.sh \
-      tests/control-tower/gate-failopen-net.test.sh)
+        tests/control-tower/gate-failopen-net.test.sh)
 N10A=0; RAW10A=""
 for f in "${F10A[@]}"; do
   c=$(gcount "$ROOT/$f" '13 组')
@@ -257,7 +255,6 @@ WL=(AGENTS.md LOOP.md \
     scripts/check-content-coupling.sh "agents/P4-门禁/AGENTS.md" \
     tests/control-tower/precommit-groups-injection.test.sh \
     tests/control-tower/fastlane-bypass-only.test.sh \
-    tests/control-tower/check-pr-budget.test.sh \
     tests/control-tower/gate-failopen-net.test.sh)
 N11=0; RAW11=""
 for f in "${WL[@]}"; do
