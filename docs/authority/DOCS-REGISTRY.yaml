@@ -2012,3 +2012,10 @@ documents:
     status: active
     owner: CTO
     note: "#1379 第一阶段清单与必要登记的限定豁免；含豁免自覆盖及经批准的 core-gates 登记与旧校验器一行兼容；不授权任何门禁删除。"
+  # ---- #1383 第二阶段首批：组 10、组 9 空块与旧④⑤退役 ----
+  - id: DOC-1383-01
+    type: governance
+    path: gate-exemptions/2026-11-13-1383-retire-batch1.md
+    status: active
+    owner: CTO
+    note: "#1383 首批历史门禁删除的限定豁免；仅覆盖裁定 A、旧④⑤、配套脚本与配对测试、必要同步、最小退役登记和豁免自覆盖；不碰核心门与后续批次对象。"

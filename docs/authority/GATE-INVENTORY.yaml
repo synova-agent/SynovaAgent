@@ -359,7 +359,7 @@ gates:
     blocking: soft
     g_axis: []
     checkpoints: []
-    decision: keep
+    decision: retire
     reason: "无 E2 命名检查点；G11 实际检查点仍是 warn_check/soft_pass（脚本 L1574-1594），非阻断 ⇒ 保留"
     replacement: ""
   - id: PC-G12
@@ -1268,14 +1268,6 @@ classification:
     evidence: telemetry
     telemetry_key: check-mirror-freshness
     confirmed_by: pending-cto
-  - id: CT-check-ci-empty-green
-    class: P1
-    owner: P4
-    review_after: 2026-11-27
-    entrypoint: scripts/control-tower/check-ci-empty-green.sh
-    required_ci: true
-    evidence: ci-step
-    confirmed_by: pending-cto
   # ---- P4 2026-10-28：#1108 W10 Unicode 同形字分级门禁（纯追加；class P0 ＝ 视觉冒充/编码损坏类）----
   - id: CT-check-unicode-confusable
     class: P0
@@ -1463,9 +1455,6 @@ run_by:
     quota: true
   - entrypoint: scripts/control-tower/check-mirror-freshness.sh
     run_by: pre-commit
-    quota: true
-  - entrypoint: scripts/control-tower/check-ci-empty-green.sh
-    run_by: gitea-ci
     quota: true
   - entrypoint: scripts/control-tower/check-unicode-confusable.py
     run_by: pre-commit
@@ -2063,13 +2052,6 @@ gate_meta:
       run_by: github-ci
       orphan: false
       quota: false
-      quota_scope: non-doc
-      nature: mechanical
-    - entrypoint: scripts/control-tower/check-ci-empty-green.sh
-      class: P1
-      run_by: gitea-ci
-      orphan: false
-      quota: true
       quota_scope: non-doc
       nature: mechanical
     - entrypoint: scripts/control-tower/check-ci-stale-red.sh
@@ -2994,6 +2976,13 @@ retired:
     evidence: "四腿过滤注释后命中 0（na_cmd rc=0）；verify-governance.sh:6/:13-14 载 G11 三桶；WIRING 该行原 status=declared-only、consumer=null"
     observation_until: 2026-11-30
     na_cmd: "grep -rn check-acceptance-matrix scripts/pre-commit-check.sh scripts/pre-push-check.sh .gitea/workflows .github/workflows 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | wc -l | grep -qx 0"
+  - id: RET-1383-check-ci-empty-green
+    path: scripts/control-tower/check-ci-empty-green.sh
+    reason: "#1383 旧 local-gates ⑤ 已先摘除，核心 runner 接管真实测试 JSON 与零断言判定"
+    date: 2026-11-13
+    replacement: scripts/ci/core-tests.sh
+    evidence: "旧⑤调用先删除；检查器及配对测试已物理删除，现役 classification/run_by/gate_meta 行同步转入本退役登记"
+    observation_until: 2026-11-13
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # workflows: 两仓 workflow 全量定态（W0-5 · GATE-STANDARD v3.1 §二 · #1205）

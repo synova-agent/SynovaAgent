@@ -23,8 +23,6 @@ tests/control-tower/check-preset-bundles.test.sh
 tests/control-tower/check-progress-freshness.test.sh
 tests/control-tower/check-project-coordinates.test.sh
 tests/control-tower/check-required-contexts.test.sh
-tests/control-tower/ci-deps-step-sim.test.sh
-tests/control-tower/ci-emptygreen-sim.test.sh
 tests/control-tower/claim-gate-drill.test.sh
 tests/control-tower/claim-identity-v2.test.py
 tests/control-tower/claim_store.test.sh
