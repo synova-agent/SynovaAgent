@@ -57,9 +57,10 @@ Synova 是一个**驻扎在企业里的 AI 诊断师**：它观察企业的数�
 
 ## 6. 工程治理（谁保证质量）
 
-- **铁律门禁**：pre-commit 13 组硬阻断（类型安全 / 测试 / 秘密扫描 / 接线 / 架构边界 / 任务认领……）——"硬阻断 100% 有效，软机制 0% 有效"
-- **控制塔流程**：任务启动（task brief）→ 写前检查 → 写后验证 → 提交阻断 → 推送阻断
-- **多 Agent 协作**：开发线（Codex / DSH / Claude Code）+ 审计线（Kimi K3）——分工见 `docs/synova/coordination/`
+- **权威合并门**：Gitea `core-gates / core (pull_request_target)` 是唯一必需 context；旧 `local-gates` 仅 `workflow_dispatch`，不自动触发、不阻断、非必需 context。GitHub 检查与 ruleset 不是 Gitea 合并权威。
+- **本地检查**：pre-commit 是本地软提示，不进 required context、不是合并阻断腿。
+- **控制塔流程**：任务启动（task brief）→ 写前检查 → 写后验证 → 本地软提示 → PR 核心门验收。
+- **多 Agent 协作**：独立审计只由创始人／CTO／任务明确要求触发；结论写任务卡／Issue／PR 评论，不生成审计报告文件。禁止自审，不得修改 `scripts/audit/**`，审计标准不得由被审方编写。
 
 ## 7. 历史演变（为什么长这样）
 
