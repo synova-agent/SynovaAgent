@@ -40,10 +40,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# ═══ W2-C（#1239）· GATE-STANDARD §二/§六批C: GitHub 腿对 6 道门禁降为「只报」 ═══════════
-# 四态登记（GATE-STANDARD §二）: Gitea = 权威腿／唯一阻断；GitHub = 集成测试腿／**只报不拦**。
-# 下列 6 道门禁的**阻断权在 Gitea 腿**（.gitea/workflows/local-gates.yml），本文件的调用一律
-#   `continue-on-error: true`（**step 级**）:
+# ═══ W2-C（#1239）· GitHub 集成测试腿保留的 4 道只报门禁 ═════════════════════
+# Gitea = 权威腿／唯一阻断；GitHub = 集成测试腿／只报不拦。以下调用仍用 step 级
+# `continue-on-error: true`，命令与原始日志保留，job 内其余判定保持真阻断：
 #   ① scripts/control-tower/verify-parallel.sh
 #        → job quality / step「Verify parallel declaration (D540…)」
 #   ② scripts/workflow/check-brief-vs-code.sh
@@ -52,19 +51,7 @@ concurrency:
 #        → job golden-case / step「Run golden case F1 gate」
 #   ④ scripts/ci/diagnosis-quality-check.sh
 #        → job golden-case / step「Run diagnosis quality check」
-#   ⑤ scripts/control-tower/check-gate-integrity.sh
-#        → job gate-integrity / pattern sentinel 步 + C 段 ci-reds 步 + 证据发布步
-#   ⑥ scripts/control-tower/check-required-contexts.py
-#        → job gate-integrity / step「Required contexts ⇄ job name consistency」
-# 三条不可让渡约束（本批判据 d）:
-#   · **job 数不减**（12 个业务 job 全在）、**step 不删**、判据语义不改（迁腿 ≠ 改判据）；
-#   · **仍然真跑、真出日志** —— continue-on-error 只吸收失败对 workflow 结论的影响，
-#     命令照执行、原始输出与 ::error 注解照出（不是 `if: false` 式空转）；
-#   · 用 **step 级**而非 job 级: job 内其余判定（docs-only 检测、写集对账等）保持真阻断。
-# all-checks-passed 一致性（判据 b）: 该聚合 job 判据 = needs.*.result 含 failure/cancelled/skipped。
-#   GitHub 语义: step 级 continue-on-error 下失败 step 的 outcome=failure、**conclusion=success**，
-#   job 结论仍 success ⇒ needs.<job>.result = success ⇒ 本批**不改**聚合 job 也恒不因只报而红
-#   （同机制在文件内已有先例: D1147 顾问腿段注释，见 windows-advisory 段头）。
+# 旧 gate-integrity 与 all-checks-passed 已按 #1385／#1379 裁定 B 退役。
 # 已知限制: GitHub 腿无法在本机触发/观测（本机无 GitHub 凭据）⇒ 本腿"绿"须队外/合并后核。
 
 jobs:
@@ -495,10 +482,8 @@ jobs:
       # （CT-51 队列），修复一个入列一个；全绿后本 job 收敛为跑全目录。
 
   # ══ D1039: control-tower 重活「按需跑」—— 判据唯一载体 = scripts/control-tower/ci-signal-classify.sh ══
-  # 🔴 必需 context 约束（不可违背）: **本 job 的 `Control Tower Gate Tests (ubuntu-latest)`**
-  #   是 main 分支保护的必需检查之一（D1147 后必需集 9 条，登记表 =
-  #   scripts/control-tower/required-checks-baseline.txt；旧证据 scripts/control-tower/ci-red-baseline.txt:65-66
-  #   与 docs/synova/coordination/CI-诊断通道.md:115-116 成文于 12 条时代，按 D1147 状态读）。
+  # 🔴 调度约束：保留本 job 的无 job 级 if:/paths: 形态，避免集成测试腿因事件或路径漏报。
+  #   旧 GitHub required-context 清单已随 #1385 退役；当前唯一合并权威为 Gitea core-gates / core。
   #   ⚠️ `(windows-latest)` 自 D1147 起**已不是必需 context**（降级为顾问 job，见文件末 D1147 段）
   #   —— 它现在**必须**带 job 级 `if:`（路径触发），而正是这一点使它不能是必需 context。
   #   **禁止 job 级 `paths:` 过滤**——job 不被创建 ⇒ 不产生 check-run ⇒ 必需 context 永不报告
@@ -1056,223 +1041,6 @@ jobs:
         continue-on-error: true
         run: bash scripts/ci/diagnosis-quality-check.sh
 
-  # ── M9 门禁完整性：三件套接线（task-5 检查器 + task-6 夹具/基线表；本 job 由 task-6 登记）──
-  # 三步各堵一类洞，缺一步即门禁有洞（B 模式口径：登记 gate 判 = 路径出现在 ci.yml **全文**，
-  #   含本 job 的 run: 行；重型夹具不入 canary 密封清单，避免 canary 运行时长翻倍）：
-  #   step 1 = 检查器本体（模式哨兵 + 登记 gate；本地/CI 同一条命令）
-  #   step 2 = 注入夹具**抽检**（组 1/2/7/12 + 绿基线；全量由 SYNO_PRE_COMMIT_INJECT_FULL=1
-  #            人工或夜间触发——全量 ≈ 12 组 ×1 次 pre-commit，副本内实测 ~4s/次）
-  #   step 3 = CI 既有红基线对账（--ci-reds /tmp/checkruns.json），取数 fail-closed
-  gate-integrity:
-    # T3: timeout-minutes 基线（口径 = 只取 success；n=12；as_of=2026-10-02T12:45:00+08:00；
-    # 公式 = max(P95×1.5, 中位数×3)）：audit 1 / Test-Kit(ubuntu) 1 / Golden Case 2 /
-    # Gate Integrity 2 / Test-Kit(windows) 3 / Architecture 6 / Checker Review 6 /（#665e 改 10：夹具需先装 tsx）
-    # Integration 6 / TypeScript+Iron Laws 7 / Vitest 8 / Control Tower(ubuntu) 14 / (windows) 106（D1109 后**未重取**：口径要 n=12 同分布样本，现 n=1）。
-    timeout-minutes: 10
-    name: Gate Integrity (pattern sentinel + injection fixture + ci-reds)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 登记 gate/模式哨兵依赖 origin/main 与完整历史（同 control-tower-tests 口径）
-      # 棘轮语义（check-gate-integrity.sh 的 PATTERN-BASELINE 段，README 见该脚本头部）：
-      #   存量非法模式（如 scripts/pre-commit-check.sh:991 的 `^+++` 非法 ERE——组 7a 因此恒绿）
-      #   以「登记豁免 owner/expires」形式入 gate-integrity-baseline.txt → 修复未落地前不堵队列；
-      #   **未登记的新非法模式仍必红**；已登记条目过期或失效（模式已消失却未清理）→ exit 1。
-      #   棘轮只减不增：到期即强制清理，豁免不得续期式常驻。
-      - name: Detect docs-only change (D515)
-        id: docsonly
-        shell: bash   # Windows 上默认 pwsh ⇒ 必须显式 bash（本 detect 是 bash 语法）
-        run: |
-          # D-F/①（卡 #1227）: 白名单正则的**唯一副本** = .github/ci-criteria.txt（本文件内零内联副本）。
-          # 🔴 D-F/①-fix（独立复核 R1，2026-10-07）: 单源读不到时**显式**置 docs_only=false（全量）。
-          #   实测 `printf x | grep -qvE ''` 返 **1**（空正则匹配每行，-v 反选后无输出）⇒ 若依赖该
-          #   隐式返回，正常路径会掉进 else ⇒ docs_only=true（早退）＝ **fail-OPEN**。
-          #   故本处**不依赖 grep 隐式语义**：空/不可读 ⇒ 显式 false；不可解析 origin/main ⇒ 显式 false。
-          DS_RE="$(grep -m1 '^DOCSONLY_WHITELIST_RE=' .github/ci-criteria.txt 2>/dev/null || true)"   # swallow-ok: 读失败由下一分支显式 fail-closed
-          DS_RE="${DS_RE#DOCSONLY_WHITELIST_RE=}"; DS_RE="${DS_RE%$'\r'}"
-          # 卡 #1323: base 解析（push 用 github.event.before；全零 SHA/不可解析 ⇒ 显式全量）。详见文件头「docs-only 判定」段。
-          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_EVENT_BEFORE:-}" ] \
-             && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
-            DS_BASE="$GITHUB_EVENT_BEFORE"
-          else
-            DS_BASE="origin/main"
-          fi
-          if [ -z "$DS_RE" ]; then
-            echo "::warning title=docs-only criteria::.github/ci-criteria.txt 缺 DOCSONLY_WHITELIST_RE 或不可读 ⇒ 显式按非 docs-only 处理（全量跑，绝不误跳）"
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
-            # fail-safe（D1111 E5 原有，**保留原文**——D1023 守卫按此字面量计数 9 个消费点）:
-            #   origin/main 不可解析 ⇒ 按非 docs-only 处理（全量跑，绝不误跳）
-            echo "::warning title=docs-only base::origin/main 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          elif ! git rev-parse --verify -q "$DS_BASE" >/dev/null 2>&1; then
-            # fail-safe（#1323 新增）: push 的 before-sha 不可解析（含全零 SHA 退化）⇒ 全量跑
-            echo "::warning title=docs-only base::base=$DS_BASE 不可解析 ⇒ 显式按非 docs-only 处理（全量跑）"
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-          else
-            DS_CHANGED="$(git diff --name-only "$DS_BASE"...HEAD 2>/dev/null || true)"   # swallow-ok: 空集/命中两条分支各自显式处置
-            if [ -z "$DS_CHANGED" ]; then
-              # 第三态（铁律 11: 空集 ≠ 纯文档）⇒ 无法判定 ⇒ 显式全量 + 告警，绝不静默归 docs-only
-              echo "::warning title=docs-only empty-diff::base=$DS_BASE 与 HEAD 变更集为**空** ⇒ 无法判定是否纯文档 ⇒ 显式按非 docs-only 处理（全量跑）"
-              echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            elif printf '%s\n' "$DS_CHANGED" | grep -qvE "$DS_RE"; then
-              echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "docs_only=true" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-      # W2-C（#1239）: 门禁 ⑤(A/B 段) —— 阻断权在 Gitea 腿，本腿只报（命令照跑，失败出 ::error/step 详情）。
-      - name: Gate integrity pattern sentinel + registration gate [report-only #1239]
-        if: steps.docsonly.outputs.docs_only != 'true'
-        continue-on-error: true
-        run: bash scripts/control-tower/check-gate-integrity.sh
-      # 抽检即注册（B 模式口径）——该行同时是"夹具在 CI 里无人执行"的反证。
-      # #665e: 夹具跑完整 pre-commit（含组 13 块级 paths 快照对账）需要 tsx；本 job 无依赖安装步骤
-      #   ⇒ 显式只装 tsx（不装全量 node_modules）。不装则组 13 fail-closed（exit 2）⇒ 夹具 baseline 恒红
-      #   （实测 CI annotation: ❌ 门禁判不了（exit 2）：找不到 tsx）。
-      - name: Install fixture toolchain (from single source)
-        if: steps.docsonly.outputs.docs_only != 'true'
-        run: |
-          # 卡 #739 ④: 工具链**单一来源** = scripts/control-tower/fixture-toolchain.txt；
-          #   kind=npm 的项由本步安装（不再硬编码包名）；kind=runner 的项由 runner 预装、由 preflight 核对。
-          SPECS="$(awk -F'|' '{b=$1; k=$2; s=$3; gsub(/^[[:space:]]+|[[:space:]]+$/,"",b); gsub(/^[[:space:]]+|[[:space:]]+$/,"",k); gsub(/^[[:space:]]+|[[:space:]]+$/,"",s); if (k=="npm" && s!="" ) print s}' scripts/control-tower/fixture-toolchain.txt | tr '\n' ' ')"
-          if [ -n "$SPECS" ]; then
-            echo "从 fixture-toolchain.txt 安装: $SPECS"
-            npm install --no-save --no-audit --no-fund $SPECS
-          else
-            echo "fixture-toolchain.txt 无 npm 项（跳过安装）"
-          fi
-        timeout-minutes: 5
-      - name: Fixture requires preflight (卡 #739 ④)
-        if: steps.docsonly.outputs.docs_only != 'true'
-        run: bash scripts/control-tower/check-fixture-requires.sh
-      - name: pre-commit groups injection fixture (sampled)
-        if: steps.docsonly.outputs.docs_only != 'true'
-        run: bash tests/control-tower/precommit-groups-injection.test.sh
-      # ── D1111/A1-①: 必需 context ⇄ job `name:` 展开名 一致性门禁（**只读**）──────────────
-      # 补的缺口（D971 同型）: 无人保证「branch protection 的 12 个必需 context 名」与
-      #   「workflow job `name:` 展开后实际能产出的 check-run 名」一致；改一个字符 ⇒ 必需 context
-      #   静默失配 ⇒ check-run 永不上报 ⇒ PR 永久 blocked（405 "N of 12 required status checks are expected")。
-      # 判据载体: scripts/control-tower/required-checks-baseline.txt（12 条）。
-      # 本步**不判**「Gate Integrity 该不该进必需集」（那是语义变更，走 K3→CTO）；只判「名与名一致」。
-      # 三态: 0=一致 / 1=违规（exit 1 ⇒ 本 job 红）/ 2=降级（fail-closed）。
-      # 🔴 D1111 实测修正: CI 上 `github.token` **无 admin 权限**读 branch protection（本机已登录 gh 时 OK）
-      #   ⇒ 首版带 `--api-check` 使本步恒 exit 2（PR #935 实测本 job 因此变红，annotation 只有
-      #   "Process completed with exit code 2"）。修法：**静态面是阻断判据**（不取数、无网络、必可跑；
-      #   改坏 job 名 = 必红），live 双向对账降为**显式 warning**（`--allow-degraded`：打印 degraded 原因
-      #   + warning 行、exit 0）。判定不被降级削弱：静态面违规仍 exit 1。
-      #   live 对账的真落点 = 本地/带 PAT 的定期任务（见 D1 §2-A1 与 D2 §6）。
-      - name: Required contexts ⇄ job name consistency (A1-①, read-only) [report-only #1239]
-        if: steps.docsonly.outputs.docs_only != 'true'
-        # W2-C（#1239）: 门禁 ⑥ —— 阻断权在 Gitea 腿，本腿只报（判据与 --allow-degraded 语义不变）。
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -uo pipefail
-          # 裁 421（K3 诊断 §1.3）：原写法在 `bash -e` 下失败路径是死代码——
-          #   赋值命令失败即触发 errexit，rc=$?/printf/落盘全被跳过 ⇒ CI 日志里看不到失败原因。
-          #   改为 errexit 安全捕获：失败原因必打印、/tmp/required-contexts-check.out 必落盘。
-          if OUT="$(python3 scripts/control-tower/check-required-contexts.py --api-check --allow-degraded --verbose 2>&1)"; then
-            rc=0
-          else
-            rc=$?
-          fi
-          printf '%s\n' "$OUT"
-          printf '%s\n' "$OUT" > /tmp/required-contexts-check.out
-          exit "$rc"
-      # 取数失败必须让 step 失败（fail-closed，不静默放行）：豁免台账核对不到 = 既有红基线不可核。
-      - name: CI red baseline reconciliation (--ci-reds, fail-closed fetch) [report-only #1239]
-        if: steps.docsonly.outputs.docs_only != 'true'
-        # W2-C（#1239）: 门禁 ⑤(C 段) —— 阻断权在 Gitea 腿，本腿只报。
-        #   步内判定不动（取数失败仍 exit 1 的 fail-closed 语义保留，只是不再拿阻断权）。
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          OUT=/tmp/checkruns.json
-          # D954（K3 定罪修复）: 对账对象 = **base**，不是当前提交。
-          #   旧取数 REF=head.sha → 该时刻同 SHA 多数 job 仍 in_progress（conclusion≠failure）
-          #   → 「失败检查 0 项」→ 棘轮从未被行使（同 SHA 终局实有 3 个 failure）。
-          #   base 是已定态集合，才可判定"有没有既有红"。
-          REF="${PR_BASE_SHA:-}"
-          if [ -z "$REF" ]; then
-            echo "── push 事件：base = origin/main（fetch 后解析）"
-            git fetch origin main --quiet 2>/dev/null || true   # swallow-ok: fetch 失败时下方 rev-parse 仍可命中既存 origin/main；两者皆失败 → fail-closed
-            REF="$(git rev-parse --verify --quiet 'origin/main^{commit}' 2>/dev/null || true)"
-          fi
-          if [ -z "$REF" ]; then
-            echo "::error title=ci-reds base::无法解析 base ref（PR base.sha 为空且 origin/main 不可解析）—— fail-closed，不静默放行"
-            exit 1
-          fi
-          echo "对账对象 base = ${REF}"
-          printf '%s\n' "$REF" > /tmp/ci-reds-base-ref.txt
-          URL="https://api.github.com/repos/${REPO}/commits/${REF}/check-runs?per_page=100"
-          AUTH=()
-          [ -n "${GH_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer ${GH_TOKEN}")
-          ok=0
-          for i in 1 2 3; do
-            echo "── check-runs 取数尝试 ${i}/3: ${URL}"
-            if curl -sS --fail --max-time 30 "${AUTH[@]+"${AUTH[@]}"}" \
-                 -H "Accept: application/vnd.github+json" \
-                 -H "X-GitHub-Api-Version: 2022-11-28" \
-                 -o "$OUT" "$URL"; then
-              ok=1
-              break
-            fi
-            echo "::warning title=ci-reds fetch::第 ${i} 次取数失败（最多 3 次，退避重试）"
-            sleep $((i * 5))
-          done
-          if [ "$ok" -ne 1 ]; then
-            echo "::error title=ci-reds fetch::check-runs 取数 3 次全失败 —— fail-closed，不静默放行（既有红基线无从核对）"
-            exit 1
-          fi
-          N=$(python3 -c "import json;print(len(json.load(open('$OUT')).get('check_runs',[])))")
-          if [ "$N" -eq 0 ]; then
-            echo "::warning title=ci-reds::${REF} 取到 0 条 check-runs（尚无检查记录）——基线核对为空集，不等于「已核对通过」"
-          fi
-          echo "check_runs=${N} (ref=${REF})"
-          bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" --ci-reds /tmp/checkruns.json --base-ref "$REF" --exclude-check "Gate Integrity (pattern sentinel + injection fixture + ci-reds)"
-      # 证据步（M9 task-11）：判定已由前面 step 完成，本步只把关键行发布为 **可公开检索的注解**——
-      #   GitHub job logs 端点匿名 404/403（CTO 证据要求 ③ 的 CI GNU 侧原始输出取不回，K3 也核不了），
-      #   而注解有公开 API：GET /repos/{owner}/{repo}/check-runs/{id}/annotations（无需 token）。
-      #   本步只取数、判定归前一步；`if: always()` 保证失败时同样出证据；注解 ≤10 行（GitHub 上限）。
-      #   ⚠️ W2-C（#1239）: 检查器调用行的吞错后缀已删（删后行为等价: 本步 `set -uo pipefail` 无 -e，
-      #     赋值失败不中止；取不到行时走下方 ::warning 分支，不伪造判定），
-      #     本 step 一并 report-only ⇒ 本文件内**门禁调用行零吞错后缀**（出口阈值见 PR/回执）。
-      - name: Publish gate-integrity summary (public evidence via annotations) [report-only #1239]
-        if: steps.docsonly.outputs.docs_only != 'true' && (always())
-        continue-on-error: true
-        run: |
-          set -uo pipefail
-          # 证据步：判定已由前面 step 完成；此处只把关键行发布为可公开检索的注解
-          # 带上 --ci-reds + --base-ref（若取数成功），使 C 段对账结果与**对账对象身份**同样可公开检索；
-          # 缺文件则自然回落 SKIPPED（可见，不静默）。
-          ARGS=""
-          [ -f /tmp/checkruns.json ] && ARGS="--ci-reds /tmp/checkruns.json"
-          # D954: base ref 由前一步落盘（单一解析点）；缺失则不传 → 检查器出显式 SKIPPED（不伪造判定）
-          if [ -f /tmp/ci-reds-base-ref.txt ]; then
-            ARGS="$ARGS --base-ref $(cat /tmp/ci-reds-base-ref.txt)"
-          fi
-          OUT="$(bash scripts/control-tower/check-gate-integrity.sh --root "$PWD" $ARGS 2>&1)"
-          # 取不到关键行时**可见但不断**（发布者不判红；真实判定见 step 1）——见下方 ::warning 分支
-          # D954: 「对账对象」行**优先占一个注解位**（注解 ≤10 条上限）——保证对账对象身份必然可公开检索，
-          #   不被 PATTERN/REGISTRY 等行的条数挤出（原实现 head -10 有被挤掉的风险）。
-          KEY="$(echo "$OUT" | grep -E '^对账对象 = ' | head -1 || true)"
-          REST="$(echo "$OUT" | grep -E '^(PATTERN-SENTINEL|PATTERN-BASELINE|CI-REGISTRY|CI-RED-CHECK|CI-RED-BASELINE|GATE-INTEGRITY):' | head -9 || true)"
-          LINES="$(printf '%s\n%s\n' "$KEY" "$REST" | grep -v '^$' | head -10 || true)"
-          if [ -z "$LINES" ]; then
-            echo "::warning title=gate-integrity::证据步未取到关键行（检查器可能未能执行）——发布者不判红；真实判定见 step 1"
-          else
-            echo "$LINES" | while IFS= read -r line; do
-              echo "::notice title=gate-integrity::$line"
-            done
-          fi
-
   # ══════════════════════════════════════════════════════════════════════════════════════════
   # D1147（单套门禁 · 批2）: windows 腿 = **顾问 job**（路径触发 / 非必需 / 红不拦合并）
   #
@@ -1573,38 +1341,3 @@ jobs:
             echo "::warning title=advisory:control-tower(win)::windows 顾问腿**未执行**（outcome='${OUTCOME}'）——本次未取得平台信号（非必需，不拦合并）；前置步骤失败时属预期"
           fi
           exit 0
-
-  # ═══ P0-3: 聚合必需检查 —— skipped 也判 FAIL ═══
-  # 蓝本: DSH 上游 ci.yml:700-726（dsh-v0.2.1-rc.2；steps 段逐字）
-  # 与蓝本的三处已声明差异（K3 整改 D1177，原「唯一差异」表述不实）:
-  #   ① if 去掉 pull_request 事件限定（CTO 明令——#905 语境为 main push）
-  #   ② name: all checks passed → All Checks Passed（对齐本仓 check-run 命名习惯）
-  #   ③ runs-on: 上游 failover 选择器 → ubuntu-latest（failover 机制本仓未建）
-  # 归因口径（K3 整改订正）: 本 job 治的是 **job 级 skip 族**（job 结论 success/skipped 不可辨，
-  #   D971/D1111/D1147 系）。#905 实为 **step 级 skip**（docs-only 误判 ⇒ job 内重步骤 skip
-  #   但 job=success）——needs.*.result 物理上看不见 step 级 skip，那层归 D1111 路径锚正则/
-  #   D708/D540 管。本 job 是纵深一层，不是「修 #905」。
-  # needs = 8 个 job 键，恰覆盖 9 条必需 context（test 是 2-shard 矩阵，覆盖 Vitest 1/2+2/2）。
-  # 🔴 不纳入 needs 的（非必需，纳入会把它们的红也变成阻断）:
-  #   audit(npm audit) · gate-integrity · windows-leg-trigger
-  #   · test-kit-windows-advisory · control-tower-windows-advisory
-  # 🔴 与 DSH 蓝本的唯一差异: 去掉 `github.event_name == 'pull_request'`
-  #   理由: push 到 main 同样必须被拦（#905 的假绿正是发生在 main push 语境）。
-  # ⚠️ 上界（必须留档）: 本 job 挡不住「PR 自己改 ci.yml 把本 job 改成恒绿」——
-  #   PR 事件跑的是 PR 头分支里的 workflow（#905 事故机制）；只保证 (a) skip 掉必需
-  #   job ⇒ 必红；(b) 改实现 ⇒ 挡不住（需 pull_request_target，下一张卡）。
-  all-checks-passed:
-    name: All Checks Passed
-    runs-on: ubuntu-latest
-    # 注: needs 必须单行 —— check-required-contexts.py 的 YAML 子集解析器不支持续行
-    #     （多行会 fail-closed degrade ⇒ required-contexts 全量检查降级失败）。
-    needs: [quality, test, test-kit-architecture, control-tower-tests, integration-check, checker-review, golden-case, gate-integrity]
-    if: ${{ !cancelled() }}
-    steps:
-      - name: Fail if any needed job did not succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
-        run: |
-          echo "::error::Needed job results: ${{ join(needs.*.result, ', ') }}"
-          exit 1
-      - name: All checks passed
-        run: echo "All needed jobs succeeded (${{ join(needs.*.result, ', ') }})"

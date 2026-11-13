@@ -1,0 +1,28 @@
+# .claude/claims/1385.yaml — 历史门禁残余第二批 A：⑦⑧与 GitHub 聚合退役
+writeset:
+  - .claude/claims/1385.yaml
+  - .gitea/workflows/local-gates.yml
+  - .github/workflows/ci.yml
+  - scripts/control-tower/check-gate-integrity.sh
+  - scripts/control-tower/check-required-contexts.py
+  - scripts/control-tower/ci-red-baseline.txt
+  - scripts/control-tower/required-checks-baseline.txt
+  - scripts/control-tower/fixture-requires-baseline.txt
+  - tests/control-tower/check-gate-integrity.test.sh
+  - tests/control-tower/check-gate-integrity-selfexclude.test.sh
+  - tests/control-tower/check-required-contexts.test.sh
+  - tests/control-tower/ci-signal-classify.test.sh
+  - docs/authority/GATE-INVENTORY.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - gate-exemptions/2026-11-13-1385-retire-batch2-a.md
+  - memory/notes/proposed/2026-11-13-1385-retire-batch2-a.md
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1385 --root .
+  - verify: SYNO_P0_FLOOR=6 bash scripts/control-tower/check-gate-inventory.sh --root .
+  - verify: bash scripts/control-tower/check-fixture-requires.sh
+  - verify: bash tests/control-tower/ci-signal-classify.test.sh
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: SYNO_P0_FLOOR=6 bash scripts/pre-commit-check.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: git -c core.whitespace=cr-at-eol diff --check
+note: "#1385 A 批依据 #1379 评论 11882 裁定 B，先摘 local-gates ⑦⑧、GitHub gate-integrity 与 all-checks-passed，再删除两件检查器、三件配对测试和两份专属基线；同步现役 CI 配对断言、fixture 基线与最小退役登记，并清理③步已退役④复现器的死兼容分支。保留 sealed-tests.sh、gate-integrity-baseline.txt 及密封执行段，不碰 core-gates、core-tests.sh、tests/user-visible/**、tests/contract/**、scripts/audit/**、观察期对象或 B/C 批对象，不自行合并。"

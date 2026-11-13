@@ -2019,3 +2019,10 @@ documents:
     status: active
     owner: CTO
     note: "#1383 首批历史门禁删除的限定豁免；仅覆盖裁定 A、旧④⑤、配套脚本与配对测试、必要同步、最小退役登记和豁免自覆盖；不碰核心门与后续批次对象。"
+  # ---- #1385 第二批 A：⑦⑧与 GitHub 聚合退役 ----
+  - id: DOC-1385-01
+    type: governance
+    path: gate-exemptions/2026-11-13-1385-retire-batch2-a.md
+    status: active
+    owner: CTO
+    note: "#1385 A 批历史门禁删除的限定豁免；仅覆盖裁定 B、⑦⑧、GitHub 聚合、配套删除与必要同步；保留密封链，不碰核心门、观察期对象或后续批次。"

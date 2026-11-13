@@ -293,14 +293,9 @@ jobs:
             _EG_STATUS=ran
             if [ -n "${_EG_SKIP_REASON:-}" ]; then _EG_STATUS=skipped; fi
             echo "test_count=${_EG_TC}" >> "${GITHUB_OUTPUT:-/dev/null}"
-            # ③步既有 `SYNO_EG_STUB_MODE` 兼容分支：注入桩时不写真实结果记录。
-            if [ -n "${SYNO_EG_STUB_MODE:-}" ]; then
-              echo "ℹ️  ④ 复现器沙箱复跑（SYNO_EG_STUB_MODE 在场）⇒ 本步结果记录跳过写入（不污染真实判据）"
-            else
-              _EG_RESULTS="${RUNNER_TEMP:-/tmp}/synova-ci-emptygreen-${GITHUB_RUN_ID:-local}.env"
-              mkdir -p "$(dirname "$_EG_RESULTS")" 2>/dev/null || true  # swallow-ok: 目录建不了时下面的写会失败并被同行的 || true 接住（汇总步判 exit 2）
-              { printf 'step=③ 增量测试 status=%s test_count=%s reason=%s\n' "$_EG_STATUS" "$_EG_TC" "${_EG_SKIP_REASON:-}" >> "$_EG_RESULTS"; } 2>/dev/null || true  # swallow-ok: 结果文件写失败不改本步判定（缺记录 ⇒ 汇总步 exit 2，不假绿）
-            fi
+            _EG_RESULTS="${RUNNER_TEMP:-/tmp}/synova-ci-emptygreen-${GITHUB_RUN_ID:-local}.env"
+            mkdir -p "$(dirname "$_EG_RESULTS")" 2>/dev/null || true  # swallow-ok: 目录建不了时下面的写会失败并被同行的 || true 接住（汇总步判 exit 2）
+            { printf 'step=③ 增量测试 status=%s test_count=%s reason=%s\n' "$_EG_STATUS" "$_EG_TC" "${_EG_SKIP_REASON:-}" >> "$_EG_RESULTS"; } 2>/dev/null || true  # swallow-ok: 结果文件写失败不改本步判定（缺记录 ⇒ 汇总步 exit 2，不假绿）
             exit 0
           fi
           # 🔴 #338 可诊断性：`::error` 必须**带可判读摘要**（否则"红了你也不知道哪条挂了"）。
@@ -447,38 +442,6 @@ jobs:
       #   三态：逐条 `|| exit $?` 原样保留 rc（0 通过 ｜ 1 真红 ｜ 2 判不了），禁 `|| exit 1` 折叠。
       #   回滚：本批不设开关 —— 判据迁移属治理面，回滚 = revert 本次 PR（无 SYNO_* 软开关，避免"静默绿"）。
       # ═══════════════════════════════════════════════════════════════════════════════
-      - name: ⑦ 门禁完整性 check-gate-integrity.sh（patterns 哨兵 ＋ 登记 ratchet；C 段 --ci-reds 显式不跑 · #1239）
-        run: |
-          cd /Users/wane/.ci-work/SynovaAgent
-          # 判据源：scripts/control-tower/check-gate-integrity.sh 头部 @exit（0 通过／1 违规／2 判不了）
-          #   与「C 既有红对账（仅 --ci-reds 时执行）」段。
-          # 🔴 GitHub-only 证据门的**显式选择**（本批验收判据 (c)：禁恒绿／禁静默降级）：
-          #   C 段（--ci-reds）的对账对象是 **GitHub check-runs JSON**
-          #   （`https://api.github.com/repos/<owner>/<repo>/commits/<base sha>/check-runs`，
-          #    见该脚本头「K3 端到端复核」段）；Gitea 腿既无该数据源、也无读它的凭据。
-          #   ⇒ 本腿**只跑 A 模式（grep 方言哨兵）＋ B 模式（测试登记 ratchet）**，**不传** `--ci-reds`：
-          #     契约头明载「未给 --ci-reds 时 C 显式 SKIPPED（不参与 OK/违规判定）」
-          #     ⇒ 输出必含可见的 SKIPPED 行，**不是**假绿、**不是**静默跳过。
-          #   ⇒ 代价（写明，禁当"已核"）：既有 CI 红基线（ci-red-baseline.txt）在这条腿上**不参与判定**；
-          #     该面对账仍归 GitHub 腿的 gate-integrity job（本批降只报，回传 Gitea）。
-          # #1252: 必须注入 base —— 面 2 的「越线者付账」判据（sealed-tests.sh:307-320）靠 `SYNO_BASE_REF`
-          #   取 base 面扫描数；空 ⇒ 退化"现状语义"（余量>上限即红）且显式打印"未给 base"。
-          #   本步原缺该变量 ⇒ 同一提示在每次 run 里都出现，而判据实际从未行使「越线」判定。
-          CHANGED_BASE="$(bash scripts/control-tower/resolve-ci-base.sh)" || exit $?
-          SYNO_BASE_REF="$CHANGED_BASE" bash scripts/control-tower/check-gate-integrity.sh || exit $?
-      - name: ⑧ 必需 context ⇄ job name 一致性（check-required-contexts.py 静态面阻断；--api-check 显式不跑 · #1239）
-        run: |
-          cd /Users/wane/.ci-work/SynovaAgent
-          # 判据源：scripts/control-tower/check-required-contexts.py 头部 @exit / @degraded / `--api-check` 段。
-          # 🔴 GitHub-only 证据门的**显式选择**：
-          #   · 静态面（基线 9 条 ⊆ `.github/workflows/*.yml` job `name:` 展开出的 check-run 名全集）
-          #     ＝**阻断判据**、零网络、零凭据 ⇒ 本腿照跑（改坏一个 `name:` 字符即 exit 1 并点名）。
-          #   · `--api-check`（`gh api …/branches/main/protection` 读 live branch protection）＝**GitHub-only**：
-          #     branch protection 是 GitHub 侧对象，Gitea runner 无 GH_TOKEN／无 admin 读权限
-          #     （ci.yml:1122-1127 已记该事实：CI 的 github.token 无 admin ⇒ 首版恒 exit 2）。
-          #   ⇒ 本腿**不传** `--api-check`（也**不**拿 `--allow-degraded` 把它糊成绿）：live 双向对账仍归
-          #     GitHub 腿该步（本批降只报，不得当"已核"）；其真落点见 GATE-STANDARD §十一 W8。
-          python3 scripts/control-tower/check-required-contexts.py --verbose || exit $?
       - name: ⑨ 并行写集声明物理验证（verify-parallel.sh --ci-pr · #1239）
         run: |
           cd /Users/wane/.ci-work/SynovaAgent
