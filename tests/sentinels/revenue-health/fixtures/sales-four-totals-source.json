@@ -1,0 +1,12 @@
+{
+  "rows": [
+    { "orderId": "SYNTHETIC-001", "orderAmount": 100.1, "receivedAmount": 50.05 },
+    { "orderId": "SYNTHETIC-002", "orderAmount": 200.2, "receivedAmount": 200.2 },
+    { "orderId": "SYNTHETIC-003", "orderAmount": 0, "receivedAmount": 75 }
+  ],
+  "baseline": {
+    "orderCount": 3,
+    "orderAmount": 300.3,
+    "receivedAmount": 325.25
+  }
+}

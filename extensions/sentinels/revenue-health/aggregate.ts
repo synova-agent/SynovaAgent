@@ -4,6 +4,7 @@ import type { SentinelFinding } from '../../../src/sentinel/types';
 import type { GraphStoreReader, GraphTraversal } from '../../../src/l4/graph-traversal';
 import { createLogger } from '@synova/logger';
 import { computeRevenueGrowth } from './computes/compute-revenue-growth';
+import { computeSalesFourTotals, type SalesFourTotals } from './computes/compute-sales-four-totals';
 
 const log = createLogger('sentinel/revenue-health');
 
@@ -51,6 +52,48 @@ export const revenueHealthSentinel = {
 
       // 收入增长率 — 通过 compute 函数
       const growthResult = await computeRevenueGrowth(store, { teamId, traversal });
+
+      // 销售四总数 — 仅对显式携带订单来源字段的图节点运行；不把普通营收节点伪装成订单。
+      const salesNodes = revenueNodes.filter(n =>
+        n.props.orderId != null || n.props.orderAmount != null || n.props.receivedAmount != null,
+      );
+      if (salesNodes.length > 0) {
+        const baselineValue = salesNodes[0]?.props.salesBaseline;
+        let baseline: SalesFourTotals | null = null;
+        if (typeof baselineValue === 'object' && baselineValue !== null) {
+          const value = baselineValue as Record<string, unknown>;
+          baseline = {
+            orderCount: Number(value.orderCount),
+            orderAmount: Number(value.orderAmount),
+            receivedAmount: Number(value.receivedAmount),
+          };
+        }
+        const salesResult = computeSalesFourTotals({
+          rows: salesNodes.map(n => ({
+            orderId: typeof n.props.orderId === 'string' ? n.props.orderId : '',
+            orderAmount: Number(n.props.orderAmount),
+            receivedAmount: Number(n.props.receivedAmount),
+          })),
+          baseline,
+        });
+        if (salesResult.degraded || !salesResult.matched) {
+          findings.push({
+            id: salesResult.degraded ? 'rev_sales_totals_degraded' : 'rev_sales_totals_mismatch',
+            severity: 'warning',
+            title: salesResult.degraded ? '销售四总数无法完成对账' : '销售四总数与人工基线不一致',
+            description: salesResult.degraded
+              ? `销售四总数对账降级：${salesResult.warnings.join('；')}`
+              : '四总数存在显式差额，不能解释为一致。',
+            evidence: [
+              `计算值: ${JSON.stringify(salesResult.totals)}`,
+              `差额: ${JSON.stringify(salesResult.differences)}`,
+              ...salesResult.warnings,
+            ],
+            suggestion: '请核对订单来源行、重复业务键与独立人工基线。',
+            detectedAt: new Date().toISOString(),
+          });
+        }
+      }
 
       if (this.manifest) {
         const t = this.manifest.thresholds;

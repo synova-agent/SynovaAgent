@@ -1,0 +1,15 @@
+writeset:
+  - .claude/claims/1381.yaml
+  - extensions/sentinels/revenue-health/computes/compute-sales-four-totals.ts
+  - extensions/sentinels/revenue-health/aggregate.ts
+  - tests/sentinels/revenue-health/compute-sales-four-totals.test.ts
+  - tests/sentinels/revenue-health/fixtures/sales-four-totals-source.json
+  - docs/synova/product-lines/evidence/W0-1381-sales-four-totals.md
+  - scripts/pre-commit-check.sh
+  - tests/control-tower/pre-commit-extensions-wiring.test.sh
+done:
+  - verify: npx vitest run tests/sentinels/revenue-health/compute-sales-four-totals.test.ts
+  - verify: npm run lint
+  - verify: bash tests/control-tower/pre-commit-extensions-wiring.test.sh
+  - verify: git diff --check 0541ddab1c99e9deb376ff3370e1e5537365d3e4
+note: "#1381 W0 Mandate v3（评论 11959）：固定 base 0541ddab；销售源行确定性计算四总数，与独立人工基线显式对账；生产调用位于 extensions/sentinels/revenue-health/aggregate.ts；不提交真实客户数据，不自动合并。"
