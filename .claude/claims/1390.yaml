@@ -1,0 +1,19 @@
+# .claude/claims/1390.yaml — hooks 刷新验证与文档漂移清理
+writeset:
+  - .claude/claims/1390.yaml
+  - .github/workflows/ci.yml
+  - agents/P1-能跑通/AGENTS.md
+  - agents/P2-能部署/AGENTS.md
+  - agents/P3-一致性/AGENTS.md
+  - agents/P4-门禁/AGENTS.md
+  - agents/P5-清账/AGENTS.md
+  - agents/P6-事实与入口件/AGENTS.md
+  - agents/P7-交付自证与真值/AGENTS.md
+  - agents/P8-内置FDE/AGENTS.md
+  - agents/P9-包独立交付/AGENTS.md
+  - agents/P10-双仓与生态面/AGENTS.md
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1390 --root .
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: git -c core.whitespace=cr-at-eol diff --check
+note: "#1390 任务1+2：w0 rebase 后刷新共享 hooks，实测旧引用清除情况与审计报告漏网；漏网只报 CTO，不改 hooks。agents 与 ci.yml 只把已删脚本的现行时态引用改为历史时态或删除，不改逻辑；dual-repo-sync 仅 Issue 评论，#1381 独立 PR，不自行合并。"

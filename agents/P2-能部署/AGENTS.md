@@ -137,9 +137,9 @@ M1b（已合）｜U1 数据卫生（customer-config 只发模板骨架）
 **🔴 必须复用的四个既有约定**（重复实现即不合格）：
 ```
  ① **三态退出码**（0 通过／1 真红／**2 检查自身失败**）—— 见 `scripts/control-tower/pre-dispatch-check.sh`
- ② **`@降级` 契约 ＋ `SYNO_GATE_DEGRADED_LOG`**（degraded 日志字段 time/component/code/phase/retryable）—— 见 `check-gate-integrity.sh`
+ ② **`@降级` 契约 ＋ `SYNO_GATE_DEGRADED_LOG`**（degraded 日志字段 time/component/code/phase/retryable）—— 原 `check-gate-integrity.sh` 已于 #1385 退役
  ③ **UTF-8 强制**（D732）—— 见 `pre-dispatch-check.sh` 头部
- ④ **判别力自检**（"改坏必红"能够真的变红）—— 见 `check-gate-integrity.sh`／`check-verifiable-done.sh`
+ ④ **判别力自检**（"改坏必红"能够真的变红）—— 见 `check-verifiable-done.sh`；原 `check-gate-integrity.sh` 已于 #1385 退役
 ```
 🔴 **判据**：dev doc 缺「既有基础盘点」节 ⇒ **不许开工**；盘点结论写"确需新建"但**未说明为何不能复用** ⇒ **退回**。
 
