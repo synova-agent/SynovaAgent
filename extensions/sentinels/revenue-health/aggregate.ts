@@ -4,6 +4,7 @@ import type { SentinelFinding } from '../../../src/sentinel/types';
 import type { GraphStoreReader, GraphTraversal } from '../../../src/l4/graph-traversal';
 import { createLogger } from '@synova/logger';
 import { computeRevenueGrowth } from './computes/compute-revenue-growth';
+import { computeSalesFourTotals } from './computes/compute-sales-four-totals';
 
 const log = createLogger('sentinel/revenue-health');
 
@@ -51,6 +52,37 @@ export const revenueHealthSentinel = {
 
       // 收入增长率 — 通过 compute 函数
       const growthResult = await computeRevenueGrowth(store, { teamId, traversal });
+
+      // 销售四总数 — 仅以 ERP 应收字段识别销售行；普通营收节点不误入。
+      const salesNodes = revenueNodes.filter(n => n.props.receivables != null);
+      if (salesNodes.length > 0) {
+        const salesResult = computeSalesFourTotals({
+          rows: salesNodes.map(n => ({
+            orderId: typeof n.props.standardKey === 'string' ? n.props.standardKey : '',
+            orderAmount: Number(n.props.total_revenue),
+            receivedAmount: Number(n.props.total_revenue) - Number(n.props.receivables),
+          })),
+          // 写侧暂无独立人工基线；显式降级，绝不从同批来源行伪造 matched=true。
+          baseline: null,
+        });
+        if (salesResult.degraded || !salesResult.matched) {
+          findings.push({
+            id: salesResult.degraded ? 'rev_sales_totals_degraded' : 'rev_sales_totals_mismatch',
+            severity: 'warning',
+            title: salesResult.degraded ? '销售四总数无法完成对账' : '销售四总数与人工基线不一致',
+            description: salesResult.degraded
+              ? `销售四总数对账降级：${salesResult.warnings.join('；')}`
+              : '四总数存在显式差额，不能解释为一致。',
+            evidence: [
+              `计算值: ${JSON.stringify(salesResult.totals)}`,
+              `差额: ${JSON.stringify(salesResult.differences)}`,
+              ...salesResult.warnings,
+            ],
+            suggestion: '请核对订单来源行、重复业务键与独立人工基线。',
+            detectedAt: new Date().toISOString(),
+          });
+        }
+      }
 
       if (this.manifest) {
         const t = this.manifest.thresholds;

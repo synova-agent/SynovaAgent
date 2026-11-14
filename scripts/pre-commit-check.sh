@@ -900,10 +900,12 @@ if [ -n "$NEW_IMPL" ]; then
     for name in $EXPORTS; do
       [ -z "$name" ] && continue
       echo "$name" | grep -qi 'mock\|fake\|_internal\|_deprecated' && continue
-      # V3.8: 搜索范围扩大——任何 src/ 下的文件引用了就算"已接线"
-      WIRED=$(grep -rn "\b${name}\b" src/ --include="*.ts" 2>/dev/null \
+      # 内容 compute 的真实调用方就在 extensions/sentinels/**；不得要求伪造 src/ re-export。
+      WIRE_ROOTS="src/"
+      echo "$file" | grep -q '^extensions/sentinels/' && WIRE_ROOTS="src/ extensions/sentinels/"
+      WIRED=$(grep -rn "\b${name}\b" $WIRE_ROOTS --include="*.ts" 2>/dev/null \
         | grep -v "export.*${name}" | grep -v "$file" | grep -v "\.test\." | head -1 || true)
-      [ -z "$WIRED" ] && UNWIRED="${UNWIRED}${file}: export ${name} — 未被任何 src/ 文件引用\n"
+      [ -z "$WIRED" ] && UNWIRED="${UNWIRED}${file}: export ${name} — 未被任何生产文件引用\n"
     done
   done <<< "$NEW_IMPL"
 fi
@@ -923,8 +925,10 @@ if [ -n "$NEW_IMPL" ]; then
     for name in $EXPORTS; do
       [ -z "$name" ] && continue
       echo "$name" | grep -qi 'mock\|fake\|_internal\|_deprecated' && continue
-      CALL_SITES=$(grep -rn "\b${name}\b" src/server.ts src/index.ts src/agent/synova-agent.ts --include="*.ts" 2>/dev/null | grep -v "import.*${name}\b" | grep -v "export.*${name}\b" | grep -v "^\s*//\|^\s*\*" | head -1 || true)
-      IMPORT_ONLY=$(grep -rn "import.*\b${name}\b" src/server.ts src/index.ts src/agent/synova-agent.ts --include="*.ts" 2>/dev/null | head -1 || true)
+      CALL_ROOTS="src/server.ts src/index.ts src/agent/synova-agent.ts"
+      echo "$file" | grep -q '^extensions/sentinels/' && CALL_ROOTS="extensions/sentinels/"
+      CALL_SITES=$(grep -rn "\b${name}\b" $CALL_ROOTS --include="*.ts" 2>/dev/null | grep -v "import.*${name}\b" | grep -v "export.*${name}\b" | grep -v "^\s*//\|^\s*\*" | head -1 || true)
+      IMPORT_ONLY=$(grep -rn "import.*\b${name}\b" $CALL_ROOTS --include="*.ts" 2>/dev/null | head -1 || true)
       if [ -z "$CALL_SITES" ] && [ -n "$IMPORT_ONLY" ]; then
         DEEP_FAIL="${DEEP_FAIL}  ${file}: export ${name} — 已 import 但从未调用（空 import 绕过检测）\n"
       fi
