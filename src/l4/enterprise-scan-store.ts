@@ -8,6 +8,7 @@
  */
 import type Database from 'better-sqlite3';
 import type { SqliteGraphStore } from '../adapters/sqlite-graph-store';
+import { systemClock, type Clock } from '../services/clock';
 import { validateAndLog } from './sog-schema-validator';
 import { EnterpriseScanError, asEnterpriseScanError } from '../connectors/enterprise-scan/errors';
 import { stableId } from '../connectors/enterprise-scan/canonical';
@@ -87,7 +88,11 @@ function runRecord(row: RunRow): RunRecord {
 }
 
 export class EnterpriseScanStore implements EnterpriseScanStorePort {
-  constructor(private readonly db: Database.Database, private readonly graphStore: SqliteGraphStore) {
+  constructor(
+    private readonly db: Database.Database,
+    private readonly graphStore: SqliteGraphStore,
+    private readonly clock: Clock = systemClock,
+  ) {
     this.db.pragma('foreign_keys = ON');
   }
 
@@ -163,7 +168,7 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
           `INSERT INTO scan_runs(run_id, graph, operation, created_by, client_request_id, request_fingerprint, status, manifest_id, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(input.record.runId, input.record.graph, input.record.operation, input.record.createdBy,
-          input.record.clientRequestId, input.record.requestFingerprint, input.record.status, input.record.manifestId, new Date().toISOString());
+          input.record.clientRequestId, input.record.requestFingerprint, input.record.status, input.record.manifestId, this.clock.nowIso());
 
         this.writeEvidence(input);
         const objectIds = this.writeObjects(input.record.graph, input.model.objects);
@@ -202,7 +207,7 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
   }
 
   private writeEvidence(input: PersistScanInput): void {
-    const now = new Date().toISOString();
+    const now = this.clock.nowIso();
     for (const preflight of input.preflights) {
       const source = input.model.sources.find(item => item.source_id === preflight.authorization.sourceId);
       if (!source) continue;
@@ -274,7 +279,7 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
   }
 
   private writeAssertions(graph: string, assertions: AssertionDraft[], ids: Map<string, string>): void {
-    const now = new Date().toISOString();
+    const now = this.clock.nowIso();
     for (const assertion of assertions) {
       const target = ids.get(this.linkKey(assertion.targetKind, assertion.targetType, assertion.targetBusinessKey));
       if (!target) throw new EnterpriseScanError('SCHEMA_MAPPING_FAILED', 'mapping', `断言目标缺失: ${assertion.assertionKey}`);
@@ -361,7 +366,7 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
       `INSERT INTO scan_reports(report_id, graph, run_id, viewer_user_id, visibility_fingerprint, request_fingerprint, partial_visibility, report_json, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(reportId, record.graph, record.runId, viewer.sub, visibility, record.requestFingerprint,
-      model.partialVisibility ? 1 : 0, JSON.stringify(report), new Date().toISOString());
+      model.partialVisibility ? 1 : 0, JSON.stringify(report), this.clock.nowIso());
     for (const assertion of model.assertions) {
       this.db.prepare(
         'INSERT INTO scan_report_assertions(graph, report_id, assertion_version_id) VALUES (?, ?, ?)',
