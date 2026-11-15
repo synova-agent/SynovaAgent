@@ -1,0 +1,50 @@
+writeset:
+  - .claude/claims/1395.yaml
+  - deploy/dsh/profiles/synova-sidecar/package.json
+  - deploy/dsh/profiles/synova-sidecar/cordis.patch.yml
+  - deploy/dsh/profiles/synova-sidecar/cordis.yml
+  - deploy/dsh/profiles/synova-sidecar/pnpm-workspace.yaml
+  - src/runtime/dsh/sidecar.ts
+  - src/runtime/dsh/acp-client.ts
+  - src/runtime/dsh/errors.ts
+  - src/runtime/dsh/profile.ts
+  - src/runtime/dsh/session.ts
+  - src/runtime/dsh/events.ts
+  - src/runtime/dsh/tools.ts
+  - src/runtime/dsh/proposals.ts
+  - src/routes/dsh.ts
+  - src/server.ts
+  - src/mcp/http.ts
+  - src/mcp/tool-definitions.ts
+  - src/l2/proposal-manager.ts
+  - scripts/dsh-sidecar/start.ps1
+  - scripts/dsh-sidecar/stop.ps1
+  - scripts/dsh-sidecar/status.ps1
+  - scripts/dsh-sidecar/logs.ps1
+  - scripts/dsh-sidecar/turn.ps1
+  - scripts/dsh-sidecar/backup.ps1
+  - scripts/dsh-sidecar/restore.ps1
+  - scripts/dsh-sidecar/rollback.ps1
+  - tests/runtime/dsh/sidecar-lifecycle.test.ts
+  - tests/runtime/dsh/session-events.test.ts
+  - tests/runtime/dsh/readonly-tool.test.ts
+  - tests/runtime/dsh/security-cases.test.ts
+  - tests/runtime/dsh/idempotency.test.ts
+  - tests/runtime/dsh/isolation.test.ts
+  - tests/runtime/dsh/readonly-tool-real.test.ts
+  - tests/runtime/dsh/fixtures/synova-context-get.json
+  - tests/routes/dsh.test.ts
+  - docs/synova/product-lines/evidence/1A-T1-DSH实物核验.md
+  - docs/synova/product-lines/evidence/1A-T1-历史运行时盘点.md
+  - docs/synova/product-lines/evidence/1A-T1-Sidecar生命周期.md
+  - docs/synova/product-lines/evidence/1A-T2-认证API与SSE.md
+  - docs/synova/product-lines/evidence/1A-T3-只读领域工具.md
+  - docs/synova/product-lines/evidence/1A-T4-权限幂等隔离部署.md
+  - docs/synova/product-lines/evidence/1A-探针证据合集.md
+done:
+  - verify: npx vitest run tests/runtime/dsh/sidecar-lifecycle.test.ts
+  - verify: npx vitest run tests/routes/dsh.test.ts tests/runtime/dsh/session-events.test.ts
+  - verify: npx vitest run tests/runtime/dsh/readonly-tool.test.ts
+  - verify: npx vitest run tests/runtime/dsh/security-cases.test.ts tests/runtime/dsh/idempotency.test.ts tests/runtime/dsh/isolation.test.ts
+  - verify: npm run lint
+note: "1A 过渡 Mandate（Gitea #1395 评论 12306）冻结写集；Policy synova-1a-transitional-v1；base 8abdaa7cf；只允许申报 OFFLINE_IMPLEMENTATION_READY。"
