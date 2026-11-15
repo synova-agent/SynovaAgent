@@ -42,6 +42,7 @@ whenToUse: 写或改模块 DEV DOC、单任务卡、coding 编码指令时加载
 每个 coding session 只获得**一个**明确任务：目标；范围与不做；前置依赖；验收；失败和回退；需要退回 CTO 的停点。
 按用户可验证行为与依赖关系拆分，不为凑团队编制而拆任务；**垂直切片**——一条任务对应一条「真实入口 → 客户可见结果」的可验收路径，不按技术层／文件拆。
 任务卡字段＝`cto-handover` §7 的「CTO 给 coding」八字段。
+开工先跑 `python scripts/control-tower/claim_store.py --scaffold <issue>` 再动手；scaffold 已生成全量 writeset，纯文档任务只需补 done 的 verify 命令，不要求手写 writeset。
 
 ## 7 · §7 验收与反例
 

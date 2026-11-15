@@ -67,6 +67,7 @@ coding 返回：  实际改动／真实入口验证／测试与失败路径结�
                未验证项／需要 CTO 裁定的问题
 ```
 
+开工先跑 `python scripts/control-tower/claim_store.py --scaffold <issue>` 再动手；骨架已存在时不得默认覆盖，确需重建须显式 `--force`。
 共同纪律：coding 不静默改方向；CTO 不在验收时临时增加需求；方向变化先更新 DEV DOC；技术事实变化可修正实现方案但必须保留证据；不为交接另建第二套决策台账。
 
 ## 8 · 红线与最小记录
