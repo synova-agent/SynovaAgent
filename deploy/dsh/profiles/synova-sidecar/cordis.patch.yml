@@ -1,0 +1,63 @@
+# synova-sidecar — Synova-owned dsh profile patch layer (1A).
+#
+# Security posture (frozen by the 1A transitional mandate, policy
+# synova-1a-transitional-v1):
+#   * sandbox = read-only, workspaceRoot = the sidecar instance directory
+#     (the launcher pins cwd to instanceDir, so `process.cwd()` resolves there);
+#   * approval = ask — never inherits the desktop profile's `never`;
+#   * every shell / arbitrary-path / web / third-party MCP / delegation tool is
+#     explicitly disabled by id, so a default-on platform row cannot leak in;
+#   * no full-access sandbox token may appear in this file.
+#
+# Entry ids audited against the shipped `dsh-base` + `dsh-acp-app` bundles
+# (`dsh --profile acp --dump-default-config`, 2026-11-15, rc.1 install).
+# The 1A acceptance re-checks every id through `--dump-config` at runtime.
+
+- id: sandbox-policy
+  config:
+    mode: read-only
+    workspaceRoot: !!js process.cwd()
+
+- id: approval
+  config:
+    policy: ask
+
+# ── shell / arbitrary path / jobs ───────────────────────────────────────────
+- id: tool-bash
+  disabled: true
+- id: tool-pwsh
+  disabled: true
+- id: tool-fs
+  disabled: true
+- id: tool-fs-search
+  disabled: true
+- id: tool-jobs
+  disabled: true
+
+# ── skills / delegation / agent orchestration ───────────────────────────────
+- id: tool-skill
+  disabled: true
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+- id: tool-subagent-control
+  disabled: true
+- id: tool-agent-team
+  disabled: true
+- id: tool-workflow
+  disabled: true
+
+# ── web / third-party resources ─────────────────────────────────────────────
+- id: web
+  disabled: true
+- id: web-search-deepseek
+  disabled: true
+- id: web-deepseek-api
+  disabled: true
+- id: web-fetch-http
+  disabled: true
+- id: tool-web
+  disabled: true
+- id: mcp-resources
+  disabled: true

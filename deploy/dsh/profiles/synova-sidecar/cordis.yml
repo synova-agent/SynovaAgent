@@ -1,0 +1,7 @@
+# dsh profile root — an empty entry list. The tree is composed as patches:
+# each bundle in package.json's dsh.profile.bundles, then cordis.patch.yml,
+# then any --patch overlays. Edit cordis.patch.yml, not this file.
+#
+# Synova-owned profile: synova-sidecar (1A). Do NOT edit the shipped
+# acp/desktop/headless/web profiles from this repository.
+[]

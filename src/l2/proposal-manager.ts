@@ -13,7 +13,15 @@ const log = createLogger('l2/proposal-manager');
 
 export interface Proposal {
   id: string;
-  type: 'goal_create' | 'goal_update' | 'alert_create' | 'alert_resolve' | 'obstacle_add' | 'obstacle_close';
+  type:
+    | 'goal_create'
+    | 'goal_update'
+    | 'alert_create'
+    | 'alert_resolve'
+    | 'obstacle_add'
+    | 'obstacle_close'
+    /** 1A（#1395）：DSH 一轮运行产出的 Proposal 草案（proposal_only，不写经营决定）。 */
+    | 'agent_proposal_draft';
   title: string;
   description: string;
   confidence: number;
@@ -21,6 +29,8 @@ export interface Proposal {
   status: 'proposed' | 'confirmed' | 'rejected' | 'opinion' | 'expired';
   createdAt: string;
   expiresAt: string;
+  /** 1A 幂等键：同一 runId 重试不重复创建草案（旧库升级后才有此列）。 */
+  runId?: string;
   resolvedAt?: string;
   userFeedback?: string;
   suppressedUntil?: string;
@@ -58,12 +68,37 @@ export class ProposalManager {
       CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
       CREATE INDEX IF NOT EXISTS idx_proposals_created ON proposals(created_at);
     `);
+    this.ensureRunIdColumn();
+  }
+
+  /**
+   * 1A 幂等迁移：旧 `proposals` 表（无 run_id）在构造时就地升级。
+   * 幂等：用 PRAGMA 判列存在再 ALTER；索引 IF NOT EXISTS（重启/重复构造都安全）。
+   */
+  private ensureRunIdColumn(): void {
+    const columns = this.db.prepare('PRAGMA table_info(proposals)').all() as Array<{ name: string }>;
+    if (!columns.some(column => column.name === 'run_id')) {
+      this.db.exec('ALTER TABLE proposals ADD COLUMN run_id TEXT');
+      log.info('proposals 表已升级：新增 run_id 列（1A 幂等键）');
+    }
+    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_proposals_run_id ON proposals(run_id) WHERE run_id IS NOT NULL');
   }
 
   propose(opts: {
     type: Proposal['type']; title: string; description: string;
     confidence: number; source: string;
+    /** 1A：幂等键（缺省 = 旧行为，无幂等）。 */
+    runId?: string;
+    /** 1A：企业归属（写入 source = `enterprise:<id>`，不改表契约）。 */
+    enterpriseId?: string;
   }): Proposal {
+    if (opts.runId !== undefined) {
+      const existing = this.getByRunId(opts.runId);
+      if (existing !== null) {
+        log.info({ id: existing.id, runId: opts.runId }, '提议已存在（runId 幂等，返回原记录）');
+        return existing;
+      }
+    }
     const suppressed = this.db.prepare('SELECT suppressed_until FROM proposal_suppressions WHERE proposal_type=?').get(opts.type) as { suppressed_until: number } | undefined;
     if (suppressed && Date.now() < suppressed.suppressed_until) {
       return {
@@ -74,21 +109,34 @@ export class ProposalManager {
       };
     }
 
+    const source = opts.enterpriseId === undefined ? opts.source : `enterprise:${opts.enterpriseId}`;
     const proposal: Proposal = {
       id: `prop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
       type: opts.type, title: opts.title, description: opts.description,
-      confidence: opts.confidence, source: opts.source,
+      confidence: opts.confidence, source,
       status: 'proposed',
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
+      ...(opts.runId === undefined ? {} : { runId: opts.runId }),
     };
 
-    this.db.prepare(`INSERT INTO proposals (id,type,title,description,confidence,source,status,created_at,expires_at)
-      VALUES (?,?,?,?,?,?,?,?,?)`).run(
-      proposal.id, proposal.type, proposal.title, proposal.description,
-      proposal.confidence, proposal.source, proposal.status,
-      proposal.createdAt, proposal.expiresAt,
-    );
+    try {
+      this.db.prepare(`INSERT INTO proposals (id,type,title,description,confidence,source,status,created_at,expires_at,run_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+        proposal.id, proposal.type, proposal.title, proposal.description,
+        proposal.confidence, proposal.source, proposal.status,
+        proposal.createdAt, proposal.expiresAt,
+        opts.runId ?? null,
+      );
+    } catch (err: unknown) {
+      // 并发同 runId：唯一索引兜底，冲突后重查（不吞错：只处理已知 UNIQUE 冲突）。
+      const message = err instanceof Error ? err.message : String(err);
+      if (opts.runId !== undefined && message.includes('UNIQUE constraint failed')) {
+        const raced = this.getByRunId(opts.runId);
+        if (raced !== null) return raced;
+      }
+      throw err;
+    }
     log.info({ id: proposal.id, type: opts.type }, '提议已创建 (SQLite)');
     return proposal;
   }
@@ -117,6 +165,12 @@ export class ProposalManager {
     const proposal = this.rowToProposal({ ...row, status, resolved_at: now, user_feedback: feedback });
     log.info({ id, action }, '提议已处理');
     return { ok: true, proposal };
+  }
+
+  /** 按 runId 查草案（1A 幂等；不存在返回 null）。 */
+  getByRunId(runId: string): Proposal | null {
+    const row = this.db.prepare('SELECT * FROM proposals WHERE run_id=?').get(runId) as Record<string, unknown> | undefined;
+    return row === undefined ? null : this.rowToProposal(row);
   }
 
   getPending(): Proposal[] {
@@ -159,6 +213,7 @@ export class ProposalManager {
       createdAt: r.created_at as string, expiresAt: r.expires_at as string,
       resolvedAt: r.resolved_at as string | undefined,
       userFeedback: r.user_feedback as string | undefined,
+      ...(r.run_id === null || r.run_id === undefined ? {} : { runId: r.run_id as string }),
     };
   }
 }
