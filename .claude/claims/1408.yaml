@@ -1,0 +1,27 @@
+# .claude/claims/1408.yaml — #1408 角色真源统一为 WorkspaceRole（扫描授权契约修正）
+# 纪律：只列本 PR 真正改动的文件；变更集 ⊆ writeset（check-brief-vs-code G12）。
+# DEV DOC: Issue #1408 评论 12664（v7-2026-11-16）｜Mandate: 评论 12678｜T-2 #9 口径: 评论 12680
+writeset:
+  - .claude/claims/1408.yaml
+  - memory/notes/implemented/1408-role-vocab.md
+  - src/connectors/enterprise-scan/types.ts
+  - src/connectors/enterprise-scan/visibility.ts
+  - src/l4/enterprise-scan-store.ts
+  - src/middleware/rbac.ts
+  - src/routes/enterprise-scan.ts
+  - tests/enterprise-scan/file-race.test.ts
+  - tests/enterprise-scan/fixtures.ts
+  - tests/enterprise-scan/isolation.test.ts
+  - tests/enterprise-scan/store-role-read.test.ts
+  - tests/enterprise-scan/test-helpers.ts
+  - tests/enterprise-scan/variants.test.ts
+  - tests/enterprise-scan/visibility.test.ts
+  - tests/middleware/rbac-role-validation.test.ts
+  - tests/routes/enterprise-scan.integration.test.ts
+  - tests/routes/enterprise-scan.roles.integration.test.ts
+done:
+  - verify: npx vitest run tests/enterprise-scan tests/routes tests/middleware tests/security
+  - verify: npm run lint
+  - verify: SYNO_CI=1 npm run check:architecture
+  - verify: git diff --check
+note: "#1408 角色真源统一为 WorkspaceRole：types.ts 唯一真源 WORKSPACE_ROLES(satisfies)+ScanRole；visibility.ts 重写 canViewSource（个人短路在前、角色闸只作用部门路径、liaison 只认个人级、ga/未知 deny-all、admin 全域）+ isWorkspaceRole/toScanViewer(三种 SCOPE_DENIED)；store.ts 读路径 rawRoles 守卫改名+禁 ?? []+allowedRolesDeclared 取原始长度+每请求每源一条 warn；routes viewerOf 改用 toScanViewer；rbac extractRbacContext 加枚举校验+reason:invalid_role（全局有意收紧 D-v）。测试：T-1 6×2 真身份链、T-2 21 行(manager 镜像 27 格)、T-3/T-4/T-6/T-7/T-9、store 读路径、T-10 11 处改坏必红。"

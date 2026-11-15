@@ -41,8 +41,8 @@ beforeAll(async () => {
   if (!address || typeof address === 'string') throw new Error('真实服务器未返回端口');
   baseUrl = `http://127.0.0.1:${address.port}`;
   seedManifest(getDatabase(), { root });
-  ownerToken = signJwtToken({ sub: 'owner-a', role: 'owner', orgId: 'org-a', departmentIds: ['dept-delivery'] }) ?? '';
-  otherOrgToken = signJwtToken({ sub: 'owner-b', role: 'owner', orgId: 'org-b', departmentIds: [] }) ?? '';
+  ownerToken = signJwtToken({ sub: 'owner-a', role: 'admin', orgId: 'org-a', departmentIds: ['dept-delivery'] }) ?? '';
+  otherOrgToken = signJwtToken({ sub: 'owner-b', role: 'admin', orgId: 'org-b', departmentIds: [] }) ?? '';
   if (!ownerToken || !otherOrgToken) throw new Error('JWT签发失败');
 }, 90_000);
 

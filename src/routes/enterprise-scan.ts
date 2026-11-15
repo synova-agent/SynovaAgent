@@ -3,6 +3,7 @@ import { createLogger } from '@synova/logger';
 import type { JwtPayload } from '../middleware/auth';
 import type { EnterpriseScanService } from '../agent/enterprise-scan-service';
 import { asEnterpriseScanError, EnterpriseScanError } from '../connectors/enterprise-scan/errors';
+import { toScanViewer } from '../connectors/enterprise-scan/visibility';
 import type { ScanViewer } from '../connectors/enterprise-scan/types';
 
 const router = Router();
@@ -10,10 +11,14 @@ const log = createLogger('routes/enterprise-scan');
 
 type AuthedRequest = Request & { auth?: JwtPayload };
 
+/**
+ * #1408：验签身份 → `ScanViewer` 的**唯一**收窄点（`toScanViewer`）。
+ *
+ * 失败语义：缺 sub/orgId、角色缺失/非枚举、`ga` ⇒ `SCOPE_DENIED`（403）+ 固定 message + 零写入。
+ * 旧实现在此处只做真值校验，`role` 直接透传 ⇒ 未知角色到 `canViewSource` 才被拒、且 `ga` 无固定口径。
+ */
 function viewerOf(req: AuthedRequest): ScanViewer {
-  const auth = req.auth;
-  if (!auth?.sub || !auth.orgId || !auth.role) throw new EnterpriseScanError('SCOPE_DENIED', 'request', '缺少验签企业身份');
-  return { sub: auth.sub, role: auth.role, orgId: auth.orgId, departmentIds: auth.departmentIds };
+  return toScanViewer(req.auth);
 }
 
 function serviceOf(req: Request): EnterpriseScanService {
