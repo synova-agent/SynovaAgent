@@ -16,6 +16,10 @@ export function canonicalJson(value: unknown): string {
   throw new EnterpriseScanError('VALIDATION_ERROR', 'request', '载荷含不可规范化值');
 }
 
+function sha256Text(value: string): string {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
 export function fingerprint(value: unknown): string {
   return sha256Text(canonicalJson(value));
 }
