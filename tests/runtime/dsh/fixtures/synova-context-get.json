@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "problemId": "problem-revenue-health-2026q3",
+  "count": 3,
+  "items": [
+    {
+      "layer": "②",
+      "$id": "ontology.entity.sales_revenue",
+      "cycleVersion": "cycle-sales@v3",
+      "sentinelRun": "sr-2026-11-14T02:00:00Z",
+      "period": "2026-07",
+      "defVersion": "def-2026.10",
+      "evidenceId": "ev-2026-11-13-001",
+      "status": "observed",
+      "visibility": "enterprise",
+      "source": { "kind": "synova.domain", "api": "synthetic-context-v1" }
+    },
+    {
+      "layer": "③",
+      "$id": "sentinel.sales_four_totals",
+      "cycleVersion": "cycle-sales@v3",
+      "sentinelRun": "sr-2026-11-14T02:00:00Z",
+      "period": "2026-07",
+      "defVersion": "def-2026.10",
+      "evidenceId": "ev-2026-11-13-002",
+      "status": "partial",
+      "visibility": "enterprise",
+      "source": { "kind": "synova.domain", "api": "synthetic-context-v1" }
+    },
+    {
+      "layer": "④",
+      "$id": "param.sales_gross_margin",
+      "cycleVersion": "cycle-sales@v3",
+      "sentinelRun": "sr-2026-11-14T02:00:00Z",
+      "period": "2026-07",
+      "defVersion": "def-2026.10",
+      "evidenceId": "ev-2026-11-13-003",
+      "status": "observed",
+      "visibility": "enterprise",
+      "source": { "kind": "synova.domain", "api": "synthetic-context-v1" }
+    }
+  ]
+}
