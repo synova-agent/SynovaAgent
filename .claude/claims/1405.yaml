@@ -1,4 +1,5 @@
-# .claude/claims/1405.yaml — #1405（维护 · 既有红清理）：两条测试侧红 → 绿 · 写集声明
+# .claude/claims/1405.yaml — #1405（维护 · 既有红清理）：三条测试侧红 → 绿 · 写集声明
+# 范围：原正文红 A/红 B + CTO 评论 12545 追加的红 C（tests/routes/enterprise.test.ts）。
 # 纪律：只列本 PR 真正改动的文件，不预授权。
 # 边界：只动本次允许的测试侧 + 登记件；不碰 src/** / extensions/** / scripts/** / .gitea/** / customer-config/**。
 # 判据：原有断言一条不删（8 类目 / 扩展层非空 / 实例可加载且零 violations / 9 个 number 字面相等 /
@@ -9,10 +10,12 @@ writeset:
   - tests/l3/graphbridge-wiring.test.ts
   - tests/ontology/fixtures/synthetic-activity-production.json
   - tests/ontology/instance-loading.test.ts
+  - tests/routes/enterprise.test.ts
 done:
-  - verify: npx vitest run tests/l3/graphbridge-wiring.test.ts tests/ontology/instance-loading.test.ts # 2 files / 30 tests 全绿
+  - verify: npx vitest run tests/l3/graphbridge-wiring.test.ts tests/ontology/instance-loading.test.ts tests/routes/enterprise.test.ts # 3 files / 52 tests 全绿
+  - verify: npx vitest run --config <临时 config：继承 vitest.config.ts 并追加 scripts/ci/core-tests.sh:158-178 同款 setup> tests/routes/enterprise.test.ts # 复现 CI 零断言判据：修前 CORE_ZERO_ASSERTIONS / 修后 22 passed
   - verify: npm run lint # tsc --noEmit rc=0
   - verify: SYNO_CI=1 npm run check:architecture # rc=0「架构检查: 全部通过」
   - verify: git ls-tree -r HEAD -- customer-config # 0 项（#842 客户实例脱敏口径）
   - verify: git diff --name-only abf3ef0d4..HEAD # 与本 writeset 精确一致
-note: "#1405 维护票（测试侧，零产品行为改动）：红 A = tests/l3/graphbridge-wiring.test.ts 的 fakeStore.createNodes 丢 props ⇒ createGraphBridge 包装的 store.createNode 在 undefined 上取 observed_at 抛 TypeError，被 upsertFromHONA 的 catch 吞掉 ⇒ 成功模块也 0 节点（expected +0 to be 1）；修法 = 夹具透传 n.props 并补三条身份/包装器断言（type / props.name='hona' / props.observed_at 为 string），仍证「失败模块不产生节点、成功模块产生节点」。红 B = tests/ontology/instance-loading.test.ts 断言客户实例 customer-config/ontology-instances/wani-baby/activity-production.json 入库，但该前提已被 Issue #842（裁 302-D3 客户实例脱敏、移出公开面）推翻，仓内 git ls-tree 0 项；修法 = 该 describe 保留仓内真件两面（Schema 8 类目 / 扩展层非空）＋新增合规不变式「客户实例不入库」，实例面判据改由**静态合成夹具** tests/ontology/fixtures/synthetic-activity-production.json（synthetic-org，无客户标识）承载，仍走同一 loadInstanceLayer + 仓内 Schema/扩展层，9 个 number 逐条字面相等 + agent_type_recommendation 前缀逐条断言不删。判别力：A 改坏（fakeStore 彻底不写节点）⇒ expected +0 to be 1；B 改坏（合成件 headcount 10→42）⇒ 属性 headcount 字面值 expected 42 to be 10。"
+note: "#1405 维护票（测试侧，零产品行为改动）：红 A = tests/l3/graphbridge-wiring.test.ts 的 fakeStore.createNodes 丢 props ⇒ createGraphBridge 包装的 store.createNode 在 undefined 上取 observed_at 抛 TypeError，被 upsertFromHONA 的 catch 吞掉 ⇒ 成功模块也 0 节点（expected +0 to be 1）；修法 = 夹具透传 n.props 并补三条身份/包装器断言（type / props.name='hona' / props.observed_at 为 string），仍证「失败模块不产生节点、成功模块产生节点」。红 B = tests/ontology/instance-loading.test.ts 断言客户实例 customer-config/ontology-instances/wani-baby/activity-production.json 入库，但该前提已被 Issue #842（裁 302-D3 客户实例脱敏、移出公开面）推翻，仓内 git ls-tree 0 项；修法 = 该 describe 保留仓内真件两面（Schema 8 类目 / 扩展层非空）＋新增合规不变式「客户实例不入库」，实例面判据改由**静态合成夹具** tests/ontology/fixtures/synthetic-activity-production.json（synthetic-org，无客户标识）承载，仍走同一 loadInstanceLayer + 仓内 Schema/扩展层，9 个 number 逐条字面相等 + agent_type_recommendation 前缀逐条断言不删。红 C（CTO 评论 12545 追加）= tests/routes/enterprise.test.ts 的 bcrypt 用例把唯一断言放在 catch 里，而 bcrypt 6.0.0 对 rounds=0 默认化为 10 轮不抛（本机实测 resolved）⇒ 断言从不执行 ⇒ CI 零断言判据 scripts/ci/core-tests.sh:170-177 抛 CORE_ZERO_ASSERTIONS（本机无该 hook 故假绿；已用同款 hook 本地复现）；修法 = 注入 bcrypt.hash 失败后真调 /api/enterprise/register，断言 500 + ok:false + code=INTERNAL_ERROR + degraded:true（真跑产品降级路径 user-store.ts:89 → enterprise.ts:121-125）。判别力：A 改坏（fakeStore 彻底不写节点）⇒ expected +0 to be 1；B 改坏（合成件 headcount 10→42）⇒ 属性 headcount 字面值 expected 42 to be 10；C 改坏（抽掉失败注入）⇒ expected 200 to be 500。登记不修：tests/l4/ontology-loader-param-bridge-1031.test.ts 在 CI 的 4 条红属另一根因（本票写集外）。"
