@@ -13,6 +13,7 @@ import { validateAndLog } from './sog-schema-validator';
 import { EnterpriseScanError, asEnterpriseScanError } from '../connectors/enterprise-scan/errors';
 import { stableId } from '../connectors/enterprise-scan/canonical';
 import { recheckAuthorizedSource } from '../connectors/enterprise-scan/path-authorizer';
+import { describeSource } from '../connectors/enterprise-scan/scanner';
 import type {
   AssertionDraft,
   EnterpriseScanStorePort,
@@ -208,24 +209,37 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
 
   private writeEvidence(input: PersistScanInput): void {
     const now = this.clock.nowIso();
+    // 🔴 反序 GET 修复（1B 复核阻塞项 1）：证据版本按「**全部授权来源**」随 run 落库。
+    //   旧实现只在 `input.model.sources`（= **创建者**可见集）里找来源，找不到即 `continue`
+    //   ⇒ 不可见来源的证据版本从未落库 ⇒ 更宽可见者 GET 时 `scan_assertion_evidence` 的
+    //   复合外键 `(graph, evidence_version_id)` 找不到父行 ⇒ TRANSACTION_ABORTED（HTTP 500）。
+    //
+    //   「落库」≠「回显」：这些行不进入任何 viewer 的报告 —— 报告仍只由 `model.sources`
+    //   （当前 viewer 可见集）生成，因此不改变可见范围语义（DEV DOC §9）。
+    //   身份（sourceId/evidenceId/evidenceVersionId）一律取自 `describeSource()` 单一真源。
     for (const preflight of input.preflights) {
-      const source = input.model.sources.find(item => item.source_id === preflight.authorization.sourceId);
-      if (!source) continue;
+      const described = describeSource(input.record.graph, preflight);
+      const visible = input.model.sources.find(item => item.source_id === described.sourceId);
       this.db.prepare(
         `INSERT INTO scan_sources(source_id, graph, source_kind, locator, visibility, read_scope_json, egress_scope_json, created_by, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(source_id) DO NOTHING`,
-      ).run(preflight.authorization.sourceId, input.record.graph, preflight.authorization.format,
+      ).run(described.sourceId, input.record.graph, preflight.authorization.format,
         preflight.authorization.allowedPath, preflight.authorization.visibility,
         JSON.stringify({ required_as_of: preflight.authorization.requiredAsOf ?? null }), JSON.stringify({ model: false }), input.viewer.sub, now);
       this.db.prepare(
         'INSERT INTO scan_evidence(evidence_id, graph, source_id, registered_by, registered_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(evidence_id) DO NOTHING',
-      ).run(source.evidence_id, input.record.graph, source.source_id, input.viewer.sub, now);
+      ).run(described.evidenceId, input.record.graph, described.sourceId, input.viewer.sub, now);
       this.db.prepare(
         `INSERT INTO scan_evidence_versions(evidence_version_id, graph, evidence_id, sha256, size, mtime_ms, observed_at, period, valid_from, valid_to, parse_status, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(graph, evidence_id, sha256) DO NOTHING`,
-      ).run(source.evidence_version_id, input.record.graph, source.evidence_id, source.sha256, source.size,
-        preflight.mtimeMs, source.observed_at, source.period, source.valid_from, source.valid_to, source.evidence_status, now);
+      ).run(described.evidenceVersionId, input.record.graph, described.evidenceId,
+        preflight.sha256, preflight.size, preflight.mtimeMs,
+        visible?.observed_at ?? new Date(preflight.mtimeMs).toISOString(),
+        // 不可见来源不参与本次建模 ⇒ 期间/时态/证据态未知：留 NULL，`parse_status` 记 `pending`（未确立），
+        // 不冒充 confirmed，也不据此影响任何可见性计算或派生值。
+        visible?.period ?? null, visible?.valid_from ?? null, visible?.valid_to ?? null,
+        visible?.evidence_status ?? 'pending', now);
     }
   }
 
@@ -306,7 +320,9 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
           const message = error instanceof Error ? error.message : String(error);
           const assertionParent = this.db.prepare('SELECT COUNT(*) AS n FROM scan_assertion_versions WHERE graph = ? AND assertion_version_id = ?').get(graph, assertion.assertionVersionId) as { n: number };
           const evidenceParent = this.db.prepare('SELECT COUNT(*) AS n FROM scan_evidence_versions WHERE graph = ? AND evidence_version_id = ?').get(graph, evidence.evidenceVersionId) as { n: number };
-          throw new Error(`${assertion.assertionKey} 证据关联 ${evidence.evidenceVersionId} 失败: ${message}; assertionParent=${assertionParent.n}; evidenceParent=${evidenceParent.n}`);
+          // 🔴 内部标识不得外泄（复核阻塞项 1 附带项）：路由 `respondError` 把本 message 原样写进
+          //   500 响应体，故此处**只**保留 SQLite 原始原因与父行计数（计数不是标识，不指向具体对象）。
+          throw new Error(`证据关联失败: ${message}; assertionParent=${assertionParent.n}; evidenceParent=${evidenceParent.n}`);
         }
       }
     }

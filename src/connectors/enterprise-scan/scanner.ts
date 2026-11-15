@@ -47,7 +47,14 @@ interface AssertionInput {
   fingerprintMaterial: unknown;
 }
 
-function descriptor(graph: string, preflight: PreflightSource): SourceDescriptor {
+/**
+ * 来源身份（`sourceId` / `evidenceId` / `evidenceVersionId`）的**单一真源**。
+ *
+ * 🔴 导出原因（1B 复核阻塞项 1）：L4 持久化层必须为「**全部授权来源**」落证据版本，
+ *   而不能只落创建者可见集 —— 否则更宽可见者 GET 时 `scan_assertion_evidence` 的复合外键
+ *   找不到父行。两条路径必须用**同一公式**推 ID，故此处导出、由 store 复用，禁止第二份公式。
+ */
+export function describeSource(graph: string, preflight: PreflightSource): SourceDescriptor {
   const sourceId = preflight.authorization.sourceId;
   const evidenceId = stableId('evidence', graph, sourceId);
   return {
@@ -132,7 +139,7 @@ function sourcePeriod(source: SourceDescriptor, batches: DeliveryBatchRow[], das
 }
 
 export function buildScanModel(graph: string, preflights: PreflightSource[], partialVisibility: boolean): ScanModel {
-  const descriptors = preflights.map(preflight => descriptor(graph, preflight));
+  const descriptors = preflights.map(preflight => describeSource(graph, preflight));
   const byName = new Map(descriptors.map(item => [item.fileName, item]));
   const batchSource = byName.get('delivery_batches.csv');
   const dashboardSource = byName.get('delivery_dashboard.csv');
