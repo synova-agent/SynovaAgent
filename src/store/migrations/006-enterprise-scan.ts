@@ -1,3 +1,19 @@
+/**
+ * 迁移 006 — 企业扫描（#1398 / 1B）：11 张 scan_* 表、索引、触发器。
+ *
+ * 🔴 文件序号为什么是 006（CTO 裁定 12522 D-3）：
+ *   `#1258`（分支 `ct/1258a*`，**尚未合 main**）已占用 `005-session-events-v2.ts` 且声明 `version = 6`。
+ *   本卡为**避让文件名撞车**取 006，`version` 仍保持 §6 契约的 **6**（`SCHEMA_VERSION = 6`）。
+ *   `assertMigrationChain` 只校验「版本连号 `[2,3,4,5,6]` + 末条 == SCHEMA_VERSION」，
+ *   文件序号 `NNN+1` 是历史惯例、不是契约 ⇒ 序号与 version 不同步**不会**被门禁误判。
+ *
+ * 🔴 合入顺序约束（在案）：若 `#1258` **晚于**本票合入，则 `#1258` 必须自行改为 `007 / v7` 并重跑；
+ *   禁止二者以同号 `v6` 并存（`assertMigrationChain` 会在**模块 import 期**抛
+ *   `MIGRATION_DUPLICATE_VERSION` / `MIGRATION_CHAIN_GAP` ⇒ 启动即红，不是运行时才炸）。
+ *   若顺序反转（`#1258` 先合），本文件须重编号为 `007 / v7` 并同步 `SCHEMA_VERSION`。
+ *
+ * 回滚：无自动 down migration；用迁移前 SQLite `.backup` 恢复 v5（禁 DROP 新表冒充回滚）。
+ */
 import type Database from 'better-sqlite3';
 import type { Migration } from '../schema-migration';
 
