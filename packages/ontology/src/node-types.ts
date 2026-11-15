@@ -1,7 +1,7 @@
 /**
  * @synova/ontology — Node Type Constants
  *
- * 29 node type string constants derived from extensions/ontology/ JSON Schema.
+ * Node type string constants derived from extensions/ontology/ JSON Schema.
  * Replaces old SOGNodeType enum. DO NOT add backward-compatible aliases.
  *
  * Source of truth: extensions/ontology/ (activity/, outcome/, resource/)
@@ -9,7 +9,7 @@
  * @module @synova/ontology/node-types
  */
 
-// ─── Activity Types (8) ───
+// ─── Activity Types ───
 export const NodeType = {
   ACTIVITY_PRODUCTION: 'activity/production',
   ACTIVITY_ACQUISITION: 'activity/acquisition',
@@ -19,8 +19,9 @@ export const NodeType = {
   ACTIVITY_GOVERNANCE: 'activity/governance',
   ACTIVITY_MAINTENANCE: 'activity/maintenance',
   ACTIVITY_COMPLIANCE: 'activity/compliance',
+  ACTIVITY_DELIVERY_BATCH: 'activity/delivery_batch',
 
-  // ─── Outcome Types (8) ───
+  // ─── Outcome Types ───
   OUTCOME_FINANCIAL: 'outcome/financial',
   OUTCOME_MARKET: 'outcome/market',
   OUTCOME_OPERATIONAL: 'outcome/operational',
@@ -29,8 +30,9 @@ export const NodeType = {
   OUTCOME_RISK: 'outcome/risk',
   OUTCOME_COMPETITIVE: 'outcome/competitive',
   OUTCOME_EXTERNAL: 'outcome/external',
+  OUTCOME_DELIVERY_RESULT: 'outcome/delivery_result',
 
-  // ─── Resource Types (13) ───
+  // ─── Resource Types ───
   RESOURCE_MONEY: 'resource/money',
   RESOURCE_PERSON: 'resource/person',
   RESOURCE_TEAM: 'resource/team',
@@ -44,6 +46,7 @@ export const NodeType = {
   RESOURCE_LOCATION: 'resource/location',
   RESOURCE_CHANNEL: 'resource/channel',
   RESOURCE_SUPPLIER: 'resource/supplier',
+  RESOURCE_DELIVERY_TEAM: 'resource/delivery_team',
 
   // ─── Pool Types: 存量池(9) — 15概念节点池体系 §一 ───
   POOL_CAPITAL: 'pool/capital',
@@ -68,7 +71,7 @@ export const NodeType = {
   EXTERNAL_BASELINE: 'external/baseline',
 } as const;
 
-/** Union type of all 29 node type string values */
+/** Union type of canonical node type string values */
 export type NodeType = typeof NodeType[keyof typeof NodeType];
 
 // ─── Category helpers ───
@@ -81,6 +84,7 @@ export const ACTIVITY_TYPES: readonly NodeType[] = [
   NodeType.ACTIVITY_GOVERNANCE,
   NodeType.ACTIVITY_MAINTENANCE,
   NodeType.ACTIVITY_COMPLIANCE,
+  NodeType.ACTIVITY_DELIVERY_BATCH,
 ] as const;
 
 export const OUTCOME_TYPES: readonly NodeType[] = [
@@ -92,6 +96,7 @@ export const OUTCOME_TYPES: readonly NodeType[] = [
   NodeType.OUTCOME_RISK,
   NodeType.OUTCOME_COMPETITIVE,
   NodeType.OUTCOME_EXTERNAL,
+  NodeType.OUTCOME_DELIVERY_RESULT,
 ] as const;
 
 export const RESOURCE_TYPES: readonly NodeType[] = [
@@ -108,6 +113,7 @@ export const RESOURCE_TYPES: readonly NodeType[] = [
   NodeType.RESOURCE_LOCATION,
   NodeType.RESOURCE_CHANNEL,
   NodeType.RESOURCE_SUPPLIER,
+  NodeType.RESOURCE_DELIVERY_TEAM,
 ] as const;
 
 // ─── Pool category arrays ───
@@ -133,7 +139,7 @@ export const EXTERNAL_TYPES: readonly NodeType[] = [
   NodeType.EXTERNAL_BASELINE,
 ] as const;
 
-/** All 45 node types in a flat array (29 original + 16 new) */
+/** All canonical node types in a flat array */
 export const ALL_NODE_TYPES: readonly NodeType[] = [
   ...ACTIVITY_TYPES,
   ...OUTCOME_TYPES,

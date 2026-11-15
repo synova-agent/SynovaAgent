@@ -38,6 +38,7 @@ import type { Database } from 'better-sqlite3';
 // 类型侧只取 L4 契约（DecisionInput/DecisionResult），**运行时**写入口在工厂函数内动态 import
 // ——与既有 GraphStore 动态 import 同款（1c / 3b / 5x），保持启动期加载顺序不变。
 import type { DecisionInput, DecisionResult } from '../l4/decision-capture';
+import type { EnterpriseScanService } from '../agent/enterprise-scan-service';
 import { resolveMasterSecret } from '../security/master-secret';
 import { listDecisionRows, setDecisionLedgerReader, type DecisionLedgerReaderPort } from '../l4/decision-ledger-readback';
 
@@ -216,6 +217,7 @@ export interface BootstrapServices {
   stateMachine: PhaseStateMachine;
   wiring: OrchestrationWiring;
   graphStore?: unknown;
+  enterpriseScanService?: EnterpriseScanService;
   /**
    * K12-08(#191): 决策台账装配口（回调工厂）—— 装配层用 Bootstrap Phase 1c 的真图存储实例构造；
    * 图存储缺席时**不构造**（undefined），消费方据此不注入 `onDecision`（降级不静默，铁律 24/31）。
@@ -771,6 +773,7 @@ export class Bootstrap {
       stateMachine: this.ctx.get<PhaseStateMachine>('stateMachine')!,
       wiring: this.ctx.get<OrchestrationWiring>('wiring')!,
       graphStore,
+      enterpriseScanService: this.ctx.get<EnterpriseScanService>('enterpriseScanService'),
       ...(decisionCapture !== undefined ? { decisionCapture } : {}),
       agentMemory: this.ctx.get('agentMemory'),
       connectorToolRegistry: this.ctx.get('connectorToolRegistry'),
@@ -890,6 +893,10 @@ export class Bootstrap {
           const { SqliteGraphStore } = await import('../adapters/sqlite-graph-store');
           const store = new SqliteGraphStore(ctx.require<Database>('db'));
           ctx.set('graphStore', store);
+          const { EnterpriseScanStore } = await import('../l4/enterprise-scan-store');
+          const { EnterpriseScanService } = await import('../agent/enterprise-scan-service');
+          const enterpriseScanStore = new EnterpriseScanStore(ctx.require<Database>('db'), store);
+          ctx.set('enterpriseScanService', new EnterpriseScanService(enterpriseScanStore));
           const { getOntologyEventBus } = await import('../l5/ontology-event-bus');
           getOntologyEventBus(store as never);
 

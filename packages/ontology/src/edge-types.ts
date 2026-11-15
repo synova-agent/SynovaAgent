@@ -1,7 +1,7 @@
 /**
  * @synova/ontology — Edge Type Constants
  *
- * 42 edge type string constants from extensions/ontology/edge-types/ JSON Schema.
+ * Edge type string constants from extensions/ontology/edge-types/ JSON Schema.
  * I2-Phase2: 7 KEEP + 4 MODIFY-rename + 2 @deprecated (DEPLOYS/FUNDS) + 38 NEW = 51
  * (55 JSON files - 4 renamed MODIFY old names = 51 EdgeType entries)
  * +1 (#190 K12-07 目标分解边 GOAL_DECOMPOSITION) = 52 条目 / 56 JSON 文件
@@ -105,12 +105,13 @@ export const EdgeType = {
   //   ⚠️ 命名待《命名权威登记册》N3/N4 认领确认（CTO 裁定 §2）
   GOAL_DECOMPOSES_TO: 'GOAL_DECOMPOSES_TO',
   PLAN_COMMITS_TO: 'PLAN_COMMITS_TO',
+  TEAM_EXECUTES_ACTIVITY: 'edge/team_executes_activity',
 } as const;
 
-/** Union type of all 54 edge type string values */
+/** Union type of canonical edge type string values */
 export type EdgeType = typeof EdgeType[keyof typeof EdgeType];
 
-/** All 54 edge types in a flat array */
+/** All canonical edge types in a flat array */
 export const ALL_EDGE_TYPES: readonly EdgeType[] = [
   // KEEP (7)
   EdgeType.SIGNAL_TRANSMITS,
@@ -177,4 +178,5 @@ export const ALL_EDGE_TYPES: readonly EdgeType[] = [
   // +2 (#1350 K4-05bis): 目标层级边 ＋ 计划边（导航层 #1448 ⑤）
   EdgeType.GOAL_DECOMPOSES_TO,
   EdgeType.PLAN_COMMITS_TO,
+  EdgeType.TEAM_EXECUTES_ACTIVITY,
 ] as const;

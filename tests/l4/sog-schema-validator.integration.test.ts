@@ -28,6 +28,7 @@ import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import type { GraphStore } from '../../src/l4/graph-bridge';
 import { createGraphBridge } from '../../src/l4/graph-bridge';
 import { getUncoveredTypeStats, resetUncoveredTypeStats } from '../../src/l4/sog-schema-validator';
+import { loadOntology } from '../../src/l4/ontology-loader';
 
 const { logMock } = vi.hoisted(() => ({
   logMock: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -137,26 +138,38 @@ describe('#980 SOG 校验器可见降级 — 真 SQLite 集成', () => {
 
   it('I2 distinct 口径：ALL_NODE_TYPES 去重后逐条 createNode ⇒ count = distinct；GOAL 负例对照', () => {
     const distinct = [...new Set(ALL_NODE_TYPES)];
-    expect(ALL_NODE_TYPES.length).toBe(45); // 原始 45 条（8+8+13+9+6+1, 含 pool/activity 字面量 ×6）
-    expect(distinct.length).toBe(40);       // 去重后 40 distinct
+    expect(ALL_NODE_TYPES.length).toBe(48); // #1398 起 45→48：+3 中性节点类型（含重复字面量）
+    expect(distinct.length).toBe(43);       // 去重后 43 distinct（#1398 起 40→43）
 
     for (const t of distinct) {
       const id = store.createNode(t, {}, GRAPH);
       expect(id.length).toBeGreaterThan(0);
     }
 
+    // 🔴 #1398：`canonicalNodeSchema()` 上线后，「未覆盖类型」不再 == distinct 全集 ——
+    //   带 `naturalKey` 的 canonical 定义会被 SOG 校验器**消费**（本期 = #1398 三个中性类型），
+    //   于是它们既不进 `uncoveredTypes`，也不该被当成"放行未覆盖"。
+    //   ⇒ 期望未覆盖集由**生产 loader** 派生（distinct − 已被 canonical 覆盖者）；不写死类型名、不写死基数。
+    const canonicalCovered = new Set(
+      loadOntology().ontology.nodeTypes.filter((n) => n.naturalKey !== undefined).map((n) => n.$id),
+    );
+    // 判别性棘轮：本期恰好 3 个（#1398 activity/outcome/resource 各 1）。
+    //   若 canonical 接线被打断，本行先红 —— 否则下面几行会退化成"全量都未覆盖"而**看不出接线失效**。
+    expect(canonicalCovered.size, '带 naturalKey 的 canonical 节点类型数（#1398 起 3）').toBe(3);
+    const expectedUncovered = distinct.filter((t) => !canonicalCovered.has(t));
+
     const stats = getUncoveredTypeStats();
-    expect(stats.count).toBe(40);
-    expect(stats.uncoveredTypes).toHaveLength(40);
-    expect(new Set(stats.uncoveredTypes)).toEqual(new Set(distinct));
-    expect(stats.uncoveredTypes[0]).toBe(distinct[0]); // 首见序
+    expect(stats.count).toBe(expectedUncovered.length);
+    expect(stats.uncoveredTypes).toHaveLength(expectedUncovered.length);
+    expect(new Set(stats.uncoveredTypes)).toEqual(new Set(expectedUncovered));
+    expect(stats.uncoveredTypes[0]).toBe(expectedUncovered[0]); // 首见序
 
     // 负例对照: 已覆盖 schema 类型 GOAL 不进未覆盖清单, 且不增长计数（判别性, 非平凡成立）
     expect(stats.uncoveredTypes).not.toContain('GOAL');
     expect(stats.uncoveredTypes).not.toContain('goal');
     const goalId = store.createNode('GOAL', { name: 'g-980' }, GRAPH);
     expect(goalId.length).toBeGreaterThan(0);
-    expect(getUncoveredTypeStats().count).toBe(40);
+    expect(getUncoveredTypeStats().count).toBe(expectedUncovered.length);
     expect(getUncoveredTypeStats().uncoveredTypes).not.toContain('GOAL');
   });
 

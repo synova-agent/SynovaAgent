@@ -1,0 +1,59 @@
+writeset:
+  - .claude/claims/1398.yaml
+  - src/connectors/enterprise-scan/canonical.ts
+  - src/connectors/enterprise-scan/errors.ts
+  - src/connectors/enterprise-scan/parsers.ts
+  - src/connectors/enterprise-scan/path-authorizer.ts
+  - src/connectors/enterprise-scan/preflight-worker.ts
+  - src/connectors/enterprise-scan/preflight.ts
+  - src/connectors/enterprise-scan/request-fingerprint.ts
+  - src/connectors/enterprise-scan/scanner.ts
+  - src/connectors/enterprise-scan/types.ts
+  - src/connectors/enterprise-scan/visibility.ts
+  - src/agent/enterprise-scan-service.ts
+  - src/l4/enterprise-scan-store.ts
+  - src/l4/ontology-loader.ts
+  - src/l4/sog-schema-validator.ts
+  - src/routes/enterprise-scan.ts
+  - src/deploy/bootstrap.ts
+  - src/server.ts
+  - src/services/container.ts
+  - src/store/migrations/006-enterprise-scan.ts
+  - src/store/schema-migration.ts
+  - extensions/ontology/activity/delivery_batch.json
+  - extensions/ontology/resource/delivery_team.json
+  - extensions/ontology/outcome/delivery_result.json
+  - extensions/ontology/edge-types/team_executes_activity.json
+  - extensions/ontology/manifest.json
+  - packages/ontology/src/node-types.ts
+  - packages/ontology/src/edge-types.ts
+  - tests/enterprise-scan/atomicity.test.ts
+  - tests/enterprise-scan/dsh-isolation.test.ts
+  - tests/enterprise-scan/file-race.test.ts
+  - tests/enterprise-scan/fixtures.ts
+  - tests/enterprise-scan/golden.test.ts
+  - tests/enterprise-scan/isolation.test.ts
+  - tests/enterprise-scan/migration.test.ts
+  - tests/enterprise-scan/test-helpers.ts
+  - tests/enterprise-scan/variants.test.ts
+  - tests/l4/enterprise-scan-schema.test.ts
+  - tests/routes/enterprise-scan.integration.test.ts
+  - tests/store/metric-readings-schema.test.ts
+  - tests/store/schema-migration.test.ts
+  - tests/store/migrations/003-orgs.test.ts
+  - tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
+  # 以下 3 件由 CTO 裁定 12522 D-1 批准纳入写集（本体轴棘轮随 #1398 新增 3 个中性节点类型上移）
+  - tests/agent/write-side-axis-alignment.test.ts
+  - tests/l4/sog-schema-validator.integration.test.ts
+  - tests/ontology/instance-loading.test.ts
+  # 以下 1 件由 CTO 裁定 12522 + 12587（D-2′ / Option B）批准纳入写集
+  - scripts/control-tower/probe-ontology-values.ts
+  - docs/synova/coordination/编码指令-1398-1b-enterprise-scan-20261114.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/proposed/1398-enterprise-scan.md
+done:
+  - verify: npx vitest run tests/enterprise-scan tests/l4/enterprise-scan-schema.test.ts tests/routes/enterprise-scan.integration.test.ts
+  - verify: npm run lint
+  - verify: SYNO_CI=1 npm run check:architecture
+  - verify: git diff --check 8abdaa7cf9e11ef27f49682e77e86c0d12ffed12
+note: "#1398 synova-1b-transitional-v1；固定base 8abdaa7cf。仅合成CSV/Markdown/JSON的⓪证据接入与②映射；不宣称客户瓶颈或真实客户验收；PR停review，不merge/close/deploy。Note: memory/notes/proposed/1398-enterprise-scan.md"

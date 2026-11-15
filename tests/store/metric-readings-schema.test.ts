@@ -203,8 +203,8 @@ describe('metric_readings 表结构（#1053 / 2-1a · V1）', () => {
     }
   });
 
-  it('SCHEMA_VERSION 已含 002（含 003/004 后 = 5）', () => {
-    expect(SCHEMA_VERSION).toBe(5);
+  it('SCHEMA_VERSION 已含 002（含 #1398 enterprise-scan 后 = 6）', () => {
+    expect(SCHEMA_VERSION).toBe(6);
   });
 
   it('证据输出：schema SQL 原文（等价 .schema metric_readings）', () => {

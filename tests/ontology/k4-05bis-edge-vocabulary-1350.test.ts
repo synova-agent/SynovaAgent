@@ -2,16 +2,16 @@
  * tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts — #1350（K4-05bis）边词表：目标层级边 ＋ 计划边
  *
  * 判据（CTO 受理裁定原文 V1/V2/V3）：
- *   V1 词表计数 = 实测基数 +2（56 → 58）；两新件与既有件**同构**（11 键 ＋ canonical 顺序）
+ *   V1 词表计数 = 原基数 58 ＋ #1398 新增一边 = 59；两新件与既有件**同构**（11 键 ＋ canonical 顺序）
  *   V2 新边被 ontology 加载器**认领**（`loadOntology()` 计数 +2）且 **#1031 的桥可读其字段**
  *   V3 反例：**删任一新边 ⇒ 加载计数回落 ⇒ 测试红**（本件 B 组即该反例，判别性）
  *
  * 🔴 设计要点 1（cwd 敏感）：`src/l4/ontology-loader.ts` 的 `ONTOLOGY_DIR =
  *    join(process.cwd(), 'extensions', 'ontology')` ⇒ **必须在独立子进程内先 `chdir` 再动态 import**，
- *    否则读到的是 vitest 进程的 cwd（= 真仓根），沙箱无效（且会**静默**拿到真仓 58 件）。
- * 🔴 设计要点 2（"删掉即报红"必须真发生）：沙箱删除后，**先断言沙箱磁盘实况**（文件数 57/56），
+ *    否则读到的是 vitest 进程的 cwd（= 真仓根），沙箱无效（且会**静默**拿到真仓 59 件）。
+ * 🔴 设计要点 2（"删掉即报红"必须真发生）：沙箱删除后，**先断言沙箱磁盘实况**（文件数 58/57），
  *    再断言 `loadOntology()` 计数回落 —— 防「替换未发生却报绿」（R22 教训）。
- * 🔴 设计要点 3（口径）：本件所有计数都标**全量**（58 件逐件 / 沙箱逐件），非抽样。
+ * 🔴 设计要点 3（口径）：本件所有计数都标**全量**（59 件逐件 / 沙箱逐件），非抽样。
  *
  * 判据口径：`ledger 值 + 口径(全量) + 时点(HEAD SHA) + 探针版本(本文件)`
  *
@@ -41,10 +41,10 @@ const CANON_KEYS = [
   'consumed_by_sentinels', 'action_effect_lag', 'transfer_function', 'description',
 ] as const;
 
-/** 🔴 棘轮：实测基数 56 ＋ 本卡 2 = 58。**漂移即红**。 */
-const BASELINE_TOTAL = 58;
-/** 无本卡两件时的基数（= 实测基数）。 */
-const BASELINE_WITHOUT_NEW = 56;
+/** 🔴 棘轮：原基数 58 ＋ #1398 批准新增一边 = 59。**漂移即红**。 */
+const BASELINE_TOTAL = 59;
+/** 无本卡两件时的基数（含 #1398 批准新增一边）。 */
+const BASELINE_WITHOUT_NEW = 57;
 
 const PROBE_PREFIX = 'SYNO_1350_PROBE:';
 
@@ -163,7 +163,7 @@ const edgeOf = (r: ProbeResult, label: string): ProbeEdge | undefined =>
 describe('0. 真仓磁盘实况（全量，非抽样）', () => {
   const files = readdirSync(EDGE_DIR).filter((n) => n.endsWith('.json'));
 
-  it('0.1 `edge-types/` 全量件数 = 58（实测基数 56 ＋ 本卡 2）', () => {
+  it('0.1 `edge-types/` 全量件数 = 59（原基数 58 ＋ #1398 新增一边）', () => {
     expect(files.length).toBe(BASELINE_TOTAL);
   });
 
@@ -187,7 +187,7 @@ describe('0. 真仓磁盘实况（全量，非抽样）', () => {
 describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）', () => {
   const r = probe(REPO);
 
-  it('A1 【V1】装载器读到 58 件边类型（实测基数 56 ＋ 本卡 2；棘轮）', () => {
+  it('A1 【V1】装载器读到 59 件边类型（原基数 58 ＋ #1398 新增一边；棘轮）', () => {
     expect(r.loaded).toBe(BASELINE_TOTAL);
   });
 
@@ -270,7 +270,7 @@ describe('A. 真仓基线 — 穿生产入口 loadOntology()（正常路径）',
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('B. 【V3】删任一新边 ⇒ 加载计数回落 ⇒ 本件红（判别性）', () => {
-  it('B0 🔴 "替换确实发生"：完整沙箱 = 58 件（阴性对照，证明沙箱机制本身不改变计数）', () => {
+  it('B0 🔴 "替换确实发生"：完整沙箱 = 59 件（阴性对照，证明沙箱机制本身不改变计数）', () => {
     withSandbox([], (sb) => {
       const r = probe(sb);
       expect(r.dirFiles).toBe(BASELINE_TOTAL); // 沙箱磁盘实况
@@ -282,11 +282,11 @@ describe('B. 【V3】删任一新边 ⇒ 加载计数回落 ⇒ 本件红（判�
     withSandbox(['goal_decomposes_to.json'], (sb) => {
       const r = probe(sb);
       expect(r.dirFiles).toBe(BASELINE_TOTAL - 1); // 先证替换发生
-      expect(r.loaded).toBe(BASELINE_TOTAL - 1);   // 再证计数回落（主仓基线 58 时本断言必红 ⇒ 判别性成立）
+      expect(r.loaded).toBe(BASELINE_TOTAL - 1);   // 再证计数回落（主仓基线 59 时本断言必红 ⇒ 判别性成立）
     });
   });
 
-  it('B2 删 `plan_commits_to.json` ⇒ 沙箱磁盘 57 件，装载计数回落 57（期望"红"）', () => {
+  it('B2 删 `plan_commits_to.json` ⇒ 沙箱磁盘 58 件，装载计数回落 58（期望"红"）', () => {
     withSandbox(['plan_commits_to.json'], (sb) => {
       const r = probe(sb);
       expect(r.dirFiles).toBe(BASELINE_TOTAL - 1);
@@ -294,7 +294,7 @@ describe('B. 【V3】删任一新边 ⇒ 加载计数回落 ⇒ 本件红（判�
     });
   });
 
-  it('B3 两件都删 ⇒ 回到**引入本卡之前的基数 56**（本卡 +2 的净增量可判）', () => {
+  it('B3 两件都删 ⇒ 回到**引入本卡之前的基数 57**（本卡 +2 的净增量可判）', () => {
     withSandbox([...NEW_FILES], (sb) => {
       const r = probe(sb);
       expect(r.dirFiles).toBe(BASELINE_WITHOUT_NEW);
@@ -316,7 +316,7 @@ describe('B. 【V3】删任一新边 ⇒ 加载计数回落 ⇒ 本件红（判�
   it('B5 🔴 "夹具会红"的**自足证明**：把 A1 的同一条断言施加到「删了一件」的沙箱 ⇒ **必抛（= 红）**', () => {
     withSandbox(['goal_decomposes_to.json'], (sb) => {
       const r = probe(sb);
-      // 复刻 A1 的断言形态（期望 58）施加到缺件沙箱 ⇒ 必须抛
+      // 复刻 A1 的断言形态（期望 59）施加到缺件沙箱 ⇒ 必须抛
       expect(() => expect(r.loaded).toBe(BASELINE_TOTAL)).toThrow();
       // 反向对照：期望值改成实际值 ⇒ 不抛（证明上一行的"抛"来自计数差，不是写法错误）
       expect(() => expect(r.loaded).toBe(BASELINE_TOTAL - 1)).not.toThrow();

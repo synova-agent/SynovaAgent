@@ -79,6 +79,7 @@ import overflowRoutes, { setOverflowGraphStore } from './routes/overflow'; // D4
 import loopRoutes from "./routes/loops";
 import enterpriseRoutes from './routes/enterprise'; // D103
 import importRoutes from './routes/import'; // D231
+import enterpriseScanRoutes from './routes/enterprise-scan';
 import cockpitRoutes from './routes/cockpit'; // D220-PHASE3
 import type { ServiceContainer } from './services/container';
 // Phase 0.1: 全局错误兜底 — uncaughtException + unhandledRejection
@@ -384,6 +385,7 @@ export async function createServer(): Promise<Server> {
   const container: ServiceContainer = {
     db,
     eventBus, hookRunner, sessionManager, stateMachine,
+    enterpriseScanService: services.enterpriseScanService,
     piiScrubber: piiScrubber as never,
     credentialVault: credentialVault as never,
     credentialPool: credentialPool as never,
@@ -565,6 +567,7 @@ export async function createServer(): Promise<Server> {
   app.use(selfOpsRoutes);
   app.use(enterpriseRoutes); // D103 — 企业路由
   app.use(importRoutes); // D231
+  app.use(enterpriseScanRoutes);
   app.use(loopRoutes); // D20 — 循环状态 API
   app.use(cockpitRoutes); // D220-PHASE3 — 创始人仪表盘
   app.use(overflowRoutes); // D478 — 溢出仪表盘 API（D476 认证+隔离已就绪；修复 D90 仅 import 未挂载）
