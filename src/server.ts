@@ -80,6 +80,8 @@ import loopRoutes from "./routes/loops";
 import enterpriseRoutes from './routes/enterprise'; // D103
 import importRoutes from './routes/import'; // D231
 import cockpitRoutes from './routes/cockpit'; // D220-PHASE3
+import { createDshRouter } from './routes/dsh'; // 1A — 认证 API + SSE（工厂；JWT 之后装配）
+import { createDefaultDshRunManager } from './runtime/dsh/session'; // 1A — 固定版本 DSH Sidecar 会话管理
 import type { ServiceContainer } from './services/container';
 // Phase 0.1: 全局错误兜底 — uncaughtException + unhandledRejection
 // ⚠️ 同名陷阱的一半已根除（#975）: LoopScheduler 侧原 `setMainAgent`（零调用 = 死代码）已按铁律 37 删除；
@@ -568,6 +570,9 @@ export async function createServer(): Promise<Server> {
   app.use(loopRoutes); // D20 — 循环状态 API
   app.use(cockpitRoutes); // D220-PHASE3 — 创始人仪表盘
   app.use(overflowRoutes); // D478 — 溢出仪表盘 API（D476 认证+隔离已就绪；修复 D90 仅 import 未挂载）
+  // 1A（#1395）：认证 API + SSE。必须在 jwtAuthMiddleware / rbacMiddleware 之后挂载；
+  // 身份只取 req.auth（路由内 fail-closed 401），首轮运行才 spawn 固定版本 DSH Sidecar。
+  app.use(createDshRouter({ runtime: createDefaultDshRunManager(), proposalManager: container.proposalManager }));
 
   // ═══ D575: LLM 凭证变更热生效（A4 onChanged）═══
   // 按请求解析架构（routes 每请求 loadConfig + createProvider）——凭证更新无需重建任何
