@@ -1,12 +1,12 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# install-post-commit.sh — D210 外部审计器 post-commit 安装脚本
+# install-post-commit.sh — post-commit 安装脚本
 #
 # 用法: bash scripts/workflow/install-post-commit.sh
 #
 # 作用:
 #   将 scripts/hooks/post-commit.sh 安装到 .git/hooks/post-commit。
-#   确保每次提交后自动触发 external-auditor.sh。
+#   外部审计默认关闭；仅 SYNO_AUDIT_HOOK=1 时触发 external-auditor.sh。
 #   幂等：重复安装不报错。
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
@@ -30,4 +30,5 @@ SCRIPT
 chmod +x "$TARGET"
 
 echo "✅ post-commit hook 已安装 → $TARGET"
-echo "   调用链: git commit → .git/hooks/post-commit → $SOURCE → external-auditor.sh"
+echo "   调用链: git commit → .git/hooks/post-commit → $SOURCE"
+echo "   外部审计: 默认关闭；SYNO_AUDIT_HOOK=1 时启用 external-auditor.sh"

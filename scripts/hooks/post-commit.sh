@@ -212,19 +212,17 @@ fi
 # V4.5.1: STATE.md 已移除。证据链由 git log 提供。
 # 不再写入 STATE.md。
 
-# ═══ D210: 外部审计器 — 提交后自动扫描 ═══
-AUDITOR="$ROOT/scripts/control-tower/external-auditor.sh"
-if [ -f "$AUDITOR" ]; then
-  # D421: grep -oP 在 macOS BSD grep 无 -P → TASK_ID 恒 unknown (D334 双机残留)
-  # 改 portable: grep -oE 'D[0-9]+' 提取 "D411" → tr 剥 D → "411"
-  TASK_ID=$(git log -1 --pretty=%B | head -1 | grep -oE 'D[0-9]+' | head -1 | tr -d 'D' || true)
-  [ -n "$TASK_ID" ] || TASK_ID="unknown"
-  bash "$AUDITOR" --task-id "D${TASK_ID}" --diff HEAD~1..HEAD 2>&1 | tail -3
-fi
-
-# ═══ D256: 审计器统一入口 — 提交后自动 --dispatch ═══
-if [ -f "$AUDITOR" ]; then
-  bash "$AUDITOR" --dispatch 2>&1 | tail -3
+# ═══ #1394: 外部审计器按需启用，提交后默认不生成报告文件 ═══
+if [ "${SYNO_AUDIT_HOOK:-0}" = "1" ]; then
+  AUDITOR="$ROOT/scripts/control-tower/external-auditor.sh"
+  if [ -f "$AUDITOR" ]; then
+    # D421: grep -oP 在 macOS BSD grep 无 -P → TASK_ID 恒 unknown (D334 双机残留)
+    # 改 portable: grep -oE 'D[0-9]+' 提取 "D411" → tr 剥 D → "411"
+    TASK_ID=$(git log -1 --pretty=%B | head -1 | grep -oE 'D[0-9]+' | head -1 | tr -d 'D' || true)
+    [ -n "$TASK_ID" ] || TASK_ID="unknown"
+    bash "$AUDITOR" --task-id "D${TASK_ID}" --diff HEAD~1..HEAD 2>&1 | tail -3
+    bash "$AUDITOR" --dispatch 2>&1 | tail -3
+  fi
 fi
 
 # ═══ 决策流程 ═══

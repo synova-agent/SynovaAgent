@@ -2047,3 +2047,10 @@ documents:
     status: active
     owner: CTO
     note: "#1385 C 批预算与遥测删除的限定豁免；仅覆盖 pre-commit 摘调用、四件工具及配对、必要基线与登记同步；保留核心门、观察期对象和密封执行逻辑。"
+  # ---- #1394：post-commit 审计默认关闭与活性指令清扫 ----
+  - id: DOC-1394-01
+    type: governance
+    path: gate-exemptions/2026-11-16-1394-hooks-and-gatesplit.md
+    status: active
+    owner: CTO
+    note: "#1394 外部审计默认关闭的限定豁免；仅覆盖 hook、配对测试、安装说明、必要登记与豁免自覆盖；同批 #1400 文档修正不新增门禁。"
