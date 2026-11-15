@@ -11,8 +11,12 @@
  *
  * 覆盖（铁律 48：正常 / 降级 / 边界 三路径，非空壳）:
  *   正常路径 — ① 隔离 fixture（os.tmpdir() 下的自造仓）走**同一批 loader** 全绿
- *              ② 仓内真件（git 跟踪的交付物）走同一批 loader 全绿（只读盘，零 DB）
- *              ③ [L2] 生产 loader `loadOntology()` 真加载：activity 8 类目 + Schema 层零评估属性
+ *              ② 仓内真件（git 跟踪的交付物：Schema 层 + 扩展层）走同一批 loader 全绿（只读盘，零 DB）
+ *              ③ 合成实例夹具（`tests/ontology/fixtures/`，明示合成、无客户标识）走**同一** loadInstanceLayer
+ *                 ＋仓内 Schema/扩展层校验：9 个 number 逐条字面相等 + agent_type_recommendation 前缀
+ *              ④ [L2] 生产 loader `loadOntology()` 真加载：activity 8 类目 + Schema 层零评估属性
+ *   合规不变式 — **客户实例不入库**（Issue #842／裁 302-D3：客户实例脱敏、移出公开面）
+ *               ⇒ 仓内不得出现 <客户>/activity-production.json；实例面判据因此改由 ③ 合成夹具承载
  *   降级路径 — 扩展层/实例层目录缺失、JSON 损坏 ⇒ loader **不抛**，errors 显式可见（铁律 11/24/31）
  *   边界     — 空目录 / 悬空 extends 目标 / 类型错 / 属性缺失或置空 / 无归属属性 / 值不等
  *
@@ -22,12 +26,13 @@
  *
  * 契约 (铁律 47):
  *   @input    — 无。仓库根 = `process.cwd()`（vitest cwd = 仓库根）
- *   @output   — vitest 断言；夹具全部落 `os.tmpdir()`，afterAll 清理
+ *   @output   — vitest 断言；夹具运行期全部落 `os.tmpdir()`（含合成实例的「仓形」容器），afterAll 清理；
+ *               仓内静态合成件 `tests/ontology/fixtures/` 只读，不被改写
  *   @degraded — 无。本件是判据载体，失败即红；loader 的"降级"由返回的 errors 表达并被断言
  *   @零 DB    — 全程不 open 任何 SQLite 文件、不读 `data/synova.db`
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { tmpdir } from 'os';
 import {
@@ -50,6 +55,13 @@ const FIXTURE_BASE = mkdtempSync(join(tmpdir(), 'synova-1057-k4-03-'));
 const FIXTURE_ROOT = join(FIXTURE_BASE, 'repo');
 const FIXTURE_EXT_DIR = join(FIXTURE_ROOT, EXTENSION_ROOT_REL, 'general-enterprise');
 const FIXTURE_INST_DIR = join(FIXTURE_ROOT, INSTANCE_ROOT_REL, EXPECTED_INSTANCE.orgId);
+
+// ─── 合成实例夹具（#1405 红 B）：客户实例按 #842 不入库 ⇒ 实例面判据改由合成件承载 ───
+// 件本身是**静态**的（数值逐条写死在 tests/ontology/fixtures/ 下），不是从 EXPECTED_INSTANCE 生成 ——
+// 因而「改坏某个 number ⇒ 值断言必红」这一步有真实判别力（生成式夹具会退化成恒真断言）。
+const SYNTH_FIXTURE_REL = 'tests/ontology/fixtures/synthetic-activity-production.json';
+const SYNTH_ORG_ID = 'synthetic-org';
+const SYNTH_REPO_ROOT = join(FIXTURE_BASE, 'synthetic-repo');
 
 afterAll(() => {
   rmSync(FIXTURE_BASE, { recursive: true, force: true });
@@ -127,6 +139,31 @@ function loadFixtureChain() {
   return { schema, ext, inst, violations };
 }
 
+/**
+ * 合成实例夹具落成「仓形」临时根 —— 仍走**同一** `loadInstanceLayer`（不是测试侧手工拼 InstanceDoc），
+ * 目录名 → orgId 的内容侧不变式因此照旧生效；Schema/扩展两面取**仓内真件**（真件里没有实例件）。
+ */
+function loadSyntheticInstanceChain() {
+  const instDir = join(SYNTH_REPO_ROOT, INSTANCE_ROOT_REL, SYNTH_ORG_ID);
+  mkdirSync(instDir, { recursive: true });
+  copyFileSync(join(REPO_ROOT, SYNTH_FIXTURE_REL), join(instDir, 'activity-production.json'));
+
+  const schema = loadSchemaLayer(REPO_ROOT);
+  const ext = loadExtensionLayer(REPO_ROOT);
+  const inst = loadInstanceLayer(SYNTH_REPO_ROOT);
+  const target = inst.instances.find(
+    (d) => d.type === EXPECTED_INSTANCE.nodeTypeId && d.orgId === SYNTH_ORG_ID,
+  );
+  return { schema, ext, inst, target };
+}
+
+/** 取合成实例（未落位即红，避免后续断言在 undefined 上崩成 TypeError） */
+function requireSyntheticInstance() {
+  const { target } = loadSyntheticInstanceChain();
+  expect(target, `合成实例未落在 ${INSTANCE_ROOT_REL}/${SYNTH_ORG_ID}/activity-production.json`).toBeDefined();
+  return target!;
+}
+
 // ═══════════════════════════════════════════════════════════════
 describe('#1057 正常路径 — 隔离 fixture（临时目录自造仓）走同一批 loader', () => {
   it('Schema 面：8 类目、$id 对齐、零 parse 错误', () => {
@@ -164,32 +201,27 @@ describe('#1057 正常路径 — 隔离 fixture（临时目录自造仓）走同
 
 // ═══════════════════════════════════════════════════════════════
 describe('#1057 正常路径 — 仓内真件（git 跟踪交付物，只读盘零 DB）', () => {
-  it('真件三面：Schema 8 类目 / 扩展层非空 / 实例在位，且加载链零 violations', () => {
+  it('真件两面：Schema 8 类目 / 扩展层非空，零 parse 错误', () => {
     const schema = loadSchemaLayer(REPO_ROOT);
     const ext = loadExtensionLayer(REPO_ROOT);
-    const inst = loadInstanceLayer(REPO_ROOT);
     expect(schema.errors).toEqual([]);
     expect(ext.errors).toEqual([]);
-    expect(inst.errors).toEqual([]);
     expect(schema.categories.length).toBe(ACTIVITY_CATEGORIES.length);
     expect(ext.decls.length).toBeGreaterThanOrEqual(1);
-
-    const target = inst.instances.find(
-      (d) => d.type === EXPECTED_INSTANCE.nodeTypeId && d.orgId === EXPECTED_INSTANCE.orgId,
-    );
-    expect(target, `缺冻结作业实例（${INSTANCE_ROOT_REL}/${EXPECTED_INSTANCE.orgId}/）`).toBeDefined();
-    expect(validateInstance(target!, schema, ext, EXPECTED_INSTANCE)).toEqual([]);
   });
 
-  it('真件实例值：9 个 number 逐条字面相等 + agent_type_recommendation 前缀', () => {
+  it('合规不变式：客户实例不入库（#842 脱敏口径 ⇒ 仓内零客户实例）', () => {
+    // 实例面不再靠「仓内客户实例在位」证明（该前提已被 #842／裁 302-D3 推翻），
+    // 而是把它反过来钉死：仓内出现客户实例才是红。
     const inst = loadInstanceLayer(REPO_ROOT);
-    const target = inst.instances.find((d) => d.type === EXPECTED_INSTANCE.nodeTypeId)!;
-    for (const [name, want] of Object.entries(EXPECTED_INSTANCE.values)) {
-      expect(target.props[name], `属性 ${name} 字面值`).toBe(want);
-    }
-    expect(typeof target.props['agent_type_recommendation']).toBe('string');
-    expect(String(target.props['agent_type_recommendation']))
-      .toMatch(new RegExp(`^${EXPECTED_INSTANCE.agentTypeRecommendationPrefix}`));
+    const customerDoc = inst.instances.find(
+      (d) => d.orgId === EXPECTED_INSTANCE.orgId && d.type === EXPECTED_INSTANCE.nodeTypeId,
+    );
+    expect(
+      customerDoc,
+      `客户实例 ${INSTANCE_ROOT_REL}/${EXPECTED_INSTANCE.orgId}/ 不得入库（#842 脱敏、移出公开面）`,
+    ).toBeUndefined();
+    expect(existsSync(join(REPO_ROOT, INSTANCE_ROOT_REL, EXPECTED_INSTANCE.orgId))).toBe(false);
   });
 
   it('真件 Schema 层零评估属性（属性只在扩展层 —— 本卡冻结口径）', () => {
@@ -223,6 +255,31 @@ describe('#1057 正常路径 — 仓内真件（git 跟踪交付物，只读盘�
     expect(ids).not.toContain('activity-production-wani-baby-001');
     // 旧落点已搬走（搬家对偶）：extensions/ontology/activity/instances/ 不再有实例件
     expect(existsSync(join(REPO_ROOT, SCHEMA_ACTIVITY_REL, 'instances'))).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+describe('#1057 正常路径 — 合成实例夹具（非客户数据；口径与冻结值逐条对齐）', () => {
+  it('合成实例走同一 loadInstanceLayer + 仓内 Schema/扩展层：可加载、零 violations', () => {
+    const { schema, ext, inst, target } = loadSyntheticInstanceChain();
+    expect(schema.errors).toEqual([]);
+    expect(ext.errors).toEqual([]);
+    expect(inst.errors).toEqual([]);
+    expect(inst.instances.length).toBe(1);
+    expect(target, `合成实例未落在 ${INSTANCE_ROOT_REL}/${SYNTH_ORG_ID}/activity-production.json`).toBeDefined();
+    expect(target!.orgId).toBe(SYNTH_ORG_ID); // 目录名 → orgId 不变式（loader 真实遍历出来的）
+    expect(target!.graph).toBe(SYNTH_ORG_ID); // 内容侧不变式：doc.graph == 目录 orgId
+    expect(validateInstance(target!, schema, ext)).toEqual([]);
+  });
+
+  it('合成实例值：9 个 number 逐条字面相等 + agent_type_recommendation 前缀', () => {
+    const target = requireSyntheticInstance();
+    for (const [name, want] of Object.entries(EXPECTED_INSTANCE.values)) {
+      expect(target.props[name], `属性 ${name} 字面值`).toBe(want);
+    }
+    expect(typeof target.props['agent_type_recommendation']).toBe('string');
+    expect(String(target.props['agent_type_recommendation']))
+      .toMatch(new RegExp(`^${EXPECTED_INSTANCE.agentTypeRecommendationPrefix}`));
   });
 });
 

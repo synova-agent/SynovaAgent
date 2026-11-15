@@ -1,0 +1,22 @@
+{
+  "$schema": "https://synova.dev/schemas/ontology-instance-v1.json",
+  "$comment": "合成夹具（非客户数据，无任何客户标识）。用途：#1057 判据的实例面原依赖 customer-config/ontology-instances/<客户>/ 下的客户实例，该实例按 Issue #842（裁 302-D3）脱敏并移出公开面 ⇒ 判据改由本件承载。props 的 9 个 number 与 agent_type_recommendation 前缀逐条对齐 #1057 冻结口径（scripts/control-tower/probe-ontology-instances.ts 的 EXPECTED_INSTANCE.values / agentTypeRecommendationPrefix）；改本件任一数字 ⇒ 对应断言必红。",
+  "instanceVersion": "activity-production-synthetic-001",
+  "type": "activity/production",
+  "graph": "synthetic-org",
+  "name": "合成作业单元",
+  "props": {
+    "name": "合成作业单元",
+    "output_type": "合成产出",
+    "headcount": 10,
+    "hours_per_run": 10,
+    "runs_per_period": 30,
+    "unit_labor_cost": 88,
+    "error_rate": 0.02,
+    "structuredness": 0.55,
+    "error_tolerance": 0.35,
+    "data_reachability": 0.2,
+    "agent_readiness_score": 0.45,
+    "agent_type_recommendation": "copilot — 合成占位"
+  }
+}
