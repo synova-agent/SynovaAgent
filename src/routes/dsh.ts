@@ -25,7 +25,7 @@ import { randomUUID } from 'node:crypto';
 import type { JwtPayload } from '../middleware/auth';
 import { DshError, toDshError } from '../runtime/dsh/errors';
 import { formatSseFrame, formatSseHeartbeat, isTerminalEvent, type AgentEvent } from '../runtime/dsh/events';
-import { startReadonlyMcpServer, type ReadonlyMcpServer } from '../mcp/http';
+import type { ReadonlyMcpServer } from '../mcp/http';
 import type { ProposalManager } from '../l2/proposal-manager';
 import { persistProposalDraft, type ProposalDraftResult } from '../runtime/dsh/proposals';
 import type { DshRunManager, RunRecord } from '../runtime/dsh/session';
@@ -104,7 +104,11 @@ export function createDshRouter(deps: DshRouterDeps): Router {
   const runtime = deps.runtime;
   const heartbeatMs = deps.heartbeatMs ?? 15_000;
   const enableMcp = deps.enableMcp ?? true;
-  const startMcp = deps.mcpStarter ?? startReadonlyMcpServer;
+  const startMcp = deps.mcpStarter ?? (async (): Promise<ReadonlyMcpServer> => {
+    // 懒加载 MCP SDK（只在首个 run 时加载，不拖慢进程启动导入面）。
+    const { startReadonlyMcpServer } = await import('../mcp/http');
+    return startReadonlyMcpServer();
+  });
   const router = Router();
   /** 回环 MCP 懒启动：只有真的发起 run 才监听端口（不污染纯领域进程）。 */
   let mcpPromise: Promise<ReadonlyMcpServer> | null = null;
