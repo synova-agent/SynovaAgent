@@ -1,0 +1,20 @@
+writeset:
+  - .claude/claims/1394.yaml
+  - .github/GATE-SPLIT.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/synova/coordination/AUDIT-PROTOCOL.md
+  - gate-exemptions/2026-11-16-1394-hooks-and-gatesplit.md
+  - memory/notes/proposed/2026-11-16-1394-hooks-and-gatesplit.md
+  - scripts/hooks/post-commit.sh
+  - scripts/workflow/install-post-commit.sh
+  - tests/control-tower/install-post-commit.test.sh
+  - tests/control-tower/post-commit.test.sh
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1394 --root .
+  - verify: bash tests/control-tower/post-commit.test.sh
+  - verify: bash tests/control-tower/install-post-commit.test.sh
+  - verify: bash scripts/doc-system/check-doc-truth.sh
+  - verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main
+  - verify: bash scripts/pre-commit-check.sh
+  - verify: git diff --check
+note: "#1394 默认关闭 post-commit 外部审计并保留 SYNO_AUDIT_HOOK=1；同批引用 #1400 修正 GATE-SPLIT，清扫安装说明与 AUDIT-PROTOCOL 活性指令。synova-commit 仍消费 external-auditor.sh，故不登记退役候选、不物理删除；不碰核心门、core-tests、用户可见／契约测试或 scripts/audit/**，不自行合并。"
