@@ -19,6 +19,11 @@ export interface NodeTypeDef {
   requiredProps: string[];
   optionalProps: Record<string, unknown>;
   description: string;
+  version?: string;
+  naturalKey?: string[];
+  writableProps?: string[];
+  writeAuthority?: string;
+  actionRefs?: string[];
 }
 
 export interface EdgeTypeDef {
@@ -28,6 +33,10 @@ export interface EdgeTypeDef {
   allowedFrom: string[];
   allowedTo: string[];
   requiredProps?: string[];
+  version?: string;
+  naturalKey?: string[];
+  cardinality?: string;
+  temporal?: boolean;
   /**
    * 可选属性声明表。注意 `causal_strength` 的**权威归属就在这里**
    * （#1031 实测 as_of 5a6591c4a：55/55 落在 `optionalProps` 内，顶层无此键）
@@ -111,13 +120,34 @@ export function loadOntology(): { ontology: LoadedOntology; degraded: boolean; e
       }
     }
 
-    // 3. 从 edgeTypes 动态构建 EDGE_ENDPOINT_MAP
+    // 3. 从 edgeTypes 动态构建 EDGE_ENDPOINT_MAP；$id 与历史 label 均可查询。
     const edgeEndpointMap: Record<string, { from: string[]; to: string[] }> = {};
     for (const e of edgeTypes) {
-      edgeEndpointMap[e.label] = {
-        from: e.allowedFrom,
-        to: e.allowedTo,
-      };
+      const endpoints = { from: e.allowedFrom, to: e.allowedTo };
+      edgeEndpointMap[e.label] = endpoints;
+      edgeEndpointMap[e.$id] = endpoints;
+    }
+    const seenIds = new Set<string>();
+    const enterpriseScanTypes = new Set([
+      'activity/delivery_batch', 'resource/delivery_team', 'outcome/delivery_result', 'edge/team_executes_activity',
+    ]);
+    for (const definition of [...nodeTypes, ...edgeTypes]) {
+      if (seenIds.has(definition.$id)) errors.push(`本体 $id 重复: ${definition.$id}`);
+      seenIds.add(definition.$id);
+      if (enterpriseScanTypes.has(definition.$id)) {
+        if (!Array.isArray(definition.naturalKey) || definition.naturalKey.length !== 1 || definition.naturalKey[0] !== 'businessKey') {
+          errors.push(`首次扫描类型缺 naturalKey=[businessKey]: ${definition.$id}`);
+        }
+        if (definition.version !== '1.0.0' || !Array.isArray(definition.requiredProps)) {
+          errors.push(`首次扫描类型缺 version/requiredProps: ${definition.$id}`);
+        }
+      }
+    }
+    const nodeIds = new Set(nodeTypes.map(node => node.$id));
+    for (const edge of edgeTypes.filter(item => item.$id === 'edge/team_executes_activity')) {
+      if (edge.allowedFrom.some(id => !nodeIds.has(id)) || edge.allowedTo.some(id => !nodeIds.has(id))) {
+        errors.push(`首次扫描关系端点不存在: ${edge.$id}`);
+      }
     }
 
     const ontology: LoadedOntology = { nodeTypes, edgeTypes, edgeEndpointMap };
