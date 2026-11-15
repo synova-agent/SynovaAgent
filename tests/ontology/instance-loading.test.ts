@@ -51,6 +51,19 @@ const FIXTURE_ROOT = join(FIXTURE_BASE, 'repo');
 const FIXTURE_EXT_DIR = join(FIXTURE_ROOT, EXTENSION_ROOT_REL, 'general-enterprise');
 const FIXTURE_INST_DIR = join(FIXTURE_ROOT, INSTANCE_ROOT_REL, EXPECTED_INSTANCE.orgId);
 
+/**
+ * 仓内 activity **磁盘真源**（`$id` 全集，升序）。
+ *
+ * 🔴 与 `ACTIVITY_CATEGORIES`（= **8 个冻结评估类目**，K4-03 判据、每类须带 10 个评估属性）**分开**：
+ *    「activity 全量类型」= 磁盘件集（#1398 起 9 件，含中性类型 `activity/delivery_batch`）；
+ *    「冻结评估类目」= `ACTIVITY_CATEGORIES`（8 件，评估面冻结口径，不因新增中性类型而变）。
+ *   ⇒ 全量断言只对磁盘集合；`ACTIVITY_CATEGORIES` 改为 **⊆ 全量** 的 subset 断言。
+ */
+const REPO_ACTIVITY_IDS: string[] = readdirSync(join(REPO_ROOT, SCHEMA_ACTIVITY_REL))
+  .filter((n) => n.endsWith('.json'))
+  .map((n) => (JSON.parse(readFileSync(join(REPO_ROOT, SCHEMA_ACTIVITY_REL, n), 'utf-8')) as { $id: string }).$id)
+  .sort();
+
 afterAll(() => {
   rmSync(FIXTURE_BASE, { recursive: true, force: true });
 });
@@ -164,14 +177,28 @@ describe('#1057 正常路径 — 隔离 fixture（临时目录自造仓）走同
 
 // ═══════════════════════════════════════════════════════════════
 describe('#1057 正常路径 — 仓内真件（git 跟踪交付物，只读盘零 DB）', () => {
-  it('真件三面：Schema 8 类目 / 扩展层非空 / 实例在位，且加载链零 violations', () => {
+  it('真件三面：Schema 全量件集 / 扩展层非空 / 实例在位，且加载链零 violations', () => {
     const schema = loadSchemaLayer(REPO_ROOT);
     const ext = loadExtensionLayer(REPO_ROOT);
     const inst = loadInstanceLayer(REPO_ROOT);
-    expect(schema.errors).toEqual([]);
+    // 🔴 #1398：`ACTIVITY_CATEGORIES`（8 个**冻结评估类目**）不再等于「activity 磁盘全量」。
+    //   本探针把「件数 ≠ 冻结口径 / $id 集 ≠ 冻结口径」写成 errors —— 那是**口径差**，不是加载失败；
+    //   ⇒ 只允许这两类（文案含「冻结口径」）出现，其余一律零容忍。
+    expect(
+      schema.errors.filter((e) => !e.includes('冻结口径')),
+      '除「冻结评估类目 8 件 ≠ activity 全量」这两条口径差以外，Schema 面必须零错',
+    ).toEqual([]);
     expect(ext.errors).toEqual([]);
     expect(inst.errors).toEqual([]);
-    expect(schema.categories.length).toBe(ACTIVITY_CATEGORIES.length);
+    // 全量口径：Schema 面类目数 === 磁盘 activity 件数
+    expect(schema.categories.length).toBe(REPO_ACTIVITY_IDS.length);
+    // 冻结口径：8 个评估类目**必须都在**全量里（subset，不是相等）
+    for (const cat of ACTIVITY_CATEGORIES) {
+      expect(
+        schema.categories.map((c) => c.id),
+        `冻结评估类目 activity/${cat} 必须仍在 Schema 面`,
+      ).toContain(`activity/${cat}`);
+    }
     expect(ext.decls.length).toBeGreaterThanOrEqual(1);
 
     const target = inst.instances.find(
@@ -200,14 +227,18 @@ describe('#1057 正常路径 — 仓内真件（git 跟踪交付物，只读盘�
     }
   });
 
-  it('[L2] 生产 loader 真加载：degraded=false 且 activity 恰好 8 个类型', () => {
+  it('[L2] 生产 loader 真加载：degraded=false；activity 全量 === 磁盘件集，冻结 8 类目 ⊆ 全量', () => {
     const { ontology, degraded } = loadOntology();
     const activityTypes = ontology.nodeTypes.filter((n) => n.$id.startsWith('activity/'));
     expect(degraded).toBe(false);
-    expect(activityTypes.length).toBe(ACTIVITY_CATEGORIES.length);
-    expect(activityTypes.map((t) => t.$id).sort()).toEqual(
-      ACTIVITY_CATEGORIES.map((c) => `activity/${c}`).sort(),
-    );
+    // 全量口径（#1398 起 9 件）：与磁盘 `$id` 集**集合相等**（多一件/少一件都红）
+    expect(activityTypes.length).toBe(REPO_ACTIVITY_IDS.length);
+    expect(activityTypes.map((t) => t.$id).sort()).toEqual(REPO_ACTIVITY_IDS);
+    // 冻结口径：8 个评估类目必须都在全量里（subset）
+    const loadedIds = activityTypes.map((t) => t.$id);
+    for (const cat of ACTIVITY_CATEGORIES) {
+      expect(loadedIds, `冻结评估类目 activity/${cat} 必须仍被 loader 加载`).toContain(`activity/${cat}`);
+    }
     // 旧件断言「loader 里 8 类目各带 10 属性」已随落点改写撤除：属性现在**只在扩展层**声明。
     for (const t of activityTypes) {
       const leaked = EVAL_PROPS.filter((p) => p.name in t.optionalProps).map((p) => p.name);
@@ -215,11 +246,11 @@ describe('#1057 正常路径 — 仓内真件（git 跟踪交付物，只读盘�
     }
   });
 
-  it('平铺扫描不递归：实例落点不再被生产 loader 当成第 9 个节点类型', () => {
+  it('平铺扫描不递归：实例落点不被生产 loader 当成额外节点类型', () => {
     const { ontology } = loadOntology();
     const ids = ontology.nodeTypes.map((n) => n.$id);
     for (const p of EVAL_PROPS) expect(ids).not.toContain(p.name); // 属性名不是节点类型
-    expect(ids.filter((id) => id.startsWith('activity/')).length).toBe(ACTIVITY_CATEGORIES.length);
+    expect(ids.filter((id) => id.startsWith('activity/')).length).toBe(REPO_ACTIVITY_IDS.length);
     expect(ids).not.toContain('activity-production-wani-baby-001');
     // 旧落点已搬走（搬家对偶）：extensions/ontology/activity/instances/ 不再有实例件
     expect(existsSync(join(REPO_ROOT, SCHEMA_ACTIVITY_REL, 'instances'))).toBe(false);
