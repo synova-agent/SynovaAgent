@@ -26,6 +26,15 @@ writeset:
   - scripts/dsh-sidecar/restore.ps1
   - scripts/dsh-sidecar/rollback.ps1
   - tests/runtime/dsh/sidecar-lifecycle.test.ts
+  - tests/mcp/http.test.ts
+  - tests/runtime/dsh/acp-client.test.ts
+  - tests/runtime/dsh/errors.test.ts
+  - tests/runtime/dsh/events.test.ts
+  - tests/runtime/dsh/profile.test.ts
+  - tests/runtime/dsh/proposals.test.ts
+  - tests/runtime/dsh/session.test.ts
+  - tests/runtime/dsh/sidecar.test.ts
+  - tests/runtime/dsh/tools.test.ts
   - tests/runtime/dsh/session-events.test.ts
   - tests/runtime/dsh/readonly-tool.test.ts
   - tests/runtime/dsh/security-cases.test.ts
