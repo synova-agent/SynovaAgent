@@ -143,10 +143,31 @@ describe('D103 — enterprise route handlers', () => {
 
 describe('D103 — degraded paths', () => {
   it('bcrypt hash failure returns degraded info', async () => {
+    // #1405 红 C：原写法把唯一断言放在 catch 里（等 bcrypt 抛「invalid rounds」），但 bcrypt 6.0.0
+    // 对 rounds=0 视为「默认 10 轮」**不抛**（本机实测 resolved，返回 $2b$10$… 长 60）⇒ catch 永不执行
+    // ⇒ 该用例零断言 ⇒ CI 零断言判据（scripts/ci/core-tests.sh:170-177，afterEach 比对
+    // expect.getState().assertionCalls）抛 CORE_ZERO_ASSERTIONS。本机无该 hook，故"全绿"是假绿。
+    // 修法：真跑产品降级路径 —— UserStore.createUser 的 bcrypt.hash 失败（src/growth/user-store.ts:89）
+    // 冒泡到 enterprise register 的 catch（src/routes/enterprise.ts:121-125）⇒ 500 + degraded:true。
+    // 注入失败（而不是等原生模块抛）让判据跨平台确定：不再依赖各平台 bcrypt 对非法入参的宽容度。
+    const hashSpy = vi.spyOn(bcrypt, 'hash').mockRejectedValueOnce(new Error('bcrypt hash failed (D103)'));
     try {
-      await bcrypt.hash('test', 0); // invalid rounds
-    } catch (err: unknown) {
-      expect(err).toBeDefined();
+      const res = await fetch(`${baseUrl}/api/enterprise/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'd103-degraded@synova.test',
+          password: 'degradedPass1',
+          orgName: 'D103 降级企业',
+        }),
+      });
+      const body = await res.json() as { ok: boolean; code?: string; degraded?: boolean };
+      expect(res.status).toBe(500);
+      expect(body.ok).toBe(false);
+      expect(body.code).toBe('INTERNAL_ERROR');
+      expect(body.degraded).toBe(true);
+    } finally {
+      hashSpy.mockRestore();
     }
   });
 

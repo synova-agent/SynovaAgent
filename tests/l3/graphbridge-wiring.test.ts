@@ -51,10 +51,18 @@ describe('GraphBridge → ModuleRunner.afterRun → Phase 1', () => {
   });
 
   it('Given a failing module, When afterRun with GraphBridge, Then only successful modules create nodes', async () => {
-    const graphNodes: Array<{type:string}> = [];
+    // 夹具契约（#1405 红 A 修复点）: fakeStore 必须**透传 props**。
+    // createGraphBridge 会包装 store.createNode 并写 props.observed_at；createNodes 若丢掉 props，
+    // 包装器会在 undefined 上取属性抛 TypeError，被 upsertFromHONA 的 catch 吞掉 ⇒ 成功模块也 0 节点。
+    // 夹具也不得绕过 store.createNode 直接记账（那会把"桥接真跑过包装器"这件事弄丢）。
+    const graphNodes: Array<{type:string, props:Record<string,unknown>}> = [];
     const fakeStore = {
-      createNode(type: string) { graphNodes.push({type}); return `n_${graphNodes.length}`; },
-      createNodes(nodes: Array<{type:string}>) { return nodes.map(n => this.createNode(n.type)); },
+      createNode(type: string, props: Record<string,unknown>) {
+        graphNodes.push({type, props}); return `n_${graphNodes.length}`;
+      },
+      createNodes(nodes: Array<{type:string, props:Record<string,unknown>}>) {
+        return nodes.map(n => this.createNode(n.type, n.props));
+      },
       queryNodes() { return []; },
       queryEdges() { return []; },
       createEdge() { return 'e1'; },
@@ -77,6 +85,9 @@ describe('GraphBridge → ModuleRunner.afterRun → Phase 1', () => {
 
     // Only hona created a node; broken did not
     expect(graphNodes.length).toBe(1);
+    expect(graphNodes[0].type).toBe(NodeType.RESOURCE_PERSON);
+    expect(graphNodes[0].props.name).toBe('hona'); // 成功模块的人映射成节点（不是别的节点凑数）
+    expect(typeof graphNodes[0].props.observed_at).toBe('string'); // 桥接包装器真跑过：props 到手且被补时间戳
   });
 
   it('Given GraphBridge.upsertFromKeyPersonRisk, When risk profiles provided, Then creates Risk nodes + AFFECTS edges', () => {

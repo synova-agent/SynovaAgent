@@ -571,6 +571,14 @@ export async function createServer(): Promise<Server> {
   app.use(loopRoutes); // D20 — 循环状态 API
   app.use(cockpitRoutes); // D220-PHASE3 — 创始人仪表盘
   app.use(overflowRoutes); // D478 — 溢出仪表盘 API（D476 认证+隔离已就绪；修复 D90 仅 import 未挂载）
+  // 1A（#1395）：认证 API + SSE。必须在 jwtAuthMiddleware / rbacMiddleware 之后挂载；
+  // 身份只取 req.auth（路由内 fail-closed 401），首轮运行才 spawn 固定版本 DSH Sidecar。
+  // 动态装配：DSH/MCP 依赖只在装配点加载，避免拖慢既有 server 启动路径。
+  {
+    const { createDshRouter } = await import('./routes/dsh');
+    const { createDefaultDshRunManager } = await import('./runtime/dsh/session');
+    app.use(createDshRouter({ runtime: createDefaultDshRunManager(), proposalManager: container.proposalManager }));
+  }
 
   // ═══ D575: LLM 凭证变更热生效（A4 onChanged）═══
   // 按请求解析架构（routes 每请求 loadConfig + createProvider）——凭证更新无需重建任何

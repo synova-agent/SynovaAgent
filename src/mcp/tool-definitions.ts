@@ -40,6 +40,7 @@ import {
 import { createProvider } from '../providers';
 import { detectProvider } from '../providers/detect';
 import { ConversationEngine } from '../agent/conversation-engine';
+import { handleDomainToolCall } from '../runtime/dsh/tools';
 // D487: 装配类型（type-only，零运行时加载）
 import type { SessionManager } from '../orchestrator/session-manager';
 import type { SessionStoreLike } from '../agent/diagnosis-launcher';
@@ -190,6 +191,48 @@ export const TOOLS: ToolDef[] = [
     permission: 'read',
   },
 ];
+
+// ═══ 1A Sidecar 只读工具面（#1395）═══
+//
+// 为什么单列而不是追加进 TOOLS：`tests/mcp/tool-definitions.test.ts` 把 stdio 侧
+// 12 工具/8 read/4 write 钉成冻结断言（该测试不在 1A 写集内）。Sidecar 用同一
+// `ToolDef` 形状、同一 permission 语义、同一 `McpError` 错误码，但只广告 1 个
+// 合成只读领域工具（默认最小工具面）。
+export const SIDECAR_TOOLS: ToolDef[] = [
+  {
+    name: 'synova_context_get',
+    description: '读取一个问题对应的合成只读 ContextSnapshot（②结构/③观测/④依据，带 $id/版本/证据状态）',
+    inputSchema: {
+      type: 'object',
+      properties: { problemId: { type: 'string', description: '问题 ID（合成基线：problem-revenue-health-2026q3）' } },
+      required: ['problemId'],
+    },
+    permission: 'read',
+  },
+];
+
+/**
+ * Sidecar 工具权限门（与 stdio 侧同一错误码语义）。
+ * @error 写工具 ⇒ McpError -32000；未登记 ⇒ McpError -32601
+ */
+export function assertSidecarToolAllowed(name: string, mode: McpMode = 'read-only'): void {
+  if (SIDECAR_TOOLS.some(tool => tool.name === name)) return;
+  const legacy = TOOLS.find(tool => tool.name === name);
+  if (legacy !== undefined && legacy.permission === 'write' && mode === 'read-only') {
+    throw new McpError(-32000, `PERMISSION_DENIED: 工具 ${name} 为写操作，Sidecar 只读模式禁止调用`);
+  }
+  if (legacy !== undefined) return;
+  throw new McpError(ErrorCode.MethodNotFound, `未知工具: ${name}`);
+}
+
+/** Sidecar MCP initialize instructions（信任模型 + 只读声明）。 */
+export function buildSidecarInstructions(): string {
+  return [
+    'Synova Sidecar MCP — 回环 HTTP、只读、一次性 token（服务端注入身份，入参不得携带身份字段）。',
+    '工具面：仅 synova_context_get（合成基线，synthetic=true）；写工具不广告且调用被拒（-32000）。',
+    `契约: ${MCP_CONTRACT}`,
+  ].join('\n');
+}
 
 // ═══ 权限模型（spec §5.3）═══
 
@@ -447,6 +490,10 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         reply: result.reply.slice(0, 2000),
         messageCount: conv.getMessages().length,
       });
+    }
+    // ─── 1A Sidecar：合成只读领域工具（身份由回环 token 注入，入参校验在 runtime/dsh/tools）───
+    case 'synova_context_get': {
+      return handleDomainToolCall(name, args);
     }
     // ─── L1 HTTP 桥（localhost fetch 惯例；白名单 D595 三前缀保证生产态可达）───
     case 'query_ontology': {

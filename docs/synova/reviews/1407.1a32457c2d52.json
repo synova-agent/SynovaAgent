@@ -1,0 +1,98 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1407,
+  "patch_fingerprint": "sha256:1a32457c2d52cc0a396c9608aca3619641d7b6fb5565b1ddd3cc74e60443cfff",
+  "author": "win-external 维护施工会话（#1405）",
+  "reviewer": "零上下文独立复核会话（a1a-reviewer，未参与实现，非 CTO）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "ci-green",
+      "title": "head 6434c2fef 的 CI 为 success，且 affected 闭包正是本票三件（3+27+22=52）",
+      "cmd": "Invoke-RestMethod \"$API/repos/synova-agent/SynovaAgent/commits/6434c2fef07fe5fe5750e0641a19418dd40354f7/status\" -Headers @{Authorization=\"token $tok\"}；GET /repos/synova-agent/SynovaAgent/actions/runs/4171/jobs → GET /actions/jobs/4313/logs",
+      "result": "pass",
+      "evidence": "state=success total_count=1；statuses[0]: context=\"core-gates / core (pull_request_target)\" status=success。job 4313 conclusion=success（run 4171），日志原文：CORE-ENV event=pull-request HEAD=6434c2fef07fe5fe5750e0641a19418dd40354f7 BASE=932f0d98fc401e88b0b1ebe9c64e9133787b9dd7 / CORE-CONTRACT-COUNTS total=92 passed=92 / CORE-USER-VISIBLE-COUNTS total=10 passed=10 / ✓ tests/l3/graphbridge-wiring.test.ts (3 tests) · ✓ tests/ontology/instance-loading.test.ts (27 tests) · ✓ tests/routes/enterprise.test.ts (22 tests) / Test Files 3 passed (3) · Tests 52 passed (52) / CORE-AFFECTED-COUNTS total=52 passed=52 skipped=0 failed=0 suites=17 / CORE-TESTS RESULT rc=0 contract_passed=92 user_visible_passed=10 affected=ran affected_passed=52 reason=affected-passed / Job succeeded。日志中的 CORE_ZERO_ASSERTIONS 仅出现在门禁自测夹具（comment only / string only / dead branch / uncalled helper / existing empty affected test，故意失败），非本 PR 用例"
+    },
+    {
+      "id": "forbidden-paths-zero",
+      "title": "禁区零改动；有效补丁恰 6 文件；vs 名义 base 的另外 52 文件逐 blob 等于 main（非本 PR 改动）",
+      "cmd": "git diff --name-only $(git merge-base 932f0d98 HEAD) HEAD；git diff --name-only abf3ef0d4 HEAD 的每个非本票文件做 git rev-parse 932f0d98:<f> vs HEAD:<f> 比对",
+      "result": "pass",
+      "evidence": "有效补丁（merge-base(932f0d98,head)=932f0d98 → head）恰 6 个文件：.claude/claims/1405.yaml、memory/notes/proposed/1405-latent-red.md、tests/l3/graphbridge-wiring.test.ts、tests/ontology/fixtures/synthetic-activity-production.json、tests/ontology/instance-loading.test.ts、tests/routes/enterprise.test.ts；按 ^src/|^extensions/|^scripts/|^\\.gitea/|^customer-config/|^expert/|^data/ 过滤 = ZERO 命中。git diff abf3ef0d4..HEAD 为 58 文件（因 head 已并入 main@932f0d98），其中 52 个不属于本票的文件与 main tip 的 blob 逐个完全相同（不同的 = 0）⇒ 全部是 main 推进（1A #1397 合入等）带来的，不是本 PR 作者夹带"
+    },
+    {
+      "id": "assertions-not-weakened",
+      "title": "冻结判据一条未删、断言总数上升、无 skip/only 变绿手法；被替换的 2 条断言逐条有等价或更强覆盖",
+      "cmd": "对三件做前后版本 expect( 计数 + 逐条 expect 行集合差分 + 六条冻结口径 grep + it() 计数 + \\.(skip|only|todo|fails) 计数",
+      "result": "pass",
+      "evidence": "expect() 计数：instance-loading 68→76、graphbridge-wiring 5→8、enterprise 132→135（均不减少）。instance-loading 仅 2 条 expect 行被替换：(a)『expect(target, 缺冻结作业实例…).toBeDefined()』→『expect(target, 合成实例未落在 …/synthetic-org/activity-production.json).toBeDefined()』；(b)『expect(validateInstance(target!, schema, ext, EXPECTED_INSTANCE)).toEqual([])』→「3 参 validateInstance(...).toEqual([]) ＋ expect(target!.orgId).toBe('synthetic-org') ＋ expect(target!.graph).toBe('synthetic-org') ＋ 9 个 number 与前缀的独立断言仍在」——第 4 参 expected 是 as const 且 orgId 被钉成客户 org 字面量，合成实例不得冒用，故 orgId/type 维度改由『目录名→orgId→doc.graph』真实 loader 不变式覆盖，判据强度等价。六条冻结判据 grep 全 PRESENT：8 类目(ACTIVITY_CATEGORIES.length) / 扩展层非空(ext.decls.length).toBeGreaterThanOrEqual / 实例可加载零 violations(validateInstance(...).toEqual) / 9 个 number 逐条字面相等(EXPECTED_INSTANCE.values) / agent_type_recommendation 前缀(agentTypeRecommendationPrefix) / Schema 层零评估属性(EVAL_PROPS)。it() 数：3→3 / 25→27 / 22→22（无合并、无删除）；skip/only/todo/fails 前后均为 0；.gitignore 与 scripts/**、.gitea/** 零 diff"
+    },
+    {
+      "id": "customer-config-zero-tracked",
+      "title": "customer-config 仍零跟踪，且本 PR 未新增任何 customer-config 项、未改 .gitignore",
+      "cmd": "git ls-tree -r --name-only HEAD -- customer-config；git diff --name-status 932f0d98 HEAD | grep customer-config；git diff --name-only 932f0d98 HEAD | grep -E '\\.gitignore|scripts/|\\.gitea/'",
+      "result": "pass",
+      "evidence": "git ls-tree -r HEAD -- customer-config = 0 项；有效补丁内 customer-config 条目 = 0；.gitignore / scripts/ / .gitea/ 命中 = 0（未用『把客户实例当交付物』或改门禁的方式变绿）"
+    },
+    {
+      "id": "synthetic-fixture-no-customer-id",
+      "title": "合成夹具无客户标识，且 9 个 number 对的是 scripts/ 内独立冻结常量（非自证）",
+      "cmd": "git show HEAD:tests/ontology/fixtures/synthetic-activity-production.json + grep 'wani|baby|客户'；对照 scripts/control-tower/probe-ontology-instances.ts 的 EXPECTED_INSTANCE（该文件在本 PR 零 diff）",
+      "result": "pass",
+      "evidence": "夹具 graph/name = 'synthetic-org' / '合成作业单元' / '合成产出'，无 wani/baby 等客户标识（唯一『客户』字样出现在 $comment 的『非客户数据、无客户标识』说明里）。9 个 number（headcount 10 / hours_per_run 10 / runs_per_period 30 / unit_labor_cost 88 / error_rate 0.02 / structuredness 0.55 / error_tolerance 0.35 / data_reachability 0.2 / agent_readiness_score 0.45）与 EXPECTED_INSTANCE.values 逐条相同、前缀 'copilot' 相同；断言取值为 scripts/ 内冻结常量（本 PR 未改 scripts/**），夹具为静态写死文件（非由该常量生成）⇒ 改坏夹具数字必红，断言非恒真"
+    },
+    {
+      "id": "mutation-red-green-4",
+      "title": "改坏必红 4/4（本人动手），每处命中具体失败断言，还原后复跑全绿",
+      "cmd": "M1 改夹具 number → M2 createNodes 改 return [] → M3 mockRejectedValueOnce 改 mockResolvedValueOnce → M4 临时放回客户实例；每处 vitest run 指定文件 → git checkout -- / 删除探针 → 复跑",
+      "result": "pass",
+      "evidence": "M1 unit_labor_cost 88→89 ⇒ FAIL『属性 unit_labor_cost 字面值: expected 89 to be 88』→ 还原 27 passed。M2 graphbridge fakeStore.createNodes → return [] ⇒ FAIL『expected +0 to be 1』→ 还原 3 passed。M3 红 C 注入失败改注入成功 ⇒ FAIL『expected 200 to be 500』→ 还原 22 passed。M4 临时写回 customer-config/ontology-instances/wani-baby/activity-production.json ⇒ FAIL『客户实例 customer-config/ontology-instances/wani-baby/ 不得入库（#842 脱敏、移出公开面）: expected { …(6) } to be undefined』→ 探针删除后 27 passed，git ls-tree 仍 0 项。终态 git status --porcelain 为空"
+    },
+    {
+      "id": "local-suite",
+      "title": "三件在复核工作树内本地全绿",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/l3/graphbridge-wiring.test.ts tests/ontology/instance-loading.test.ts tests/routes/enterprise.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 3 passed (3) / Tests 52 passed (52)（3 + 27 + 22），vitest 退出码 0；与 CI 的 CORE-AFFECTED-COUNTS total=52 一致。运行对象 = 6434c2fef 的只读 worktree（依赖以 junction 复用同 package.json 的既有 node_modules；本补丁未改 package.json/lock — git diff 为空）"
+    },
+    {
+      "id": "red-c-root-cause",
+      "title": "红 C 根因独立复现：bcrypt 6.0.0 对 rounds=0 不抛 ⇒ 原用例 catch 永不执行",
+      "cmd": "node 探针 require('bcrypt').hash('test', 0)（cwd = 仓根，bcrypt 6.0.0）",
+      "result": "pass",
+      "evidence": "输出：bcrypt version = 6.0.0 / rounds=0 => RESOLVED（不抛）, len=60, prefix=$2b$10$ ⇒ 原用例『await bcrypt.hash('test',0) 期待抛错』的前提不成立，catch 内那唯一一条 expect 从不执行 ⇒ CI 零断言判据（scripts/ci/core-tests.sh:158-178）必然抛 CORE_ZERO_ASSERTIONS。作者归因（测试缺陷，而非 Linux 产品行为差异）经独立复现成立"
+    },
+    {
+      "id": "red-c-fixed-in-ci",
+      "title": "红 C 在真实 CI 的零断言门禁下通过（不是靠本地跳过）",
+      "cmd": "CI job 4313 日志 grep CORE_ZERO_ASSERTIONS / enterprise.test / CORE-AFFECTED-COUNTS",
+      "result": "pass",
+      "evidence": "同一 job 中零断言门禁先跑自测（CORE_ZERO_ASSERTIONS comment only / string only / dead branch / uncalled helper / existing empty affected test 各 expected rc=1 ⇒ 证明判据有判别力），随后 affected 真实运行里 ✓ tests/routes/enterprise.test.ts (22 tests)，CORE-AFFECTED-COUNTS total=52 passed=52 failed=0 ⇒ 该文件的用例现在无条件执行断言，红 C 在 CI 环境（WSL Ubuntu，原红发生地）已转绿"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "PR #1407 正文 §2 与 .claude/claims/1405.yaml 的 done 行（『git diff --name-only abf3ef0d4..HEAD 与写集精确一致（6 个文件）』）",
+      "what": "这句在并入 main@932f0d98 之后已不成立：当前 head 上该字面命令实测 58 文件。多的 52 个已逐 blob 证明等于 main tip、非本 PR 夹带，有效补丁仍是 6 文件，所以不是夹带问题；但后续任何人照抄这条命令对账都会看到 58≠6 而误判。建议改成 merge-base 口径（git diff --name-only $(git merge-base origin/main HEAD) HEAD），或注明『并入 main 前测』"
+    },
+    {
+      "severity": "info",
+      "where": "tests/ontology/instance-loading.test.ts:205-216（新的『仓内真件两面』用例）",
+      "what": "随『客户实例在位』一并移除的还有 REPO_ROOT 的 expect(inst.errors).toEqual([])。当前仓内 0 实例时该断言近乎恒真，且『客户实例不入库』不变式更强地覆盖了 #842 目标；但仓库级实例层的 parse-error 断言就此消失（若将来仓内出现非客户实例且 JSON 损坏，不再有断言兜住）。建议把 expect(loadInstanceLayer(REPO_ROOT).errors).toEqual([]) 补回合规不变式用例，成本一行"
+    },
+    {
+      "severity": "info",
+      "where": "tests/routes/enterprise.test.ts:153-175（红 C 修法）",
+      "what": "用 vi.spyOn(bcrypt,'hash').mockRejectedValueOnce 注入失败 + 真调 /api/enterprise/register，断言强度明显高于原例（4 条 vs catch 内 0-1 条），且跨平台确定；严格说它验的是『路由在 hash 失败时的降级』，不是『真实 bcrypt 对非法入参抛错』。作者已在 PR §6.2 把这个口径提请 CTO 裁定，属待裁定事项而非缺陷"
+    },
+    {
+      "severity": "info",
+      "where": "tests/l4/ontology-loader-param-bridge-1031.test.ts（本 PR 未动）",
+      "what": "第四条既有红（#1031 V5(L2-真跑) 3 条 + 两笔账棘轮 1 条）已按票面停点『登记不修』处理，与本票写集一致；CI 日志里 tests/contract/basic.test.ts / tests/unit/empty.test.ts 的失败是门禁自测夹具（故意失败），不是本 PR 引入的红"
+    }
+  ],
+  "issued_at": "2026-11-16T02:36:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}

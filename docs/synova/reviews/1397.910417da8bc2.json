@@ -1,0 +1,122 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1397,
+  "patch_fingerprint": "sha256:910417da8bc264febb5997e48fd92c2a666975f5bdf8487a83fbdb8a34f10974",
+  "author": "win-external 1A coding session（#1395 / synova-1a-transitional-v1）",
+  "reviewer": "零上下文独立复核会话（a1a-reviewer，未参与实现，非 CTO）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "ci-green",
+      "title": "head e118ef7f0 的 CI 结论为 success（含真实核心测试，不只是空跑）",
+      "cmd": "Invoke-RestMethod \"$API/repos/synova-agent/SynovaAgent/commits/e118ef7f041892b1ccc4fa65e8df44bf9db213e0/status\" -Headers @{Authorization=\"token $tok\"}；job 日志 GET /repos/synova-agent/SynovaAgent/actions/jobs/4300/logs",
+      "result": "pass",
+      "evidence": "state=success total_count=1；statuses[0]: context=\"core-gates / core (pull_request_target)\" status=success description=\"Successful in 2m21s\" target_url=/synova-agent/SynovaAgent/actions/runs/4158/jobs/4300（即 head e118ef7f0 那次 run）。job 日志原文：CORE-ENV event=pull-request HEAD=e118ef7f041892b1ccc4fa65e8df44bf9db213e0 BASE=abf3ef0d464b2afdc6e15c138f533c8340995ec8 / CORE-PREFLIGHT RESULT rc=0 / CORE-AFFECTED-COUNTS total=323 passed=323 skipped=0 failed=0 suites=121 / CORE-TESTS RESULT rc=0 contract_passed=92 user_visible_passed=10 affected=ran affected_passed=323 reason=affected-passed / Job succeeded"
+    },
+    {
+      "id": "writeset-match",
+      "title": "有效补丁 51 文件与 .claude/claims/1395.yaml 写集逐路径一致",
+      "cmd": "git diff --name-only abf3ef0d464b2afdc6e15c138f533c8340995ec8 e118ef7f041892b1ccc4fa65e8df44bf9db213e0 | sort  ⟷  .claude/claims/1395.yaml writeset 集合比较",
+      "result": "pass",
+      "evidence": "claim writeset count=51 / diff count=51 → SETS IDENTICAL (51/51)（Compare-Object 零差异）。git diff --stat: 51 files changed, 8937 insertions(+), 8 deletions(-)。目录分布与申报一致：src/runtime/dsh(8) src/mcp(2) src/routes/dsh.ts src/server.ts src/l2/proposal-manager.ts deploy/dsh/profiles(4) scripts/dsh-sidecar(8) tests(18) docs evidence(7) claim(1)"
+    },
+    {
+      "id": "merge-provenance",
+      "title": "merge commit 只带入 main 的 8 个文件，且逐 blob 与 main 相同（自证「不采信口述」）",
+      "cmd": "git rev-list --parents -n 1 e118ef7f0；git diff --name-status 2fc2f7791 e118ef7f0；对每个文件 git rev-parse abf3ef0d:<f> 与 e118ef7f0:<f> 比较",
+      "result": "pass",
+      "evidence": "parents = 2fc2f7791c561f93469a10efa942caa251a86da1 + abf3ef0d464b2afdc6e15c138f533c8340995ec8（后者即远端 refs/heads/main，git ls-remote gitea 实测）。与第一父的差异恰 8 个文件，且 8/8 与 abf3ef0d 的 blob 完全相同（IDENTICAL-to-main）：.claude/claims/1402.yaml、.dsh/skills/{cto-handover,dev-doc-spec}/SKILL.md、.synova/skills/{cto-handover,dev-doc-spec}/SKILL.md、memory/notes/implemented/2026-11-16-1402-claim-scaffold.md、scripts/control-tower/claim_store.py、tests/control-tower/claim-scaffold.test.sh ⇒ 全部来自 #1402，非本 PR 作者改动"
+    },
+    {
+      "id": "forbidden-paths",
+      "title": "无 .gitea/**、scripts/audit/**、门禁脚本、客户数据/客户配置改动",
+      "cmd": "git diff --name-only abf3ef0d..e118ef7f0 | Where-Object { $_ -match '^\\.gitea/|^scripts/audit/|pre-commit-check|^scripts/control-tower/(check-|synova-commit)|^customer-config/|^data/|\\.db$|^expert/|^extensions/' }",
+      "result": "pass",
+      "evidence": "NONE（零命中）。51 文件全部落在 claim 写集内；merge 带入的 scripts/control-tower/claim_store.py 为 main 既有文件（blob 与 main 相同），非本 PR 修改。禁区内文件零改动 ⇒ 未触碰审计红线与门禁本体"
+    },
+    {
+      "id": "identity-from-req-auth",
+      "title": "身份只取服务端认证上下文 req.auth；body/query 伪造身份无效；挂载在 jwt/rbac 之后",
+      "cmd": "grep -n 'req\\.auth|req\\.body|req\\.query' src/routes/dsh.ts；临时探针（POST body+query 带 enterpriseId/userId/orgId 的伪造身份）；反向对照把 identityOf 改取 body 后复跑；grep -n 'jwtAuthMiddleware|rbacMiddleware|createDshRouter' src/server.ts",
+      "result": "pass",
+      "evidence": "dsh.ts:59-69 identityOf 仅读 (req as {auth?}).auth 的 sub/orgId/role，body 只取 input/runId/sessionId（:142）。探针（复核者自建、跑完即删）：body 与 query 同时注入 enterpriseId=ent-EVIL/userId=user-EVIL/orgId=ent-EVIL ⇒ captured.enterpriseId=='ent-REAL'、userId=='user-REAL'、scope=='admin'，2 tests passed。反向对照：把 identityOf 改为取 body ⇒ AssertionError: expected 'ent-EVIL' to be 'ent-REAL'（探针有判别力，非恒真）。挂载顺序 server.ts:487 app.use(jwtAuthMiddleware) → :509 app.use(rbacMiddleware) → :577 app.use(createDshRouter(...))"
+    },
+    {
+      "id": "mcp-loopback-token",
+      "title": "回环 MCP 只监听 127.0.0.1 随机端口；token 绑 run + TTL + 终态 revoke；写工具/未登记工具 fail-closed；真实客户端测试",
+      "cmd": "sed -n '43p;181,209p' src/mcp/http.ts；sed -n '169,209p' src/runtime/dsh/tools.ts；node node_modules/vitest/vitest.mjs run tests/mcp/http.test.ts tests/runtime/dsh/readonly-tool.test.ts",
+      "result": "pass",
+      "evidence": "http.ts:198 httpServer.listen(0, '127.0.0.1', …)（随机端口 + 仅回环；url 固定 http://127.0.0.1:<port>/mcp）；:43 const SIDECAR_MODE: McpMode = 'read-only'。tools.ts:169 TTL=10min、:184-188 issue(randomBytes(32))、:191-199 resolve 过期删除、:202-204 revoke。tool-definitions.ts:218-226 写工具→McpError -32000 / 未登记→-32601。测试用 @modelcontextprotocol/sdk/client 的 StreamableHTTPClientTransport 真连回环口（非 mock）：Test Files 2 passed, Tests 13 passed（含无 token 401、撤销 token 401、写工具 -32000、未登记 -32601、未知 problemId DOMAIN_EMPTY）"
+    },
+    {
+      "id": "idempotency-sqlite-unique",
+      "title": "runId 幂等靠真实 SQLite 部分唯一索引（非内存 Map）；重放返回原记录且 count 不增",
+      "cmd": "grep -n 'CREATE UNIQUE INDEX' src/l2/proposal-manager.ts；PRAGMA index_list(proposals)；node node_modules/vitest/vitest.mjs run tests/runtime/dsh/idempotency.test.ts",
+      "result": "pass",
+      "evidence": "proposal-manager.ts:84 CREATE UNIQUE INDEX IF NOT EXISTS idx_proposals_run_id ON proposals(run_id) WHERE run_id IS NOT NULL（构造时升级旧表 :78-85）。测试断言：indexes 中 idx_proposals_run_id unique==1；同 run_id 二次**直插**抛 \"UNIQUE constraint failed\"；persistProposalDraft 同 runId 重放 created=false 且 proposal.id 与首次相同；count 断言 1/1/2。Tests 4 passed"
+    },
+    {
+      "id": "dsh-stop-isolation",
+      "title": "DSH 不可用时显式失败（不是空成功、不伪造 run.completed），领域能力照常可用",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/runtime/dsh/isolation.test.ts tests/runtime/dsh/sidecar.test.ts",
+      "result": "pass",
+      "evidence": "isolation.test.ts:36-84 —— createClient 抛 SIDECAR_NOT_RUNNING ⇒ 终态 terminal.type=='run.failed'、data.code=='SIDECAR_NOT_RUNNING'、data.retryable==false；另一例断言 snapshot().some(e=>e.type=='run.completed')===false（零对象不算成功）；同刻 handleDomainToolCall('synova_context_get') 仍返回 count=3 ⇒ 领域不受 DSH 影响。sidecar.test.ts 断言未运行态 status/stop ⇒ exit 1 + SIDECAR_NOT_RUNNING（不空成功）。Tests 3+4 passed"
+    },
+    {
+      "id": "mutation-red-green",
+      "title": "改坏必红 4/4（本人动手），每处命中具体失败断言，还原后复跑全绿",
+      "cmd": "逐处编辑 → vitest run（指定文件）→ git checkout -- <file> → 复跑；最后 git status --porcelain",
+      "result": "pass",
+      "evidence": "M1 deploy/dsh/profiles/synova-sidecar/cordis.patch.yml mode: read-only→danger-full-access ⇒ 3 failures（profile.test.ts: expected 'danger-full-access' to be 'read-only'；security-cases.test.ts: profile 不合规 DshError）→ 还原后 12 passed。M2 src/mcp/http.ts:43 SIDECAR_MODE 'read-only'→'full' ⇒ 2 failures（readonly-tool.test.ts: expected -32602 to be -32000；http.test.ts: to match object {code:-32000}）→ 还原后 13 passed。M3 src/l2/proposal-manager.ts:84 唯一索引注释掉 ⇒ 2 failures（expected null not to be null / expected false to be true）→ 还原后 7 passed。M4 src/routes/dsh.ts:61 无 req.auth 时兜底身份 ⇒ expected 202 to be 401 → 还原后 9 passed。终态 git status --porcelain 为空"
+    },
+    {
+      "id": "suite-and-lint",
+      "title": "1A 全量测试与类型检查在复核工作树内全绿",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/runtime/dsh/*.test.ts tests/mcp/http.test.ts tests/routes/dsh.test.ts；node node_modules/typescript/bin/tsc --noEmit",
+      "result": "pass",
+      "evidence": "Test Files 17 passed (17) / Tests 96 passed (96)（含 sidecar-lifecycle 真实 CLI + fake ACP 5 tests、acp-client 真实子进程 NDJSON 5 tests）；tsc --noEmit exit 0。所跑代码 = e118ef7f0 的只读 worktree，node_modules 以 junction 复用具同 package.json 的既有安装（本补丁未改 package.json/lock：git diff 为空）"
+    },
+    {
+      "id": "boundary-claims",
+      "title": "申报边界未夸大：无「rc.2 运行期/真实模型/真实领域 API/正式安装/实机恢复/可见 UI/生产可用/锁版」说成已完成",
+      "cmd": "对 docs/synova/product-lines/evidence/1A-*.md 与 PR 正文做关键词扫描（rc\\.2|真实模型|正式安装|生产可用|锁版|可见 UI|实机恢复|外发|完成）并逐条读上下文",
+      "result": "pass",
+      "evidence": "申报口径 = OFFLINE_IMPLEMENTATION_READY（1A-探针证据合集.md:3 与 :91-92 明写「不可申报：1A 完成、十项探针通过、运行时锁版、真实 UI 已接线、真实客户验收、生产可用」）。逐项落 NOT_AVAILABLE/SOURCE_NOT_AVAILABLE（rc.2 包/SHA512/包内 runtime.json/commit ddac9676）、UNVERIFIED（rc.2 运行期、真实模型一轮、真实 Kimi Code API 一致、端到端模型调工具）、NOT DONE（rc.2 官方安装/停机窗口/实机回滚演练/生产备份/可见 UI/《DSH 锁版记录》）。未发现把上述任一说成已完成；反向更保守（正文 §9 仍记旧 head CI failure）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "src/routes/dsh.ts:59-69 / tests/routes/dsh.test.ts（无对应用例）",
+      "what": "「身份只取 req.auth」没有提交内测试钉住：没有任何 committed 测试从 body/query 注入 enterpriseId/userId。本次以临时探针（含反向对照必红）证明当前实现正确，但该回归面未被门禁覆盖；建议补一条 body/query 伪造身份用例，否则将来改成取 body 只有人肉复核能拦住"
+    },
+    {
+      "severity": "warn",
+      "where": "src/routes/dsh.ts:154-155 → src/runtime/dsh/session.ts:255",
+      "what": "POST /api/dsh/runs 接受 body.sessionId 并直接 resumeSession，未校验该 sessionId 属于调用方企业；同时 session.ts:335-337 的 handleUpdate 仅按 sessionId 匹配 run。跨租户需先知道对方 ACP sessionId（UUID，路由层不跨企业暴露），且 1A 无多租户部署，故非阻断；但多租户/1B 之前需补 session 归属校验，否则是串事件的隐患"
+    },
+    {
+      "severity": "info",
+      "where": "src/runtime/dsh/tools.ts:191-204 与 PR/文档措辞（http.ts:2、tool-definitions.ts:231）",
+      "what": "「一次性 token」实际语义 = 一次 run 一个 token ＋ TTL 10min ＋ run 终态 revoke；resolve() 不消费 token（同一 token 在生命周期内可多次调用）。实现合理（一轮 run 需多次工具调用），建议措辞改为「按 run 签发、终态撤销」以免被读成 one-time-use"
+    },
+    {
+      "severity": "info",
+      "where": "src/routes/dsh.ts:171-182 与 234-236",
+      "what": "token 在 await runtime.run() 之前签发；若 run() 抛错，catch 分支只 respondError 不 revoke ⇒ token 存活到 TTL 到期。当前 run()（session.ts:145-171）以 void execute 启动且不抛，窗口为理论值；建议在 catch 分支补一次 revoke 兜底"
+    },
+    {
+      "severity": "info",
+      "where": "src/runtime/dsh/session.ts:115,137 / src/routes/dsh.ts:116,118",
+      "what": "runs（含每条事件流）/ runTokens / runDrafts 三个内存 Map 均无淘汰或上限，长驻进程内存只增不减。1A 离线过渡可接受，正式运行前需配 TTL/水位清理"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1397 正文 §5 与 §9",
+      "what": "正文仍记录旧 head（8cfbada9b / 2fc2f7791）的 CI failure 与「readonly-tool.test.ts 8 passed」「Compare: 42 files」，与当前 head e118ef7f0 的实测（run 4158 success、该文件 7 tests、51 files）不一致；属陈旧陈述（偏保守非夸大）。建议复核后在正文同步，本回执提交内不改"
+    }
+  ],
+  "issued_at": "2026-11-16T01:11:30+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}
