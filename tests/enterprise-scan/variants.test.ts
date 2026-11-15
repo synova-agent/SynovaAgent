@@ -147,10 +147,26 @@ describe('#1398 八类变体与幂等反例', () => {
       const restricted = await service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'restricted-conflict');
       expect(restricted.report.partial_visibility).toBe(true);
       expect(restricted.report.assertions.some(item => item.value === 100 && item.instance_state === 'measured')).toBe(true);
-      const serialized = JSON.stringify(restricted.report);
-      expect(serialized).not.toContain('120');
-      expect(serialized).not.toContain('operator-statement');
-      expect(restricted.report.checks.cross_source).toEqual([]);
+      const restrictedReport = restricted.report;
+      // 🔴 结构化断言（1B 复核阻塞项 2）：**禁**对整串 JSON 搜裸数字 —— graph node UUID 里可能出现
+      //   `…1202…` 之类子串，会随机红（复核者实测 ~13% flake，且命中的不是产品泄漏）。
+      //   ⇒ 按语义点断言：值 / 来源可见性 / 证据链 / 跨来源核对 / 遮蔽标记。
+      expect(restrictedReport.assertions.every(item => item.value !== 120), '私有值 120 不得出现在受限报告').toBe(true);
+      expect(restrictedReport.sources.every(item => item.visibility !== 'restricted'), '受限报告不得含 restricted 来源').toBe(true);
+      expect(restrictedReport.sources.every(item => !item.source_id.includes('operator-statement')), '私有 source_id 不得出现').toBe(true);
+      // 断言证据链不得指向私有来源（比"整串不含 operator-statement"更精确：只看真正承载证据关联的字段）
+      const evidenceSourceRefs = restrictedReport.assertions.flatMap(item => {
+        const links = item.evidence as Array<{ sourceRef?: string }> | undefined;
+        return (links ?? []).map(link => link.sourceRef ?? '');
+      });
+      expect(evidenceSourceRefs.some(ref => ref.includes('operator-statement')), '断言证据链不得引用私有来源').toBe(false);
+      expect(restrictedReport.checks.cross_source, '跨来源核对不得建立在私有来源之上').toEqual([]);
+      expect(restrictedReport.partial_visibility, '受限视图必须显式标 partial_visibility').toBe(true);
+      // 说明（防误读）：受限报告**允许**出现 conflict —— 该 conflict 由**可见**的 batches(100) 与
+      //   dashboard(13) 的计算差异产生，不涉及私有来源；这里显式钉住它的成因，防止将来被误当成泄漏。
+      expect(restrictedReport.checks.dashboard.some(check => check.calculation_match === false), '可见来源间的计算差异必须如实暴露').toBe(true);
+      // 固定文件名可保留整串判据（无数字碰撞风险；与上面的结构化断言互补）
+      expect(JSON.stringify(restrictedReport)).not.toContain('operator-statement');
     } finally { close(); }
   });
 });

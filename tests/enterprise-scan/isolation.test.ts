@@ -36,7 +36,10 @@ describe('#1398 企业隔离、GET可见范围与源变化', () => {
       const before = authorityCounts(db);
       const restricted = await service.get(viewer('responsible', 'responsible-a'), full.record.runId);
       expect(restricted.partial_visibility).toBe(true);
-      expect(JSON.stringify(restricted)).not.toContain('120');
+      // 🔴 结构化断言（同 blocking-2 类缺陷）：不对整串 JSON 搜裸数字（UUID 子串会随机命中）。
+      expect(restricted.assertions.every(item => item.value !== 120), '私有值 120 不得进入受限报告').toBe(true);
+      expect(restricted.sources.every(item => item.visibility !== 'restricted'), '受限报告不得含 restricted 来源').toBe(true);
+      expect(restricted.checks.cross_source, '跨来源核对不得建立在私有来源之上').toEqual([]);
       expect(authorityCounts(db)).toMatchObject({
         scan_runs: before.scan_runs,
         scan_evidence: before.scan_evidence,
@@ -48,6 +51,42 @@ describe('#1398 企业隔离、GET可见范围与源变化', () => {
       await expect(service.get(viewer('staff', 'staff-a'), full.record.runId)).rejects.toMatchObject({ code: 'RUN_UNAVAILABLE' });
       writeFileSync(join(root, 'delivery_dashboard.csv'), DELIVERY_DASHBOARD.replace('accepted_count,13', 'accepted_count,14'));
       await expect(service.get(viewer(), full.record.runId)).rejects.toMatchObject({ code: 'SOURCE_CHANGED_RERUN_REQUIRED' });
+    } finally { close(); }
+  });
+
+  // 🔴 反序回归（1B 复核阻塞项 1）：原实现按「创建者可见集」落证据版本 ⇒ 受限用户先建 run 后，
+  //    更宽可见者 GET 会因 `scan_assertion_evidence` 的复合外键找不到父行而 500
+  //    （TRANSACTION_ABORTED，evidenceParent=0）。本用例把该序钉死：owner 必须 200，且受限方不被放宽。
+  it('反序：受限先建 run ⇒ 更宽可见者 GET 必须 200；受限方仍看不到私有部分', async () => {
+    const { db, service, close } = createScanHarness();
+    try {
+      const files = {
+        ...GOLDEN_FILES,
+        'delivery_batches.csv': DELIVERY_BATCHES.replace('2026-10,10,10,8,', '2026-10,10,10,100,'),
+        'operator-statement.json': OPERATOR_STATEMENT.replace('"value":8', '"value":120'),
+      };
+      const root = writeFixtureRoot(files);
+      seedManifest(db, { root, files, restricted: ['operator-statement.json'] });
+
+      // ① 受限身份**先**建 run（模型只含 3 个可见来源，partial_visibility=true）
+      const restrictedRun = await service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'restricted-first');
+      expect(restrictedRun.report.partial_visibility).toBe(true);
+      expect(restrictedRun.report.assertions.every(item => item.value !== 120)).toBe(true);
+
+      // ② 更宽可见者（owner）**后** GET：旧实现此处 500，修好后必须 200 且拿到全量视图
+      const full = await service.get(viewer('owner', 'owner-a'), restrictedRun.record.runId);
+      expect(full.partial_visibility, 'owner 视图不应标 partial').toBe(false);
+      expect(full.sources.some(item => item.visibility === 'restricted'), 'owner 必须看到 restricted 来源').toBe(true);
+      expect(full.assertions.some(item => item.value === 120), 'owner 必须看到私有来源带来的断言').toBe(true);
+
+      // ③ 受限方再 GET：不得因为存在更宽报告而被放宽
+      const again = await service.get(viewer('responsible', 'responsible-a'), restrictedRun.record.runId);
+      expect(again.partial_visibility).toBe(true);
+      expect(again.assertions.every(item => item.value !== 120), '受限方仍不得看到私有值 120').toBe(true);
+      expect(again.sources.every(item => item.visibility !== 'restricted'), '受限视图不得含 restricted 来源').toBe(true);
+      expect(again.checks.cross_source).toEqual([]);
+
+      expect(db.pragma('foreign_key_check')).toEqual([]);
     } finally { close(); }
   });
 });
