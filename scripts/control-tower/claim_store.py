@@ -60,6 +60,7 @@ feature flag（K3 R2）:
   claim_store.py --all                            # JSON 全量
   claim_store.py --resolve <staged>...            # {status,issue,claim,reason,degraded}
   claim_store.py --check <issue>                  # 校验单条（0/1/2）
+  claim_store.py --scaffold <issue> [--force]      # 从暂存区生成骨架（已存在须 --force）
   claim_store.py --migration-marker               # 迁移期显式标识串（R6：禁静默空白）
   claim_store.py --legacy-view                    # task-state 形状的兼容视图（R6 消费者只读降级用）
   claim_store.py --issue-of "<text>"              # 从分支名/提交主题提取 issue 号（R5 单源）
@@ -71,6 +72,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -536,6 +538,60 @@ def coverage(root: Path | str, staged: List[str],
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# scaffold —— 从暂存区生成两字段骨架；--check/--resolve 不经过此路径
+# ══════════════════════════════════════════════════════════════════════════════
+def scaffold_claim(root: Path | str, issue: str) -> Path:
+    """读取暂存文件并写入 claim 骨架；Git/写入失败抛 ClaimError（exit 2）。"""
+    base = Path(root).resolve()
+    path = claim_path(base, issue)
+    try:
+        claim_relative = path.resolve().relative_to(base).as_posix()
+    except ValueError as exc:
+        raise ClaimError(
+            f"scaffold claim 必须位于仓库内: {path}",
+            code="claim-scaffold-outside-root", phase="scaffold",
+        ) from exc
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "-z", "--"],
+            cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="strict", check=False,
+        )
+    except (OSError, UnicodeError) as exc:
+        raise ClaimError(
+            f"读取暂存区失败: {exc}", code="claim-scaffold-git-error",
+            phase="scaffold", retryable=True,
+        ) from exc
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"git diff --cached exit {result.returncode}"
+        raise ClaimError(
+            f"读取暂存区失败: {detail}", code="claim-scaffold-git-error",
+            phase="scaffold", retryable=True,
+        )
+
+    staged = [name for name in result.stdout.split("\0") if name]
+    writeset = sorted(set(staged) | {claim_relative})
+    lines = ["writeset:"]
+    lines.extend(f"  - {name}" for name in writeset)
+    lines.extend([
+        "done:",
+        f"  - verify: python scripts/control-tower/claim_store.py --check {normalize_issue(issue)} --root .",
+        "  # 按任务替换或补充下面的标准检查；纯文档任务只需补 done.verify，无需手写 writeset",
+        "  - verify: bash scripts/pre-commit-check.sh",
+        "",
+    ])
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+    except OSError as exc:
+        raise ClaimError(
+            f"写入 claim 骨架失败: {path}: {exc}", code="claim-scaffold-write-error",
+            phase="scaffold", retryable=True,
+        ) from exc
+    return path
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # CLI
 # ══════════════════════════════════════════════════════════════════════════════
 def _emit(obj) -> None:
@@ -562,6 +618,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="暂存文件 vs 全部 claim 的**并集**覆盖（JSON；0=ok，2=检查自身失败）")
     ap.add_argument("--issue-of", metavar="TEXT", help="从文本提取 issue 号")
     ap.add_argument("--check", metavar="ISSUE", help="校验单条")
+    ap.add_argument("--scaffold", metavar="ISSUE", help="从暂存区生成 claim 骨架")
+    ap.add_argument("--force", action="store_true", help="配合 --scaffold 覆盖已存在的 claim")
     ap.add_argument("--migration-marker", action="store_true", help="打印迁移期标识")
     ap.add_argument("--legacy-view", action="store_true", help="task-state 形状兼容视图")
     ap.add_argument("--flag", action="store_true", help="打印 SYNO_CLAIM_V2 状态")
@@ -649,6 +707,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             r = coverage(root, staged)
             _emit(r)
             return 2 if r["status"] == "invalid" else 0
+
+        if args.scaffold:
+            path = claim_path(root, args.scaffold)
+            if path.exists() and not args.force:
+                print(f"claim 已存在，拒绝覆盖: {path}（须显式 --force）", file=sys.stderr)
+                return 1
+            print(scaffold_claim(root, args.scaffold))
+            return 0
 
         if args.check:
             c = load_claim(root, args.check)
