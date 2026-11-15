@@ -35,3 +35,12 @@
 
 **实测结果**：探针自身 `violations=0` / `[OK] 值域迁移判定全绿` / exit 0；`1031` 30/30 全绿；`k4-05bis` 20/20 全绿。改动仅 2 文件、**零测试改动**，判据结构未动。
 
+## 决定（补充二，2026-11-16）：独立复核退回的两项缺陷及其修法
+
+**阻塞项 1（产品行为）：跨 viewer 的 GET 返回 500。** 旧 `writeEvidence` 只在 `model.sources`（= **创建者**可见集）里找来源，找不到即跳过 ⇒ 不可见来源的证据版本从未落库 ⇒ 更宽可见者 GET 时 `scan_assertion_evidence` 的复合外键 `(graph, evidence_version_id)` 找不到父行 ⇒ `TRANSACTION_ABORTED`（`evidenceParent=0`），且 500 消息回显内部 evidence-version ID。
+
+**修法**：证据版本改为按「**全部授权来源**」随 run 落库（身份取自 `describeSource()` 单一真源，不复制公式）；不可见来源的期间/时态留 `NULL`、`parse_status` 记 `pending`（未确立），**不参与任何可见性计算或派生值**，也不进入任何 viewer 的报告 —— 「落库」≠「回显」。同时 500 消息去掉了内部 ID（只留 SQLite 原因与父行计数）。**未改共享 Schema、未改权限模型。**
+
+**阻塞项 2（测试可靠性）：`variants.test.ts` 对整串 JSON 搜裸数字 `'120'` ⇒ 随机 flake。** 机制：`stableId()` = `前缀-` + sha256 前 32 位 hex（`canonical.ts:27-29`），报告里此类 hex 标识约 25–30 个，每个含子串 `120` 的概率 ≈ 30/4096 ≈ 0.7% ⇒ 聚合 ≈ 13–18%，与复核者实测 ~13% 相符。**修法**：改结构化断言（值 / 来源可见性 / 证据链 sourceRef / cross_source / partial_visibility），固定文件名整串判据保留；同类缺陷在 `isolation.test.ts` 一并修掉。
+
+**代价登记（不在本票修）**：角色词表分裂（`visibility.ts` 的 `owner/operator/responsible` vs 产品 `WorkspaceRole`）⇒ 真实登录用户会 deny-all；preflight worker 打包依赖 devDependency `tsx`；`scanner.ts` 同 basename 静默覆盖。三项均由 CTO 另立票。

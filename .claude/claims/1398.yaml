@@ -46,6 +46,8 @@ writeset:
   - tests/agent/write-side-axis-alignment.test.ts
   - tests/l4/sog-schema-validator.integration.test.ts
   - tests/ontology/instance-loading.test.ts
+  # 以下 1 件由 CTO 裁定 12522 + 12587（D-2′ / Option B）批准纳入写集
+  - scripts/control-tower/probe-ontology-values.ts
   - docs/synova/coordination/编码指令-1398-1b-enterprise-scan-20261114.md
   - docs/authority/DOCS-REGISTRY.yaml
   - memory/notes/proposed/1398-enterprise-scan.md
