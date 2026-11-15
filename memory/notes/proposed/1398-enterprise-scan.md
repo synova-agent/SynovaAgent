@@ -20,3 +20,18 @@
 ## 生效时点
 
 本 Note 随 #1398 PR 留痕；PR review 与合并后才成为 main 行为。本批只声明合成资料开发验收，不声称真实客户验收、瓶颈识别或①③④⑤⑥能力完成。
+
+## 决定（补充，2026-11-16）：中性关系在参数桥登记面按「显式 unknown」登记
+
+**背景**：DEV DOC §4 line 38 规定新关系 `edge/team_executes_activity` **不含**权重、瓶颈、因果函数或时滞。而 `tests/l4/ontology-loader-param-bridge-1031.test.ts` 的登记面模型（`scripts/control-tower/probe-ontology-values.ts`）隐含要求每条 `edge-types/*.json` 在 `tf / cs / lag` 三处闭合等式下可归类。
+
+**失败的两条替代路**（实测，非推演）：
+- `TFR_REGISTERED_OTHER` 以 `structural_na` 登记 → 1031 仍 3 红（`tally.tf_placeholder` 1≠2、absent 集多一件、`cs_resolved` 0≠1），且**探针自身由 `violations=0` 变 `violations=1` / `[FAIL] 违规 2 条` / exit 1**。原因：`structural_na` 的语义是「`transfer_function` = 占位串 `N/A — …`」（样例 `goal_decomposition` 同时**有** `action_effect_lag`），与新关系「三键皆无」不是同类。
+- 改 1031 的闭合等式 → 与该件设计目的（消灭「数字变了靠手改」）相反，且与「1031 本件不改」自相矛盾。
+
+**采纳决定**（CTO 裁定 12522 D-2′）：把新关系登记进 `PENDING_REGISTERED_ADDITIONS`（`expected: 'non_causal_unknown'`，与 #1350 两件同款），并在边 JSON 顶层声明 `"action_effect_lag": "unknown"` 与 `"transfer_function": "unknown"`。
+
+**口径**：DEV DOC §4 line 38「不含因果函数或时滞」指**不含数值/函数定义**；显式 `unknown` 是「未确立」的保守声明，**不构成**声明了函数或时滞（CTO 12522 改口在案）。
+
+**实测结果**：探针自身 `violations=0` / `[OK] 值域迁移判定全绿` / exit 0；`1031` 30/30 全绿；`k4-05bis` 20/20 全绿。改动仅 2 文件、**零测试改动**，判据结构未动。
+

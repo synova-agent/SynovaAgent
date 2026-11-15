@@ -8,6 +8,8 @@
   "allowedTo": ["activity/delivery_batch"],
   "cardinality": "n",
   "temporal": true,
+  "action_effect_lag": "unknown",
+  "transfer_function": "unknown",
   "optionalProps": {
     "sourceIds": { "type": "array" }
   },
