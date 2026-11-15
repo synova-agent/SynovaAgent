@@ -42,6 +42,10 @@ writeset:
   - tests/store/schema-migration.test.ts
   - tests/store/migrations/003-orgs.test.ts
   - tests/ontology/k4-05bis-edge-vocabulary-1350.test.ts
+  # 以下 3 件由 CTO 裁定 12522 D-1 批准纳入写集（本体轴棘轮随 #1398 新增 3 个中性节点类型上移）
+  - tests/agent/write-side-axis-alignment.test.ts
+  - tests/l4/sog-schema-validator.integration.test.ts
+  - tests/ontology/instance-loading.test.ts
   - docs/synova/coordination/编码指令-1398-1b-enterprise-scan-20261114.md
   - docs/authority/DOCS-REGISTRY.yaml
   - memory/notes/proposed/1398-enterprise-scan.md
