@@ -9,6 +9,13 @@
 
 documents:
 
+  - id: DOC-1398-01
+    type: devdoc
+    path: docs/synova/coordination/编码指令-1398-1b-enterprise-scan-20261114.md
+    status: active
+    owner: CTO
+    note: "#1398 1B 中性首次企业扫描执行记录与固定base历史资产审计；权威DEV DOC为Issue评论12428，Mandate为评论12430；仅合成资料开发验收。"
+
   - id: DOC-1327-01
     type: devdoc
     path: docs/synova/coordination/编码指令-CompanyOS-Ticket0-1327-20261104.md

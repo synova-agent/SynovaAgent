@@ -49,7 +49,7 @@ function validation(message: string): never {
   throw new EnterpriseScanError('SOURCE_VALIDATION_FAILED', 'parse', message);
 }
 
-export function parseCsv(content: string): { headers: string[]; records: Array<{ line: number; values: CsvRecord }> } {
+function parseCsv(content: string): { headers: string[]; records: Array<{ line: number; values: CsvRecord }> } {
   if (content.trim().length === 0) throw new EnterpriseScanError('EMPTY_CONTENT', 'parse', 'CSV 内容为空');
   const rows: Array<{ line: number; fields: string[] }> = [];
   let fields: string[] = [];

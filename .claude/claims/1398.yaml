@@ -1,6 +1,15 @@
 writeset:
   - .claude/claims/1398.yaml
-  - src/connectors/enterprise-scan/**
+  - src/connectors/enterprise-scan/canonical.ts
+  - src/connectors/enterprise-scan/errors.ts
+  - src/connectors/enterprise-scan/parsers.ts
+  - src/connectors/enterprise-scan/path-authorizer.ts
+  - src/connectors/enterprise-scan/preflight-worker.ts
+  - src/connectors/enterprise-scan/preflight.ts
+  - src/connectors/enterprise-scan/request-fingerprint.ts
+  - src/connectors/enterprise-scan/scanner.ts
+  - src/connectors/enterprise-scan/types.ts
+  - src/connectors/enterprise-scan/visibility.ts
   - src/agent/enterprise-scan-service.ts
   - src/l4/enterprise-scan-store.ts
   - src/l4/ontology-loader.ts
@@ -18,7 +27,15 @@ writeset:
   - extensions/ontology/manifest.json
   - packages/ontology/src/node-types.ts
   - packages/ontology/src/edge-types.ts
-  - tests/enterprise-scan/**
+  - tests/enterprise-scan/atomicity.test.ts
+  - tests/enterprise-scan/dsh-isolation.test.ts
+  - tests/enterprise-scan/file-race.test.ts
+  - tests/enterprise-scan/fixtures.ts
+  - tests/enterprise-scan/golden.test.ts
+  - tests/enterprise-scan/isolation.test.ts
+  - tests/enterprise-scan/migration.test.ts
+  - tests/enterprise-scan/test-helpers.ts
+  - tests/enterprise-scan/variants.test.ts
   - tests/l4/enterprise-scan-schema.test.ts
   - tests/routes/enterprise-scan.integration.test.ts
   - tests/store/metric-readings-schema.test.ts

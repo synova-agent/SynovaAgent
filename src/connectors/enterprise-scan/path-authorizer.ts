@@ -1,5 +1,5 @@
 import { closeSync, fstatSync, lstatSync, openSync, readSync, realpathSync } from 'fs';
-import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from 'path';
+import { basename, extname, isAbsolute, relative, resolve, sep } from 'path';
 import { createHash } from 'crypto';
 import { TextDecoder } from 'util';
 import { EnterpriseScanError } from './errors';
@@ -153,8 +153,4 @@ export function recheckAuthorizedSource(before: PreflightSource): void {
 
 export function authorizedFileName(authorization: ScanAuthorization): string {
   return basename(authorization.allowedPath);
-}
-
-export function authorizedDirectory(authorization: ScanAuthorization): string {
-  return dirname(authorization.allowedPath);
 }
