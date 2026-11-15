@@ -2044,7 +2044,7 @@ documents:
   # ---- 2026-11-15：目标导航、企业上下文与当前产品宪章 ----
   - id: DOC-1335
     type: decision
-    path: decisions/proposed/product/2026-11-15-goal-navigation-enterprise-context.md
+    path: decisions/implemented/product/2026-11-15-goal-navigation-enterprise-context.md
     status: active
     owner: CTO
     note: "创始人确认⑤为目标驱动的持续经营导航；②①③④共同构成跨模型企业上下文与验证核心；含链式召回；已落入当前执行版宪章v8.5。"

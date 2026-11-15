@@ -11,7 +11,7 @@
 ## Q2: 范围（做什么 / 不做什么——含文件路径）
 做什么：
 - `docs/synova/产品宪章-v8.5-修订稿.md`
-- `decisions/proposed/product/2026-11-15-goal-navigation-enterprise-context.md`
+- `decisions/implemented/product/2026-11-15-goal-navigation-enterprise-context.md`
 - `docs/synova/Synova-首个客户主线-总体施工规格与Win-CTO交接-v1.0-2026-11-15.md`
 - `docs/authority/DOCS-REGISTRY.yaml`
 - `.claude/task-briefs/2026-11-15-product-charter-v8-5.md`

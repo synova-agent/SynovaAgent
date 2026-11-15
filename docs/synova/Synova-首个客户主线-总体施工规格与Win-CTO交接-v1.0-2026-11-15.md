@@ -64,7 +64,7 @@ Synova 是组织数字孪生诊断与持续增长导航系统。诊断是手段�
 
 ### 1.2.1 🔴 ⑤与②①③④产品契约入口
 
-本轮产品决策记录见[`decisions/proposed/product/2026-11-15-goal-navigation-enterprise-context.md`](../../decisions/proposed/product/2026-11-15-goal-navigation-enterprise-context.md)；完整产品图景见[`docs/synova/产品宪章-v8.5-修订稿.md`](产品宪章-v8.5-修订稿.md)。创始人已于 2026-11-15 裁定**产品宪章以 v8.5 为当前执行版本**；院方原件同步另行完成，不回改 v8.4 历史镜像。
+本轮产品决策记录见[`decisions/implemented/product/2026-11-15-goal-navigation-enterprise-context.md`](../../decisions/implemented/product/2026-11-15-goal-navigation-enterprise-context.md)；完整产品图景见[`docs/synova/产品宪章-v8.5-修订稿.md`](产品宪章-v8.5-修订稿.md)。创始人已于 2026-11-15 裁定**产品宪章以 v8.5 为当前执行版本**；院方原件同步另行完成，不回改 v8.4 历史镜像。
 
 施工侧必须遵守其核心约束：⑤是目标驱动的持续经营导航；②①③④共同构成企业上下文与验证核心；事实关系、因果假设和已验证关系必须分层；岗位界面共享同一企业状态；决策历史不得覆盖；缺失不得补零；图连通不得冒充根因；跨模型增益须用同模型 A/B 实测，不作自动变准承诺。
 
