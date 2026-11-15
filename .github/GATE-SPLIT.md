@@ -36,21 +36,11 @@
 
 ---
 
-## 四、必需 context 真值（2026-10-26 起，唯一源 = repo ruleset）
-> 由 `gh api repos/<o>/<r>/rules/branches/main` 重放；`scripts/control-tower/required-checks-baseline.txt` 与之一致。
-> **改名/增删必须同 PR 同步三处：ci.yml job `name:` ⇄ ruleset ⇄ baseline**（否则 D971 型永久 blocked）。
-
-| # | context | 产出方 |
-|---|---|---|
-| 1 | Checker Review (maker/checker) | ci.yml |
-| 2 | Control Tower Gate Tests (ubuntu-latest) | ci.yml |
-| 3 | Golden Case F1 Gate | ci.yml |
-| 4 | Integration Contract Check | ci.yml |
-| 5 | Test-Kit Architecture Tests (ubuntu-latest) | ci.yml |
-| 6 | **PR 元信息门禁 (docs/evidence/write-set)** | ci.yml（原名 `TypeScript + Lint + Iron Laws`，名下已无 tsc/iron-laws，改名对齐实际内容） |
-| 7 | Vitest (1/2) | ci.yml |
-| 8 | Vitest (2/2) | ci.yml |
-| 9 | **Gate Integrity (pattern sentinel + injection fixture + ci-reds)** | ci.yml（2026-10-26 入必需集） |
+## 四、工程质量权威与 required checks（#1396 执行后口径）
+- **工程质量唯一权威 = Gitea `core-gates / core (pull_request_target)`**；它是 Gitea main 的唯一必需 context。
+- **GitHub = 集成测试面**。GitHub 检查报告集成测试结果，不作为工程质量权威；其 required checks 仅表示集成测试面的平台要求，不改变上述权威归属。
+- GitHub required checks 以 **#1396 执行后的 repo ruleset 实物**为准，本件不复制可能漂移的清单。复核命令：`gh api repos/<o>/<r>/rules/branches/main`。
+- 改名／增删须在同 PR 同步实际 workflow job `name:` 与平台 ruleset，避免 context 名漂移。
 
 ## 五、已知结构性风险（K3 诊断 §4）
 - **P2-⑧ DeployKey 永久旁路**：ruleset `bypass_actors=[{DeployKey, always}]` ⇒ 镜像同步通道即绕过通道；
