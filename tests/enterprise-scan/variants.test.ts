@@ -117,23 +117,23 @@ describe('#1398 八类变体与幂等反例', () => {
   it('同键不同载荷、不同用户同键和可见范围变化均409且不泄露旧报告', async () => {
     const { db, service, close, root } = setup(GOLDEN_FILES, { restricted: ['operator-statement.json'] });
     try {
-      await service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'same-key');
+      await service.run(viewer('staff', 'staff-a'), 'manifest-golden', 'same-key');
       const initial = authorityCounts(db);
-      const replay = await service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'same-key');
+      const replay = await service.run(viewer('staff', 'staff-a'), 'manifest-golden', 'same-key');
       expect(replay.replayed).toBe(true);
       expect(authorityCounts(db)).toEqual(initial);
-      await expectCode(service.run(viewer('responsible', 'other-user'), 'manifest-golden', 'same-key'), 'IDEMPOTENCY_KEY_UNAVAILABLE');
+      await expectCode(service.run(viewer('staff', 'other-user'), 'manifest-golden', 'same-key'), 'IDEMPOTENCY_KEY_UNAVAILABLE');
       expect(authorityCounts(db)).toEqual(initial);
-      db.prepare("UPDATE scan_authorizations SET allowed_users_json = ? WHERE source_id LIKE '%operator-statement'").run(JSON.stringify(['responsible-a']));
-      await expectCode(service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'same-key'), 'IDEMPOTENCY_REPLAY_SCOPE_CHANGED');
+      db.prepare("UPDATE scan_authorizations SET allowed_users_json = ? WHERE source_id LIKE '%operator-statement'").run(JSON.stringify(['staff-a']));
+      await expectCode(service.run(viewer('staff', 'staff-a'), 'manifest-golden', 'same-key'), 'IDEMPOTENCY_REPLAY_SCOPE_CHANGED');
       expect(authorityCounts(db)).toEqual(initial);
       writeFileSync(join(root, 'delivery_dashboard.csv'), DELIVERY_DASHBOARD.replace('accepted_count,13', 'accepted_count,14'));
-      await expectCode(service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'same-key'), 'IDEMPOTENCY_PAYLOAD_MISMATCH');
+      await expectCode(service.run(viewer('staff', 'staff-a'), 'manifest-golden', 'same-key'), 'IDEMPOTENCY_PAYLOAD_MISMATCH');
       expect(authorityCounts(db)).toEqual(initial);
     } finally { close(); }
   });
 
-  it('公开100+私有120：owner见双方conflict，受限只见100且partial_visibility', async () => {
+  it('公开100+私有120：admin见双方conflict，受限staff只见100且partial_visibility', async () => {
     const files = {
       ...GOLDEN_FILES,
       'delivery_batches.csv': DELIVERY_BATCHES.replace('2026-10,10,10,8,', '2026-10,10,10,100,'),
@@ -141,10 +141,11 @@ describe('#1398 八类变体与幂等反例', () => {
     };
     const { service, close } = setup(files, { restricted: ['operator-statement.json'] });
     try {
-      const full = await service.run(viewer(), 'manifest-golden', 'owner-conflict');
+      const full = await service.run(viewer(), 'manifest-golden', 'admin-conflict');
       expect(full.report.assertions.some(item => item.value === 100 && item.instance_state === 'conflict')).toBe(true);
       expect(full.report.assertions.some(item => item.value === 120)).toBe(true);
-      const restricted = await service.run(viewer('responsible', 'responsible-a'), 'manifest-golden', 'restricted-conflict');
+      // T-5：受限方 = `staff` @ `dept-delivery`（restricted 来源部门为 `dept-other` ⇒ 不可见）
+      const restricted = await service.run(viewer('staff', 'staff-a'), 'manifest-golden', 'restricted-conflict');
       expect(restricted.report.partial_visibility).toBe(true);
       expect(restricted.report.assertions.some(item => item.value === 100 && item.instance_state === 'measured')).toBe(true);
       const restrictedReport = restricted.report;

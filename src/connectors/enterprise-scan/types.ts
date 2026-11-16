@@ -1,3 +1,18 @@
+import type { WorkspaceRole } from '../../middleware/rbac';
+
+/**
+ * 扫描可见性消费的**唯一角色真源**（#1408 / 创始人裁定 Gitea #1408 评论 12607）。
+ *
+ * `satisfies readonly WorkspaceRole[]` 是**单向绑定**：`WorkspaceRole` 仍是产品 RBAC 的
+ * 定义方（`src/middleware/rbac.ts:13`），本数组只声明「扫描侧认这些值」并让 `tsc` 在
+ * 产品角色增删时**编译期报警**。禁止反向把 `WorkspaceRole` 定义为本数组的元素类型
+ * （会引入 `rbac.ts → types.ts` 的运行时边与跨模块类型环，v7 §5.1 明令本票不做）。
+ */
+export const WORKSPACE_ROLES = ['admin', 'manager', 'liaison', 'staff', 'ga'] as const satisfies readonly WorkspaceRole[];
+
+/** 扫描可见性角色 = 上述唯一真源的联合类型。 */
+export type ScanRole = typeof WORKSPACE_ROLES[number];
+
 export type EvidenceStatus = 'confirmed' | 'pending' | 'stale' | 'conflict';
 export type InstanceState = 'measured' | 'derived' | 'estimated' | 'partial' | 'stale' | 'conflict' | 'missing';
 export type AssertionType = 'fact' | 'inference' | 'unknown';
@@ -6,7 +21,8 @@ export type SourceFormat = 'csv' | 'md' | 'json';
 
 export interface ScanViewer {
   sub: string;
-  role: string;
+  /** #1408：只接受 `WorkspaceRole` 枚举（编译期）；运行时由 `toScanViewer` 校验。 */
+  role: ScanRole;
   orgId: string;
   departmentIds?: readonly string[];
 }
@@ -19,7 +35,14 @@ export interface ScanAuthorization {
   allowedPath: string;
   format: string;
   visibility: 'enterprise' | 'restricted';
-  allowedRoles: readonly string[];
+  /** 已过滤为合法 `WorkspaceRole` 的角色清单（角色闸只作用部门路径，见 visibility.ts）。 */
+  allowedRoles: readonly ScanRole[];
+  /**
+   * 角色清单是否**被声明**：取 `allowed_roles_json` **成功解析后的原始数组长度 > 0**
+   * （`src/l4/enterprise-scan-store.ts` 读路径）。**不得**用过滤后长度 —— 否则
+   * 「只写了旧词表（如 `["responsible"]`）」会被折成「未声明」，让角色闸整体失效（fail-open）。
+   */
+  allowedRolesDeclared: boolean;
   allowedUsers: readonly string[];
   allowedDepartments: readonly string[];
   revision: number;

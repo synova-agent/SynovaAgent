@@ -15,7 +15,8 @@ function prepare(restricted = false) {
   seedManifest(harness.db, { root, restricted: restricted ? ['operator-statement.json'] : [] });
   const authorizations = harness.store.listAuthorizations('org-a', 'manifest-golden');
   const preflights = authorizations.map(inspectAuthorizedSource);
-  const currentViewer = restricted ? viewer('responsible', 'responsible-a') : viewer();
+  // #1408：受限方身份 = `staff`（restricted 来源部门不命中、且未个人授权 ⇒ 不可见）
+  const currentViewer = restricted ? viewer('staff', 'staff-a') : viewer();
   const visible = preflights.filter(item => canViewSource(currentViewer, item.authorization));
   const model = buildScanModel('org-a', visible, visible.length < preflights.length);
   const input: PersistScanInput = {

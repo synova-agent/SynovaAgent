@@ -1,0 +1,111 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1409,
+  "patch_fingerprint": "sha256:50e9b7ff442e1415bf3e220341a59e1c1e61875d6a1c1f2362589f3aaa25433e",
+  "author": "win-external 1408 coding session（#1408 / synova-1408-role-vocab-v1）",
+  "reviewer": "零上下文独立复核会话（b1408-reviewer，未参与实现，非 CTO）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "锚-V1",
+      "title": "版本锚 / base / head 三真值独立复算",
+      "cmd": "GET $API/repos/synova-agent/SynovaAgent/issues/comments/12664 → UTF-8 字节数 + SHA-256；git ls-remote http://127.0.0.1:3000/synova-agent/SynovaAgent.git refs/heads/main；GET /pulls/1409",
+      "result": "pass",
+      "evidence": "12664 = 22690 B / SHA-256 612da322dc5550f3cd6ac93ec9f5a52f91ef9d7724c55c6f28768143483c68e0（与固定记录逐字一致）；main = 8b662ba056c1a7009f2bdcc17be5f0f4b8cdaa0d = PR base；PR head = cb7b80ce451f816a3878a4737134ca30742b2919（单 commit，17 files/+973/-42，open/mergeable=true）"
+    },
+    {
+      "id": "写集-W1",
+      "title": "17 条写集全在 v7 §4 内；禁区零改动；store/rbac 改动面逐行核对",
+      "cmd": "git diff --name-status 8b662ba0..cb7b80ce；git diff --name-only 8b662ba0..cb7b80ce -- extensions scripts .gitea customer-config src/middleware/auth.ts src/agent/enterprise-scan-service.ts；git diff -U0 -- src/l4/enterprise-scan-store.ts src/middleware/rbac.ts",
+      "result": "pass",
+      "evidence": "17 条逐条落在 v7 §4（5 个 src + tests/enterprise-scan/** + tests/routes/enterprise-scan*.test.ts + tests/middleware/rbac-role-validation.test.ts + .claude/claims + memory/notes/implemented）；禁区命令输出为空（0 文件）。store 改动 = :10/:18 两行 import + :33 `const log` + 读路径 :112(`rawRoles`)/:115-124(守卫+filter+warn)/:136(`allowedRolesDeclared`)，无其他逻辑；rbac 改动 = :10-12 import/注释 + :128-139 `extractRbacContext` 内枚举校验，其余函数零改动（`git diff --stat` = 14 insertions/1 deletion）"
+    },
+    {
+      "id": "硬约束-H1",
+      "title": "v7 §5 七条硬约束逐条物理核对",
+      "cmd": "git grep -n 'rawRoles\\|?? \\[\\]\\|allowedRolesDeclared\\|invalid_workspace_role\\|new Set\\|isWorkspaceRole' -- src/l4/enterprise-scan-store.ts src/connectors/enterprise-scan/visibility.ts src/middleware/rbac.ts；读 visibility.ts:39-90、store.ts:109-136、rbac.ts:125-140",
+      "result": "pass",
+      "evidence": "① 守卫改名：`const rawRoles = stringArray(...)` + `if (!rawRoles || !users || !departments) return []`（过滤在守卫之后）；② 无 `?? []`（仅 visibility.ts:84 `viewer.departmentIds ?? []`，正是 §3.2 口径，非解析兜底）；③ `allowedRolesDeclared: rawRoles.length > 0`（:136，原始成功解析长度，非过滤后）；④ `toScanViewer` 对 ga 抛固定 message「GA 本切片未接入来源级授权约束」（visibility.ts:51-57），`canViewSource` 对 ga 仍 `return false`（:80）；⑤ `extractRbacContext` 非法角色 `reason:'invalid_role'` + `code:'RBAC_DENIED'` 走既有匿名返回，未复用 `no_authenticated_context`；⑥ warn 位于每源循环内（每次读取每源一条），文件内 `new Set` 零命中；`degraded` 只在日志 meta；⑦ 旧词表/`owner` 在 `isWorkspaceRole` 直接 false，代码中无 owner→任何角色映射（src 改动内 `'owner'` 零命中）"
+    },
+    {
+      "id": "真链-T1",
+      "title": "T-1 6×2 真实身份链（signJwtToken + createServer + 真 HTTP）",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/routes/enterprise-scan.roles.integration.test.ts（我自建只读 worktree @cb7b80ce）",
+      "result": "pass",
+      "evidence": "42 passed / 0 failed；测试文件 :18 引仓内 `signJwtToken`、:175-179 真 `createServer()` + `server.address().port`、:36-46 真 `fetch` socket；T-1 参数化 6 身份（admin/manager/liaison/staff/ga/root），每个身份断言 enterprise 与 restricted 两格（合法 4 角色 201 + sources 含两类且长度=2；ga/root 403 + 固定 message + `sources` undefined + `authorityCounts` 前后相等）"
+    },
+    {
+      "id": "矩阵-T2",
+      "title": "T-2 27 格逐格核三字段实际值（非只读标题）+ 判别格",
+      "cmd": "读 tests/routes/enterprise-scan.roles.integration.test.ts:93-128 MATRIX 数组（27 条，三字段字面值）并与 v7 §7 T-2 表逐格比对；跑同文件",
+      "result": "pass",
+      "evidence": "27 格 = v7 21 行 + #9 manager 布尔空间镜像 7 行。关键格逐值一致：#5bis staff/users=[]/roles=['responsible']/depts=['dept-a']/staff-a@dept-a ⇒ denied；#6 users=['staff-a']/roles=['manager']/depts=['dept-other'] ⇒ visible；#6bis 同 #6 但 depts=['dept-a'] ⇒ visible；#7bis users=[]/roles=['staff']/depts=['dept-a'] ⇒ visible；#7ter users=[]/roles=['staff']/depts=['dept-other'] ⇒ denied；#10 liaison/users=['liaison-a']/roles=['manager']/depts=['dept-other'] ⇒ visible；#11 users=[]/roles=['liaison']/depts=['dept-a'] ⇒ denied；#11bis users=[]/roles=[]/depts=['dept-a'] ⇒ denied；#9a-#9g manager 三字段逐行写死且 staff↔manager 镜像（无 same-as 继承写法）。实跑判定用真实 HTTP 的 `partial_visibility` + 报告 `sources` 是否含被测 source_id（非仅标题）"
+    },
+    {
+      "id": "改坏-T2R",
+      "title": "改坏必红：本人抽 3 处动手（+1 替代读法 + 1 泄漏），各自打红指定格，还原后全绿",
+      "cmd": "在只读 worktree 临时改 → 跑 tests/routes/enterprise-scan.roles.integration.test.ts → git checkout -- → git status --porcelain",
+      "result": "pass",
+      "evidence": "① T-10 #11（部门路径前置到个人短路之前）：`× T-2 #6bis` + `× T-2 #9d(同#6bis)`（其余 40 绿）→ 还原后 42 绿；② T-10 #6（declared 改过滤后非空）：`× T-2 #5bis` + store 单测「declared 取原始长度」→ 还原后全绿；③ T-10 #8（liaison 并入 restrictedVisible）：`× T-2 #11` + `× T-2 #11bis`；#8 字面读法（liaison 追加角色清单门槛）另测：`× T-2 #10`（与作者自述一致）；④ 附加 T-8 泄漏：让 staff 见 restricted ⇒ variants「公开100+私有120」与 isolation 4 例必红。四轮后 `git status --porcelain` 均为空，最终残留 diff 0"
+    },
+    {
+      "id": "T3-双向",
+      "title": "T-3 双向断言（真实链 401 / 纯函数 403 SCOPE_DENIED / root 403 零写入）",
+      "cmd": "读 tests/routes/enterprise-scan.roles.integration.test.ts:276-301 + tests/enterprise-scan/visibility.test.ts:51-80；跑两文件",
+      "result": "pass",
+      "evidence": "真实 JWT `role=''`（`signJwtToken` 真签）⇒ 401 `UNAUTHORIZED` + 零写入；缺 role（用测试自己的 JWT_SECRET 手签合法签名缺字段）⇒ 401 + 零写入，未改 auth.ts（禁区零改动）；`role='root'` 真实链 ⇒ 403 `SCOPE_DENIED` + message 含「未知角色」+ 零写入；纯函数 `toScanViewer({role:''/'root'/'responsible'})` ⇒ `EnterpriseScanError` code=SCOPE_DENIED status=403"
+    },
+    {
+      "id": "T9-基线",
+      "title": "T-9 基线真伪（改前跑出，非改后自比）+ 5 合法角色网格逐格一致",
+      "cmd": "自建 base worktree @8b662ba0 + 未跟踪临时探针（跑完即删，未入库）跑 5 角色 × [{S1},{S3},{undefined}] `canAccessWorkspace`；对照 tests/middleware/rbac-role-validation.test.ts:44-50 BASELINE_GRID 与 :70-80 断言",
+      "result": "pass",
+      "evidence": "base 探针原始输出：admin authenticated=true grid=T,T,T／manager F,F,F／liaison T,T,T／staff F,F,F／ga T,F,T —— 与测试内冻结的 BASELINE_GRID 逐字一致 ⇒ 基线确为改前代码产出；head 测试断言 5 角色 `authenticated:true` 且网格与基线逐格相等（42 绿文件之一）；非枚举 root / 缺失 role ⇒ `authenticated:false` + `reason:'invalid_role'` 且断言不出现 `no_authenticated_context`；空上下文仍记 `no_authenticated_context`"
+    },
+    {
+      "id": "护栏-C1",
+      "title": "#842 不变式与 1B 100/120 泄漏断言仍在且仍会红",
+      "cmd": "读 tests/ontology/instance-loading.test.ts:240-252、tests/enterprise-scan/variants.test.ts:136-155；改坏后分别跑（仓内建 customer-config/ontology-instances/wani-baby，或让 staff 见 restricted），跑完删除/还原",
+      "result": "pass",
+      "evidence": "instance-loading「客户实例不入库」两条断言在位（loadInstanceLayer 找不到 wani-baby 文档 + existsSync 为 false）；仓内建该目录后 `× 合规不变式：客户实例不入库（#842 脱敏口径 ⇒ 仓内零客户实例）`（1 failed/26 passed），删除后 27 绿。variants「公开100+私有120」断言在位（admin 见 100/120；受限 staff `every(item => item.value !== 120)` + 不含私有 source/evidence）；让 staff 见 restricted 后该用例与 isolation 另 3 例必红（4 failed/6 passed），还原后全绿"
+    },
+    {
+      "id": "回归-R1",
+      "title": "回归（T-11 相关子集）+ lint + 架构 + diff-check + CI 最终态",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/enterprise-scan tests/routes/enterprise-scan.integration.test.ts tests/routes/enterprise-scan.roles.integration.test.ts tests/middleware/rbac-role-validation.test.ts tests/ontology/instance-loading.test.ts；node node_modules/typescript/bin/tsc --noEmit；SYNO_CI=1 bash scripts/check-architecture.sh；git diff --check；GET /commits/cb7b80ce451f816a3878a4737134ca30742b2919/status",
+      "result": "pass",
+      "evidence": "13 test files / 124 tests 全绿（exit 0）；`tsc --noEmit` exit 0 零错误；`架构检查: 全部通过 ✅` exit 0；`git diff --check` exit 0；CI status：state=success total_count=1（`core-gates / core` Successful in 1m55s，job 4328）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "PR 正文 §4.3 / src/l4/enterprise-scan-store.ts:10,18,33",
+      "what": "自述「另加 2 行 import」与实物有小差：顶部实际 +2 import 行 + `const log = createLogger('l4/enterprise-scan-store')` 1 行（第 33 行）。该 logger 行是 §5.2 强制 warn 的机械必需，逻辑仍只落在 :107-:122 读路径，判定可接受；仅建议后续自述写成「+3 行」以免偏差累积。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/routes/enterprise-scan.roles.integration.test.ts:206-239",
+      "what": "T-1 用 6 个参数化 `it` 覆盖 6×2=12 格（每个 `it` 内分别断言 enterprise 与 restricted 两格），覆盖等价但用例粒度不是 12 条独立用例；不影响判据强度。"
+    },
+    {
+      "severity": "info",
+      "where": "visibility.ts 临时改坏实验（T-10 #8）",
+      "what": "T-10 #8 存在两种读法且打红不同格：『liaison 追加角色清单门槛』只打红 #10（与作者自述逐字一致，已复现）；『liaison 并入 restrictedVisible』打红 #11+#11bis。v7 §7 T-10 #8 要求「至少打中 #10 或 #11」，两种读法均满足，非缺陷。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/enterprise-scan/visibility.test.ts:97-98",
+      "what": "测试用 `'root' as ScanRole` / `{...} as ScanViewer` 故意构造非法运行时输入（纵深防御补充断言所必需）；`tests/` 不在 tsconfig `include` 内，`npm run lint` 不覆盖测试，故这类断言不过门禁。本票未改变该现状，属既有口径，仅提示：若将来把 tests 纳入 tsc，需要改用显式 unknown 中转。"
+    },
+    {
+      "severity": "info",
+      "where": "T-2 #9d 与 #6bis",
+      "what": "T-10 #11 改坏同时打红 #6bis 与 manager 镜像 #9d（布尔四元组同为 (T,T,T,F)）——与 v7「#9 与 staff 逐格一致」要求自洽，非缺陷；回执树中已按 12680 要求逐行写死 manager 七行三字段。"
+    }
+  ],
+  "issued_at": "2026-11-16T08:12:59+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）＋ claim-verifier 场景2（逐项物理复现）＋ 独立抽样改坏（T-10 3/11 + 替代读法 + T-8 泄漏）",
+  "head_reviewed": "cb7b80ce451f816a3878a4737134ca30742b2919"
+}

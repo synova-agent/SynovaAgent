@@ -7,6 +7,7 @@
  * @error 幂等冲突、②映射失败、文件变化与 SQLite 失败显式抛出。
  */
 import type Database from 'better-sqlite3';
+import { createLogger } from '@synova/logger';
 import type { SqliteGraphStore } from '../adapters/sqlite-graph-store';
 import { systemClock, type Clock } from '../services/clock';
 import { validateAndLog } from './sog-schema-validator';
@@ -14,6 +15,7 @@ import { EnterpriseScanError, asEnterpriseScanError } from '../connectors/enterp
 import { stableId } from '../connectors/enterprise-scan/canonical';
 import { recheckAuthorizedSource } from '../connectors/enterprise-scan/path-authorizer';
 import { describeSource } from '../connectors/enterprise-scan/scanner';
+import { isWorkspaceRole } from '../connectors/enterprise-scan/visibility';
 import type {
   AssertionDraft,
   EnterpriseScanStorePort,
@@ -27,6 +29,8 @@ import type {
   ScanReport,
   ScanViewer,
 } from '../connectors/enterprise-scan/types';
+
+const log = createLogger('l4/enterprise-scan-store');
 
 interface AuthorizationRow {
   graph: string;
@@ -105,10 +109,19 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
     ).all(graph, manifestId) as AuthorizationRow[];
     const output: ScanAuthorization[] = [];
     for (const row of rows) {
-      const roles = stringArray(row.allowed_roles_json);
+      const rawRoles = stringArray(row.allowed_roles_json);
       const users = stringArray(row.allowed_users_json);
       const departments = stringArray(row.allowed_departments_json);
-      if (!roles || !users || !departments) return [];
+      if (!rawRoles || !users || !departments) return [];
+      const roles = rawRoles.filter(isWorkspaceRole);
+      if (roles.length !== rawRoles.length) {
+        // #1408：非 WorkspaceRole 值被过滤（如旧词表 'responsible'）。degraded 只进日志、不进 HTTP 响应；
+        // 「每请求每源至多一条 warn」是已接受的取舍 —— 本循环天然每来源一条，禁模块级 Set（会跨请求携带状态）。
+        log.warn(
+          { reason: 'invalid_workspace_role', dropped: rawRoles.length - roles.length, degraded: true },
+          '扫描授权角色清单含非 WorkspaceRole 值，已按角色闸口径过滤（allowedRolesDeclared 仍按原始长度）',
+        );
+      }
       if (row.visibility !== 'enterprise' && row.visibility !== 'restricted') return [];
       if (!Number.isInteger(row.revision) || row.revision < 1) return [];
       output.push({
@@ -120,6 +133,7 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
         format: row.format,
         visibility: row.visibility,
         allowedRoles: roles,
+        allowedRolesDeclared: rawRoles.length > 0,
         allowedUsers: users,
         allowedDepartments: departments,
         revision: row.revision,

@@ -66,8 +66,54 @@ export function seedManifest(
     const readScope = JSON.stringify({ required_as_of: options.requiredAsOf ?? null });
     insertSource.run(`${graph}:${sourceId}`, graph, format, join(options.root, name), visibility, readScope, JSON.stringify({ model: false }), 'seed', '2026-11-01T00:00:00.000Z');
     insertAuthorization.run(graph, manifestId, `${graph}:${sourceId}`, options.root, join(options.root, name), format, visibility,
-      JSON.stringify(visibility === 'restricted' ? [] : ['responsible']), JSON.stringify([]),
+      JSON.stringify(visibility === 'restricted' ? [] : ['staff']), JSON.stringify([]),
       JSON.stringify(visibility === 'restricted' ? ['dept-other'] : ['dept-delivery']), 1);
+  }
+}
+
+/** 单条来源授权夹具（#1408 T-2 矩阵用；三个授权字段全部由调用方钉死，允许旧词表原样落库）。 */
+export interface SeedAuthorizationEntry {
+  fileName: string;
+  visibility: 'enterprise' | 'restricted';
+  /** 原样写入 `allowed_roles_json`（**允许非法/旧词表**，专供 raw-vs-filtered 判别格）。 */
+  allowedRoles: readonly string[];
+  allowedUsers: readonly string[];
+  allowedDepartments: readonly string[];
+}
+
+/**
+ * 按 T-2 矩阵逐行种植授权（#1408 v7 §2.6 先例：直接 SQL 种夹具）。
+ *
+ * `scan_sources.source_id` 是**全局主键** ⇒ 每个 manifest 用独立 source_id，
+ * 从而同一 in-memory 库内可并存多行不同授权形状的夹具（逐行独立 manifest）。
+ */
+export function seedAuthorizationManifest(
+  db: Database.Database,
+  options: {
+    graph?: string;
+    manifestId: string;
+    root: string;
+    entries: readonly SeedAuthorizationEntry[];
+    requiredAsOf?: string | null;
+  },
+): void {
+  const graph = options.graph ?? 'org-a';
+  const insertSource = db.prepare(
+    `INSERT INTO scan_sources(source_id, graph, source_kind, locator, visibility, read_scope_json, egress_scope_json, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertAuthorization = db.prepare(
+    `INSERT INTO scan_authorizations(graph, manifest_id, source_id, canonical_root, allowed_path, format, visibility, allowed_roles_json, allowed_users_json, allowed_departments_json, revision)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  for (const entry of options.entries) {
+    const format = entry.fileName.endsWith('.csv') ? 'csv' : entry.fileName.endsWith('.md') ? 'md' : 'json';
+    const locator = join(options.root, entry.fileName);
+    const sourceId = `${graph}:${options.manifestId}:${entry.fileName}`;
+    const readScope = JSON.stringify({ required_as_of: options.requiredAsOf ?? null });
+    insertSource.run(sourceId, graph, format, locator, entry.visibility, readScope, JSON.stringify({ model: false }), 'seed', '2026-11-01T00:00:00.000Z');
+    insertAuthorization.run(graph, options.manifestId, sourceId, options.root, locator, format, entry.visibility,
+      JSON.stringify(entry.allowedRoles), JSON.stringify(entry.allowedUsers), JSON.stringify(entry.allowedDepartments), 1);
   }
 }
 
