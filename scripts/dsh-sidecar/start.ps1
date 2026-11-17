@@ -2,8 +2,12 @@
 #
 # Usage:
 #   powershell -File scripts/dsh-sidecar/start.ps1 -InstanceDir C:\path\to\instance
-# Optional: -DshHome <per-instance DSH_HOME>, -InstallDir <fixed dsh install>,
+# Optional: -DshHome <per-instance DSH_HOME>, -InstallDir <versioned fixed dsh install>,
+#           -ExpectedVersion <0.2.2-rc.2 default | 0.2.2-rc.1 explicit fallback>,
 #           -TimeoutSec <startup window, default 60>.
+# Production pins 0.2.2-rc.2; 0.2.2-rc.1 only works when -ExpectedVersion is passed
+# explicitly. Any other value (rc.3/caret/empty string) is rejected with
+# DSH_VERSION_MISMATCH before any process is spawned.
 #
 # Contract:
 #   exit 0 = supervisor ready (ACP initialize passed); stdout = one JSON status line
@@ -17,6 +21,7 @@ param(
   [Parameter(Mandatory = $true)][string]$InstanceDir,
   [string]$DshHome = '',
   [string]$InstallDir = '',
+  [string]$ExpectedVersion = '',
   [int]$TimeoutSec = 60
 )
 
@@ -33,6 +38,7 @@ $instanceFull = [System.IO.Path]::GetFullPath($InstanceDir)
 $arguments = @($entry, '--action', 'start', '--instance-dir', $instanceFull, '--start-timeout-ms', [string]($TimeoutSec * 1000))
 if ($DshHome -ne '') { $arguments += @('--dsh-home', [System.IO.Path]::GetFullPath($DshHome)) }
 if ($InstallDir -ne '') { $arguments += @('--install-dir', [System.IO.Path]::GetFullPath($InstallDir)) }
+if ($ExpectedVersion -ne '') { $arguments += @('--expected-version', $ExpectedVersion) }
 
 & $tsx @arguments
 exit $LASTEXITCODE

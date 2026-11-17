@@ -23,9 +23,10 @@ export type DshErrorCode =
   | 'FORGED_PATH'
   | 'TOOL_REJECTED'
   | 'EGRESS_DENIED'
-  // profile / 进程
+  // profile / 进程 / 版本
   | 'PROFILE_NOT_FOUND'
   | 'PROFILE_INVALID'
+  | 'DSH_VERSION_MISMATCH'
   | 'SIDECAR_NOT_RUNNING'
   | 'SIDECAR_SPAWN_FAILED'
   | 'SIDECAR_START_TIMEOUT'
@@ -80,6 +81,8 @@ const CODE_META: Record<DshErrorCode, CodeMeta> = {
   EGRESS_DENIED: { retryable: false, httpStatus: 403 },
   PROFILE_NOT_FOUND: { retryable: false, httpStatus: 500 },
   PROFILE_INVALID: { retryable: false, httpStatus: 500 },
+  // 版本是被锁定的部署前置条件：409 表示「当前安装与期望版本冲突」，重试同样冲突。
+  DSH_VERSION_MISMATCH: { retryable: false, httpStatus: 409 },
   SIDECAR_NOT_RUNNING: { retryable: false, httpStatus: 503 },
   SIDECAR_SPAWN_FAILED: { retryable: true, httpStatus: 503 },
   SIDECAR_START_TIMEOUT: { retryable: true, httpStatus: 504 },
