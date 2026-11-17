@@ -1,5 +1,6 @@
 writeset:
   - .claude/claims/1417.yaml
+  - gate-exemptions/2026-11-18-1417-precommit-fastpath.md
   - memory/notes/implemented/2026-11-18-1417-precommit-fastpath.md
   - scripts/check-hardcoded.sh
   - scripts/check-integrity-startup.sh
