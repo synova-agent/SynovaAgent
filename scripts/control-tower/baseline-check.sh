@@ -110,7 +110,13 @@ collect() { # collect <kind> → stdout: 原始输出
   case "$kind" in
     tsc)
       if [ -n "${SYNO_TSC_OUTPUT:-}" ]; then cat "$SYNO_TSC_OUTPUT" 2>/dev/null || true
-      else npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "server/vendor/" | grep -v "packages/" | grep -v "node_modules" || true; fi
+      elif [ -f "$REPO_DIR/node_modules/typescript/bin/tsc" ]; then
+        # #1417: 只用本地依赖（禁 npx 联网下载 tsc —— 无 node_modules 时会挂住/超时）
+        ( cd "$REPO_DIR" && node node_modules/typescript/bin/tsc --noEmit 2>&1 ) | grep "error TS" | grep -v "server/vendor/" | grep -v "packages/" | grep -v "node_modules" || true
+      else
+        printf '环境未就绪，先 npm ci（缺 node_modules/typescript；禁 npx 联网下载 tsc）\n' >&2
+        echo "__ENV_NOT_READY__"
+      fi
       ;;
     tests)
       if [ -n "${SYNO_VITEST_OUTPUT:-}" ]; then cat "$SYNO_VITEST_OUTPUT" 2>/dev/null || true
@@ -128,6 +134,11 @@ check_baseline() { # check_baseline <kind> <baseline_file> <extract_fn>
   local kind="$1" bfile="$2" extract="$3"
   local current baseline existing added fixed
   current=$(collect "$kind")
+  if [ "$kind" = "tsc" ] && [ "$current" = "__ENV_NOT_READY__" ]; then
+    # #1417: 环境未就绪 ⇒ exit 2 语义（判不了 ≠ 通过；也不得挂住等 npx）
+    echo "  ⚠️ 环境未就绪，先 npm ci —— tsc 基线快检判不了（exit 2，禁当通过）"
+    return 2
+  fi
   if [ -z "$current" ]; then
     # 采集器崩溃/无输出 → degraded，不误报新增（fail-open）
     log_degraded "$kind 采集无输出"
@@ -233,8 +244,10 @@ BLOCKED=0
 JSON_PARTS=""
 
 if [ "$DO_TSC" -eq 1 ]; then
-  OUT_TSC=$(check_baseline "tsc" "$BASELINE_DIR/tsc-errors.json" extract_tsc_keys) && : || BLOCKED=1
+  OUT_TSC=$(check_baseline "tsc" "$BASELINE_DIR/tsc-errors.json" extract_tsc_keys); TSC_RC=$?
   echo "$OUT_TSC"
+  if [ "$TSC_RC" -eq 2 ]; then exit 2; fi
+  [ "$TSC_RC" -eq 1 ] && BLOCKED=1
   N_TSC=$(echo "$OUT_TSC" | grep -oE '存量 [0-9]+' | head -1 | grep -oE '[0-9]+' || echo 0)
   A_TSC=$(echo "$OUT_TSC" | grep -oE '新增 [0-9]+' | head -1 | grep -oE '[0-9]+' || echo 0)
   JSON_PARTS="${JSON_PARTS}{\"tsc\":{\"existing\":$N_TSC,\"added\":$A_TSC}},"

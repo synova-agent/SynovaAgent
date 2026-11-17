@@ -5,10 +5,12 @@ set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 FAIL=0
+# #1417: 单次 git diff 复用（原实现同一 diff 取 4 次，本机每次 ~1s）
+DIFF="$(git diff --cached 2>/dev/null || true)"
 
 # ═══ 模式1: 联合类型中硬编码了专家/哨兵/工具名 ═══
 # 检测: type X = 'strategy' | 'org' | ...  ← 应该是 string
-PATTERN1=$(git diff --cached 2>/dev/null | grep "^+.*type.*=.*'[a-z_]*'.*|.*'[a-z_]*'" | grep -v "severity\|critical\|warning\|info\|high\|medium\|low\|improving\|stable\|declining\|dense\|sparse\|fragmented\|moderate\|healthy\|tight\|critical.*'" | grep -v "node_modules\|\.test\." | head -5 || true)
+PATTERN1=$(printf '%s\n' "$DIFF" | grep "^+.*type.*=.*'[a-z_]*'.*|.*'[a-z_]*'" | grep -v "severity\|critical\|warning\|info\|high\|medium\|low\|improving\|stable\|declining\|dense\|sparse\|fragmented\|moderate\|healthy\|tight\|critical.*'" | grep -v "node_modules\|\.test\." | head -5 || true)
 if [ -n "$PATTERN1" ]; then
   echo ""
   echo "⚠️  检测到可能的硬编码联合类型:"
@@ -20,7 +22,7 @@ fi
 
 # ═══ 模式2: 数组硬编码了应可扩展的实体 ═══
 # 检测: const arr = ['strategy', 'org', 'finance', ...]  ← 应从Registry/文件读取
-PATTERN2=$(git diff --cached 2>/dev/null | grep "^+.*= \['[a-z_]*'.*,.*'[a-z_]*'.*,.*'[a-z_]*'" | grep -v "severity\|node_modules\|\.test\." | head -5 || true)
+PATTERN2=$(printf '%s\n' "$DIFF" | grep "^+.*= \['[a-z_]*'.*,.*'[a-z_]*'.*,.*'[a-z_]*'" | grep -v "severity\|node_modules\|\.test\." | head -5 || true)
 if [ -n "$PATTERN2" ]; then
   echo ""
   echo "⚠️  检测到可能的硬编码数组:"
@@ -31,7 +33,7 @@ fi
 
 # ═══ 模式3: Set硬编码了后台/排除列表 ═══
 # 检测: new Set(['knowledge', ...])  ← 应从 expert-registry.yaml 的 background:true 读取
-PATTERN3=$(git diff --cached 2>/dev/null | grep "^+.*new Set(\[.*'.*'.*\])" | grep -v "node_modules\|\.test\." | head -5 || true)
+PATTERN3=$(printf '%s\n' "$DIFF" | grep "^+.*new Set(\[.*'.*'.*\])" | grep -v "node_modules\|\.test\." | head -5 || true)
 if [ -n "$PATTERN3" ]; then
   echo ""
   echo "⚠️  检测到可能的硬编码 Set:"
@@ -42,7 +44,7 @@ fi
 
 # ═══ 模式4: 大型硬编码 fallback 对象 ═══
 # 检测: export const DEFAULT_XXX = { ... }  ← 应删除，文件优先
-PATTERN4=$(git diff --cached 2>/dev/null | grep "^+.*export const DEFAULT_[A-Z_]*.*=.*{" | head -5 || true)
+PATTERN4=$(printf '%s\n' "$DIFF" | grep "^+.*export const DEFAULT_[A-Z_]*.*=.*{" | head -5 || true)
 if [ -n "$PATTERN4" ]; then
   echo ""
   echo "⚠️  检测到可能的硬编码 fallback 对象:"

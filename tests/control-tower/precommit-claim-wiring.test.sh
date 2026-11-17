@@ -93,6 +93,7 @@ CLAIM_FILE_NAME="1217.yaml"
 probe() { # <script> [v2=1] [staged]
   local _st="${3:-$STAGED}"
   GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_V2="${2:-1}" SYNO_CLAIM_DIR="$CLAIM_DIR" \
+  SYNO_PRECOMMIT_FULL=1 \
   SYNO_ISSUE_HINT="1217" \
   SYNO_GIT_CACHED_ALL_NAMES="$_st" SYNO_GIT_CACHED_NAMES="$_st" \
   bash "$1" 2>&1 || true
@@ -123,6 +124,7 @@ fi
 # 🔴 #911 判据（默认开端到端）: **不注入** SYNO_CLAIM_V2 ⇒ 行为必须与显式 1 一致
 #   （此前 `*)` 兜底把"未设"吞成 0，且 resolver 同样默认关 ⇒ 组 6/12 的 claim 分支默认不可达）
 OUT_DEFAULT="$(GITHUB_ACTIONS=true SYNO_TEST_ARM=1 SYNO_CLAIM_DIR="$CLAIM_DIR" \
+  SYNO_PRECOMMIT_FULL=1 \
   env -u SYNO_CLAIM_V2 SYNO_ISSUE_HINT=1217 \
   SYNO_GIT_CACHED_ALL_NAMES="$STAGED" SYNO_GIT_CACHED_NAMES="$STAGED" \
   bash "$PC" 2>&1 || true)"

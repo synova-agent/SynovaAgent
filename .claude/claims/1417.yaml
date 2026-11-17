@@ -1,0 +1,20 @@
+writeset:
+  - .claude/claims/1417.yaml
+  - memory/notes/implemented/2026-11-18-1417-precommit-fastpath.md
+  - scripts/check-hardcoded.sh
+  - scripts/check-integrity-startup.sh
+  - scripts/control-tower/baseline-check.sh
+  - scripts/doc-system/doc-registry-gate.sh
+  - scripts/pre-commit-check.sh
+  - scripts/pre-push-check.sh
+  - scripts/workflow/sync-dsh-skills.sh
+  - tests/control-tower/precommit-claim-wiring.test.sh
+  - tests/control-tower/precommit-fastpath.test.sh
+  - tests/control-tower/precommit-groups-injection.test.sh
+done:
+  - verify: python3 scripts/control-tower/claim_store.py --check 1417 --root .
+  - verify: bash tests/control-tower/precommit-fastpath.test.sh
+  - verify: bash scripts/pre-commit-check.sh
+  - verify: grep -q -- '--full)' scripts/pre-commit-check.sh && grep -q 'SYNO_PRECOMMIT_FULL' scripts/pre-commit-check.sh
+  - verify: git diff --check HEAD~1
+note: "Issue #1417 本地软提示收敛：pre-commit 默认只跑组1（类型/硬编码/冲突标记）+组3（Secrets）+组12（claim 覆盖）+组13（技能同步及自检缝），其余组与组12/13 重检查需 --full 或 SYNO_PRECOMMIT_FULL=1；组横幅与检查体零删除，CI core-gates 零改动。实测（本机，代表暂存集=scripts 单文件）：默认 27s（≤30 目标达标；改前同一脚本全量 606s：组1=12/2=14/3=1/4=0/5=26/6=20/7=169/8=3/9=19/12=28/13=301）；全量 --full 184s（3.3x 提速；组7 169→12s、组13 301→80s）。慢因与修法：组7 check-integrity-startup.sh 逐 manifest 起 python（268s→1s 单进程批量）；组13 doc-registry-gate.sh R1/R2 逐条目 grep 子进程且 BASE_IDS 正则丢 -NN 后缀导致存量不冻结（>200s→30s）；sync-dsh-skills 逐目录 basename（13s→8s）；check-hardcoded 重复 git diff 四次（8s→1s）；冲突标记与技能同步在 setup 并行。pre-push：baseline-check tsc 只用本地 node_modules/typescript/bin/tsc，缺失时报『环境未就绪，先 npm ci』并 exit 2（不 npx 联网、不挂住；实测 8s 返回），pre-push 区分 exit 1（新增 tsc 错误）与 exit 2（降级）。配对测试 tests/control-tower/precommit-fastpath.test.sh 32/0：默认 7 个跳过组确无横幅、全量 11 组全跑无跳过行、改坏必红抽两条（组1 as any / 组2 配对缺失）默认只红组1、全量两条同红。受保护路径变更 ⇒ 同 PR 另加 gate-exemptions 豁免件（下一 commit，引用本 PR 号）。"

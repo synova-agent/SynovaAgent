@@ -1,0 +1,21 @@
+# 本地 pre-commit 收敛：默认快跑集 + 全量按需（组7/13 提速，pre-push 禁 npx）
+
+- **状态**: implemented（2026-11-18，Issue #1417）
+- **任务**: #1417 ｜ 上游背景：CI core-gates 已是唯一权威门；本地 11 组全量实测组7=169~291s、组13=301~303s、pre-push 4–5 分钟，摩擦失控（CTO 裁定 2026-11-18）。
+- **决策**:
+  - 默认只跑 **组 1**（类型/硬编码/冲突标记）、**组 3**（Secrets）、**组 12 的 claim 覆盖判定**、**组 13 的技能同步检查**；组 2/4/5/6/7/8/9 与组 12/13 其余重检查改为 `--full` 或 `SYNO_PRECOMMIT_FULL=1` 执行。
+  - **判据零删除**：11 个组横幅与全部检查体原样保留；全量模式（FULL）与改动前逐字节同语义；CI core-gates 零改动。
+  - 组 7 `check-integrity-startup.sh` 改**单进程批量**（原逐 manifest/边类型/行业起 `python3 -c`，本机 268s → 1s），判据与失败文案不变。
+  - 组 13 `doc-registry-gate.sh`：`BASE_IDS` 提取正则补 `-NN` 后缀（原 `grep -oE 'DOC-[0-9]+'` 丢掉 `DOC-<issue>-NN` ⇒ 存量从不冻结、每次全量重判），R1/R2 存量跳过改用内建匹配（原逐条目 `grep` 子进程）；`sync-dsh-skills.sh` 用参数展开替代逐目录 `basename`；`check-hardcoded.sh` 复用单次 `git diff`（原四次）。
+  - 默认模式把冲突标记（组1）与技能同步（组13）在 setup 并行启动、原调用点 wait 收口；默认不解析 `BRIEF`（claim 覆盖不需要，全量仍解析）。
+  - pre-push：`baseline-check.sh` 的 tsc 采集只走本地 `node_modules/typescript/bin/tsc`；缺失 ⇒ stderr「环境未就绪，先 npm ci」+ **exit 2**（不再 `npx tsc` 联网下载/挂住）；`pre-push-check.sh` 区分 exit 1（新增 tsc 错误）与 exit 2（降级，不误报）。
+- **理由**: 「判得准归 CI，跑得快归本地」；重检查不删、改按需。默认集 ≤30s 才能把本地门禁从「被迫 --no-verify」拉回可用区间（事故史：pre-commit 120s 超时导致绕过）。
+- **证据**（本机，代表暂存集 = `scripts/` 单文件）:
+  - 改前全量 606s（组1=12/2=14/3=1/4=0/5=26/6=20/7=169/8=3/9=19/12=28/13=301）
+  - 默认（无参数）**27s**（组1=8/3=1/12=3/13=3，其余跳过）≤30s 达标
+  - 全量 `--full` **184s**（组7=12s、组13=80s；3.3x）
+  - 单项：`check-integrity-startup.sh` 268s→1s；`doc-registry-gate.sh` >200s→30s；`sync-dsh-skills --check` 13s→8s；`check-hardcoded.sh` 8s→1s
+  - `baseline-check.sh --tsc`（无 node_modules 夹具）→ 8s 内打印「环境未就绪，先 npm ci」并 exit 2
+  - 配对测试 `tests/control-tower/precommit-fastpath.test.sh` → `pass=32 fail=0`（默认 7 个跳过组无横幅；全量 11 组全跑无跳过行；改坏必红两条：组1 as any、组2 配对缺失——默认只红组1，全量两条同红）
+- **回滚**: 不传 `--full`/不设 `SYNO_PRECOMMIT_FULL` 即本默认；全量语义与改动前一致；`SYNO_CLAIM_V2=0` 等既有回滚点未动。helper 优化可 `git revert` 单文件恢复（判据不变）。
+- **边界**: 未改 CI workflow（`.gitea/**` 零改动）、未改分支保护、未删任何检查组、未弱化 FULL 判据；受保护路径变更已在同 PR 加 `gate-exemptions/2026-11-18-1417-precommit-fastpath.md`。
