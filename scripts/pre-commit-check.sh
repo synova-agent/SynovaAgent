@@ -480,6 +480,7 @@ DOC_ONLY=$(is_doc_only "$STAGED_ALL")
     soft_check "D1193 文档契约三闸: CI 无 base（fail-closed，禁空跑）" "SYNO_DIFF_BASE 未注入"
     exit 1
   fi
+if [ "$PRECOMMIT_FULL" = "1" ] || [ "${SYNO_CI:-0}" = "1" ]; then
 DOC_CONTRACT_TOUCHED=$(echo "$STAGED_ALL" | grep -E '\.(md|html?)$' || true)
 if [ -z "$DOC_CONTRACT_TOUCHED" ]; then
   soft_pass "D1193 文档契约三闸: 无文档变更（跳过）"
@@ -508,6 +509,10 @@ else
     soft_check "D1193 文档契约三闸: 检查本身降级 (exit=$DOC_CONTRACT_RC)" "$(echo "$DOC_CONTRACT_OUT" | tail -3)" "check-doc-contract"
     [ "${SYNO_CI:-0}" = "1" ] && exit 1
   fi
+fi
+
+else
+  echo -e "  ${CYAN}ℹ️  D1193 文档契约三闸 —— 跳过（默认快跑集；全量请加 --full；CI 仍执行）${RESET}"
 fi
 
 # ── CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 11 组 ──
@@ -646,6 +651,8 @@ fi
 # ═══ V3.8: plan.json — 分阶段任务支持 ═══
 # Anthropic 原则: 架构步骤不是偷懒。当 plan.json 声明某文件处于 create 阶段
 # 且 wiring 标记为 deferred，接线检查对该文件降级为警告。
+# #1417: PLAN 解析（python ~2s）只服务 plan_aware_check（组 2/4，FULL 专属）⇒ 默认跳过
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 PLAN_FILE="$ROOT/.claude/plan.json"
 DEFERRED_WIRING_FILES=""
 DEFERRED_FF_FILES=""
@@ -679,6 +686,8 @@ except: pass
     DEFERRED_TEST_FILES=$(echo "$PLAN_PARSE" | grep "^TEST:" | sed 's/^TEST://')
   fi
 fi
+fi
+
 # STAGED_ALL 已提前定义于 CT-34 (D387) 区块 — 此处不再重复定义
 STAGED_SRC=$(echo "$STAGED_ALL" | grep -E '^src/|^tests/|^packages/|^scripts/' | grep -v 'scripts/pre-commit-check.sh\|scripts/check-secrets.sh\|scripts/check-file-driven.sh\|scripts/workflow/' || true)
 NEW_IMPL=$(echo "$GIT_CACHED_ADDED_NAMES" | grep -E "^src/|^extensions/" | grep "\.ts$" | grep -v "\.test\." | grep -v "\.d\.ts" | grep -v "types\.ts$\|index\.ts$\|helpers\.ts$" | grep -v "src/sentinel/compute/" || true)
@@ -700,6 +709,8 @@ if [ -n "$(git rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ]; then
     <(git diff --cached MERGE_HEAD --name-only --diff-filter=ACMR 2>/dev/null | sed '/^$/d' | sort) \
     2>/dev/null || true)"
   [ -z "$DECL_SCOPE" ] && DECL_MERGE_SKIP=1
+fi
+DECL_SRC="$STAGED_SRC"
 
 # #1417: 默认快跑集不解析 BRIEF（18s：逐 brief 多次 python）；claim 覆盖判定不需要它。
 #   全量模式仍在 setup 解析（原组 5 内联逻辑上移；判据语义不变）。
@@ -716,8 +727,6 @@ case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
 esac
 IS_CLAIM_DECL=0
 case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
-fi
-DECL_SRC="$STAGED_SRC"
 [ "$DECL_MERGE_SKIP" = "1" ] && DECL_SRC=""   # 合并提交无自撰文件 → 闸① 无对象
 
 echo ""

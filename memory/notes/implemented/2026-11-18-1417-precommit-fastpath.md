@@ -7,7 +7,7 @@
   - **判据零删除**：11 个组横幅与全部检查体原样保留；全量模式（FULL）与改动前逐字节同语义；CI core-gates 零改动。
   - 组 7 `check-integrity-startup.sh` 改**单进程批量**（原逐 manifest/边类型/行业起 `python3 -c`，本机 268s → 1s），判据与失败文案不变。
   - 组 13 `doc-registry-gate.sh`：`BASE_IDS` 提取正则补 `-NN` 后缀（原 `grep -oE 'DOC-[0-9]+'` 丢掉 `DOC-<issue>-NN` ⇒ 存量从不冻结、每次全量重判），R1/R2 存量跳过改用内建匹配（原逐条目 `grep` 子进程）；`sync-dsh-skills.sh` 用参数展开替代逐目录 `basename`；`check-hardcoded.sh` 复用单次 `git diff`（原四次）。
-  - 默认模式把冲突标记（组1）与技能同步（组13）在 setup 并行启动、原调用点 wait 收口；默认不解析 `BRIEF`（claim 覆盖不需要，全量仍解析）。
+  - 默认模式把冲突标记（组1）与技能同步（组13）在 setup 并行启动、原调用点 wait 收口；默认不解析 `BRIEF`（claim 覆盖不需要，全量仍解析）。`BRIEF`/`CLAIM_V2`/`IS_CLAIM_DECL` 的 hoist 必须落在 `MERGE_HEAD` if 块**之外**（首版误放块内 ⇒ 仅 merge 提交可用；claim-wiring 探针抓到后已修，见下方证据）。
   - pre-push：`baseline-check.sh` 的 tsc 采集只走本地 `node_modules/typescript/bin/tsc`；缺失 ⇒ stderr「环境未就绪，先 npm ci」+ **exit 2**（不再 `npx tsc` 联网下载/挂住）；`pre-push-check.sh` 区分 exit 1（新增 tsc 错误）与 exit 2（降级，不误报）。
 - **理由**: 「判得准归 CI，跑得快归本地」；重检查不删、改按需。默认集 ≤30s 才能把本地门禁从「被迫 --no-verify」拉回可用区间（事故史：pre-commit 120s 超时导致绕过）。
 - **证据**（本机，代表暂存集 = `scripts/` 单文件）:
