@@ -16,7 +16,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, win32 as win32Path } from 'node:path';
 import { DshError } from './errors';
 
 /** 生产唯一允许的固定版本（#1411 锁定 0.2.2-rc.2）。 */
@@ -83,10 +83,12 @@ function homeDir(env: NodeJS.ProcessEnv): string {
  */
 export function defaultInstallDir(options: DefaultInstallDirOptions = {}): string {
   const env = options.env ?? process.env;
-  const fromEnv = env.SYNOVA_DSH_INSTALL_DIR;
-  if (fromEnv !== undefined && fromEnv.length > 0) return resolve(fromEnv);
-  const version = options.version ?? PINNED_DSH_VERSION;
   const platform = options.platform ?? process.platform;
+  const fromEnv = env.SYNOVA_DSH_INSTALL_DIR;
+  if (fromEnv !== undefined && fromEnv.length > 0) {
+    return platform === 'win32' ? win32Path.resolve(fromEnv) : resolve(fromEnv);
+  }
+  const version = options.version ?? PINNED_DSH_VERSION;
   if (platform === 'win32') {
     const localAppData = env.LOCALAPPDATA;
     if (localAppData !== undefined && localAppData.length > 0) {
