@@ -1,0 +1,33 @@
+# .claude/claims/1413.yaml — #1413 中性首次企业扫描最小可见 UI＋只读清单 API
+# DEV DOC: Issue #1413 评论 13049（v4）｜固定记录: 13052｜Mandate: 13053
+# Base: 2cde2320224f930b4769315edf1396b25157cad7｜Policy: synova-1413-transitional-v1
+writeset:
+  - .claude/claims/1413.yaml
+  - memory/notes/implemented/1413-scan-ui.md
+  - src/routes/enterprise-scan.ts
+  - src/agent/enterprise-scan-service.ts
+  - src/l4/enterprise-scan-store.ts
+  - src/connectors/enterprise-scan/types.ts
+  - tests/routes/enterprise-scan.manifests.integration.test.ts
+  - electron-renderer/src/lib/enterprise-scan-api.ts
+  - electron-renderer/src/stores/scan-store.ts
+  - electron-renderer/src/components/ScanPanel.tsx
+  - electron-renderer/src/components/ScanContainer.tsx
+  - electron-renderer/src/App.tsx
+  - electron-renderer/src/stores/app-store.ts
+  - electron-renderer/src/components/LeftPanel.tsx
+  - tests/scan-ui/scan-store.test.ts
+  - tests/scan-ui/scan-api-loader.test.ts
+  - tests/scan-ui/scan-panel.render.test.ts
+  - tests/scan-ui/scan-wiring.test.ts
+done:
+  - verify: npx vitest run tests/routes/enterprise-scan.manifests.integration.test.ts tests/scan-ui
+  - verify: npx vitest run tests/routes/enterprise-scan.integration.test.ts tests/routes/enterprise-scan.roles.integration.test.ts tests/enterprise-scan
+  - verify: npx tsc --noEmit
+  - verify: npx tsc -p electron-renderer/tsconfig.json
+  - verify: npx vitest run tests/acceptance/mvp1-m3-domain-chain.test.ts tests/acceptance/mvp1-m4-output-face.test.ts
+  - verify: npm run check:architecture
+  - verify: npm run check:iron-laws
+  - verify: npm run test
+  - verify: bash scripts/pre-commit-check.sh
+note: "#1413 只读清单由服务端 graph＋canViewSource 过滤；renderer loader/store/纯面板与 LeftPanel→App→Container 真实接线；DevMode 自动 admin 真 socket 全链，真实 JWT 接线、实机 Electron、DSH/SSE/实时进度/取消不做。"

@@ -14,8 +14,8 @@ type AuthedRequest = Request & { auth?: JwtPayload };
 /**
  * #1408：验签身份 → `ScanViewer` 的**唯一**收窄点（`toScanViewer`）。
  *
- * 失败语义：缺 sub/orgId、角色缺失/非枚举、`ga` ⇒ `SCOPE_DENIED`（403）+ 固定 message + 零写入。
- * 旧实现在此处只做真值校验，`role` 直接透传 ⇒ 未知角色到 `canViewSource` 才被拒、且 `ga` 无固定口径。
+ * 失败语义：验签后缺 orgId、角色缺失/非枚举、`ga` ⇒ `SCOPE_DENIED`（403）+ 固定 message + 零写入；
+ * 缺 sub 由认证中间件按 401 拒绝。旧实现在此处只做真值校验，`role` 直接透传。
  */
 function viewerOf(req: AuthedRequest): ScanViewer {
   return toScanViewer(req.auth);
@@ -54,6 +54,19 @@ function respondError(res: Response, error: unknown): void {
     retryable: classified.retryable,
   });
 }
+
+router.get('/api/enterprise-scan/manifests', (req: AuthedRequest, res: Response) => {
+  try {
+    if (Object.keys(req.query).length > 0) {
+      throw new EnterpriseScanError('VALIDATION_ERROR', 'request', '清单读取不接受 query 参数');
+    }
+    const manifests = serviceOf(req).listManifests(viewerOf(req));
+    res.status(200).json({
+      schema_version: 'enterprise-scan-manifests/v1',
+      manifests: manifests.map(item => ({ manifest_id: item.manifestId, display_name: item.displayName })),
+    });
+  } catch (error) { respondError(res, error); }
+});
 
 router.post('/api/enterprise-scan/runs', async (req: AuthedRequest, res: Response) => {
   try {

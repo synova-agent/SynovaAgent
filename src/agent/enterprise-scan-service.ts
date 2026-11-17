@@ -11,11 +11,30 @@ import { EnterpriseScanError } from '../connectors/enterprise-scan/errors';
 import { preflightSources } from '../connectors/enterprise-scan/preflight';
 import { buildScanModel } from '../connectors/enterprise-scan/scanner';
 import { canViewSource, visibilityFingerprint } from '../connectors/enterprise-scan/visibility';
-import type { EnterpriseScanStorePort, PersistedScan, PreflightSource, RunRecord, ScanAuthorization, ScanReport, ScanViewer } from '../connectors/enterprise-scan/types';
+import type { EnterpriseScanStorePort, PersistedScan, PreflightSource, RunRecord, ScanAuthorization, ScanManifestSummary, ScanReport, ScanViewer } from '../connectors/enterprise-scan/types';
 import { scanRequestFingerprint } from '../connectors/enterprise-scan/request-fingerprint';
 
 export class EnterpriseScanService {
   constructor(private readonly store: EnterpriseScanStorePort) {}
+
+  /**
+   * @input 已由认证边界收窄的 viewer。
+   * @output 当前身份至少有一个可见来源的清单摘要；无可见清单返回空数组。
+   * @degraded 授权损坏按既有 listAuthorizations fail-closed 跳过；读取失败显式抛出，不伪造空清单。
+   * @authority 企业只取 viewer.orgId，可见性只由服务端授权与 canViewSource 判定。
+   * @not-here 不做 preflight、文件 IO、来源计数、业务写入或材料内容读取。
+   * @error 存储错误交由路由归一为 SCAN_STORE_FAILED；viewer 拒绝由路由统一处理。
+   */
+  listManifests(viewer: ScanViewer): ScanManifestSummary[] {
+    const manifests: ScanManifestSummary[] = [];
+    for (const manifestId of this.store.listManifestIds(viewer.orgId)) {
+      const authorizations = this.store.listAuthorizations(viewer.orgId, manifestId);
+      if (authorizations.length > 0 && authorizations.some(item => canViewSource(viewer, item))) {
+        manifests.push({ manifestId, displayName: manifestId });
+      }
+    }
+    return manifests;
+  }
 
   async run(viewer: ScanViewer, manifestId: string, clientRequestId: string): Promise<PersistedScan> {
     const authorizations = this.store.listAuthorizations(viewer.orgId, manifestId);
