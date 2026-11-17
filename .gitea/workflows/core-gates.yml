@@ -5,6 +5,12 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+# 防队列堆积（Issue #1414）：同 workflow + 同 ref 只保留最新一条 run。
+# 本实例原生支持（Gitea 28.3.0 / gitea-runner v5.4.1，临时分支双 push 实测：
+# 旧 run #4305 在新 run #4311 创建同秒由 queued → cancelled），非兜底 API 方案。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
