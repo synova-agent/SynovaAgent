@@ -1,0 +1,10 @@
+writeset:
+  - .claude/claims/1414.yaml
+  - .gitea/workflows/core-gates.yml
+  - .gitea/workflows/dual-repo-sync.yml
+done:
+  - verify: python3 scripts/control-tower/claim_store.py --check 1414 --root .
+  - verify: python3 -c 'import yaml,sys; exp={"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":True}; files=(".gitea/workflows/core-gates.yml",".gitea/workflows/dual-repo-sync.yml"); bad=[f for f in files if yaml.safe_load(open(f,encoding="utf-8")).get("concurrency")!=exp]; print("concurrency-mismatch:",bad); sys.exit(1 if bad else 0)'
+  - verify: CI=1 SYNO_CI=1 bash tests/control-tower/core-gates-workflow.test.sh
+  - verify: git diff --check HEAD~1
+note: "Issue #1414 防 CI 队列堆积：core-gates.yml / dual-repo-sync.yml 各加顶层 concurrency{group: workflow-ref, cancel-in-progress: true}，其余零改动（timeout/步骤/permissions/required context/分支保护均未动）。平台支持性已实测（Gitea 28.3.0 / gitea-runner v5.4.1）：临时分支 probe-1414-concurrency 连推两次，run 4305 由 queued→cancelled（完成时间 2026-11-18T02:40:53 与 run 4311 创建同秒），4311 为新 run ⇒ 原生 cancel-in-progress 生效，未启用兜底 API 方案。core-gates.yml 属受信核心输入，本 PR 的 core-gates run 按设计 exit 2（CORE-TRUSTED-INPUT-CHANGED）；新配置绿灯证据走 workflow_dispatch(manual-no-base) 运行。PR Closes #1414，不自行合并。"
