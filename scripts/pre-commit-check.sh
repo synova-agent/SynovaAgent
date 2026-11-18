@@ -76,6 +76,28 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; RE
 #   用 `sed -n '42,44p;47p'` 提取计数器/颜色行后单独 source；赋值行不被提取 ⇒
 #   该片段里 QUIET_SUCCESS 为空 ⇒ ${QUIET_SUCCESS:-0} 走**打印**语义（夹具断言 ✅）。
 QUIET_SUCCESS="${SYNO_QUIET_SUCCESS:-1}"
+
+# ═══════════════════════════════════════════════════════════════════
+# Issue #1417（2026-11-18，CTO 裁定）：本地软提示收敛为「默认快跑集 + 全量按需」
+#   默认只跑：组 1（类型/硬编码/冲突标记）、组 3（Secrets）、组 12 的 claim 覆盖判定、
+#   组 13 的技能同步检查；其余组与重检查需 --full 或 SYNO_PRECOMMIT_FULL=1。
+#   判据不删不改：组横幅与全部检查体原样保留，全量模式跑满 11 组（CI core-gates 零改动）。
+#   回滚：不传 --full / 不设 SYNO_PRECOMMIT_FULL 即本默认；全量语义与改动前一致。
+# ═══════════════════════════════════════════════════════════════════
+PRECOMMIT_FULL="${SYNO_PRECOMMIT_FULL:-0}"
+for _pc_arg in "$@"; do
+  case "$_pc_arg" in
+    --full) PRECOMMIT_FULL=1 ;;
+    --default) PRECOMMIT_FULL=0 ;;
+  esac
+done
+case "$PRECOMMIT_FULL" in
+  1|true|TRUE|yes) PRECOMMIT_FULL=1 ;;
+  *) PRECOMMIT_FULL=0 ;;
+esac
+_precommit_skip() { # <组号> <名称> —— 跳过的组不打印组横幅，明确点名（非静默）
+  echo -e "  ${CYAN}⏭  组 $1: $2 —— 跳过（默认快跑集；全量请加 --full 或 SYNO_PRECOMMIT_FULL=1）${RESET}"
+}
 # #595: 组计数真值 = 实际执行的横幅数（运行时）；汇总行读 GROUP_DONE，禁写字面总数。
 GROUP_DONE=0
 
@@ -458,6 +480,7 @@ DOC_ONLY=$(is_doc_only "$STAGED_ALL")
     soft_check "D1193 文档契约三闸: CI 无 base（fail-closed，禁空跑）" "SYNO_DIFF_BASE 未注入"
     exit 1
   fi
+if [ "$PRECOMMIT_FULL" = "1" ] || [ "${SYNO_CI:-0}" = "1" ]; then
 DOC_CONTRACT_TOUCHED=$(echo "$STAGED_ALL" | grep -E '\.(md|html?)$' || true)
 if [ -z "$DOC_CONTRACT_TOUCHED" ]; then
   soft_pass "D1193 文档契约三闸: 无文档变更（跳过）"
@@ -486,6 +509,10 @@ else
     soft_check "D1193 文档契约三闸: 检查本身降级 (exit=$DOC_CONTRACT_RC)" "$(echo "$DOC_CONTRACT_OUT" | tail -3)" "check-doc-contract"
     [ "${SYNO_CI:-0}" = "1" ] && exit 1
   fi
+fi
+
+else
+  echo -e "  ${CYAN}ℹ️  D1193 文档契约三闸 —— 跳过（默认快跑集；全量请加 --full；CI 仍执行）${RESET}"
 fi
 
 # ── CT-34 纯文档提交: 仅 Secrets 扫描, 豁免其余 11 组 ──
@@ -606,15 +633,26 @@ par_collect_quiet() {
 ( par_start hardcoded check-hardcoded.sh ) &  PAR_HARDCODED=$!
 ( par_start deprecated-mapping check-deprecated-mapping.sh ) &  PAR_DEPRECATED=$!
 ( par_start secrets check-secrets.sh ) &  PAR_SECRETS=$!
+
+# #1417 默认快跑集并行化: 冲突标记（组 1）与技能同步（组 13）在 setup 并行启动，
+#   各自原调用点 wait + 读取输出；判据与退出码语义不变。
+if [ -f "$ROOT/scripts/control-tower/check-conflict-markers.sh" ]; then
+  ( bash "$ROOT/scripts/control-tower/check-conflict-markers.sh" --root "$ROOT" > "$PAR_DIR/conflict.out" 2>&1; echo $? > "$PAR_DIR/conflict.code" ) &  PAR_CONFLICT=$!
+fi
+( bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check > "$PAR_DIR/skillsync.out" 2>&1; echo $? > "$PAR_DIR/skillsync.code" ) &  PAR_SKILLSYNC=$!
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 ( par_start plan-integrity check-plan-integrity.sh ) &  PAR_PLAN_INTEGRITY=$!
 ( par_start verifiable-done check-verifiable-done.sh ) &  PAR_VERIFIABLE=$!
 # D1148: q0c 取消跟踪已并入声明闸①，改为**同步单次**执行（见闸①块）——不再并行启动，避免跑两遍。
 ( par_start acceptance-ci check-acceptance-ci.sh ) &  PAR_ACCEPTANCE=$!
 ( SYNO_GROUP_DOWN=$([ "${SYNO_GATE_STRICT_LEGACY:-0}" = "1" ] && echo 0 || echo 1) par_start file-driven check-file-driven.sh ) &  PAR_FILE_DRIVEN=$!
+fi
 
 # ═══ V3.8: plan.json — 分阶段任务支持 ═══
 # Anthropic 原则: 架构步骤不是偷懒。当 plan.json 声明某文件处于 create 阶段
 # 且 wiring 标记为 deferred，接线检查对该文件降级为警告。
+# #1417: PLAN 解析（python ~2s）只服务 plan_aware_check（组 2/4，FULL 专属）⇒ 默认跳过
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 PLAN_FILE="$ROOT/.claude/plan.json"
 DEFERRED_WIRING_FILES=""
 DEFERRED_FF_FILES=""
@@ -648,6 +686,8 @@ except: pass
     DEFERRED_TEST_FILES=$(echo "$PLAN_PARSE" | grep "^TEST:" | sed 's/^TEST://')
   fi
 fi
+fi
+
 # STAGED_ALL 已提前定义于 CT-34 (D387) 区块 — 此处不再重复定义
 STAGED_SRC=$(echo "$STAGED_ALL" | grep -E '^src/|^tests/|^packages/|^scripts/' | grep -v 'scripts/pre-commit-check.sh\|scripts/check-secrets.sh\|scripts/check-file-driven.sh\|scripts/workflow/' || true)
 NEW_IMPL=$(echo "$GIT_CACHED_ADDED_NAMES" | grep -E "^src/|^extensions/" | grep "\.ts$" | grep -v "\.test\." | grep -v "\.d\.ts" | grep -v "types\.ts$\|index\.ts$\|helpers\.ts$" | grep -v "src/sentinel/compute/" || true)
@@ -671,6 +711,22 @@ if [ -n "$(git rev-parse -q --verify MERGE_HEAD 2>/dev/null || true)" ]; then
   [ -z "$DECL_SCOPE" ] && DECL_MERGE_SKIP=1
 fi
 DECL_SRC="$STAGED_SRC"
+
+# #1417: 默认快跑集不解析 BRIEF（18s：逐 brief 多次 python）；claim 覆盖判定不需要它。
+#   全量模式仍在 setup 解析（原组 5 内联逻辑上移；判据语义不变）。
+if [ "$PRECOMMIT_FULL" = "1" ]; then
+  TODAY=$(date +%Y-%m-%d)
+  BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "${DECL_SCOPE:-$STAGED_ALL}" 2>/dev/null || true)
+  BRIEF_RESOLVED="$BRIEF"
+fi
+CLAIM_V2=1
+case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
+  "") CLAIM_V2=1 ;;                 # 未设 ⇒ 开（与 claim_store 单源；#911）
+  1|true|on|yes|y) CLAIM_V2=1 ;;
+  *) CLAIM_V2=0 ;;                  # 显式 0/off/false/no/n ⇒ 关（唯一回滚点）
+esac
+IS_CLAIM_DECL=0
+case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
 [ "$DECL_MERGE_SKIP" = "1" ] && DECL_SRC=""   # 合并提交无自撰文件 → 闸① 无对象
 
 echo ""
@@ -740,7 +796,14 @@ par_collect_quiet deprecated-mapping "$PAR_DEPRECATED" || true
 #   （2d70f7e2b / b0edc5c92）推上去后 CI 两条腿都判 success，说明全仓无一处判据在看它。
 # 语义: 0=干净 / 1=命中（**阻断**）/ 2=判不了（fail-closed，不当通过）。
 if [ -f "$ROOT/scripts/control-tower/check-conflict-markers.sh" ]; then
-  _CM_OUT="$(bash "$ROOT/scripts/control-tower/check-conflict-markers.sh" --root "$ROOT" 2>&1)"; _CM_RC=$?
+  # #1417: setup 已后台启动（与组 1 其余检查并行）；提取块场景无 PAR_CONFLICT ⇒ 回退内联执行
+  if [ -n "${PAR_CONFLICT:-}" ]; then
+    wait "$PAR_CONFLICT" 2>/dev/null || true
+    _CM_OUT="$(cat "$PAR_DIR/conflict.out" 2>/dev/null || true)"
+    _CM_RC="$(cat "$PAR_DIR/conflict.code" 2>/dev/null | tr -d '\n\r' || true)"; _CM_RC="${_CM_RC:-2}"
+  else
+    _CM_OUT="$(bash "$ROOT/scripts/control-tower/check-conflict-markers.sh" --root "$ROOT" 2>&1)"; _CM_RC=$?
+  fi
   case "$_CM_RC" in
     0) soft_pass "冲突标记机检（组 1·语法完整性）" "check-conflict-markers" ;;
     1) hard_check "冲突标记机检（组 1·语法完整性）" "$(printf '%s' "$_CM_OUT" | grep '^MARKER:' | head -5)" "check-conflict-markers" ;;
@@ -761,6 +824,7 @@ fi
 #   历史: 4 次接线失败 — 新 export 有单元测试但从未被 import。
 #         铁律 11 — 静默降级事故 (catch 空吞异常，生产环境无日志)。
 # ═══════════════════════════════════════════════════════════════════
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 2: 测试质量 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 2"
@@ -870,6 +934,9 @@ fi
 #   历史: .env 真实 API Key 暴露仓库 + 飞书 App Secret 暴露 (2026-06)。
 #         旧门禁只扫暂存区 → 磁盘上的真实 Key 从未被发现，直到被备份软件同步出去。
 # ═══════════════════════════════════════════════════════════════════
+else
+  _precommit_skip 2 "测试质量"
+fi
 echo -e "${CYAN}── 组 3: Secrets ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 3"
@@ -885,6 +952,7 @@ par_collect_quiet secrets "$PAR_SECRETS" || HARD_FAIL=$((HARD_FAIL + 1))
 #   历史: 4 次接线失败 — 组件通过单元测试但从未被生产代码调用。
 #         v3.5 追加拿线深度检查: 开发者 import 了函数但没调用，绕过了原第 5 项。
 # ═══════════════════════════════════════════════════════════════════
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 4: 接线完整性 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 4"
@@ -950,6 +1018,10 @@ hard_check "接线深度: 新 export 必须被调用(非仅 import)" "${DEEP_FAI
 #   为什么铁律 47 是警告而非阻断: task brief 可能包含历史遗留声明。但警告让问题
 #         始终可见——不可能"没注意到"。
 # ═══════════════════════════════════════════════════════════════════
+else
+  _precommit_skip 4 "接线完整性"
+fi
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 5: 架构边界 + 桥接文件 ──${RESET}"
 GROUP_DOWN=1  # 裁 409：组5/6 降级（只报不拦；❌ 保留）
 
@@ -1013,15 +1085,15 @@ fi
 soft_check "铁律 46: 桥接文件欺诈 + 包级 engine-core + 壳包检测" "${BRIDGE_FAIL:-}"
 
 # 5c. 铁律 47: 声称拆分完须 grep 零旧引用 (原 20 — 警告模式)
-TODAY=$(date +%Y-%m-%d)
+# #1417: TODAY/BRIEF/BRIEF_RESOLVED 已上移到 setup（见上方 hoist 段）
 # D296 认领制: 多 session 并发时用认领本提交文件的 brief (跨 session 污染根治)
-BRIEF=$(bash "$ROOT/scripts/workflow/resolve-commit-brief.sh" "${DECL_SCOPE:-$STAGED_ALL}" 2>/dev/null || true)
+
 # D1148 缺陷修复（可核）: 组 12 的 `while IFS= read -r BRIEF; do … done <<< "$ALL_TODAY_BRIEFS"`
 #   会**覆盖** $BRIEF（循环变量复用），使其后所有读 $BRIEF 的检查实际校验的是"今日 brief 列表
 #   里排序最后一份"而非**认领本次提交的那一份**——G12b 可解析性检查因此长年校验错对象
 #   （实证: 注入一份无 #CRITERIA 的认领 brief，G12b 仍判 ✅ = 假绿）。
 #   修法: 解析结果另存 BRIEF_RESOLVED，其后（含闸②）统一读它；$BRIEF 保持原语义供循环使用。
-BRIEF_RESOLVED="$BRIEF"
+
 CLEANUP_CLAIM=""
 if [ -n "$BRIEF" ] && [ -f "$BRIEF" ]; then
   # #1295/#1296：裸词（已拆/已迁移/已清理）**必须与 engine-core 或 packages/ 同现**才认为是"完成声称"——
@@ -1046,6 +1118,10 @@ warn_check "铁律 47: 声称完成须 grep 物理证明" "${CLEANUP_CLAIM:-}"
 #         v3.5 的 --no-verify 日志显示 15 次 pre-commit 失败，其中多次是因为
 #         task brief 字段不完整而非实质质量问题。
 # ═══════════════════════════════════════════════════════════════════
+else
+  _precommit_skip 5 "架构边界 + 桥接文件"
+fi
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 6: Task Brief (6 核心字段) ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 6"
@@ -1086,14 +1162,7 @@ TASK_BRIEF_EMPTY=""
 #   口径与单一事实源 claim_store.claim_v2_enabled 逐字对齐。
 #   🔴 空值分支（``)）必须在这里显式列成 1 —— 与 claim_store 的「未设 ⇒ True」同源。
 #      历史缺陷（Issue #911）：`CLAIM_V2=1` 预置值被下面的 `*)` 兜底覆盖成 0 ⇒ 未设 = 关。
-CLAIM_V2=1
-case "$(printf '%s' "${SYNO_CLAIM_V2:-}" | tr '[:upper:]' '[:lower:]')" in
-  "") CLAIM_V2=1 ;;                 # 未设 ⇒ 开（与 claim_store 单源；#911）
-  1|true|on|yes|y) CLAIM_V2=1 ;;
-  *) CLAIM_V2=0 ;;                  # 显式 0/off/false/no/n ⇒ 关（唯一回滚点）
-esac
-IS_CLAIM_DECL=0
-case "${BRIEF:-}" in *.yaml) IS_CLAIM_DECL=1 ;; esac
+# #1417: CLAIM_V2 / IS_CLAIM_DECL 已上移到 setup（见上方 hoist 段）
 if [ -n "$DECL_SRC" ]; then   # D1148: 合并提交且无自撰文件时为空 → 闸① 无对象
   if [ -z "$BRIEF" ]; then
     TASK_BRIEF_MISSING="今日无 task brief。请先运行: bash scripts/workflow/task-start.sh \"任务描述\""
@@ -1316,6 +1385,10 @@ fi
 #   历史: DiagnosticModule 注册表已删除但引用未清理 (agent-tool-registry.ts:386
 #         listModules() 运行时崩溃)。--no-verify 在 v2.5 被频繁使用 (38 项检查 90s)。
 # ═══════════════════════════════════════════════════════════════════
+else
+  _precommit_skip 6 "Task Brief (6 核心字段)"
+fi
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 7: 架构合规 ──${RESET}"
 GROUP_DOWN=0  # 组5/6 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
@@ -1487,6 +1560,10 @@ fi
 #         同样的模式: 声称文件驱动 → 有人为了方便在 src/ 加了个 enum → 没人发现 →
 #         越来越多硬编码回归 → 一年后文件驱动只剩文档里的空壳。
 # ═══════════════════════════════════════════════════════════════════
+else
+  _precommit_skip 7 "架构合规"
+fi
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 8: 文件驱动架构完整性 (V3.9) ──${RESET}"
 GROUP_DOWN=1  # 裁 409：本组降级（只报不拦）
 GROUP_DONE=$((GROUP_DONE+1))
@@ -1521,6 +1598,10 @@ par_collect_quiet file-driven "$PAR_FILE_DRIVEN" || v5_soft "文件驱动架构�
 
 # ═══ 组 9: 契约门禁 (D257) ═══
 GROUP_DOWN=0  # 组 8 降级范围结束
+else
+  _precommit_skip 8 "文件驱动架构完整性 (V3.9)"
+fi
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 echo -e "${CYAN}── 组 9: 契约门禁 ──${RESET}"
 GROUP_DOWN=1  # 裁 409：组9 降级（块级 paths 由 CI ①d 承担）
 
@@ -1578,6 +1659,9 @@ else
 fi
 
 # ═══ 组 12: Task Scope 一致性 — 暂存文件 vs Q2 范围 ═══
+else
+  _precommit_skip 9 "契约门禁"
+fi
 echo -e "${CYAN}── 组 12: Task Scope 一致性 ──${RESET}"
 GROUP_DOWN=0  # 组9 降级范围结束
 GROUP_DONE=$((GROUP_DONE+1))
@@ -1714,6 +1798,7 @@ print('\n'.join(d.get('uncovered',[])))" 2>/dev/null || echo "")"
   fi
 fi
 
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 if [ -n "$_G12_JUDGE_SET" ] && [ "$_G12_CLAIM_STATUS" = "on" ] && [ -z "$ALL_TODAY_BRIEFS" ]; then
   # ═══ D1220（本卡修的核心假绿）: claim 模式 + **无 legacy 声明载体** ⇒ 余量文件无任何声明 ═══
   #   原实现: ALL_TODAY_BRIEFS 为空 ⇒ 下面 legacy 块整段跳过 ⇒ **静默放行**（claim 载体用户
@@ -1892,6 +1977,9 @@ hard_check "G12d: 生成物单点生成门禁 (D458)" "${GENERATED_VIOLATION:-}"
 #      「改了 .synova/skills 却提交别的文件、且忘同步」⇒ 改为总是跑 `--check`。
 #   回滚: SYNO_CI=0（本地软）／判据零改动；恢复"只报不拦"须重新开卡（属判据变更）。
 #   已知限制: CT-34 纯文档提交在组 6 前早退 ⇒ 组 13 不执行（技能目录不在文档白名单，不构成漏拦）。
+else
+  echo -e "  ${CYAN}ℹ️  组 12 其余 scope 检查 —— 跳过（默认快跑集仅跑 claim 覆盖；全量请加 --full）${RESET}"
+fi
 echo -e "${CYAN}── 组 13: 技能同步一致性 ──${RESET}"
 GROUP_DONE=$((GROUP_DONE+1))
 _grp_tick "组 13"
@@ -1905,8 +1993,14 @@ if [ "${SYNO_DOWN_SELFTEST:-}" = "13" ]; then
   fi
 fi
 
-SKILL_SYNC_OUT=$(bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check 2>&1)
-SKILL_SYNC_EXIT=$?
+if [ -n "${PAR_SKILLSYNC:-}" ]; then
+  wait "$PAR_SKILLSYNC" 2>/dev/null || true
+  SKILL_SYNC_OUT="$(cat "$PAR_DIR/skillsync.out" 2>/dev/null || true)"
+  SKILL_SYNC_EXIT="$(cat "$PAR_DIR/skillsync.code" 2>/dev/null | tr -d '\n\r' || true)"; SKILL_SYNC_EXIT="${SKILL_SYNC_EXIT:-2}"
+else
+  SKILL_SYNC_OUT=$(bash "$ROOT/scripts/workflow/sync-dsh-skills.sh" --check 2>&1)
+  SKILL_SYNC_EXIT=$?
+fi
 if [ "$SKILL_SYNC_EXIT" -eq 0 ]; then
   soft_pass "G13: 技能同步一致 ($(echo "$SKILL_SYNC_OUT" | head -1 | sed 's/SYNC-OK: //'))"
 elif [ "$SKILL_SYNC_EXIT" -eq 1 ]; then
@@ -1920,6 +2014,7 @@ else
   hard_check "G13: 技能同步检查执行失败 (exit=$SKILL_SYNC_EXIT, D328 三态)" "$SKILL_SYNC_OUT"
 fi
 
+if [ "$PRECOMMIT_FULL" = "1" ]; then
 # #1227 W3: 组 13 退出降级区时**保住 #912 原态** —— 本批判据（判据 4/5）只要求组 13 可阻断，
 #   未要求改 #912 语义；不独立包裹会连带恢复其硬阻断（副作用）⇒ 用组界开关保原态。
 GROUP_DOWN=1  # 裁 409：质量增量闸降级（#1227 保持原态）
@@ -2221,6 +2316,9 @@ if [ "${SYNO_CI:-0}" = "1" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${SYNO_
   fi
 fi
 
+else
+  echo -e "  ${CYAN}ℹ️  组 13 附加检查（质量增量/文档三闸/内容耦合/Unicode 等）—— 跳过（默认快跑集仅跑技能同步；全量请加 --full）${RESET}"
+fi
 _grp_report
 # ═══════════════════════════════════════════════════════════════════
 # 结果
@@ -2237,6 +2335,7 @@ if [ "$HARD_FAIL" -gt 0 ]; then
   exit 1
 else
   echo -e "  ${GREEN}✅ 全部 ${GROUP_DONE} 组通过${RESET}"
+  [ "$PRECOMMIT_FULL" = "1" ] || echo -e "  ${CYAN}ℹ️  默认快跑集：组 1/3/12（claim 覆盖）/13（技能同步）（全量请加 --full 或 SYNO_PRECOMMIT_FULL=1；CI core-gates 不受影响）${RESET}"
   [ "$WARN_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠️  ${WARN_COUNT} 项警告 (不阻断)${RESET}"
   [ "$SOFT_COUNT" -gt 0 ] && echo -e "  ${YELLOW}⚠ V5: ${SOFT_COUNT} 项软提示（详情见上）——CI 为权威，本地不阻断${RESET}"
   echo "═══════════════════════════════════════════════════════════"

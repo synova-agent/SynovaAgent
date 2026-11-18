@@ -504,7 +504,14 @@ echo ""
 echo -e "${CYAN}── 基线展示 (D312 baseline-check) ────────────────────${RESET}"
 BASELINE_CHECK="$SCRIPT_DIR/control-tower/baseline-check.sh"
 if [[ -f "$BASELINE_CHECK" ]]; then
-  if ! bash "$BASELINE_CHECK" --tsc; then
+  # #1417: 区分「新增 tsc 错误」(exit 1) 与「环境未就绪」(exit 2) ——
+  #   baseline-check 只用本地 node_modules 的 tsc，不再 npx 联网下载（无依赖时立即 exit 2，不挂住）。
+  BASE_OUT=$(bash "$BASELINE_CHECK" --tsc 2>&1); BASE_RC=$?
+  [ -n "$BASE_OUT" ] && printf '%s\n' "$BASE_OUT"
+  if [ "$BASE_RC" -eq 2 ]; then
+    echo ""
+    echo -e "  ${YELLOW}⚠️  基线快检降级（exit 2）：环境未就绪，先 npm ci——本项判不了（不计为新增 tsc 错误）${RESET}"
+  elif [ "$BASE_RC" -ne 0 ]; then
     echo ""
     echo -e "  ${YELLOW}⚠️  存在新增 tsc 错误 — 请检查（基线豁免阻断归 D314）${RESET}"
   fi

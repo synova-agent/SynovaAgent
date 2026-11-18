@@ -156,6 +156,7 @@ _run_gate_env() { # <out> [<gate-env>...]
   fi
   ( cd "$CLONE" && env -i \
       PATH="$PATH" HOME="${HOME:-/tmp}" LANG="${LANG:-C.UTF-8}" TMPDIR="${TMPDIR:-/tmp}" \
+      SYNO_PRECOMMIT_FULL=1 \
       ${tsx_env[@]+"${tsx_env[@]}"} \
       "$@" bash scripts/pre-commit-check.sh ) >"$out" 2>&1
 }
