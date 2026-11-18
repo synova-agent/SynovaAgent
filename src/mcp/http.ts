@@ -125,7 +125,8 @@ function buildRequestServer(context: ToolCallContext): McpServer {
     // 权限门：写工具 -32000 / 未登记 -32601（与 stdio 侧同一错误语义）
     assertSidecarToolAllowed(name, SIDECAR_MODE);
     try {
-      const text = handleDomainToolCall(name, args);
+      // 身份只来自本请求的 token→ctx（闭包绑定，不经过工具入参）；缺 ctx ⇒ runtime 层 UNAUTHORIZED
+      const text = handleDomainToolCall(name, args, context);
       return { content: [{ type: 'text', text }] };
     } catch (err: unknown) {
       // DOMAIN_EMPTY 是「显式空」而不是协议错误：以结构化 content 返回，调用方能看到 code。

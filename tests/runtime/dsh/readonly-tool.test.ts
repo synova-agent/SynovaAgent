@@ -1,17 +1,21 @@
 /**
- * T3 验收：回环 HTTP MCP 的**一个**合成只读领域工具。
+ * tests/runtime/dsh/readonly-tool.test.ts — T3 验收：回环 HTTP MCP 的**一个**只读领域工具（#1426 真实 ②）。
  *
  * 真实入口：MCP Streamable HTTP（`127.0.0.1`）＋ 一次性 bearer token → `synova_context_get`
- * → 结构化 JSON（与独立 golden 逐字段一致）→ 与直接领域调用一致。
- * 反例：无 token、已撤销 token、伪造身份/路径、4 个写工具、未登记工具、未知 problemId（显式空）、
- * 真实模式未配置（fail-closed）。
+ * → 结构化 JSON（与独立 golden 逐字段一致，golden 数据种在 :memory: 真图里）→ 与直接领域调用一致。
+ * 反例：无 token、已撤销 token、伪造身份/路径、4 个写工具、未登记工具、未知 problemId（显式空）。
+ *
+ * 数据纪律：只连 `:memory:`（beforeAll fail-fast 断言）；节点用固定 id 种子（golden 需要静态 id），
+ * 读取路径仍是真 `SqliteGraphStore`（不 mock 任何 store 方法）。
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { McpError } from '@modelcontextprotocol/sdk/types.js';
+import { SqliteGraphStore } from '../../../src/adapters/sqlite-graph-store';
+import { getDatabase, initEngineContext } from '../../../src/init/engine-context';
 import { startReadonlyMcpServer, type ReadonlyMcpServer } from '../../../src/mcp/http';
 import { SIDECAR_TOOLS } from '../../../src/mcp/tool-definitions';
 import { handleDomainToolCall } from '../../../src/runtime/dsh/tools';
@@ -21,11 +25,34 @@ const GOLDEN = JSON.parse(
 ) as Record<string, unknown>;
 
 const CONTEXT = { enterpriseId: 'ent-1', userId: 'user-1', scope: 'admin', runId: 'run_t3_0001' };
+const PROBLEM = 'batch-1426-root';
 
 let server: ReadonlyMcpServer;
 let token: string;
 
 beforeAll(async () => {
+  if (process.env.SYNOVA_DB_PATH !== ':memory:') {
+    throw new Error(`readonly-tool.test 只允许 :memory: 数据库，实得 ${String(process.env.SYNOVA_DB_PATH)}`);
+  }
+  initEngineContext();
+  const db = getDatabase();
+  const graph = CONTEXT.enterpriseId;
+  // 先构造真 store（建 graph_nodes/graph_triples schema），再种固定 id 的 ② 节点
+  const store = new SqliteGraphStore(db);
+  const insertNode = db.prepare('INSERT INTO graph_nodes (id, graph, type, name, props) VALUES (?, ?, ?, ?, ?)');
+  insertNode.run('node-1426-root', graph, 'activity/delivery_batch', '7月根批次',
+    JSON.stringify({ businessKey: PROBLEM, name: '7月根批次', period: '2026-07', defVersion: 'def-2026.07' }));
+  insertNode.run('node-1426-batch-a', graph, 'activity/delivery_batch', '交付批次A',
+    JSON.stringify({ businessKey: 'batch-1426-a', name: '交付批次A', period: '2026-07', defVersion: 'def-2026.07' }));
+  insertNode.run('node-1426-batch-b', graph, 'activity/delivery_batch', '交付批次B',
+    JSON.stringify({ businessKey: 'batch-1426-b', name: '交付批次B', period: '2026-08', defVersion: 'def-2026.08' }));
+  insertNode.run('node-1426-team', graph, 'resource/delivery_team', '交付一组',
+    JSON.stringify({ businessKey: 'team-1426', name: '交付一组' }));
+
+  store.createEdge('edge/team_executes_activity', 'node-1426-root', 'node-1426-batch-a', 1, {}, graph);
+  store.createEdge('edge/team_executes_activity', 'node-1426-batch-b', 'node-1426-root', 1, {}, graph);
+  store.createEdge('edge/team_executes_activity', 'node-1426-team', 'node-1426-root', 1, {}, graph);
+
   server = await startReadonlyMcpServer();
   token = server.tokens.issue(CONTEXT);
 });
@@ -45,7 +72,7 @@ async function connect(bearer: string | null): Promise<Client> {
 }
 
 describe('T3 回环 HTTP MCP：只读、token、身份注入', () => {
-  it('tools/list 只广告 1 个合成只读工具；4 个写工具不可见', async () => {
+  it('tools/list 只广告 1 个只读工具；4 个写工具不可见', async () => {
     const client = await connect(token);
     const listed = await client.listTools();
     const names = listed.tools.map(tool => tool.name);
@@ -59,20 +86,28 @@ describe('T3 回环 HTTP MCP：只读、token、身份注入', () => {
 
   it('synova_context_get：MCP 结果与独立 golden 逐字段一致，count>0，且与直接领域调用一致', async () => {
     const client = await connect(token);
-    const result = await client.callTool({ name: 'synova_context_get', arguments: { problemId: 'problem-revenue-health-2026q3' } });
+    const result = await client.callTool({ name: 'synova_context_get', arguments: { problemId: PROBLEM } });
     const content = result.content as Array<{ type: string; text?: string }>;
     expect(content[0].type).toBe('text');
     const payload = JSON.parse(content[0].text ?? '{}') as Record<string, unknown>;
     expect(payload).toEqual(GOLDEN);
-    expect(Number(payload.count)).toBeGreaterThan(0);
-    // 与直接领域调用一致（同一合成基线，独立 golden 提供期望）
-    expect(payload).toEqual(JSON.parse(handleDomainToolCall('synova_context_get', { problemId: 'problem-revenue-health-2026q3' })));
+    expect(payload.synthetic).toBe(false);
+    expect(payload.count).toBe(2);
+    expect(payload.truncated).toBe(false);
+    // 与直接领域调用一致（同一真 store、同一身份；独立 golden 提供期望）
+    expect(payload).toEqual(JSON.parse(handleDomainToolCall('synova_context_get', { problemId: PROBLEM }, CONTEXT)));
     const items = payload.items as Array<Record<string, unknown>>;
-    expect(items.map(item => item.layer)).toEqual(['②', '③', '④']);
+    expect(items.map(item => item.layer)).toEqual(['②', '②']);
     for (const item of items) {
-      for (const field of ['$id', 'cycleVersion', 'sentinelRun', 'period', 'defVersion', 'evidenceId', 'status', 'visibility', 'source']) {
-        expect(item[field], `${String(item.$id)} 缺 ${field}`).toBeDefined();
-      }
+      expect(typeof item.$id).toBe('string');
+      expect(item.period).toMatch(/^\d{4}-\d{2}$/);
+      expect(typeof item.defVersion).toBe('string');
+      expect(item.cycleVersion).toBeNull();   // 全仓零生产者
+      expect(item.sentinelRun).toBeNull();    // ③ 不产
+      expect(item.evidenceId).toBeNull();     // ④ 不产
+      expect(item.status).toBe('observed');
+      expect(item.visibility).toBe('enterprise');
+      expect(item.source).toEqual({ kind: 'synova.domain', api: 'synova.domain/v1' });
     }
     await client.close();
   });
@@ -102,10 +137,10 @@ describe('T3 回环 HTTP MCP：只读、token、身份注入', () => {
   it('伪造身份/路径参数 ⇒ 拒绝且错误里带稳定 code（不到达领域查询）', async () => {
     const client = await connect(token);
     for (const args of [
-      { problemId: 'problem-revenue-health-2026q3', enterpriseId: 'ent-2' },
-      { problemId: 'problem-revenue-health-2026q3', userId: 'user-2' },
-      { problemId: 'problem-revenue-health-2026q3', path: 'C:\\Windows' },
-      { problemId: 'problem-revenue-health-2026q3', evidenceId: 'ev-forged' },
+      { problemId: PROBLEM, enterpriseId: 'ent-2' },
+      { problemId: PROBLEM, userId: 'user-2' },
+      { problemId: PROBLEM, path: 'C:\\Windows' },
+      { problemId: PROBLEM, evidenceId: 'ev-forged' },
     ]) {
       let caught: unknown = null;
       try {

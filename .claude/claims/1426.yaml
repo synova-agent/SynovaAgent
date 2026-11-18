@@ -1,0 +1,21 @@
+# .claude/claims/1426.yaml — #1426（I-1）DSH 只读工具 synova_context_get 接真实领域结构（②）
+# 纪律：只列本 PR 真正改动的文件；变更集 ⊆ writeset（check-brief-vs-code G12）。
+# DEV DOC: Issue #1426 评论 13350（v3-2026-11-19）｜Mandate: 评论 13352｜关卡 A v2 退回 X1–X6 已逐条收敛进 v3
+writeset:
+  - .claude/claims/1426.yaml
+  - memory/notes/implemented/1426-dsh-domain-context.md
+  - src/runtime/dsh/tools.ts
+  - src/runtime/dsh/domain-context.ts
+  - src/mcp/http.ts
+  - src/mcp/tool-definitions.ts
+  - tests/runtime/dsh/domain-context.test.ts
+  - tests/runtime/dsh/readonly-tool-real.test.ts
+  - tests/runtime/dsh/isolation.test.ts
+  - tests/runtime/dsh/readonly-tool.test.ts
+  - tests/runtime/dsh/tools.test.ts
+  - tests/runtime/dsh/fixtures/synova-context-get.json
+  - tests/mcp/http.test.ts
+done:
+  - verify: npx vitest run tests/runtime/dsh tests/mcp/http.test.ts
+  - verify: npx tsc --noEmit
+note: "#1426 I-1：synova_context_get 从合成基线换成真实领域结构（只产 ②）。domain-context.ts 新模块用 SqliteGraphStore 只读 graph_nodes/graph_triples：problemId=businessKey 或 $id（不限类型）→ 1 跳邻接节点（出边+入边、去重、升序、不含根）→ 仅 props.period 与 props.defVersion 同时为非空字符串才产出（不补零/不编常量）；period≤200、truncated=count>items.length。身份只来自 HTTP token→ctx（http.ts 传第三参）；缺 ctx ⇒ UNAUTHORIZED；args 校验（FORGED_*）先于 ctx 检查（security-cases.test.ts 未改仍绿）。visibility 走既有判据 toScanViewer（ga/未知角色/缺 sub|orgId ⇒ SCOPE_DENIED，本层映射既有码 FORBIDDEN 403）；跨企业 graph 过滤。③④ 恒 0 并记 NOT DONE（sentinel_events 无企业列/period/defVersion/status；metric_readings 与②无连接键）；cycleVersion/sentinelRun/evidenceId 恒 null（零生产者/③不产/④不产）；status 收窄 observed|partial（取消 stale，无判据）。DB 异常复用既有码 PERSISTENCE_ERROR（phase persist，retryable=true），未改 errors.ts（与 #1412 解耦）。tool-definitions.ts：stdio 分派无身份面 ⇒ fail-closed UNAUTHORIZED，并同步 SIDECAR 描述去掉 synthetic 文案。测试只连 :memory:（各文件 beforeAll fail-fast 断言）；11 条正例/反例 + 7 条改坏必红逐条留原始红后恢复复绿。"

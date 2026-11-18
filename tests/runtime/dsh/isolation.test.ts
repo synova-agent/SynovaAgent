@@ -4,19 +4,45 @@
  * 断言语义：领域计算/事实/结果**不经过 DSH**；DSH 不可用时 run 以稳定 code 失败，
  * 而不是空回答，也不影响领域侧调用。
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
+import { SqliteGraphStore } from '../../../src/adapters/sqlite-graph-store';
+import { getDatabase, initEngineContext } from '../../../src/init/engine-context';
 import { ProposalManager } from '../../../src/l2/proposal-manager';
 import { DshError } from '../../../src/runtime/dsh/errors';
 import { persistProposalDraft } from '../../../src/runtime/dsh/proposals';
 import { DshRunManager } from '../../../src/runtime/dsh/session';
 import { handleDomainToolCall } from '../../../src/runtime/dsh/tools';
 
+const ISOLATION_CONTEXT = { enterpriseId: 'ent-isolation-1426', userId: 'user-isolation-1426', scope: 'admin', runId: 'run_isolation_ctx' };
+const ISOLATION_PROBLEM = 'batch-1426-isolation-root';
+/** ② 邻接条目 id（真 :memory: 图种子）。 */
+let isolationNeighborId: string;
+
+beforeAll(() => {
+  if (process.env.SYNOVA_DB_PATH !== ':memory:') {
+    throw new Error(`isolation.test 只允许 :memory: 数据库，实得 ${String(process.env.SYNOVA_DB_PATH)}`);
+  }
+  initEngineContext();
+  const store = new SqliteGraphStore(getDatabase());
+  const root = store.createNode(
+    'activity/delivery_batch',
+    { businessKey: ISOLATION_PROBLEM, name: '隔离根批次', period: '2026-07', defVersion: 'def-2026.07' },
+    ISOLATION_CONTEXT.enterpriseId,
+  );
+  isolationNeighborId = store.createNode(
+    'activity/delivery_batch',
+    { businessKey: 'batch-1426-isolation-neighbor', name: '隔离邻接批次', period: '2026-08', defVersion: 'def-2026.08' },
+    ISOLATION_CONTEXT.enterpriseId,
+  );
+  store.createEdge('edge/team_executes_activity', root, isolationNeighborId, 1, {}, ISOLATION_CONTEXT.enterpriseId);
+});
+
 describe('T4 DSH 停止后的领域隔离', () => {
   it('没有任何 DSH 进程时：领域 ContextSnapshot 与 Proposal 草案仍可用', () => {
-    const context = JSON.parse(handleDomainToolCall('synova_context_get', { problemId: 'problem-revenue-health-2026q3' })) as { count: number };
-    expect(context.count).toBe(3);
-    expect(context.items[0].$id).toBe('ontology.entity.sales_revenue');
+    const context = JSON.parse(handleDomainToolCall('synova_context_get', { problemId: ISOLATION_PROBLEM }, ISOLATION_CONTEXT)) as { count: number; items: Array<{ $id: string }> };
+    expect(context.count).toBe(1);
+    expect(context.items[0].$id).toBe(isolationNeighborId);
 
     const db = new Database(':memory:');
     const manager = new ProposalManager(db);
@@ -57,7 +83,7 @@ describe('T4 DSH 停止后的领域隔离', () => {
     expect(terminal?.data.retryable).toBe(false);
 
     // 同一时刻领域调用仍然成功
-    expect((JSON.parse(handleDomainToolCall('synova_context_get', { problemId: 'problem-revenue-health-2026q3' })) as { count: number }).count).toBe(3);
+    expect((JSON.parse(handleDomainToolCall('synova_context_get', { problemId: ISOLATION_PROBLEM }, ISOLATION_CONTEXT)) as { count: number }).count).toBe(1);
     await manager.dispose();
   });
 

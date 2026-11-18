@@ -1,21 +1,23 @@
 /**
- * src/runtime/dsh/tools.ts — 1A 的**合成只读领域工具**数据面与调用上下文。
+ * src/runtime/dsh/tools.ts — 1A 的**只读领域工具**数据面与调用上下文。
  *
  * 边界（很重要）：
- *   · 这里的数据是**合成基线**（`synthetic: true`），只用于 1A 离线验收，
- *     不得进入生产路径，也不代表客户真值；
+ *   · 数据来自**真实领域结构**（#1426 I-1）：`domain-context.ts` 只读 `graph_nodes`/`graph_triples`，
+ *     本切片只产 ② 层（③ 观测／④ 依据 NOT DONE，条目恒 0）；不再有合成基线；
  *   · 身份/权限由服务端注入（一次性 token 绑定 runId/enterpriseId/userId/scope），
- *     工具入参 schema **不接受任何身份字段**；
- *   · 真实的 Kimi Code 领域 API 接入属 T4 停点（本批只保留 fail-closed 的 real 模式壳）。
+ *     工具入参 schema **不接受任何身份字段**；缺 ctx ⇒ fail-closed（UNAUTHORIZED）；
+ *   · 真实模型外发／真实客户数据／生产部署仍是停点（本文件不触模型、不外发）。
  *
  * 契约（铁律 47）:
- *   @input   problemId（工具参数）＋ 服务端注入的 ToolCallContext
- *   @output  ContextSnapshot JSON（带 layer/$id/version/period/evidenceId/status/visibility/source）
- *   @degraded 无：未知 problemId 返回显式 DOMAIN_EMPTY（不伪造空成功）
- *   @error   FORGED_IDENTITY / FORGED_PATH / VALIDATION_ERROR / REAL_ADAPTER_NOT_CONFIGURED
+ *   @input   problemId（工具参数）＋ 服务端注入的 ToolCallContext（缺 ⇒ UNAUTHORIZED）
+ *   @output  ContextSnapshot JSON（真实 ② 条目：$id/period/defVersion/status/visibility/source）
+ *   @degraded 无：未知 problemId 返回显式 DOMAIN_EMPTY（不伪造空成功）；DB 异常 ⇒ PERSISTENCE_ERROR
+ *   @error   FORGED_IDENTITY / FORGED_PATH / UNAUTHORIZED / VALIDATION_ERROR / FORBIDDEN /
+ *            DOMAIN_EMPTY / PERSISTENCE_ERROR
  */
 import { randomBytes } from 'node:crypto';
 import { systemClock } from '../../services/clock';
+import { buildContextSnapshot } from './domain-context';
 import { DshError } from './errors';
 
 /** 服务端注入的调用上下文（只来自 token 解析，不接受工具入参）。 */
@@ -37,68 +39,36 @@ const FORBIDDEN_IDENTITY_KEYS = ['enterpriseId', 'userId', 'orgId', 'scope', 'te
 /** 路径类越权参数（出现即 FORGED_PATH）。 */
 const FORBIDDEN_PATH_KEYS = ['path', 'filePath', 'absPath', 'cwd', 'dir', 'directory', 'root'];
 
-/** 合成 ContextSnapshot（独立 golden 见 tests/runtime/dsh/fixtures/synova-context-get.json）。 */
+/**
+ * 真实领域 ContextSnapshot 条目（逐字段来源表见 `domain-context.ts` 文件头）。
+ * 类型联合保留 '②'|'③'|'④'：本切片只产 ②，③④ 恒 0（NOT DONE）。
+ */
 export interface ContextSnapshotItem {
   layer: '②' | '③' | '④';
   $id: string;
-  cycleVersion: string;
-  sentinelRun: string;
+  /** 恒 null：全仓零生产者（没有写路径给 ② 节点落 cycle 版本），不作为可证字段。 */
+  cycleVersion: string | null;
+  /** 恒 null：③ 观测本切片 NOT DONE（sentinel_events 无企业列/period/defVersion/status）。 */
+  sentinelRun: string | null;
   period: string;
   defVersion: string;
-  evidenceId: string;
-  status: 'observed' | 'partial' | 'stale';
+  /** 恒 null：④ 依据本切片 NOT DONE；② 的 sourceIds 与 ④ evidenceId 语义未定，不拼接。 */
+  evidenceId: string | null;
+  status: 'observed' | 'partial';
   visibility: 'enterprise';
-  source: { kind: 'synova.domain'; api: 'synthetic-context-v1' };
+  source: { kind: 'synova.domain'; api: 'synova.domain/v1' };
 }
 
 export interface ContextSnapshot {
-  synthetic: true;
+  /** 生产路径恒 false（合成基线已移除；任何合成兜底 = 停点级错误）。 */
+  synthetic: false;
   problemId: string;
+  /** 命中总数（截断前）；items 最多 200 条。 */
   count: number;
+  /** count > items.length。 */
+  truncated: boolean;
   items: ContextSnapshotItem[];
 }
-
-const SYNTHETIC_PROBLEM_ID = 'problem-revenue-health-2026q3';
-
-/** 合成基线（3 条：② 结构 / ③ 观测 / ④ 依据），不随运行变化。 */
-const SYNTHETIC_ITEMS: ContextSnapshotItem[] = [
-  {
-    layer: '②',
-    $id: 'ontology.entity.sales_revenue',
-    cycleVersion: 'cycle-sales@v3',
-    sentinelRun: 'sr-2026-11-14T02:00:00Z',
-    period: '2026-07',
-    defVersion: 'def-2026.10',
-    evidenceId: 'ev-2026-11-13-001',
-    status: 'observed',
-    visibility: 'enterprise',
-    source: { kind: 'synova.domain', api: 'synthetic-context-v1' },
-  },
-  {
-    layer: '③',
-    $id: 'sentinel.sales_four_totals',
-    cycleVersion: 'cycle-sales@v3',
-    sentinelRun: 'sr-2026-11-14T02:00:00Z',
-    period: '2026-07',
-    defVersion: 'def-2026.10',
-    evidenceId: 'ev-2026-11-13-002',
-    status: 'partial',
-    visibility: 'enterprise',
-    source: { kind: 'synova.domain', api: 'synthetic-context-v1' },
-  },
-  {
-    layer: '④',
-    $id: 'param.sales_gross_margin',
-    cycleVersion: 'cycle-sales@v3',
-    sentinelRun: 'sr-2026-11-14T02:00:00Z',
-    period: '2026-07',
-    defVersion: 'def-2026.10',
-    evidenceId: 'ev-2026-11-13-003',
-    status: 'observed',
-    visibility: 'enterprise',
-    source: { kind: 'synova.domain', api: 'synthetic-context-v1' },
-  },
-];
 
 /**
  * 校验工具入参（身份/路径/白名单）。
@@ -127,33 +97,26 @@ function validateToolArguments(toolName: string, args: Record<string, unknown>):
 }
 
 /**
- * 直接领域调用（T3 的「与直接领域调用一致」基线）：返回合成 ContextSnapshot。
- * 未知 problemId ⇒ 显式空（`ok:false`/DOMAIN_EMPTY），不返回零对象成功。
+ * 工具处理：校验参数（**必须先于 ctx 检查**）→ 检查服务端注入的 ctx → 返回真实领域快照 JSON。
+ *
+ * 顺序契约（DEV DOC v3 §3.2 ＋ `tests/runtime/dsh/security-cases.test.ts` 顺序守护）：
+ *   1. `validateToolArguments`（伪造身份/路径键、白名单）先 —— 2 实参直调也先抛 FORGED_*；
+ *   2. ctx 检查后 —— 缺 ctx／token 未绑定 ⇒ `UNAUTHORIZED`（401，与 `src/mcp/http.ts` 事实一致，
+ *      **不得**写成 FORGED_IDENTITY，身份不是工具入参的问题）。
+ * @error FORGED_IDENTITY / FORGED_PATH / UNAUTHORIZED / VALIDATION_ERROR / FORBIDDEN /
+ *        DOMAIN_EMPTY / PERSISTENCE_ERROR（后三者由 `buildContextSnapshot` 抛）
  */
-function getSyntheticContext(problemId: string): ContextSnapshot {
-  if (!/^[a-z0-9-]{3,64}$/.test(problemId)) {
-    throw new DshError('VALIDATION_ERROR', 'tool', `problemId 非法: ${problemId}`, { retryable: false });
-  }
-  if (problemId !== SYNTHETIC_PROBLEM_ID) {
-    throw new DshError('DOMAIN_EMPTY', 'tool', `problemId ${problemId} 无合成基线（显式空，不伪造数据）`, { retryable: false });
-  }
-  return {
-    synthetic: true,
-    problemId,
-    count: SYNTHETIC_ITEMS.length,
-    items: SYNTHETIC_ITEMS.map(item => ({ ...item })),
-  };
-}
-
-/** 工具处理：校验参数 → 返回 JSON 文本（MCP content[0].text）。 */
-export function handleDomainToolCall(toolName: string, args: Record<string, unknown>): string {
+export function handleDomainToolCall(toolName: string, args: Record<string, unknown>, ctx: ToolCallContext): string {
   validateToolArguments(toolName, args);
+  if (!ctx) {
+    throw new DshError('UNAUTHORIZED', 'tool', '缺少服务端注入的调用上下文（token 未绑定）：工具身份不接受入参', { retryable: false });
+  }
   if (toolName === 'synova_context_get') {
     const problemId = args.problemId;
-    if (typeof problemId !== 'string') {
+    if (typeof problemId !== 'string' || problemId.length === 0) {
       throw new DshError('VALIDATION_ERROR', 'tool', '缺少 problemId', { retryable: false });
     }
-    return JSON.stringify(getSyntheticContext(problemId));
+    return JSON.stringify(buildContextSnapshot(ctx, problemId));
   }
   throw new DshError('VALIDATION_ERROR', 'tool', `未登记的工具: ${toolName}`, { retryable: false });
 }

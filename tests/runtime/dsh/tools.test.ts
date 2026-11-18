@@ -1,16 +1,21 @@
 /**
- * tests/runtime/dsh/tools.test.ts — 合成只读领域工具数据面与一次性 token 单测。
+ * tests/runtime/dsh/tools.test.ts — 只读领域工具数据面（#1426 真实 ②）与一次性 token 单测。
  *
  * 配对对象：src/runtime/dsh/tools.ts
- * 覆盖：ContextSnapshot 形状/计数、未知 problem 显式空、伪造身份/路径/未知参数拒绝、
- * token 签发-解析-撤销-过期、token 绑定身份上下文。
+ * 覆盖：真实 ContextSnapshot 形状/计数、未知 problem 显式空、伪造身份/路径/未知参数拒绝、
+ * 缺 ctx ⇒ UNAUTHORIZED、token 签发-解析-撤销-过期、token 绑定身份上下文。
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { getDatabase, initEngineContext } from '../../../src/init/engine-context';
+import { SqliteGraphStore } from '../../../src/adapters/sqlite-graph-store';
 import { DshError } from '../../../src/runtime/dsh/errors';
 import { ToolTokenStore, handleDomainToolCall } from '../../../src/runtime/dsh/tools';
 
-const PROBLEM = 'problem-revenue-health-2026q3';
-const CONTEXT = { enterpriseId: 'ent-1', userId: 'user-1', scope: 'admin', runId: 'run_tools_0001' };
+const PROBLEM = 'batch-1426-tools-root';
+const CONTEXT = { enterpriseId: 'ent-tools-1426', userId: 'user-tools-1426', scope: 'admin', runId: 'run_tools_0001' };
+
+/** ② 邻接条目 id（beforeAll 种入真 :memory: 图）。 */
+let neighborId: string;
 
 function catchError(fn: () => unknown): unknown {
   try { fn(); return null; } catch (err: unknown) { return err; }
@@ -20,38 +25,76 @@ interface SnapshotShape {
   synthetic: boolean;
   problemId: string;
   count: number;
-  items: Array<{ layer: string; $id: string; source: { kind: string; api: string } }>;
+  truncated: boolean;
+  items: Array<{
+    layer: string;
+    $id: string;
+    period: string;
+    defVersion: string;
+    source: { kind: string; api: string };
+  }>;
 }
 
-describe('tools: 合成只读 ContextSnapshot', () => {
-  it('返回 ②/③/④ 三条、count>0、synthetic=true、字段齐全', () => {
-    const payload = JSON.parse(handleDomainToolCall('synova_context_get', { problemId: PROBLEM })) as SnapshotShape;
-    expect(payload.synthetic).toBe(true);
+beforeAll(() => {
+  if (process.env.SYNOVA_DB_PATH !== ':memory:') {
+    throw new Error(`tools.test 只允许 :memory: 数据库，实得 ${String(process.env.SYNOVA_DB_PATH)}`);
+  }
+  initEngineContext();
+  const store = new SqliteGraphStore(getDatabase());
+  const root = store.createNode(
+    'activity/delivery_batch',
+    { businessKey: PROBLEM, name: '根批次', period: '2026-07', defVersion: 'def-2026.07' },
+    CONTEXT.enterpriseId,
+  );
+  neighborId = store.createNode(
+    'activity/delivery_batch',
+    { businessKey: 'batch-1426-tools-neighbor', name: '邻接批次', period: '2026-08', defVersion: 'def-2026.08' },
+    CONTEXT.enterpriseId,
+  );
+  store.createEdge('edge/team_executes_activity', root, neighborId, 1, {}, CONTEXT.enterpriseId);
+});
+
+describe('tools: 真实只读 ContextSnapshot（#1426）', () => {
+  it('返回真实 ② 条目、synthetic=false、source.api=synova.domain/v1、字段齐全', () => {
+    const payload = JSON.parse(handleDomainToolCall('synova_context_get', { problemId: PROBLEM }, CONTEXT)) as SnapshotShape;
+    expect(payload.synthetic).toBe(false);
     expect(payload.problemId).toBe(PROBLEM);
-    expect(payload.count).toBe(3);
-    expect(payload.items.map(item => item.layer)).toEqual(['②', '③', '④']);
+    expect(payload.count).toBe(1);
+    expect(payload.truncated).toBe(false);
+    expect(payload.items.map(item => item.layer)).toEqual(['②']);
     expect(payload.items[0].source.kind).toBe('synova.domain');
-    expect(payload.items[0].source.api).toBe('synthetic-context-v1');
-    expect(payload.items[0].$id).toBe('ontology.entity.sales_revenue');
+    expect(payload.items[0].source.api).toBe('synova.domain/v1');
+    expect(payload.items[0].$id).toBe(neighborId);
+    expect(payload.items[0].period).toBe('2026-08');
+    expect(payload.items[0].defVersion).toBe('def-2026.08');
   });
 
   it('未知 problemId ⇒ DOMAIN_EMPTY（显式空，不伪造数据）', () => {
-    const error = catchError(() => handleDomainToolCall('synova_context_get', { problemId: 'problem-no-such' }));
+    const error = catchError(() => handleDomainToolCall('synova_context_get', { problemId: 'problem-no-such' }, CONTEXT));
     expect(error).toBeInstanceOf(DshError);
     expect((error as DshError).code).toBe('DOMAIN_EMPTY');
     expect((error as DshError).retryable).toBe(false);
   });
 
-  it('伪造身份/路径/未知参数/未登记工具 ⇒ 稳定 code', () => {
-    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, enterpriseId: 'ent-2' })))
+  it('缺 ctx（token 未绑定）⇒ UNAUTHORIZED（不是 FORGED_IDENTITY）', () => {
+    const error = catchError(() =>
+      (handleDomainToolCall as unknown as (name: string, args: Record<string, unknown>) => string)(
+        'synova_context_get', { problemId: PROBLEM }));
+    expect(error).toBeInstanceOf(DshError);
+    expect((error as DshError).code).toBe('UNAUTHORIZED');
+    expect((error as DshError).httpStatus).toBe(401);
+  });
+
+  it('伪造身份/路径/未知参数/未登记工具 ⇒ 稳定 code（校验先于 ctx 与查询）', () => {
+    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, enterpriseId: 'ent-2' }, CONTEXT)))
       .toMatchObject({ code: 'FORGED_IDENTITY' });
-    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, userId: 'u2' })))
+    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, userId: 'u2' }, CONTEXT)))
       .toMatchObject({ code: 'FORGED_IDENTITY' });
-    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, path: '/etc/passwd' })))
+    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, path: '/etc/passwd' }, CONTEXT)))
       .toMatchObject({ code: 'FORGED_PATH' });
-    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, extra: 1 })))
+    expect(catchError(() => handleDomainToolCall('synova_context_get', { problemId: PROBLEM, extra: 1 }, CONTEXT)))
       .toMatchObject({ code: 'VALIDATION_ERROR' });
-    expect(catchError(() => handleDomainToolCall('decision_write', { problemId: PROBLEM })))
+    expect(catchError(() => handleDomainToolCall('decision_write', { problemId: PROBLEM }, CONTEXT)))
       .toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 });
