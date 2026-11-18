@@ -2047,6 +2047,28 @@ documents:
     status: active
     owner: CTO
     note: "#1385 C 批预算与遥测删除的限定豁免；仅覆盖 pre-commit 摘调用、四件工具及配对、必要基线与登记同步；保留核心门、观察期对象和密封执行逻辑。"
+
+  # ---- 2026-11-15：目标导航、企业上下文与当前产品宪章 ----
+  - id: DOC-1335
+    type: decision
+    path: decisions/implemented/product/2026-11-15-goal-navigation-enterprise-context.md
+    status: active
+    owner: CTO
+    note: "创始人确认⑤为目标驱动的持续经营导航；②①③④共同构成跨模型企业上下文与验证核心；含链式召回；已落入当前执行版宪章v8.5。"
+
+  - id: DOC-1336
+    type: decision
+    path: docs/synova/产品宪章-v8.5-修订稿.md
+    status: active
+    owner: CTO
+    note: "创始人裁定当前执行版：⑤持续经营导航、②①③④企业上下文、双向链式召回、因果验证与A/B原则；院方原件同步另行完成。"
+
+  - id: DOC-1337
+    type: governance
+    path: docs/synova/Synova-首个客户主线-总体施工规格与Win-CTO交接-v1.0-2026-11-15.md
+    status: active
+    owner: CTO
+    note: "首个客户主线总体施工与Win CTO交接入口；链式召回和双向经营回放施工契约；不替代各票Mandate。"
   # ---- #1394：post-commit 审计默认关闭与活性指令清扫 ----
   - id: DOC-1394-01
     type: governance
