@@ -78,8 +78,7 @@ describe('tools: 真实只读 ContextSnapshot（#1426）', () => {
 
   it('缺 ctx（token 未绑定）⇒ UNAUTHORIZED（不是 FORGED_IDENTITY）', () => {
     const error = catchError(() =>
-      (handleDomainToolCall as unknown as (name: string, args: Record<string, unknown>) => string)(
-        'synova_context_get', { problemId: PROBLEM }));
+      Reflect.apply(handleDomainToolCall, undefined, ['synova_context_get', { problemId: PROBLEM }]));
     expect(error).toBeInstanceOf(DshError);
     expect((error as DshError).code).toBe('UNAUTHORIZED');
     expect((error as DshError).httpStatus).toBe(401);
