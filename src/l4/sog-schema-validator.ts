@@ -10,6 +10,7 @@
  * 并把降级元素与「校验失败」显式区分（避免未覆盖类型打假失败告警）。
  */
 import { createLogger } from '@synova/logger';
+import { loadOntology } from './ontology-loader';
 
 const log = createLogger('l4/sog-schema-validator');
 
@@ -106,6 +107,23 @@ const NODE_SCHEMAS: Record<string, SchemaRule> = {
   },
 };
 
+function canonicalNodeSchema(nodeType: string): SchemaRule | undefined {
+  const { ontology, errors } = loadOntology();
+  const definition = ontology.nodeTypes.find(node => node.$id === nodeType && node.naturalKey !== undefined);
+  if (!definition || errors.some(error => error.includes(nodeType))) return undefined;
+  const properties: Record<string, PropRule> = {};
+  for (const [field, raw] of Object.entries(definition.optionalProps)) {
+    if (typeof raw !== 'object' || raw === null || !('type' in raw)) continue;
+    const type = (raw as { type?: unknown }).type;
+    if (type === 'number') properties[field] = { type: 'number' };
+    if (type === 'string' || type === 'date' || type === 'id-ref') properties[field] = { type: 'string' };
+    if (type === 'boolean') properties[field] = { type: 'boolean' };
+  }
+  properties.businessKey = { type: 'string', maxLength: 512 };
+  properties.name = { type: 'string', maxLength: 512 };
+  return { required: definition.requiredProps, properties };
+}
+
 // ═══ 未覆盖类型聚合器（#980 / 0-6 可见降级）═══
 
 /**
@@ -196,7 +214,7 @@ function validateProp(value: unknown, rule: PropRule, nodeType: string, field: s
  *   @degraded 未覆盖类型即降级路径: 登记聚合器 + 返回 degraded 元素；**绝不抛**
  */
 export function validateNodeProps(nodeType: string, props: Record<string, unknown>): ValidationError[] {
-  const schema = NODE_SCHEMAS[nodeType];
+  const schema = NODE_SCHEMAS[nodeType] ?? canonicalNodeSchema(nodeType);
   if (!schema) {
     // #980 / 0-6: 原 `return []` 为静默放行 —— 现改为「放行 + 可见降级」（不阻断写入）
     recordUncoveredType(nodeType);

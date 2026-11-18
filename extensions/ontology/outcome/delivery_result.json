@@ -1,0 +1,15 @@
+{
+  "$id": "outcome/delivery_result",
+  "label": "DELIVERY_RESULT",
+  "version": "1.0.0",
+  "naturalKey": ["businessKey"],
+  "requiredProps": ["businessKey", "name", "period"],
+  "optionalProps": {
+    "sourceIds": { "type": "array" }
+  },
+  "tags": ["delivery", "enterprise-scan"],
+  "description": "按期间形成的交付结果结构，仅承载扫描映射。",
+  "writableProps": [],
+  "writeAuthority": "none",
+  "actionRefs": []
+}

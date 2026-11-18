@@ -7,6 +7,9 @@
  */
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@synova/logger';
+// #1408：角色枚举的运行时真源 = 扫描侧 `WORKSPACE_ROLES`（`satisfies WorkspaceRole[]` 单向绑定）。
+// 方向：rbac.ts(value) → visibility.ts(type) → types.ts(type) → rbac.ts(type-only, 编译期擦除) ⇒ 运行时无环。
+import { isWorkspaceRole } from '../connectors/enterprise-scan/visibility';
 
 const log = createLogger('middleware/rbac');
 
@@ -122,8 +125,18 @@ export function extractRbacContext(req: {
   auth?: { sub: string; role: string; orgId: string; gaConstraints?: GAConstraints };
 }): RbacContext {
   if (req.auth) {
+    // #1408（v7 §5.4）：`role as WorkspaceRole` 只是类型断言，不是运行时校验。
+    // 已验签但角色不在 `WorkspaceRole` 枚举内 ⇒ fail-closed 走下方匿名拒绝路径，
+    // 审计 reason 必须区分 `invalid_role`（已认证但角色非法）与 `no_authenticated_context`。
+    if (!isWorkspaceRole(req.auth.role)) {
+      log.warn(
+        { code: 'RBAC_DENIED', reason: 'invalid_role', role: req.auth.role },
+        '安全判据: 被拒绝 — 角色不在 WorkspaceRole 枚举内（fail-closed，不回退任何默认角色）',
+      );
+      return { role: ANONYMOUS_ROLE, userId: ANONYMOUS_USER, authenticated: false };
+    }
     return {
-      role: req.auth.role as WorkspaceRole,
+      role: req.auth.role,
       department: undefined,
       userId: req.auth.sub,
       authenticated: true,

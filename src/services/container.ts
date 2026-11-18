@@ -28,6 +28,7 @@ import type { ReportTemplateRegistry } from '../l3/report-templates';
 import type { FaultRecovery } from './fault-recovery';
 import type { MCPBridge } from '../mcp/bridge';
 import type { Database } from 'better-sqlite3';
+import type { EnterpriseScanService } from '../agent/enterprise-scan-service';
 
 /**
  * 应用级服务容器。
@@ -51,6 +52,9 @@ export interface ServiceContainer {
 
   // 联邦进化
   federalAdapter: FederalAdapter;
+
+  // ⓪ 首次企业扫描（L2 编排，由 Bootstrap 装配）
+  enterpriseScanService?: EnterpriseScanService;
 
   // L3 洞察
   alertRules?: AlertRuleEngine;

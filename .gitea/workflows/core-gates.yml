@@ -5,6 +5,14 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+# 防队列堆积（Issue #1414）：同 workflow + 同 PR/ref 只保留最新一条 run。
+# 分组键：PR 事件取 pull_request.number；pull_request_target 下 github.ref=refs/heads/main，
+# 若按 ref 分组会把 PR run 与 main run 放进同组互杀——实测 run 4331(main dispatch) 在
+# run 4332(PR) 创建 9 秒后被取消（2026-11-18T04:00:13→04:00:22）。push/dispatch 无 PR 上下文时回退 ref。
+# 平台原生支持 cancel-in-progress（Gitea 28.3.0 / gitea-runner v5.4.1）。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

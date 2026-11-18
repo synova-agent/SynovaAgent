@@ -22,7 +22,8 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #   与夹具下一次 add/commit 抢 `$SB/.git/index.lock` ⇒ **假红方向是"指控门禁"**
 #   （"marker 缺失仍登记/洗白绕过"、"证据丢失"），维护者会照着错断言去"修"被测代码。
 #   现改为 **只投放被驱动脚本**（post-commit.sh + 它唯一调用的 bypass-ledger.sh，
-#   运行时拷贝，非桩），沙箱内无 auditor/decide-next ⇒ 无同仓 git 副作用。
+#   运行时拷贝，非桩）；主夹具前段无 auditor/decide-next ⇒ 无同仓 git 副作用。
+#   场景 F 在主夹具断言后投放可控 auditor，专测 #1394 默认关闭与显式启用行为。
 #   每个「应当是提交」的动作 **fail-fast**: 断言 rc=0 且 HEAD 前进；失败报
 #   `fixture: commit did not happen` 并 exit 3（夹具自身失败 ≠ 产品缺陷）。
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -106,7 +107,7 @@ else
 fi
 
 # 夹具动作封装（fail-fast: 见 header「隔离」段）
-sb_git_env() { env SYNO_SESSION_ID=test $SB_ENV git -C "$SB" "$@"; }
+sb_git_env() { env -u SYNO_AUDIT_HOOK SYNO_SESSION_ID=test $SB_ENV git -C "$SB" "$@"; }
 sb_add() {  # <描述> <路径...>
   local desc="$1"; shift; local rc
   git -C "$SB" add -- "$@" >/dev/null 2>&1; rc=$?
@@ -195,6 +196,47 @@ if [ "$E_RC" -eq 0 ] || [ "$E_BEFORE" != "$E_AFTER" ]; then
   exit 3
 fi
 git -C "$SB" status --porcelain -- e.txt | grep -q '^A' && ok "降级: 真实提交失败后沙箱状态可继续（e.txt 仍 staged）" || no "沙箱状态被破坏"
+
+# 场景F（#1394）: 默认不调用外部审计器；仅 SYNO_AUDIT_HOOK=1 时启用
+AUDIT_CALLS="$TMPD/audit-hook-calls.log"
+cat > "$SB/scripts/control-tower/external-auditor.sh" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "$AUDIT_CALLS"
+case " $* " in
+  *" --task-id "*)
+    REPORT_DIR="$(git rev-parse --show-toplevel)/.codex/audit-reports"
+    mkdir -p "$REPORT_DIR"
+    : > "$REPORT_DIR/Dunknown.md"
+    ;;
+esac
+EOF
+rm -rf "$SB/.codex"
+rm -f "$AUDIT_CALLS"
+echo "audit-default" > "$SB/audit-default.txt"
+echo "$(git -C "$SB" rev-parse HEAD)|$(date +%s)" > "$MARKER"
+SB_ENV="AUDIT_CALLS=$AUDIT_CALLS"
+sb_commit "场景F 默认关闭审计" "test: audit hook default off"
+SB_ENV=""
+[ ! -e "$SB/.codex/audit-reports/Dunknown.md" ] \
+  && ok "#1394: 默认提交不生成 Dunknown.md" \
+  || no "#1394: 默认提交仍生成 Dunknown.md"
+[ ! -e "$AUDIT_CALLS" ] \
+  && ok "#1394: 默认提交不调用 external-auditor" \
+  || no "#1394: 默认提交仍调用 external-auditor"
+echo "audit-opt-in" > "$SB/audit-opt-in.txt"
+echo "$(git -C "$SB" rev-parse HEAD)|$(date +%s)" > "$MARKER"
+SB_ENV="SYNO_AUDIT_HOOK=1 AUDIT_CALLS=$AUDIT_CALLS"
+sb_commit "场景F 显式启用审计" "test: audit hook explicit opt-in"
+SB_ENV=""
+[ -e "$SB/.codex/audit-reports/Dunknown.md" ] \
+  && ok "#1394: SYNO_AUDIT_HOOK=1 保留显式审计路径" \
+  || no "#1394: SYNO_AUDIT_HOOK=1 未生成审计报告"
+grep -q -- '--task-id Dunknown --diff HEAD~1..HEAD' "$AUDIT_CALLS" 2>/dev/null \
+  && ok "#1394: 显式启用时调用任务审计" \
+  || no "#1394: 显式启用时缺任务审计调用"
+grep -q -- '--dispatch' "$AUDIT_CALLS" 2>/dev/null \
+  && ok "#1394: 显式启用时调用 dispatch" \
+  || no "#1394: 显式启用时缺 dispatch 调用"
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -1,0 +1,16 @@
+{
+  "$id": "resource/delivery_team",
+  "label": "DELIVERY_TEAM",
+  "version": "1.0.0",
+  "naturalKey": ["businessKey"],
+  "requiredProps": ["businessKey", "name"],
+  "optionalProps": {
+    "sourceIds": { "type": "array" },
+    "name_conflicts": { "type": "array" }
+  },
+  "tags": ["delivery", "enterprise-scan"],
+  "description": "中性首次企业扫描中的团队结构。",
+  "writableProps": [],
+  "writeAuthority": "none",
+  "actionRefs": []
+}

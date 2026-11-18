@@ -223,7 +223,7 @@ ID_CHECKED=0; ID_SKIPPED=0; ID_FAIL=0
 BASE_IDS=""
 for _ref in "gitea/${TRUNK:-main}" origin/main; do   # 只用远端真源：夹具仓只有本地 main，应走降级而非误判
   if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify -q "$_ref" >/dev/null 2>&1; then
-    BASE_IDS="$(git -c safe.directory="$ROOT" -C "$ROOT" show "$_ref:docs/authority/DOCS-REGISTRY.yaml" 2>/dev/null | grep -E '^[[:space:]]*-[[:space:]]*id:' | grep -oE 'DOC-[0-9]+' | sort -u)" # swallow-ok:
+    BASE_IDS="$(git -c safe.directory="$ROOT" -C "$ROOT" show "$_ref:docs/authority/DOCS-REGISTRY.yaml" 2>/dev/null | grep -E '^[[:space:]]*-[[:space:]]*id:' | grep -oE 'DOC-[0-9]+(-[0-9]{2})?' | sort -u)" # swallow-ok:
     [ -n "$BASE_IDS" ] && break
   fi
 done
@@ -234,7 +234,7 @@ while IFS=$'\t' read -r _did _dpath; do
   [ -z "$_did" ] && continue
   [ -z "$_dpath" ] && _dpath="<NO-PATH>"
   case "$_did" in DOC-*) : ;; *) continue ;; esac
-  if [ -n "$BASE_IDS" ] && printf '%s\n' "$BASE_IDS" | grep -qxF "$_did"; then ID_SKIPPED=$((ID_SKIPPED+1)); continue; fi
+  if [ -n "$BASE_IDS" ] && [[ $'\n'"$BASE_IDS"$'\n' == *$'\n'"$_did"$'\n'* ]]; then ID_SKIPPED=$((ID_SKIPPED+1)); continue; fi   # #1417: 内建匹配替代逐条目 grep 子进程（~150 条 × 1s）
   if [ -z "$BASE_IDS" ] && [[ "$_did" =~ ^DOC-0[0-9]{3}$ ]]; then ID_SKIPPED=$((ID_SKIPPED+1)); continue; fi
   ID_CHECKED=$((ID_CHECKED+1))
   if ! [[ "$_did" =~ ^DOC-[1-9][0-9]*(-[0-9]{2})?$ ]]; then

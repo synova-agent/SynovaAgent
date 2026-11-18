@@ -1,0 +1,18 @@
+{
+  "$id": "edge/team_executes_activity",
+  "label": "TEAM_EXECUTES_ACTIVITY",
+  "version": "1.0.0",
+  "naturalKey": ["businessKey"],
+  "requiredProps": ["businessKey", "period"],
+  "allowedFrom": ["resource/delivery_team"],
+  "allowedTo": ["activity/delivery_batch"],
+  "cardinality": "n",
+  "temporal": true,
+  "action_effect_lag": "unknown",
+  "transfer_function": "unknown",
+  "optionalProps": {
+    "sourceIds": { "type": "array" }
+  },
+  "tags": ["delivery", "enterprise-scan"],
+  "description": "团队执行交付批次的事实关系，不含权重、因果函数、瓶颈或时滞。"
+}

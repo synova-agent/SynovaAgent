@@ -1,0 +1,136 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1401,
+  "patch_fingerprint": "sha256:d55aa7d15eec9db99e7b9eb709b75ccb6e79047fa397d343d35aedc2d2aee8eb",
+  "author": "win-external 1B coding session（#1398 / synova-1b-transitional-v1）",
+  "reviewer": "零上下文独立复核会话（b1b-reviewer，未参与实现，非 CTO）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "ci-4176-verified",
+      "title": "新 head b6d5d2701 的 CI（run 4176 / job 4318）为 success，原始日志 failed=0",
+      "cmd": "Invoke-RestMethod \"$API/repos/synova-agent/SynovaAgent/actions/runs/4176\"；GET /actions/jobs/4318；GET /actions/jobs/4318/logs → grep 'Tests  |CORE-AFFECTED-COUNTS|CORE-TESTS RESULT'",
+      "result": "pass",
+      "evidence": "run 4176：status=completed conclusion=success head_sha=b6d5d270171138168972e2b0c078026662d56ddb；job 4318（core）：conclusion=success，11 个 step 全 success。日志原文：Test Files 234 passed | 1 skipped (235)；Tests 2167 passed | 1 skipped (2168)；CORE-AFFECTED-COUNTS total=2168 passed=2167 skipped=1 failed=0 suites=832；CORE-TESTS RESULT rc=0 contract_passed=92 user_visible_passed=10 affected=ran affected_passed=2167 reason=affected-passed。日志中 CORE_ZERO_ASSERTIONS / contract-failed 等 rc=1 仅出现在门禁自测夹具（comment only / dead branch / deterministic original failure 等故意失败），非本 PR 用例"
+    },
+    {
+      "id": "writeset-50-and-6",
+      "title": "写集仍为批准的 50 文件；本回合 3 个 commit 仅动 6 文件且全在批准集",
+      "cmd": "git diff --name-only 4188e1949..HEAD | wc -l；git diff --name-only a4bc16f28..b6d5d2701；git diff --stat a4bc16f28..b6d5d2701",
+      "result": "pass",
+      "evidence": "main..head = 50 文件（与上一轮逐条对账的 Mandate §3 + 12522 D-1/D-2/D-5 集一致，无新增文件）。本回合 diff a4bc16f28..b6d5d2701 = 6 文件：src/connectors/enterprise-scan/scanner.ts、src/l4/enterprise-scan-store.ts、tests/enterprise-scan/isolation.test.ts、tests/enterprise-scan/variants.test.ts、.claude/claims/1398.yaml、memory/notes/proposed/1398-enterprise-scan.md；+103/−14。仍无 scripts/audit/**、.gitea/**、门禁脚本（唯一 scripts 例外为 12522+12587 批准的 probe）、客户数据"
+    },
+    {
+      "id": "blocker1-repro-fixed",
+      "title": "上一轮阻塞 1 的原始复现脚本现为 OWNER GET OK（2/2），partial=false",
+      "cmd": "Copy-Item repro-get-order.mts → worktree 根 .tmp-repro-get-order.mts；cd worktree；node_modules\\.bin\\tsx.cmd .tmp-repro-get-order.mts（连跑 2 次）",
+      "result": "pass",
+      "evidence": "RUN 1 EXIT=0：restricted run: {\"partial\":true,\"assertions\":9,\"sources\":3}；OWNER GET OK: {\"assertions\":11,\"partial\":false,\"sources\":4}。RUN 2 EXIT=0：同上（逐字一致）。上一轮同一脚本为 OWNER GET FAILED TRANSACTION_ABORTED / FOREIGN KEY constraint failed; assertionParent=1; evidenceParent=0"
+    },
+    {
+      "id": "blocker1-regression-covers-original-order",
+      "title": "新增反序回归用例真的覆盖了原触发序，且受限方未被放宽",
+      "cmd": "node_modules\\.bin\\vitest.cmd run tests/enterprise-scan/isolation.test.ts --reporter=verbose（用例：反序：受限先建 run ⇒ 更宽可见者 GET 必须 200；受限方仍看不到私有部分）",
+      "result": "pass",
+      "evidence": "3 passed（含新用例）。用例源码覆盖：① restricted(service.run) → partial=true、无 value 120；② owner 后 GET 同一 runId → full.partial_visibility=false、sources 含 restricted 来源、assertions 含 value 120；③ restricted 再 GET → again.partial_visibility=true、无 120、无 restricted 来源、cross_source=[]；④ db.pragma('foreign_key_check')=[]。与上一轮我的复现序（受限建 run → owner GET）完全一致"
+    },
+    {
+      "id": "blocker1-fix-is-load-bearing",
+      "title": "改坏必红（本人动手）：把 writeEvidence 退回 visible-only ⇒ 反序回归立刻红",
+      "cmd": "临时把 store.ts 的 for (const preflight of input.preflights) 改为 filter(可见) → vitest run tests/enterprise-scan/isolation.test.ts → git checkout -- 还原",
+      "result": "pass",
+      "evidence": "M-A：FAIL tests/enterprise-scan/isolation.test.ts > 反序：受限先建 run ⇒ 更宽可见者 GET 必须 200；受限方仍看不到私有部分；EnterpriseScanError: 证据关联失败: FOREIGN KEY constraint failed; assertionParent=1; evidenceParent=0；Serialized Error: { status: 500, code: 'TRANSACTION_ABORTED' }；Tests 1 failed | 2 passed (3)。还原后 isolation 3 passed（并入下方 17 文件/163 与 13 文件/96 全绿）。证明修复与回归用例都承重"
+    },
+    {
+      "id": "blocker2-flake-eliminated",
+      "title": "上一轮 ~13% flake 的裸 toContain('120') 已换结构化断言，15/15 绿",
+      "cmd": "1..15 循环：node_modules\\.bin\\vitest.cmd run tests/enterprise-scan/variants.test.ts tests/enterprise-scan/isolation.test.ts --reporter=dot",
+      "result": "pass",
+      "evidence": "ITER 1..15 全 pass，每轮 Tests 10 passed (10)；TOTAL_FAILS=0 / 15。上一轮同一手法（单测循环 15 次）为 2/15 红，命中原因是随机 graph node UUID 子串 …f691cc1202e4…；现 variants.test.ts:151 已改为 value/visibility/source_id/evidence sourceRef/cross_source/partial_visibility 结构化断言，isolation 的同类裸判据一并改掉"
+    },
+    {
+      "id": "structured-assertions-not-tautological",
+      "title": "改坏必红（本人动手）：泄漏与 partial 标志两处变异都能被结构化断言抓到",
+      "cmd": "M-B：service.ts 的 buildScanModel(viewer, visible, …) 改为 buildScanModel(viewer, preflights, …)；M-C：partial 参数改为 false；各跑 variants+isolation → git checkout -- 还原",
+      "result": "pass",
+      "evidence": "M-B：Test Files 2 failed (2)，Tests 2 failed | 8 passed (10) —— variants『公开100+私有120』与 isolation『反序』均红（泄漏 120/受限来源进入报告 → structured 断言 expected false to be true）。M-C：Test Files 2 failed (2)，Tests 2 failed | 8 passed (10) —— 两处 partial_visibility 断言红。还原后 15/15 与 17 文件/163 全绿。⇒ 新断言非恒真"
+    },
+    {
+      "id": "persist-not-echo",
+      "title": "「落库≠回显」守住：全部授权来源证据落库，但不可见证据零进入受限报告；partial_visibility 未被稀释",
+      "cmd": "自写 .tmp-verify-leak.mts（两 harness：① 受限建 run 后查 DB + restricted/owner/restricted-again 三份报告；② 删除不可见证据行后 owner-b GET 取错误消息）",
+      "result": "pass",
+      "evidence": "DB：scan_evidence_versions=4 行（含 restricted 来源）；不可见行 = { period: null, valid_from: null, valid_to: null, parse_status: 'pending' }。受限报告：sources=3、partial=true、hasValue120=false、hasRestrictedSource=false、hasPrivateSourceId=false、cross_source=0、linksToInvisibleEvidence=0（JOIN scan_assertion_evidence×scan_report_assertions 计数）。owner：sources=4、partial=false、hasValue120=true、hasRestrictedSource=true。受限再 GET：partial=true、hasValue120=false、hasRestrictedSource=false。foreign_key_check=0 行。派生/对账仍只用 visible 集（scanner 由 visible 建模，证据行只做 FK 父行）"
+    },
+    {
+      "id": "single-id-formula",
+      "title": "来源身份只有一份公式（describeSource 唯一真源），store 无第二处推导",
+      "cmd": "git grep -n 'describeSource' -- src；git grep -n \"stableId('evidence\" -- src",
+      "result": "pass",
+      "evidence": "describeSource 定义仅 src/connectors/enterprise-scan/scanner.ts:57；调用点 scanner.ts:142 与 src/l4/enterprise-scan-store.ts:221（store.ts:16 import）。evidence/evidence-version 派生仅 scanner.ts:59 与 :64 两行（同一函数内）。store.ts 不再出现 stableId('evidence…')"
+    },
+    {
+      "id": "parse-status-no-consumer",
+      "title": "parse_status='pending' 不参与任何计算（无读取方）",
+      "cmd": "git grep -n 'parse_status' -- src",
+      "result": "pass",
+      "evidence": "命中仅 3 处：store.ts:233（INSERT 列表）、store.ts:239（注释）、src/store/migrations/006-enterprise-scan.ts:67（DDL TEXT NOT NULL）。无 SELECT/报告/派生读取 ⇒ pending 不会被当成 confirmed 或参与可见性/对账"
+    },
+    {
+      "id": "error-message-no-internal-ids",
+      "title": "500 消息不再回显 assertionKey / evidenceVersionId（附带项）",
+      "cmd": "强制 FK 失败：删除不可见 evidence_version 行后 owner-b GET（自写 .tmp-verify-leak.mts 第二 harness）",
+      "result": "pass",
+      "evidence": "message = \"证据关联失败: FOREIGN KEY constraint failed; assertionParent=1; evidenceParent=0\"；正则 /evidence-version-|assertion-|statement-event|stmt-001/ 命中=false。旧文案（上一轮实测）会带 \"statement-event:stmt-001 证据关联 evidence-version-ba50… 失败\""
+    },
+    {
+      "id": "local-suite-and-gates",
+      "title": "新 head 本地全绿：17 文件 / 精确 13 文件 / lint / 架构 / 探针",
+      "cmd": "vitest run <17 文件清单>；vitest run <PR 声明的 13 文件清单>；tsc --noEmit；SYNO_CI=1 bash scripts/check-architecture.sh；tsx scripts/control-tower/probe-ontology-values.ts",
+      "result": "pass",
+      "evidence": "17 文件：Test Files 17 passed (17) / Tests 163 passed (163)，exit 0（162 + 新增反序 1）。精确 13 文件：Test Files 13 passed (13) / Tests 96 passed (96)，exit 0（上一轮 95；新增反序用例 +1，故 PR 正文『95 tests』是旧 head 数字）。tsc --noEmit exit 0；SYNO_CI=1 架构检查 exit 0（『架构检查: 全部通过』）；probe：RESULT=files=59 causal=55 noncausal=4 … violations=0，[OK] 值域迁移判定全绿，exit 0"
+    },
+    {
+      "id": "whitespace-and-claim",
+      "title": "Note EOF 空行已修（own diff --check=0）；claims 已含 probe（12587 锚）",
+      "cmd": "git diff --check 4188e1949..HEAD；grep -n 'probe-ontology-values' .claude/claims/1398.yaml；读 Gitea 评论 12587",
+      "result": "pass",
+      "evidence": "git diff --check 4188e1949..HEAD exit 0（上一轮为 exit 2：memory/notes/proposed/1398-enterprise-scan.md:37 new blank line at EOF，已修）。claims 第 50 行为 scripts/control-tower/probe-ontology-values.ts，注释写明『12522 + 12587（D-2′ / Option B）批准』。评论 12587 存在（user=win-push，2026-11-16T03:19:23+08:00）：D-2′ 正式替代 12522 D-2，批准 Option B（PENDING_REGISTERED_ADDITIONS 追加一条 + 边 JSON 顶层 unknown），12522 其余 D-1/D-3/D-4/D-5 继续有效。注：对固定 base 8abdaa7cf 的 diff --check 仍报 tests/l3/graphbridge-wiring.test.ts 行尾空白，但那是 main(#1405/#1407) 带入、非本票"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "src/l4/enterprise-scan-store.ts:235（ON CONFLICT(graph, evidence_id, sha256) DO NOTHING）与 :241-242（visible?.period ?? null / visible?.evidence_status ?? 'pending'）",
+      "what": "证据版本行是 write-once：受限用户先跑时，不可见来源写入 parse_status='pending'、period/valid_from/valid_to=NULL；之后更宽可见者用同一内容再跑（或 GET）不会刷新该行的 period/parse_status。当前 grep 证明 parse_status 无任何读取方（仅 INSERT + DDL），故无行为影响；但若后续票要消费该列（例如把证据期间用于对账），会读到受限先跑留下的过期口径。建议在更宽可见者落库时允许刷新这些派生列，或在列注释里写明『write-once、pending 表示创建者不可见』"
+    },
+    {
+      "severity": "warn",
+      "where": "src/connectors/enterprise-scan/visibility.ts:6-7 vs src/middleware/rbac.ts:13",
+      "what": "角色词表分裂：可见性用 owner/operator/responsible，产品 WorkspaceRole 为 admin|manager|liaison|staff|ga；无映射时真实登录用户（admin 等）会被 deny-all（可见集为空 → SCOPE_DENIED）。本票按固定 DEV DOC §9 实现，属继承口径；Note 已把该项列为 CTO 另立票（角色词表统一），不阻塞本票"
+    },
+    {
+      "severity": "warn",
+      "where": "src/connectors/enterprise-scan/preflight.ts:16-18（new Worker(new URL('./preflight-worker.ts')) + execArgv ['--import','tsx']）",
+      "what": "preflight worker 依赖 TS 源文件 + devDependency tsx；全仓无其他生产 Worker 先例。当前只在 tsx（测试/开发）环境被验证，打包产物（dist）下的路径与依赖未验证；部署不在本票范围，但首个客户部署前需要一张票确认 worker 的产物化（或改为主线程预检 + 显式超时）"
+    },
+    {
+      "severity": "warn",
+      "where": "src/connectors/enterprise-scan/scanner.ts:143（byName = new Map(descriptors.map(item => [item.fileName, item]))）",
+      "what": "同 manifest 内不同目录但同 basename 的两个来源会在 byName 里后者覆盖前者：前者内容不参与解析，但其证据版本仍随 writeEvidence 落库（现全部来源落库），报告 sources 会出现两条而解析只认最后一条。属静默覆盖路径，没有断言覆盖；建议后续票对 manifest 内 basename 唯一性做显式校验（或按 sourceId 建模）"
+    },
+    {
+      "severity": "info",
+      "where": "PR #1401 正文『真实测试证据』与『全量 npm test』段落",
+      "what": "正文的 13 文件/95 tests 与『instance-loading activity 8→9、sog-schema-validator 45→48 等 current-only 失配』是旧 head 的口径：新 head 同一 13 文件选择为 96 tests（新增反序用例），且上述失配已被 D-1/D-5 批准修复并本地/CI 全绿。属保守/滞后陈述（不是虚报），建议 PR 收口时同步，避免后续照抄旧数字"
+    },
+    {
+      "severity": "info",
+      "where": "docs/synova/reviews/1401.d55aa7d15eec.json 本轮回执",
+      "what": "上一轮『D-2′ 无 Gitea 文本锚』的观察已关闭：评论 12587 为 D-2′（Option B）的正式替代裁定，且 12522 D-1/D-3/D-4/D-5 继续有效；claims 写集也已补入 probe 路径。上一轮『claims 缺 probe』的观察同样关闭"
+    }
+  ],
+  "issued_at": "2026-11-16T03:52:00+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）"
+}

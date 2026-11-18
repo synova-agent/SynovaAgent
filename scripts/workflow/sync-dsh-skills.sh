@@ -79,7 +79,7 @@ degrade() { # <原因> — 降级: 显式日志 + exit 2（铁律 11: 不静默�
 SRC_LIST=$(mktemp /tmp/sds-src.XXXXXX)
 trap 'rm -f "$SRC_LIST"' EXIT
 while IFS= read -r d; do
-  name=$(basename "$d")
+  name=${d##*/}   # #1417: 参数展开替代 basename 子进程（逐目录 ~0.9s → 0）
   if [ -f "$d/SKILL.md" ]; then
     echo "$name" >> "$SRC_LIST"
   else
@@ -103,7 +103,7 @@ compute_plan() {
   # 目标技能目录（每次重算：apply 前后目标会变）
   DST_NAMES=""
   if [ -d "$DST" ]; then
-    DST_NAMES=$(find "$DST" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | while IFS= read -r d; do basename "$d"; done | LC_ALL=C sort) # swallow-ok: find 探测不存在/不可读目录
+    DST_NAMES=$(find "$DST" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's#.*/##' | LC_ALL=C sort) # swallow-ok: find 探测不存在/不可读目录；#1417: 单进程 sed 替代逐目录 basename
   fi
   # 漂移判定: 整树一次 diff（逐技能 diff 实测 6.3s；整树 1 次 ~0.1s 同判据）
   DIRTY_NAMES=""

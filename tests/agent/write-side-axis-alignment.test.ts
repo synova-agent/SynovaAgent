@@ -20,7 +20,8 @@ const MAP_DIR = 'extensions/ontology/field-mappings';
 //   （D734 预算 ⇒ 机械拆 4+4；**判据作用域必须与批次一致** —— 见 B1 的 CI 红教训"判据作用域泄漏"）
 const MAPPINGS = ['erp-standard', 'hr-standard', 'innovation-pipeline', 'risk-register'];
 const B1_MERGED = ['competitive-intel', 'crm-standard', 'erp-operational', 'external-intel'];
-/** 本体轴类型全集（40）—— 真源：packages/ontology/src/node-types.ts */
+/** 本体轴类型全集（43）—— 真源：packages/ontology/src/node-types.ts
+ *  #1398 起 40→43：新增 ①activity/delivery_batch ②outcome/delivery_result ③resource/delivery_team */
 const ONTOLOGY = new Set((readFileSync('packages/ontology/src/node-types.ts', 'utf-8').match(/'[a-z]+\/[a-z_]+'/g) ?? []).map(s => s.replace(/'/g, '')));
 
 function mappingTarget(name: string): string {
@@ -29,13 +30,13 @@ function mappingTarget(name: string): string {
 }
 
 describe('#1395 写入侧类型对齐本体轴', () => {
-  it('V1【形态扫描·只证明形态】覆盖 8/8（B2 4 个 + B1 已合 4 个）∈ 本体轴（40）', () => {
+  it('V1【形态扫描·只证明形态】覆盖 8/8（B2 4 个 + B1 已合 4 个）∈ 本体轴（43）', () => {
     for (const m of MAPPINGS) {
       const t = mappingTarget(m);
       expect(t.includes('/'), `${m}: ${t} 应为限定名`).toBe(true);
-      expect(ONTOLOGY.has(t), `${m}: ${t} 不在本体轴 40 类型内`).toBe(true);
+      expect(ONTOLOGY.has(t), `${m}: ${t} 不在本体轴 43 类型内`).toBe(true);
     }
-    expect(ONTOLOGY.size).toBe(40);
+    expect(ONTOLOGY.size).toBe(43);
     // 覆盖面声明：8/8（B2 本批 4 + B1 已合 4）；逐个点名（禁"8 个已改"式模糊口径）
     expect(MAPPINGS.length).toBe(4);
     expect(B1_MERGED.length).toBe(4);

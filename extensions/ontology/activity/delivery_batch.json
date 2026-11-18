@@ -1,0 +1,18 @@
+{
+  "$id": "activity/delivery_batch",
+  "label": "DELIVERY_BATCH",
+  "version": "1.0.0",
+  "naturalKey": ["businessKey"],
+  "requiredProps": ["businessKey", "name", "teamBusinessKey", "period"],
+  "optionalProps": {
+    "valid_from": { "type": "date" },
+    "valid_to": { "type": "date" },
+    "defVersion": { "type": "string" },
+    "sourceIds": { "type": "array" }
+  },
+  "tags": ["delivery", "enterprise-scan"],
+  "description": "中性首次企业扫描中的交付批次结构，不表达瓶颈或因果。",
+  "writableProps": [],
+  "writeAuthority": "none",
+  "actionRefs": []
+}

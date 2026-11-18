@@ -13,13 +13,14 @@ import { graphNodesPropsMigration } from './migrations/001-graph-nodes-props';
 import { metricReadingsMigration } from './migrations/002-metric-readings';
 import { orgsMigration } from './migrations/003-orgs';
 import { graphTriplesRebuildMigration } from './migrations/004-graph-triples-rebuild';
+import { enterpriseScanMigration } from './migrations/006-enterprise-scan';
 
 const log = createLogger('store/schema-migration');
 
 // ═══ 常量 ═══
 
 /** 当前 schema 版本。每次新增迁移文件时递增。 */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 // ═══ Migration 定义 ═══
 
@@ -45,6 +46,7 @@ const migrations: Migration[] = [
   // 只补列属半修（SQLite 改不了列类型/PK）⇒ 整表重建到 canonical（TEXT PK + props）。
   // 🔴 本迁移的 DDL 属 schema 面 ⇒ **落地前须 CTO 逐字批**（见交付件 DDL 待批清单）。
   graphTriplesRebuildMigration,
+  enterpriseScanMigration,
 ];
 
 // ═══ 版本门禁类型（#964 Q-8，裁 395） ═══

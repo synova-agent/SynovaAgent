@@ -133,6 +133,9 @@ export const PENDING_REGISTERED_ADDITIONS: readonly PendingEdgeAddition[] = [
     registeredBy: 'l3-65 / a7437498c', promoteAfter: '下一次触及 tests/l4/** 的卡；否则 CTO 收件闸收口' },
   { id: 'edge/plan_commits_to', file: 'plan_commits_to.json', expected: 'non_causal_unknown',
     registeredBy: 'l3-65 / a7437498c', promoteAfter: '同上' },
+  { id: 'edge/team_executes_activity', file: 'team_executes_activity.json', expected: 'non_causal_unknown',
+    registeredBy: '#1398 / 12522-D-2′',
+    promoteAfter: '下一次触及 tests/l4/** 的卡提升为 SPEC_EDGE_TYPES 正式成员并删除本项；否则 CTO 收件闸收口' },
 ];
 
 /**
