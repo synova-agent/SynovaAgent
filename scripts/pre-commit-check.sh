@@ -7,6 +7,13 @@
 #   @exit   0=全通过；1=有组未通过（SYNO_CI=1 时软提示转硬）；2=检查自身失败
 #   @degraded 某组检查自身失败时按 exit 2 处理或显式降级留痕
 # ═══════════════════════════════════════════════════════════════
+# Windows 本地门禁只支持 Git for Windows Bash；WSL 会把 worktree 的
+# Windows 绝对 gitdir 当成相对路径，必须在任何 git 调用前明确判环境失败。
+if [ -r /proc/version ] && grep -qi microsoft /proc/version; then
+  printf '%s\n' 'SYNO-ENV-ERROR: 请使用 Git for Windows Bash，不要在 WSL bash 中运行本地门禁。' >&2
+  exit 2
+fi
+# INTERPRETER-GUARD-END
 # D313 M5 UTF-8 强制: Windows 控制台/子进程统一 UTF-8
 export PYTHONIOENCODING=utf-8
 export LC_ALL=C.UTF-8 2>/dev/null || true

@@ -506,7 +506,8 @@ BASELINE_CHECK="$SCRIPT_DIR/control-tower/baseline-check.sh"
 if [[ -f "$BASELINE_CHECK" ]]; then
   # #1417: 区分「新增 tsc 错误」(exit 1) 与「环境未就绪」(exit 2) ——
   #   baseline-check 只用本地 node_modules 的 tsc，不再 npx 联网下载（无依赖时立即 exit 2，不挂住）。
-  BASE_OUT=$(bash "$BASELINE_CHECK" --tsc 2>&1); BASE_RC=$?
+  BASE_RC=0
+  BASE_OUT=$(bash "$BASELINE_CHECK" --tsc 2>&1) || BASE_RC=$?
   [ -n "$BASE_OUT" ] && printf '%s\n' "$BASE_OUT"
   if [ "$BASE_RC" -eq 2 ]; then
     echo ""
