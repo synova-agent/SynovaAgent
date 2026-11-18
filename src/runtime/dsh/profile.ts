@@ -10,7 +10,7 @@
  *     `scripts/dsh-sidecar/start.ps1` 的探针承担（见证据文件）。
  *
  * 契约（铁律 47）:
- *   @input   profileDir（仓库内四件所在目录）｜ dshHome ｜ instanceDir ｜ installDir
+ *   @input   profileDir（仓库内四件所在目录）｜ dshHome ｜ instanceDir ｜ installDir（含版本目录）
  *   @output  SidecarProfile（解析结果）｜ SidecarProfileViolation[]（逐条可读）｜
  *            启动 invocation {command,args,env}
  *   @degraded 无：profile 是安全边界，任何不合规都必须抛 PROFILE_INVALID，不得静默放行
@@ -386,14 +386,34 @@ export interface DshInvocation {
 }
 
 /**
- * 生成 `DeepSeek Harness.exe --expose-internals <cli.js> --profile synova-sidecar`。
- * @error SIDECAR_SPAWN_FAILED（固定安装目录或 CLI 入口缺失，`retryable=false`）
+ * 生成固定版本 dsh 的启动命令。
+ *
+ * 两种布局，**npm 安装布局优先**（本票锁版路径）：
+ * 1. npm 安装布局（生产/沙箱）：
+ *    `<node> <installDir>/node_modules/@deepseek-ai/dsh/lib/bin.js --profile synova-sidecar`
+ *    —— `<node>` 缺省 process.execPath（沙箱里就是便携 node），不依赖 PATH。
+ * 2. 桌面安装布局（历史分支，保留但非默认）：
+ *    `DeepSeek Harness.exe --expose-internals <cli.js> --profile synova-sidecar`。
+ *
+ * @error SIDECAR_SPAWN_FAILED（两种布局都缺入口，`retryable=false`）
  */
 export function buildDshInvocation(options: {
   installDir: string;
   dshHome: string;
   baseEnv?: NodeJS.ProcessEnv;
+  /** npm 布局下使用的 node 可执行文件；缺省 process.execPath（便携 node / Electron-as-node）。 */
+  nodeExecutable?: string;
 }): DshInvocation {
+  const env = buildChildEnv(options.dshHome, options.baseEnv);
+  const binJs = join(options.installDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
+  if (existsSync(binJs)) {
+    return {
+      command: options.nodeExecutable ?? process.execPath,
+      args: [binJs, '--profile', SIDECAR_PROFILE_NAME],
+      env,
+    };
+  }
+
   const exe = join(options.installDir, 'DeepSeek Harness.exe');
   const cli = join(
     options.installDir,
@@ -407,7 +427,7 @@ export function buildDshInvocation(options: {
     'cli.js',
   );
   if (!existsSync(exe)) {
-    throw new DshError('SIDECAR_SPAWN_FAILED', 'spawn', `未找到固定版本 dsh 宿主: ${exe}`, { retryable: false });
+    throw new DshError('SIDECAR_SPAWN_FAILED', 'spawn', `未找到固定版本 dsh 宿主: ${exe}（npm 布局缺 lib/bin.js，桌面布局缺 exe）`, { retryable: false });
   }
   // cli.js 位于 app.asar 内：普通 node 的 existsSync 看不见 asar 内部，只有 Electron
   // （`--expose-internals`）能加载。因此这里只核对 asar 包存在，不把 asar 内路径当普通文件断言。
@@ -418,7 +438,7 @@ export function buildDshInvocation(options: {
   return {
     command: exe,
     args: ['--expose-internals', cli, '--profile', SIDECAR_PROFILE_NAME],
-    env: buildChildEnv(options.dshHome, options.baseEnv),
+    env,
   };
 }
 

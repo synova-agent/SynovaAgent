@@ -1,0 +1,33 @@
+writeset:
+  - .claude/claims/1411.yaml
+  - src/runtime/dsh/pinned-version.ts
+  - src/runtime/dsh/sidecar.ts
+  - src/runtime/dsh/profile.ts
+  - src/runtime/dsh/session.ts
+  - src/runtime/dsh/errors.ts
+  - scripts/dsh-sidecar/start.ps1
+  - scripts/dsh-sidecar/install-dsh-runtime.ps1
+  - scripts/dsh-sidecar/probe-dsh-runtime.ps1
+  - scripts/dsh-sidecar/sandbox/Fetch-DshSandboxInputs.ps1
+  - scripts/dsh-sidecar/sandbox/New-DshSandboxConfig.ps1
+  - scripts/dsh-sidecar/sandbox/Start-DshSandbox.ps1
+  - scripts/dsh-sidecar/sandbox/Complete-DshBuildHandoff.ps1
+  - scripts/dsh-sidecar/sandbox/Invoke-DshSandboxBuild.ps1
+  - scripts/dsh-sidecar/sandbox/Invoke-DshSandboxProbe.ps1
+  - scripts/dsh-sidecar/sandbox/Test-DshEvidence.ps1
+  - scripts/dsh-sidecar/sandbox/SandboxLifecycle.psm1
+  - scripts/dsh-sidecar/sandbox/RealSandboxProcessAdapter.ps1
+  - tests/runtime/dsh/pinned-version.test.ts
+  - tests/runtime/dsh/sidecar-lifecycle.test.ts
+  - tests/runtime/dsh/sandbox-config.test.ts
+  - tests/runtime/dsh/sandbox-lifecycle.test.ts
+  - tests/runtime/dsh/sandbox-handoff.test.ts
+  - tests/runtime/dsh/sandbox-evidence.test.ts
+  - memory/notes/implemented/2026-11-17-1411-dsh-runtime.md
+done:
+  - verify: npx vitest run tests/runtime/dsh/pinned-version.test.ts tests/runtime/dsh/sidecar-lifecycle.test.ts
+  - verify: npx vitest run tests/runtime/dsh/sandbox-config.test.ts tests/runtime/dsh/sandbox-handoff.test.ts
+  - verify: npx vitest run tests/runtime/dsh/sandbox-lifecycle.test.ts tests/runtime/dsh/sandbox-evidence.test.ts
+  - verify: npm run lint
+  - verify: npm run build
+note: "Policy synova-1411-t1t2-transitional-v1（Mandate 12927 + v8 12948）；base 2cde232；只做 T1/T2，动态测试由 PR CI 执行；真实 rc.2 安装/探针/锁版仍 NOT DONE。"

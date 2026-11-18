@@ -216,3 +216,80 @@ describe('T1 Sidecar 生命周期（真实 CLI + fake ACP）', () => {
     expect(result.json.retryable).toBe(false);
   }, 90_000);
 });
+/** 造一个 npm 安装布局（node_modules/@deepseek-ai/dsh/package.json + lib/bin.js 占位）。 */
+function writeInstallLayout(version: string): { installDir: string; dshHome: string; instanceDir: string } {
+  const root = makeTempRoot();
+  const installDir = join(root, 'install', version);
+  const pkgDir = join(installDir, 'node_modules', '@deepseek-ai', 'dsh');
+  mkdirSync(join(pkgDir, 'lib'), { recursive: true });
+  writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version }), 'utf8');
+  writeFileSync(join(pkgDir, 'lib', 'bin.js'), '// version-gate stub: never spawned by the rejection cases\n', 'utf8');
+  const dshHome = join(root, 'dsh-home');
+  const instanceDir = join(root, 'instance');
+  mkdirSync(instanceDir, { recursive: true });
+  return { installDir, dshHome, instanceDir };
+}
+
+describe('T1 固定版本门（生产锁 rc.2；rc.1 仅显式回退）', () => {
+  it('伪造 expected-version rc.3 ⇒ exit 1 + DSH_VERSION_MISMATCH，不落状态文件（不 spawn）', async () => {
+    const layout = writeInstallLayout('0.2.2-rc.1');
+    const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
+      '--install-dir', layout.installDir, '--expected-version', '0.2.2-rc.3']);
+    expect(result.code).toBe(1);
+    expect(result.json.code).toBe('DSH_VERSION_MISMATCH');
+    expect(result.json.retryable).toBe(false);
+    expect(existsSync(join(layout.dshHome, 'run', 'synova-sidecar.json'))).toBe(false);
+  }, 30_000);
+
+  it('空值 expected-version ⇒ 同样 DSH_VERSION_MISMATCH（不把空串当缺省）', async () => {
+    const layout = writeInstallLayout('0.2.2-rc.2');
+    const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
+      '--install-dir', layout.installDir, '--expected-version', '']);
+    expect(result.code).toBe(1);
+    expect(result.json.code).toBe('DSH_VERSION_MISMATCH');
+    expect(existsSync(join(layout.dshHome, 'run', 'synova-sidecar.json'))).toBe(false);
+  }, 30_000);
+
+  it('已安装 rc.1 且未显式指定 ⇒ DSH_VERSION_MISMATCH，不 spawn', async () => {
+    const layout = writeInstallLayout('0.2.2-rc.1');
+    const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
+      '--install-dir', layout.installDir, '--start-timeout-ms', '2000']);
+    expect(result.code).toBe(1);
+    expect(result.json.code).toBe('DSH_VERSION_MISMATCH');
+    expect(result.json.phase).toBe('spawn');
+    expect(existsSync(join(layout.dshHome, 'run', 'synova-sidecar.json'))).toBe(false);
+  }, 30_000);
+
+  it('显式 expected-version rc.1 + 注入 ACP ⇒ 启动成功（回退只在显式路径）', async () => {
+    const root = makeTempRoot();
+    const layout = writeInstallLayout('0.2.2-rc.1');
+    const fake = writeFakeAcp(root);
+    const common = ['--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir, '--install-dir', layout.installDir,
+      '--acp-command', process.execPath, '--acp-arg', fake, '--expected-version', '0.2.2-rc.1'];
+    const started = await runSidecarCli(['--action', 'start', ...common, '--start-timeout-ms', '30000']);
+    expect(started.code).toBe(0);
+    expect(started.json.ready).toBe(true);
+    expect(started.json.expectedVersion).toBeUndefined();
+    const status = await runSidecarCli(['--action', 'status', ...common]);
+    expect(status.code).toBe(0);
+    expect(status.json.installedVersion).toBe('0.2.2-rc.1');
+    const stopped = await runSidecarCli(['--action', 'stop', ...common]);
+    expect(stopped.code).toBe(0);
+    expect(stopped.json.stopped).toBe(true);
+  }, 90_000);
+
+  it('status 读不到安装目录 ⇒ installedVersion=null（不猜版本、不冒充已核）', async () => {
+    const root = makeTempRoot();
+    const dshHome = join(root, 'dsh-home');
+    const instanceDir = join(root, 'instance');
+    mkdirSync(instanceDir, { recursive: true });
+    const fake = writeFakeAcp(root);
+    const common = ['--dsh-home', dshHome, '--instance-dir', instanceDir, '--acp-command', process.execPath, '--acp-arg', fake];
+    const started = await runSidecarCli(['--action', 'start', ...common, '--start-timeout-ms', '30000']);
+    expect(started.code).toBe(0);
+    const status = await runSidecarCli(['--action', 'status', ...common]);
+    expect(status.code).toBe(0);
+    expect(status.json.installedVersion).toBeNull();
+    await runSidecarCli(['--action', 'stop', ...common]);
+  }, 90_000);
+});

@@ -32,6 +32,11 @@ import {
   SIDECAR_PROFILE_NAME,
 } from './profile';
 import { defaultDshHome, defaultInstanceDir } from './sidecar';
+import {
+  assertInstalledDshVersion,
+  defaultInstallDir,
+  resolveExpectedDshVersion,
+} from './pinned-version';
 
 /** ACP 会话可挂载的 MCP 服务器（回环 HTTP MCP 由 T3 注入）。 */
 export interface McpServerSpec {
@@ -401,16 +406,20 @@ export function createDefaultDshRunManager(overrides: {
 } = {}): DshRunManager {
   const envDshHome = process.env.SYNOVA_DSH_HOME ?? overrides.dshHome;
   const envInstanceDir = process.env.SYNOVA_DSH_INSTANCE_DIR ?? overrides.instanceDir;
-  const envInstallDir = process.env.SYNOVA_DSH_INSTALL_DIR ?? overrides.installDir;
   const profileDir = overrides.profileDir ?? defaultProfileDir();
   const instanceDir = envInstanceDir ?? defaultInstanceDir();
   const dshHome = envDshHome ?? defaultDshHome();
+  // 生产会话只锁 PINNED_DSH_VERSION：不接受、不传播 expected-version（rc.1 回退只在 start.ps1 显式路径）。
+  // 安装目录与 buildDshInvocation 同值（含版本）；版本不符即 DSH_VERSION_MISMATCH，不 spawn。
+  const installDir = process.env.SYNOVA_DSH_INSTALL_DIR ?? overrides.installDir ?? defaultInstallDir();
+  const expectedVersion = resolveExpectedDshVersion();
 
   const createClient = (): AcpClientLike => {
+    assertInstalledDshVersion(expectedVersion.version, installDir);
     const profile = loadSidecarProfile(profileDir);
     assertSidecarProfile(profile);
     installSidecarProfile({ profileDir, dshHome });
-    const invocation = buildDshInvocation({ installDir: envInstallDir ?? '', dshHome });
+    const invocation = buildDshInvocation({ installDir, dshHome });
     const clientOptions: AcpClientOptions = {
       initializeTimeoutMs: 60_000,
       decidePermission: () => ({ optionId: 'reject-once' }),

@@ -28,6 +28,16 @@ import { systemClock } from '../../services/clock';
 import { spawnAcpProcess, type AcpClientOptions } from './acp-client';
 import { DshError, isDshError, isDshErrorCode, isDshErrorPhase, toDshError } from './errors';
 import {
+  PINNED_DSH_VERSION,
+  PREVIOUS_DSH_VERSION,
+  assertInstalledDshVersion,
+  defaultInstallDir,
+  isSelectableDshVersion,
+  readInstalledDshVersion,
+  resolveExpectedDshVersion,
+  type SelectableDshVersion,
+} from './pinned-version';
+import {
   buildChildEnv,
   buildDshInvocation,
   defaultProfileDir,
@@ -70,6 +80,8 @@ export interface SidecarStatus extends SidecarState {
   controlReachable: boolean;
   sessions: number;
   lastHealthAt: string | null;
+  /** 安装目录里实际读到的 @deepseek-ai/dsh 版本；读不到为 null（不猜版本）。 */
+  installedVersion: string | null;
   code: string | null;
   phase: string | null;
   retryable: boolean | null;
@@ -87,6 +99,8 @@ export interface SidecarOptions {
   acpArgs?: string[];
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
+  /** 期望的 DSH 版本；缺省 PINNED_DSH_VERSION，显式 rc.1 是唯一允许的回退。 */
+  expectedVersion?: string;
   /** 控制口鉴权 token（supervisor 内部生成；外部一般不需要传）。 */
   controlToken?: string;
 }
@@ -110,16 +124,7 @@ export function defaultInstanceDir(): string {
   return join(dirname(defaultDshHome()), 'instance');
 }
 
-/** 默认固定版本安装目录（部署侧可用 SYNOVA_DSH_INSTALL_DIR 覆盖）。 */
-function defaultInstallDir(): string {
-  const fromEnv = process.env.SYNOVA_DSH_INSTALL_DIR;
-  if (fromEnv !== undefined && fromEnv.length > 0) return fromEnv;
-  const localAppData = process.env.LOCALAPPDATA;
-  if (localAppData !== undefined && localAppData.length > 0) {
-    return join(localAppData, 'Programs', 'DeepSeek Harness');
-  }
-  return join(homedir(), 'Programs', 'DeepSeek Harness');
-}
+// 默认安装目录（含版本）的唯一实现见 ./pinned-version 的 defaultInstallDir()。
 
 /** 解析后的路径集合。 */
 export interface ResolvedSidecarOptions {
@@ -132,6 +137,7 @@ export interface ResolvedSidecarOptions {
   startTimeoutMs: number;
   stopTimeoutMs: number;
   controlToken: string;
+  expectedVersion: SelectableDshVersion;
 }
 
 /** 把可选项收敛成绝对路径（全部校验，避免相对路径落到任意目录）。 */
@@ -140,6 +146,7 @@ function resolveSidecarOptions(options: SidecarOptions = {}): ResolvedSidecarOpt
   const instanceDir = resolve(options.instanceDir ?? defaultInstanceDir());
   const installDir = resolve(options.installDir ?? defaultInstallDir());
   const profileDir = resolve(options.profileDir ?? defaultProfileDir());
+  const expectedVersion = resolveExpectedDshVersion(options.expectedVersion).version;
   if (!isAbsolute(dshHome) || !isAbsolute(instanceDir)) {
     throw new DshError('VALIDATION_ERROR', 'profile', 'dshHome/instanceDir 必须是绝对路径', { retryable: false });
   }
@@ -153,6 +160,7 @@ function resolveSidecarOptions(options: SidecarOptions = {}): ResolvedSidecarOpt
     startTimeoutMs: options.startTimeoutMs ?? 60_000,
     stopTimeoutMs: options.stopTimeoutMs ?? 15_000,
     controlToken: options.controlToken ?? randomBytes(24).toString('hex'),
+    expectedVersion,
   };
 }
 
@@ -325,6 +333,10 @@ function ensureInstanceDir(instanceDir: string): void {
  */
 async function startSidecar(options: SidecarOptions = {}): Promise<SidecarStatus> {
   const resolved = resolveSidecarOptions(options);
+  // 版本门：生产路径（无显式 ACP 命令）必须在 spawn 之前核对已安装版本；不符即 DSH_VERSION_MISMATCH。
+  if (resolved.acpCommand === null) {
+    assertInstalledDshVersion(resolved.expectedVersion, resolved.installDir);
+  }
   ensureInstanceDir(resolved.instanceDir);
 
   const profile = loadSidecarProfile(resolved.profileDir);
@@ -343,6 +355,9 @@ async function startSidecar(options: SidecarOptions = {}): Promise<SidecarStatus
     workspaceRoot: resolveWorkspaceRoot(resolved.instanceDir),
     dshHome: resolved.dshHome,
     profile: SIDECAR_PROFILE_NAME,
+    pinnedVersion: PINNED_DSH_VERSION,
+    fallbackVersion: PREVIOUS_DSH_VERSION,
+    expectedVersion: resolved.expectedVersion,
   });
 
   const supervisor = buildSupervisorInvocation(resolved);
@@ -370,6 +385,7 @@ async function startSidecar(options: SidecarOptions = {}): Promise<SidecarStatus
         controlReachable: true,
         sessions: 0,
         lastHealthAt: null,
+        installedVersion: readInstalledDshVersion(resolved.installDir),
         code: null,
         phase: null,
         retryable: null,
@@ -436,6 +452,7 @@ async function statusSidecar(options: SidecarOptions = {}): Promise<SidecarStatu
       controlReachable: true,
       sessions: typeof health.sessions === 'number' ? health.sessions : 0,
       lastHealthAt: typeof health.lastHealthAt === 'string' ? health.lastHealthAt : null,
+      installedVersion: readInstalledDshVersion(resolved.installDir),
       code: null,
       phase: null,
       retryable: null,
@@ -450,6 +467,7 @@ async function statusSidecar(options: SidecarOptions = {}): Promise<SidecarStatu
       controlReachable: false,
       sessions: 0,
       lastHealthAt: null,
+      installedVersion: readInstalledDshVersion(resolved.installDir),
       code: error.code,
       phase: error.phase,
       retryable: error.retryable,
@@ -515,6 +533,7 @@ function buildSupervisorInvocation(resolved: ResolvedSidecarOptions): { command:
     : [self, '--action', 'supervise'];
   args.push('--dsh-home', resolved.dshHome, '--instance-dir', resolved.instanceDir, '--install-dir', resolved.installDir,
     '--profile-dir', resolved.profileDir, '--control-token', resolved.controlToken,
+    '--expected-version', resolved.expectedVersion,
     '--start-timeout-ms', String(resolved.startTimeoutMs), '--stop-timeout-ms', String(resolved.stopTimeoutMs));
   if (resolved.acpCommand !== null) {
     args.push('--acp-command', resolved.acpCommand);
@@ -525,6 +544,10 @@ function buildSupervisorInvocation(resolved: ResolvedSidecarOptions): { command:
 
 /** supervisor：持有 ACP 子进程 + 回环控制口，直到 stop 或子进程退出。 */
 async function supervise(resolved: ResolvedSidecarOptions): Promise<void> {
+  // supervisor 侧再核一次版本（父进程已核；防 CLI 直连 supervise 绕过）。
+  if (resolved.acpCommand === null) {
+    assertInstalledDshVersion(resolved.expectedVersion, resolved.installDir);
+  }
   ensureInstanceDir(resolved.instanceDir);
   const workspaceRoot = resolveWorkspaceRoot(resolved.instanceDir);
   const logPath = logFilePath(resolved.dshHome);
@@ -753,6 +776,7 @@ interface CliArgs {
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
   controlToken?: string;
+  expectedVersion?: string;
   lines: number;
   json: boolean;
 }
@@ -785,6 +809,13 @@ function parseCliArgs(argv: string[]): CliArgs {
     else if (arg === '--acp-command') { result.acpCommand = next(); }
     else if (arg === '--acp-arg') { result.acpArgs.push(next()); }
     else if (arg === '--control-token') { result.controlToken = next(); }
+    else if (arg === '--expected-version') {
+      const value = next();
+      if (!isSelectableDshVersion(value)) {
+        throw new DshError('DSH_VERSION_MISMATCH', 'spawn', `不支持的 expectedVersion=${JSON.stringify(value)}；仅允许缺省 ${PINNED_DSH_VERSION} 或显式回退 ${PREVIOUS_DSH_VERSION}`, { retryable: false });
+      }
+      result.expectedVersion = value;
+    }
     else if (arg === '--start-timeout-ms') { result.startTimeoutMs = Number(next()); }
     else if (arg === '--stop-timeout-ms') { result.stopTimeoutMs = Number(next()); }
     else if (arg === '--lines') { result.lines = Number(next()); }
@@ -822,6 +853,7 @@ async function main(argv: string[]): Promise<number> {
     startTimeoutMs: args.startTimeoutMs,
     stopTimeoutMs: args.stopTimeoutMs,
     controlToken: args.controlToken,
+    expectedVersion: args.expectedVersion,
   };
   try {
     if (args.action === 'start') {
