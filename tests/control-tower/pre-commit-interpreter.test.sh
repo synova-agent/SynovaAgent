@@ -3,6 +3,10 @@ set -u
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 SRC="$ROOT/scripts/pre-commit-check.sh"
 TMP=$(mktemp -d)
+# Windows（MINGW/MSYS）：mktemp 可能返回 C:\...（带盘符），拼入 PATH 时会在冒号处被截断 ⇒ 先转 POSIX 路径
+case "$(uname -s)" in
+  MINGW*|MSYS*) TMP=$(cygpath -u "$TMP" 2>/dev/null || echo "$TMP") ;;
+esac
 trap 'rm -rf "$TMP"' EXIT
 pass=0 fail=0
 check() {
