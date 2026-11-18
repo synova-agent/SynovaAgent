@@ -1,0 +1,9 @@
+writeset:
+  - .claude/claims/1423.yaml
+  - gate-exemptions/2026-11-18-1423-bash-interpreter.md
+  - scripts/pre-push-check.sh
+  - tests/control-tower/pre-commit-interpreter.test.sh
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1423 --root .
+  # 按任务替换或补充下面的标准检查；纯文档任务只需补 done.verify，无需手写 writeset
+  - verify: bash scripts/pre-commit-check.sh
