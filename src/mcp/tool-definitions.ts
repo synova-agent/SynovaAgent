@@ -40,7 +40,7 @@ import {
 import { createProvider } from '../providers';
 import { detectProvider } from '../providers/detect';
 import { ConversationEngine } from '../agent/conversation-engine';
-import { handleDomainToolCall } from '../runtime/dsh/tools';
+import { DshError } from '../runtime/dsh/errors';
 // D487: 装配类型（type-only，零运行时加载）
 import type { SessionManager } from '../orchestrator/session-manager';
 import type { SessionStoreLike } from '../agent/diagnosis-launcher';
@@ -201,10 +201,10 @@ export const TOOLS: ToolDef[] = [
 export const SIDECAR_TOOLS: ToolDef[] = [
   {
     name: 'synova_context_get',
-    description: '读取一个问题对应的合成只读 ContextSnapshot（②结构/③观测/④依据，带 $id/版本/证据状态）',
+    description: '读取一个问题对应的真实只读 ContextSnapshot（本切片只产 ② 本体结构，带 $id/期间/定义版本/状态）',
     inputSchema: {
       type: 'object',
-      properties: { problemId: { type: 'string', description: '问题 ID（合成基线：problem-revenue-health-2026q3）' } },
+      properties: { problemId: { type: 'string', description: '问题 ID：本企业 ② 对象的 businessKey 或 $id' } },
       required: ['problemId'],
     },
     permission: 'read',
@@ -229,7 +229,7 @@ export function assertSidecarToolAllowed(name: string, mode: McpMode = 'read-onl
 export function buildSidecarInstructions(): string {
   return [
     'Synova Sidecar MCP — 回环 HTTP、只读、一次性 token（服务端注入身份，入参不得携带身份字段）。',
-    '工具面：仅 synova_context_get（合成基线，synthetic=true）；写工具不广告且调用被拒（-32000）。',
+    '工具面：仅 synova_context_get（真实领域只读，本切片只产 ② 结构）；写工具不广告且调用被拒（-32000）。',
     `契约: ${MCP_CONTRACT}`,
   ].join('\n');
 }
@@ -345,6 +345,8 @@ async function bridgeFetch(url: string, init?: RequestInit): Promise<string | nu
  * 契约:
  *   @input  — name: 工具名（assertToolAllowed 已放行）；args: 工具参数
  *   @output — JSON 文本；错误以 { ok: false, error } 结构化返回，不抛（协议层错误映射在 SDK）
+ *   @error  — `synova_context_get` 例外：本分派没有 token→ctx（身份只能在回环 MCP 注入）⇒
+ *             **fail-closed 抛 UNAUTHORIZED**，不造身份、不读领域数据（#1426）
  *   @degraded — 每个分支独立降级（L2 ok:false 透传 / HTTP 不可达 / 参数缺失），零静默
  */
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
@@ -491,9 +493,15 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         messageCount: conv.getMessages().length,
       });
     }
-    // ─── 1A Sidecar：合成只读领域工具（身份由回环 token 注入，入参校验在 runtime/dsh/tools）───
+    // ─── 1A Sidecar：真实只读领域工具（身份只能由回环 token→ctx 注入；stdio 分派无身份面）───
     case 'synova_context_get': {
-      return handleDomainToolCall(name, args);
+      // fail-closed：本分派（stdio/通用 handleToolCall）没有 token→ctx，不造身份、不读领域数据。
+      throw new DshError(
+        'UNAUTHORIZED',
+        'tool',
+        'synova_context_get 只能经回环 MCP（一次性 token 绑定身份）调用；本分派没有服务端注入的调用上下文',
+        { retryable: false },
+      );
     }
     // ─── L1 HTTP 桥（localhost fetch 惯例；白名单 D595 三前缀保证生产态可达）───
     case 'query_ontology': {

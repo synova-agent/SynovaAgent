@@ -1,43 +1,32 @@
 {
-  "synthetic": true,
-  "problemId": "problem-revenue-health-2026q3",
-  "count": 3,
+  "synthetic": false,
+  "problemId": "batch-1426-root",
+  "count": 2,
+  "truncated": false,
   "items": [
     {
       "layer": "②",
-      "$id": "ontology.entity.sales_revenue",
-      "cycleVersion": "cycle-sales@v3",
-      "sentinelRun": "sr-2026-11-14T02:00:00Z",
+      "$id": "node-1426-batch-a",
+      "cycleVersion": null,
+      "sentinelRun": null,
       "period": "2026-07",
-      "defVersion": "def-2026.10",
-      "evidenceId": "ev-2026-11-13-001",
+      "defVersion": "def-2026.07",
+      "evidenceId": null,
       "status": "observed",
       "visibility": "enterprise",
-      "source": { "kind": "synova.domain", "api": "synthetic-context-v1" }
+      "source": { "kind": "synova.domain", "api": "synova.domain/v1" }
     },
     {
-      "layer": "③",
-      "$id": "sentinel.sales_four_totals",
-      "cycleVersion": "cycle-sales@v3",
-      "sentinelRun": "sr-2026-11-14T02:00:00Z",
-      "period": "2026-07",
-      "defVersion": "def-2026.10",
-      "evidenceId": "ev-2026-11-13-002",
-      "status": "partial",
-      "visibility": "enterprise",
-      "source": { "kind": "synova.domain", "api": "synthetic-context-v1" }
-    },
-    {
-      "layer": "④",
-      "$id": "param.sales_gross_margin",
-      "cycleVersion": "cycle-sales@v3",
-      "sentinelRun": "sr-2026-11-14T02:00:00Z",
-      "period": "2026-07",
-      "defVersion": "def-2026.10",
-      "evidenceId": "ev-2026-11-13-003",
+      "layer": "②",
+      "$id": "node-1426-batch-b",
+      "cycleVersion": null,
+      "sentinelRun": null,
+      "period": "2026-08",
+      "defVersion": "def-2026.08",
+      "evidenceId": null,
       "status": "observed",
       "visibility": "enterprise",
-      "source": { "kind": "synova.domain", "api": "synthetic-context-v1" }
+      "source": { "kind": "synova.domain", "api": "synova.domain/v1" }
     }
   ]
 }
