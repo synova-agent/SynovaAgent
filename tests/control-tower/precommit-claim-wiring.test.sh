@@ -111,9 +111,18 @@ diag() { # $1=script → BRIEF 解析结果 + 组 6 片段
 #   ② `散文检查按设计不适用` —— claim 载体专属结论
 #   （注意：此处**不再**依赖 `Q0: 未填写` 的缺席 —— #1287 退役该信号后，"缺席"类断言会假绿。）
 evidence() {
-  printf '%s' "$1" | grep -q "声明载体 = claim（${CLAIM_FILE_NAME}）" \
-    && printf '%s' "$1" | grep -q '散文检查按设计不适用'
+  local normalized
+  normalized="$(printf '%s' "$1" | tr '\\\\' '/')"
+  printf '%s' "$normalized" | grep -qE "声明载体 = claim（(.*/)?${CLAIM_FILE_NAME}）" \
+    && printf '%s' "$normalized" | grep -q '散文检查按设计不适用'
 }
+
+WINDOWS_CLAIM_OUT='声明载体 = claim（C:\fixture\claims\1217.yaml）—— Q0/Q1/Q2/Q3 散文检查按设计不适用'
+if evidence "$WINDOWS_CLAIM_OUT"; then
+  ok "边界[#1421]: Windows 反斜杠 claim 路径归一化后可识别 claim 分支证据"
+else
+  no "边界[#1421]: Windows 反斜杠 claim 路径导致 claim 分支证据丢失"
+fi
 
 OUT_PROD="$(probe "$PC")"
 if evidence "$OUT_PROD"; then
