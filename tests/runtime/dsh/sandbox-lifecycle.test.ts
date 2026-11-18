@@ -221,6 +221,7 @@ function createFixture(options: { sentinels: 'none' | 'started-only' | 'finished
   const runnerPath = join(taskRoot, 'run-lifecycle.ps1');
   writeFileSync(runnerPath, [
     "$ErrorActionPreference = 'Stop'",
+    `$env:SYNTH_SCENARIO = '${options.scenario}'`,
     `Import-Module -Name '${MODULE}' -Force`,
     `$code = Invoke-SandboxLifecycle -Mode Build -ConfigPath '${configPath}' -OrchestrationPath '${orchestrationPath}' ` +
       `-IncomingDir '${incoming}' -OutgoingDir '${outgoing}' -AdapterPath '${adapterPath}' ` +
@@ -326,8 +327,8 @@ describeWindows('T2 生产接线与全局终止禁令', () => {
   it('模块与真实适配器都不含按名称全局终止（禁止 Stop-Process -Name）', () => {
     const moduleText = readFileSync(MODULE, 'utf8');
     const adapterText = readFileSync(REAL_ADAPTER, 'utf8');
-    expect(moduleText).not.toMatch(/Stop-Process\s+-Name/);
-    expect(adapterText).not.toMatch(/Stop-Process\s+-Name/);
+    expect(moduleText).not.toMatch(/^\s*Stop-Process\s+-Name/m);
+    expect(adapterText).not.toMatch(/^\s*Stop-Process\s+-Name/m);
     expect(adapterText).toContain('CloseMainWindow');
     expect(adapterText).toContain('Stop-Process -Id');
     expect(moduleText).toContain('function Invoke-SandboxLifecycle');

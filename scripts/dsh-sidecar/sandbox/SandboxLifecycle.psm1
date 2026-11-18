@@ -367,6 +367,7 @@ function Invoke-SandboxLifecycle {
     if ($fields.state -eq 'FINISHED') { $fields.state = 'DESTROYED' }
     $fields.hostExitCode = if ($fields.state -eq 'DESTROYED') { 0 } else { 1 }
   } else {
+    $fields.state = 'FAILED'
     $fields.hostExitCode = 2
     Write-FailureRecord -RunDir $runDir -Code 'DESTROY_FAILED' -Message $destroyFailure -Retryable 1
   }
