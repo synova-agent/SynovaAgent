@@ -84,8 +84,8 @@ function Get-ExpectedFiles([string]$ModeLower, [string]$CodeSha) {
     return @(
       'scripts/Invoke-DshSandboxBuild.ps1',
       "synova-$CodeSha.zip",
+      'dsh-0.2.2-rc.5.tgz',
       'dsh-0.2.2-rc.2.tgz',
-      'dsh-0.2.2-rc.1.tgz',
       'node-v24.21.0-win-x64.zip',
       'input-manifest.json',
       'config/build.wsb'

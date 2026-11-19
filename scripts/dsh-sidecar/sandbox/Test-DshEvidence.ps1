@@ -23,7 +23,7 @@ $ErrorActionPreference = 'Stop'
 
 $Issue = 1411
 $PinnedNode = 'v24.21.0'
-$PinnedDsh = '0.2.2-rc.2'
+$PinnedDsh = '0.2.2-rc.5'
 
 function Exit-With([int]$code, [string]$message) {
   $payload = [ordered]@{ ok = ($code -eq 0); code = $(if ($code -eq 0) { 'EVIDENCE_OK' } else { 'EVIDENCE_INVALID' }); message = $message }

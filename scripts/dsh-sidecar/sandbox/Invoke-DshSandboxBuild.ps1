@@ -10,7 +10,7 @@
 #     every manifest file hash must match, all work paths must be under C:\SynovaLab\work,
 #     DSH_HOME must be exactly C:\SynovaLab\work\home. No fallback to a default home.
 #   - verify the code archive, install the portable Node runtime, run npm ci, run the repo
-#     test slice and type check, install rc.2 and rc.1 with the pinned integrity, then emit
+#     test slice and type check, install rc.5 and rc.2 with the pinned integrity, then emit
 #     exactly one runtime-bundle.zip plus build-result.json and logs in the outgoing dir.
 #   - write RUN_STARTED.json / RUN_FINISHED.json / artifacts.json with the binding fields.
 #   - exit 0 = build succeeded; 1 = build/test/lint failed; 2 = guard/manifest/self failure.
@@ -178,16 +178,16 @@ try {
   # 4. install both pinned DSH versions from the local tarballs
   $installScript = Join-Path $RepoRoot 'scripts\dsh-sidecar\install-dsh-runtime.ps1'
   if (-not (Test-Path -LiteralPath $installScript)) { throw "install-dsh-runtime.ps1 missing from repo: $installScript" }
-  $rc2 = @($manifest.files) | Where-Object { [string]$_.path -eq 'dsh-0.2.2-rc.2.tgz' }
-  $rc1 = @($manifest.files) | Where-Object { [string]$_.path -eq 'dsh-0.2.2-rc.1.tgz' }
-  if ($null -eq $rc2 -or $null -eq $rc1) { throw 'pinned dsh tarballs are not listed in input-manifest' }
-  $rc2Integrity = [string]$manifest.dshIntegrity.'0.2.2-rc.2'
-  $rc1Integrity = [string]$manifest.dshIntegrity.'0.2.2-rc.1'
-  if ($rc2Integrity -eq '') { $rc2Integrity = 'sha512-J727r2C471x2cYXGjqZ0D9T1zYaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw==' }
-  if ($rc1Integrity -eq '') { $rc1Integrity = 'sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==' }
-  foreach ($version in @('0.2.2-rc.2', '0.2.2-rc.1')) {
+  $pinned = @($manifest.files) | Where-Object { [string]$_.path -eq 'dsh-0.2.2-rc.5.tgz' }
+  $previous = @($manifest.files) | Where-Object { [string]$_.path -eq 'dsh-0.2.2-rc.2.tgz' }
+  if ($null -eq $pinned -or $null -eq $previous) { throw 'pinned dsh tarballs are not listed in input-manifest' }
+  $pinnedIntegrity = [string]$manifest.dshIntegrity.'0.2.2-rc.5'
+  $previousIntegrity = [string]$manifest.dshIntegrity.'0.2.2-rc.2'
+  if ($pinnedIntegrity -eq '') { $pinnedIntegrity = 'sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw==' }
+  if ($previousIntegrity -eq '') { $previousIntegrity = 'sha512-J727r2C471x2cYXGjqZ0D9T1zYaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw==' }
+  foreach ($version in @('0.2.2-rc.5', '0.2.2-rc.2')) {
     $tarball = Join-Path $Incoming ("dsh-$version.tgz")
-    $integrity = if ($version -eq '0.2.2-rc.2') { $rc2Integrity } else { $rc1Integrity }
+    $integrity = if ($version -eq '0.2.2-rc.5') { $pinnedIntegrity } else { $previousIntegrity }
     & powershell -NoProfile -ExecutionPolicy Bypass -File $installScript -Version $version -Integrity $integrity -InstallRoot (Join-Path $InstallRoot $version) -TarballPath $tarball -NodeDir $NodeDir
     if ($LASTEXITCODE -ne 0) { throw "install-dsh-runtime.ps1 failed for $version rc=$LASTEXITCODE" }
   }
@@ -199,7 +199,7 @@ try {
   Copy-Item -LiteralPath $NodeDir -Destination (Join-Path $bundle 'node') -Recurse -Force
   Copy-Item -LiteralPath $InstallRoot -Destination (Join-Path $bundle 'dsh') -Recurse -Force
   Copy-Item -LiteralPath $RepoRoot -Destination (Join-Path $bundle 'repo') -Recurse -Force
-  foreach ($required in @('node\node.exe', 'repo\node_modules\.bin\tsx.cmd', 'repo\node_modules\.bin\vitest.cmd', 'repo\node_modules\better-sqlite3', 'dsh\0.2.2-rc.2\node_modules\@deepseek-ai\dsh\lib\bin.js', 'dsh\0.2.2-rc.1\node_modules\@deepseek-ai\dsh\lib\bin.js')) {
+  foreach ($required in @('node\node.exe', 'repo\node_modules\.bin\tsx.cmd', 'repo\node_modules\.bin\vitest.cmd', 'repo\node_modules\better-sqlite3', 'dsh\0.2.2-rc.5\node_modules\@deepseek-ai\dsh\lib\bin.js', 'dsh\0.2.2-rc.2\node_modules\@deepseek-ai\dsh\lib\bin.js')) {
     if (-not (Test-Path -LiteralPath (Join-Path $bundle $required))) { throw "runtime bundle is missing: $required" }
   }
   $bundleFiles = @()
@@ -216,7 +216,7 @@ try {
     codeSha = [string]$manifest.codeSha
     codeArchiveSha256 = [string]$manifest.codeArchiveSha256
     nodeVersion = $ExpectedNode
-    dshVersions = @('0.2.2-rc.2', '0.2.2-rc.1')
+    dshVersions = @('0.2.2-rc.5', '0.2.2-rc.2')
     fileCount = $bundleFiles.Count
     nonEmptyFileCount = $nonEmptyCount
     files = $bundleFiles

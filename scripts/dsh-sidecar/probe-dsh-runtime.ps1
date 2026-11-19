@@ -1,19 +1,19 @@
-# probe-dsh-runtime.ps1 -- the ten rc.2 probes (run only inside the offline probe sandbox).
+# probe-dsh-runtime.ps1 -- the ten rc.5 probes (run only inside the offline probe sandbox).
 #
 # Called by Invoke-DshSandboxProbe.ps1 from C:\SynovaLab\work\repo\scripts\dsh-sidecar\.
 # It writes evidence.json plus one log per probe into the outgoing directory.
 #
 # Contract (DEV DOC v6 SS6.3):
-#   #1 portable node runs rc.2 lib/bin.js --version (exact 0.2.2-rc.2)
-#   #2 rc.2 install lockfile version + integrity equal the pinned record
+#   #1 portable node runs rc.5 lib/bin.js --version (exact 0.2.2-rc.5)
+#   #2 rc.5 install lockfile version + integrity equal the pinned record
 #   #3 isolated DSH_HOME --dump-config: exit 0 and stderr without "skipping profile bundle"
 #   #4 active config: mode read-only, policy ask, zero 0.0.0.0 occurrences
 #   #5 real ACP initialize + session/new roundtrip obtains a sessionId
-#   #6 rc.2 tool dispatch for a registered/unregistered tool (-32000/-32601); if the shipped
+#   #6 rc.5 tool dispatch for a registered/unregistered tool (-32000/-32601); if the shipped
 #      protocol cannot reach tool dispatch without a model this records NOT DONE and stops
 #   #7 start.ps1 -> stop.ps1 -> status.ps1; pid/state gone, SIDECAR_NOT_RUNNING, log has stopped
 #   #8 backup/restore only on the sandbox home, then a status + session/new roundtrip
-#   #9 rc.1 with explicit ExpectedVersion, then rc.2; rc.1 without ExpectedVersion must not spawn
+#   #9 rc.2 with explicit ExpectedVersion, then rc.5; rc.2 without ExpectedVersion must not spawn
 #   #10 packaged repo/node_modules/.bin/vitest.cmd runs tests/runtime/dsh/isolation.test.ts
 #   Any probe not executed/failed/NOT DONE => no lock record; the script stops (non-zero exit).
 #
@@ -36,9 +36,9 @@ $ErrorActionPreference = 'Stop'
 
 $Issue = 1411
 $NodeVersion = 'v24.21.0'
-$DshVersion = '0.2.2-rc.2'
-$Rc1Version = '0.2.2-rc.1'
-$Rc2Integrity = 'sha512-J727r2C471x2cYXGjqZ0D9T1zYaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw=='
+$DshVersion = '0.2.2-rc.5'
+$PreviousVersion = '0.2.2-rc.2'
+$PinnedIntegrity = 'sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw=='
 
 $StartedAt = (Get-Date).ToUniversalTime().ToString('o')
 $RepoRoot = Join-Path $WorkRoot 'repo'
@@ -49,8 +49,8 @@ $InstanceDir = Join-Path $WorkRoot 'instance'
 $ProbeWork = Join-Path $WorkRoot 'probe'
 $LogsDir = Join-Path $Outgoing 'logs'
 $NodeExe = Join-Path $NodeDir 'node.exe'
-$BinRc2 = Join-Path $InstallRoot "$DshVersion\node_modules\@deepseek-ai\dsh\lib\bin.js"
-$BinRc1 = Join-Path $InstallRoot "$Rc1Version\node_modules\@deepseek-ai\dsh\lib\bin.js"
+$BinPinned = Join-Path $InstallRoot "$DshVersion\node_modules\@deepseek-ai\dsh\lib\bin.js"
+$BinPrevious = Join-Path $InstallRoot "$PreviousVersion\node_modules\@deepseek-ai\dsh\lib\bin.js"
 $SidecarScripts = Join-Path $RepoRoot 'scripts\dsh-sidecar'
 
 function Write-JsonFile([string]$Path, $Value) {
@@ -157,7 +157,7 @@ if (-not (Test-Path -LiteralPath $InstanceDir)) { New-Item -ItemType Directory -
 if (-not (Test-Path -LiteralPath $DshHome)) { New-Item -ItemType Directory -Path $DshHome -Force | Out-Null }
 $env:DSH_HOME = $DshHome
 
-foreach ($required in @($NodeExe, $BinRc2, $BinRc1)) {
+foreach ($required in @($NodeExe, $BinPinned, $BinPrevious)) {
   if (-not (Test-Path -LiteralPath $required)) {
     Write-Evidence @()
     Write-JsonFile -Path (Join-Path $Outgoing 'probe-failure.json') -Value ([ordered]@{ code = 'PROBE_SETUP'; message = "missing $required" })
@@ -169,10 +169,10 @@ $probes = @()
 $stop = $false
 $probesExited = 0
 
-# #1 -- portable node runs the rc.2 bin --version
-$r1 = Run-Node '01-version.log' ('"' + $BinRc2 + '" --version') $RepoRoot
+# #1 -- portable node runs the rc.5 bin --version
+$r1 = Run-Node '01-version.log' ('"' + $BinPinned + '" --version') $RepoRoot
 $observed1 = $r1.stdout.Trim()
-$probes += New-ProbeRecord 1 'rc.2 bin --version' 'node <install>/node_modules/@deepseek-ai/dsh/lib/bin.js --version' ($r1.exitCode -eq 0) (($r1.exitCode -eq 0) -and ($observed1 -eq $DshVersion)) $r1.exitCode $observed1 $r1.logPath
+$probes += New-ProbeRecord 1 'rc.5 bin --version' 'node <install>/node_modules/@deepseek-ai/dsh/lib/bin.js --version' ($r1.exitCode -eq 0) (($r1.exitCode -eq 0) -and ($observed1 -eq $DshVersion)) $r1.exitCode $observed1 $r1.logPath
 if ($r1.exitCode -ne 0 -or $observed1 -ne $DshVersion) { $stop = $true }
 
 # #2 -- lockfile version + integrity
@@ -182,14 +182,14 @@ $lockObserved = 'lockfile missing'
 if (Test-Path -LiteralPath $lockPath) {
   $lock = Get-Content -LiteralPath $lockPath -Raw -Encoding UTF8 | ConvertFrom-Json
   $lockObserved = 'version=' + [string]$lock.version + ' integrity=' + [string]$lock.integrity
-  $lockOk = ([string]$lock.version -eq $DshVersion) -and ([string]$lock.integrity -eq $Rc2Integrity)
+  $lockOk = ([string]$lock.version -eq $DshVersion) -and ([string]$lock.integrity -eq $PinnedIntegrity)
 }
 $lockLog = Write-Log '02-lock.log' ("LOCK: " + $lockPath + "`n" + $lockObserved)
-$probes += New-ProbeRecord 2 'rc.2 lockfile version + integrity' 'read <install>/0.2.2-rc.2/dsh-install-lock.json' $true $lockOk $(if ($lockOk) { 0 } else { 1 }) $lockObserved $lockLog
+$probes += New-ProbeRecord 2 'rc.5 lockfile version + integrity' 'read <install>/0.2.2-rc.5/dsh-install-lock.json' $true $lockOk $(if ($lockOk) { 0 } else { 1 }) $lockObserved $lockLog
 if (-not $lockOk) { $stop = $true }
 
 # #3 -- isolated home --dump-config, stderr clean
-$dump = Run-Node '03-dump-config.log' ('"' + $BinRc2 + '" --profile synova-sidecar --dump-config') $RepoRoot
+$dump = Run-Node '03-dump-config.log' ('"' + $BinPinned + '" --profile synova-sidecar --dump-config') $RepoRoot
 $skipWarning = $dump.stderr -match 'skipping profile bundle'
 $probes += New-ProbeRecord 3 'isolated --dump-config' 'node <bin.js> --profile synova-sidecar --dump-config' ($dump.exitCode -eq 0) (($dump.exitCode -eq 0) -and (-not $skipWarning)) $dump.exitCode ('exit=' + $dump.exitCode + ' skipping-profile-bundle=' + $skipWarning) $dump.logPath
 if ($dump.exitCode -ne 0 -or $skipWarning) { $stop = $true }
@@ -254,7 +254,7 @@ child.on('exit', (code) => { clearTimeout(timer); finish(1, { ok: false, code: '
 send({ jsonrpc: '2.0', method: 'initialize', id: 1, params: { protocolVersion: 1, clientInfo: { name: 'synova-probe', version: '1.0.0' }, capabilities: {} } });
 '@
 [System.IO.File]::WriteAllText($roundtripScript, $roundtripSource, (New-Object System.Text.UTF8Encoding($false)))
-$r5 = Run-Node '05-acp-roundtrip.log' ('"' + $roundtripScript + '" "' + $BinRc2 + '" "' + $InstanceDir + '" "' + $DshHome + '"') $ProbeWork
+$r5 = Run-Node '05-acp-roundtrip.log' ('"' + $roundtripScript + '" "' + $BinPinned + '" "' + $InstanceDir + '" "' + $DshHome + '"') $ProbeWork
 $r5Json = $null
 try { $r5Json = $r5.stdout.Trim() | ConvertFrom-Json } catch { $r5Json = $null }
 $r5Ok = ($r5.exitCode -eq 0) -and ($null -ne $r5Json) -and ($r5Json.ok -eq $true) -and ([string]$r5Json.sessionId -ne '')
@@ -265,12 +265,12 @@ if (-not $r5Ok) { $stop = $true } else {
   $probesExited += 1
 }
 
-# #6 -- rc.2 tool dispatch without a model: NOT DONE + stop
-$observed6 = 'NOT DONE: the shipped rc.2 ACP surface reaches tool dispatch only through a model turn; no model/credential is allowed in this ticket, so probe #6 stops instead of degrading to a function test'
+# #6 -- rc.5 tool dispatch without a model: NOT DONE + stop
+$observed6 = 'NOT DONE: the shipped rc.5 ACP surface reaches tool dispatch only through a model turn; no model/credential is allowed in this ticket, so probe #6 stops instead of degrading to a function test'
 $log6 = Write-Log '06-tool-dispatch-not-done.log' $observed6
 $probes += [ordered]@{
   id = 6
-  name = 'rc.2 tool dispatch (-32000/-32601)'
+  name = 'rc.5 tool dispatch (-32000/-32601)'
   executed = $false
   ok = $false
   command = 'n/a (stopped)'
@@ -288,7 +288,7 @@ exit 2
 # Probes #7-#10.
 #
 # Policy note (DEV DOC v6 SS6.3): probe #6 above records NOT DONE and stops before this point
-# whenever the shipped rc.2 ACP surface cannot reach tool dispatch without a model. The code
+# whenever the shipped rc.5 ACP surface cannot reach tool dispatch without a model. The code
 # below stays in this single probe script (the DEV DOC requires all ten probes here) and is
 # reached only in an environment where probe #6 can be executed; today the ticket forbids any
 # model/credential, so T3/T4 stops at #6 and no lock record may be produced.
@@ -301,11 +301,11 @@ $statusScript = Join-Path $SidecarScripts 'status.ps1'
 $logsScript = Join-Path $SidecarScripts 'logs.ps1'
 $backupScript = Join-Path $SidecarScripts 'backup.ps1'
 $restoreScript = Join-Path $SidecarScripts 'restore.ps1'
-$installRc2 = Join-Path $InstallRoot $DshVersion
-$installRc1 = Join-Path $InstallRoot $Rc1Version
+$installPinned = Join-Path $InstallRoot $DshVersion
+$installPrevious = Join-Path $InstallRoot $PreviousVersion
 
 # #7 -- start -> status -> stop -> status(exit 1) -> logs(stopped) -> state file gone
-$r7start = Run-PowerShellFile '07-start.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installRc2, '-ExpectedVersion', $DshVersion, '-TimeoutSec', '120')
+$r7start = Run-PowerShellFile '07-start.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installPinned, '-ExpectedVersion', $DshVersion, '-TimeoutSec', '120')
 $r7status = Run-PowerShellFile '07-status.log' $statusScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
 $r7stop = Run-PowerShellFile '07-stop.log' $stopScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
 $r7statusAfter = Run-PowerShellFile '07-status-after.log' $statusScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
@@ -325,9 +325,9 @@ $r8backup = Run-PowerShellFile '08-backup.log' $backupScript @('-DshHome', $DshH
 $backupTarget = ''
 if ($r8backup.output -match '"target"\s*:\s*"([^"]+)"') { $backupTarget = $matches[1] }
 $r8restore = Run-PowerShellFile '08-restore.log' $restoreScript @('-BackupDir', $backupTarget, '-TargetDshHome', $DshHome)
-$r8start = Run-PowerShellFile '08-start.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installRc2, '-ExpectedVersion', $DshVersion, '-TimeoutSec', '120')
+$r8start = Run-PowerShellFile '08-start.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installPinned, '-ExpectedVersion', $DshVersion, '-TimeoutSec', '120')
 $r8status = Run-PowerShellFile '08-status.log' $statusScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
-$r8roundtrip = Run-Node '08-roundtrip.log' ('"' + $roundtripScript + '" "' + $BinRc2 + '" "' + $InstanceDir + '" "' + $DshHome + '"') $ProbeWork
+$r8roundtrip = Run-Node '08-roundtrip.log' ('"' + $roundtripScript + '" "' + $BinPinned + '" "' + $InstanceDir + '" "' + $DshHome + '"') $ProbeWork
 $r8stop = Run-PowerShellFile '08-stop.log' $stopScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
 $r8Json = $null
 try { $r8Json = $r8roundtrip.stdout.Trim() | ConvertFrom-Json } catch { $r8Json = $null }
@@ -339,18 +339,18 @@ $log8 = Write-Log '08-summary.log' $observed8
 $probes += New-ProbeRecord 8 'backup/restore on sandbox home' 'backup.ps1 -> restore.ps1 -> start/status/roundtrip/stop' $true $ok8 $(if ($ok8) { 0 } else { 1 }) $observed8 $log8
 if (-not $ok8) { Write-Evidence $probes; exit 1 }
 
-# #9 -- rc.1 only with explicit ExpectedVersion; production rc.1 without it must not spawn
-$r9rc1 = Run-PowerShellFile '09-rc1-explicit.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installRc1, '-ExpectedVersion', $Rc1Version, '-TimeoutSec', '120')
-$r9status = Run-PowerShellFile '09-rc1-status.log' $statusScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
-$r9stop = Run-PowerShellFile '09-rc1-stop.log' $stopScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
-$r9negative = Run-PowerShellFile '09-rc1-negative.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installRc1, '-TimeoutSec', '600')
+# #9 -- rc.2 only with explicit ExpectedVersion; production rc.2 without it must not spawn
+$r9previous = Run-PowerShellFile '09-previous-explicit.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installPrevious, '-ExpectedVersion', $PreviousVersion, '-TimeoutSec', '120')
+$r9status = Run-PowerShellFile '09-previous-status.log' $statusScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
+$r9stop = Run-PowerShellFile '09-previous-stop.log' $stopScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome)
+$r9negative = Run-PowerShellFile '09-previous-negative.log' $startScript @('-InstanceDir', $InstanceDir, '-DshHome', $DshHome, '-InstallDir', $installPrevious, '-TimeoutSec', '600')
 $negativeStateGone = -not (Test-Path -LiteralPath $statePath)
-$ok9 = ($r9rc1.exitCode -eq 0) -and ($r9status.exitCode -eq 0) -and ($r9status.output -match '"installedVersion"\s*:\s*"' ) -and
-  ($r9status.output -match [regex]::Escape($Rc1Version)) -and ($r9stop.exitCode -eq 0) -and
+$ok9 = ($r9previous.exitCode -eq 0) -and ($r9status.exitCode -eq 0) -and ($r9status.output -match '"installedVersion"\s*:\s*"' ) -and
+  ($r9status.output -match [regex]::Escape($PreviousVersion)) -and ($r9stop.exitCode -eq 0) -and
   ($r9negative.exitCode -eq 1) -and ($r9negative.output -match 'DSH_VERSION_MISMATCH') -and $negativeStateGone
-$observed9 = "rc1-explicit=$($r9rc1.exitCode) rc1-status=$($r9status.exitCode) rc1-stop=$($r9stop.exitCode) rc1-without-expected=$($r9negative.exitCode) state-gone=$negativeStateGone"
+$observed9 = "previous-explicit=$($r9previous.exitCode) previous-status=$($r9status.exitCode) previous-stop=$($r9stop.exitCode) previous-without-expected=$($r9negative.exitCode) state-gone=$negativeStateGone"
 $log9 = Write-Log '09-summary.log' $observed9
-$probes += New-ProbeRecord 9 'explicit rc.1 fallback + production mismatch' 'start.ps1 -ExpectedVersion 0.2.2-rc.1 (then without it)' $true $ok9 $(if ($ok9) { 0 } else { 1 }) $observed9 $log9
+$probes += New-ProbeRecord 9 'explicit rc.2 fallback + production mismatch' 'start.ps1 -ExpectedVersion 0.2.2-rc.2 (then without it)' $true $ok9 $(if ($ok9) { 0 } else { 1 }) $observed9 $log9
 if (-not $ok9) { Write-Evidence $probes; exit 1 }
 
 # #10 -- packaged vitest runs the isolation test with DSH stopped; never npx

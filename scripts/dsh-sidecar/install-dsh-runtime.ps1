@@ -2,8 +2,8 @@
 #
 # Usage (inside the build sandbox or a prepared environment):
 #   powershell -NoProfile -File scripts/dsh-sidecar/install-dsh-runtime.ps1 `
-#     -Version 0.2.2-rc.2 -Integrity sha512-... -InstallRoot C:\SynovaLab\work\install\0.2.2-rc.2 `
-#     [-TarballPath <incoming>\dsh-0.2.2-rc.2.tgz] [-NodeDir C:\SynovaLab\work\node]
+#     -Version 0.2.2-rc.5 -Integrity sha512-... -InstallRoot C:\SynovaLab\work\install\0.2.2-rc.5 `
+#     [-TarballPath <incoming>\dsh-0.2.2-rc.5.tgz] [-NodeDir C:\SynovaLab\work\node]
 #
 # Contract (DEV DOC v6 SS6.1):
 #   - Version must be one of the two pinned values; Integrity must equal the pinned value.
@@ -16,7 +16,7 @@
 #   - exit 0 = installed and verified; 1 = integrity/version/install failure; 2 = bad arguments.
 
 param(
-  [Parameter(Mandatory = $true)][ValidateSet('0.2.2-rc.2', '0.2.2-rc.1')][string]$Version,
+  [Parameter(Mandatory = $true)][ValidateSet('0.2.2-rc.5', '0.2.2-rc.2')][string]$Version,
   [Parameter(Mandatory = $true)][string]$Integrity,
   [Parameter(Mandatory = $true)][string]$InstallRoot,
   [string]$TarballPath = '',
@@ -26,8 +26,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $Pinned = @{
+  '0.2.2-rc.5' = 'sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw=='
   '0.2.2-rc.2' = 'sha512-J727r2C471x2cYXGjqZ0D9T1zYaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw=='
-  '0.2.2-rc.1' = 'sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg=='
 }
 
 function Fail([string]$code, [string]$message, [int]$exitCode = 1) {

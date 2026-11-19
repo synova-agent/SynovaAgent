@@ -6,7 +6,7 @@
 #
 # Contract:
 #   - Only the three public URLs of DEV DOC v6 SS2 may be downloaded (anonymous HTTPS):
-#     rc.2 tarball, rc.1 tarball, Node v24.21.0 win-x64 zip.
+#     rc.5 tarball, rc.2 tarball, Node v24.21.0 win-x64 zip.
 #   - The code package comes only from a clean worktree at the committed head:
 #     git rev-parse HEAD == -CodeSha, git diff --quiet and git diff --cached --quiet pass,
 #     then git archive extracts exactly that SHA.
@@ -26,15 +26,15 @@ $ErrorActionPreference = 'Stop'
 
 $Issue = 1411
 $Pinned = @{
+  '0.2.2-rc.5' = @{
+    Url = 'https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-0.2.2-rc.5.tgz'
+    Integrity = 'sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw=='
+    FileName = 'dsh-0.2.2-rc.5.tgz'
+  }
   '0.2.2-rc.2' = @{
     Url = 'https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-0.2.2-rc.2.tgz'
     Integrity = 'sha512-J727r2C471x2cYXGjqZ0D9T1zYaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw=='
     FileName = 'dsh-0.2.2-rc.2.tgz'
-  }
-  '0.2.2-rc.1' = @{
-    Url = 'https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-0.2.2-rc.1.tgz'
-    Integrity = 'sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg=='
-    FileName = 'dsh-0.2.2-rc.1.tgz'
   }
 }
 $NodeZipUrl = 'https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip'
@@ -111,7 +111,7 @@ New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null
 New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
 # -- 3. the three allow-listed public URLs ------------------------------------
-foreach ($version in @('0.2.2-rc.2', '0.2.2-rc.1')) {
+foreach ($version in @('0.2.2-rc.5', '0.2.2-rc.2')) {
   $artifact = $Pinned[$version]
   $target = Join-Path $incoming $artifact.FileName
   try {
@@ -159,7 +159,7 @@ if (Test-Path -LiteralPath $probeIncomingDir) {
 
 # -- 6. build input-manifest ---------------------------------------------------
 $manifestFiles = @()
-foreach ($name in @($Pinned['0.2.2-rc.2'].FileName, $Pinned['0.2.2-rc.1'].FileName, $NodeZipFileName, $codeArchiveName, 'scripts/Invoke-DshSandboxBuild.ps1')) {
+foreach ($name in @($Pinned['0.2.2-rc.5'].FileName, $Pinned['0.2.2-rc.2'].FileName, $NodeZipFileName, $codeArchiveName, 'scripts/Invoke-DshSandboxBuild.ps1')) {
   $path = Join-Path $incoming ($name -replace '/', '\')
   $manifestFiles += [ordered]@{
     path = $name
@@ -179,8 +179,8 @@ $manifest = [ordered]@{
   codeArchivePath = $codeArchiveName
   codeArchiveSha256 = $codeArchiveSha256
   dshIntegrity = [ordered]@{
+    '0.2.2-rc.5' = $Pinned['0.2.2-rc.5'].Integrity
     '0.2.2-rc.2' = $Pinned['0.2.2-rc.2'].Integrity
-    '0.2.2-rc.1' = $Pinned['0.2.2-rc.1'].Integrity
   }
   createdAt = (Get-Date).ToUniversalTime().ToString('o')
   entryScript = [ordered]@{ path = 'scripts/Invoke-DshSandboxBuild.ps1'; sha256 = $buildEntrySha256 }

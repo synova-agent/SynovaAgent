@@ -90,13 +90,13 @@ function writeBuildFixture(options: { entry?: boolean } = {}): BuildFixture {
   const entryTarget = join(incoming, 'scripts', 'Invoke-DshSandboxBuild.ps1');
   if (options.entry !== false) cpSync(entrySource, entryTarget);
   writeFileSync(join(incoming, `synova-${codeSha}.zip`), 'code-archive');
+  writeFileSync(join(incoming, 'dsh-0.2.2-rc.5.tgz'), 'rc5-tarball');
   writeFileSync(join(incoming, 'dsh-0.2.2-rc.2.tgz'), 'rc2-tarball');
-  writeFileSync(join(incoming, 'dsh-0.2.2-rc.1.tgz'), 'rc1-tarball');
   writeFileSync(join(incoming, 'node-v24.21.0-win-x64.zip'), 'node-zip');
   const entryPath = 'scripts/Invoke-DshSandboxBuild.ps1';
   const relativeFiles = options.entry === false
-    ? [`synova-${codeSha}.zip`, 'dsh-0.2.2-rc.2.tgz', 'dsh-0.2.2-rc.1.tgz', 'node-v24.21.0-win-x64.zip']
-    : [entryPath, `synova-${codeSha}.zip`, 'dsh-0.2.2-rc.2.tgz', 'dsh-0.2.2-rc.1.tgz', 'node-v24.21.0-win-x64.zip'];
+    ? [`synova-${codeSha}.zip`, 'dsh-0.2.2-rc.5.tgz', 'dsh-0.2.2-rc.2.tgz', 'node-v24.21.0-win-x64.zip']
+    : [entryPath, `synova-${codeSha}.zip`, 'dsh-0.2.2-rc.5.tgz', 'dsh-0.2.2-rc.2.tgz', 'node-v24.21.0-win-x64.zip'];
   const files = relativeFiles.map(relative => {
     const path = join(incoming, relative.replaceAll('/', '\\'));
     return { path: relative, bytes: readFileSync(path).length, sha256: sha256(path) };
@@ -112,8 +112,8 @@ function writeBuildFixture(options: { entry?: boolean } = {}): BuildFixture {
     codeArchivePath: `synova-${codeSha}.zip`,
     codeArchiveSha256: sha256(join(incoming, `synova-${codeSha}.zip`)),
     dshIntegrity: {
+      '0.2.2-rc.5': 'sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw==',
       '0.2.2-rc.2': 'sha512-J727r2C471x2cYXGjqZ0D9T1zYaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw==',
-      '0.2.2-rc.1': 'sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==',
     },
     createdAt: new Date().toISOString(),
     entryScript: { path: entryPath, sha256: options.entry === false ? '0'.repeat(64) : sha256(entryTarget) },
@@ -174,7 +174,7 @@ describeWindows('T2 沙箱配置生成（New-DshSandboxConfig）', () => {
 
   it('清单文件哈希被改 ⇒ MANIFEST_FILE_HASH_MISMATCH', async () => {
     const f = writeBuildFixture();
-    writeFileSync(join(f.incoming, 'dsh-0.2.2-rc.2.tgz'), 'tampered');
+    writeFileSync(join(f.incoming, 'dsh-0.2.2-rc.5.tgz'), 'tampered');
     const result = await runPs(NEW_CONFIG, ['-Mode', 'Build', '-TaskRoot', f.taskRoot]);
     expect(result.code).toBe(2);
     expect(result.json.code).toBe('MANIFEST_FILE_HASH_MISMATCH');

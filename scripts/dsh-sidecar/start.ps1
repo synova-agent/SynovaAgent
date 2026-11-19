@@ -3,9 +3,9 @@
 # Usage:
 #   powershell -File scripts/dsh-sidecar/start.ps1 -InstanceDir C:\path\to\instance
 # Optional: -DshHome <per-instance DSH_HOME>, -InstallDir <versioned fixed dsh install>,
-#           -ExpectedVersion <0.2.2-rc.2 default | 0.2.2-rc.1 explicit fallback>,
+#           -ExpectedVersion <0.2.2-rc.5 default | 0.2.2-rc.2 explicit fallback>,
 #           -TimeoutSec <startup window, default 60>.
-# Production pins 0.2.2-rc.2; 0.2.2-rc.1 only works when -ExpectedVersion is passed
+# Production pins 0.2.2-rc.5; 0.2.2-rc.2 only works when -ExpectedVersion is passed
 # explicitly. Any other value (rc.3/caret/empty string) is rejected with
 # DSH_VERSION_MISMATCH before any process is spawned.
 #
