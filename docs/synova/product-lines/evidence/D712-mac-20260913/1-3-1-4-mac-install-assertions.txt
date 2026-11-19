@@ -1,4 +1,0 @@
-A1 进程存活: 1 (pgrep -f /Applications/SynovaAgent.app)
-A2 窗口存在: 1 (osascript System Events)
-A3 服务健康: 1 (curl -sf http://localhost:18790/api/healthz)
-A4 后端日志: 1 (/Users/wane/Library/Application Support/synova-agent/logs/backend.log 非空)
