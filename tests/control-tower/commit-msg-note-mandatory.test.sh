@@ -20,6 +20,8 @@
 #   8. 通过: 暂存 scripts/workflow/task-start.sh + message 含 Note 且文件存在 → exit 0
 #   9. 降级: message 含 memory/notes/ 但引用 Note 文件不存在 → exit 1（回归）
 #  10. 边界: 无暂存文件 → exit 0（跳过）
+#  11. 边界: 非常规首行 + 治理区暂存 + 无 Note → exit 1（#1436: 格式提示后仍执行 Note 检查）
+#  12. 正常: 非常规首行 + 治理区暂存 + Note 存在 → exit 0（#1436: 后续检查继续且可通过）
 #
 # 隔离: 每个用例独立临时 repo（mktemp -d + git init）+ SYNO_STAGED_FILES 注入
 #       暂存文件集（D395-a 注入缝，测试免跑真实 git diff）+ 空 .claude/task-briefs
@@ -125,6 +127,21 @@ if [ "$RC" -eq 1 ]; then pass "降级: 引用 Note 文件不存在 → exit 1（
 R=$(make_repo)
 RC=$(run_check "$R" "" "feat(D534): test empty staging")
 if [ "$RC" -eq 0 ]; then pass "边界: 无暂存文件 → exit 0（跳过）"; else fail "边界用例 — 期望 exit=0 实际=$RC"; fi
+
+# ─── 11. 边界: 非常规首行 + 治理区暂存 + 无 Note → exit 1 ───
+# #1436: 首行格式只提示不退出；后续 Note 引用门禁必须照常拦截（不得整份跳过）。
+R=$(make_repo)
+RC=$(run_check "$R" "scripts/workflow/task-start.sh" "plain unconventional commit")
+if [ "$RC" -eq 1 ]; then pass "#1436: 非常规首行 + 无 Note → 仍 exit 1（后续 Note 检查执行）"; else fail "#1436 非常规首行 + 无 Note — 期望 exit=1 实际=$RC"; fi
+
+# ─── 12. 正常: 非常规首行 + 治理区暂存 + Note 存在 → exit 0 ───
+R=$(make_repo)
+mkdir -p "$R/memory/notes/implemented"
+touch "$R/memory/notes/implemented/2026-08-17-d406-lessons-channel.md"
+RC=$(run_check "$R" "scripts/workflow/task-start.sh" "plain unconventional commit
+
+memory/notes/implemented/2026-08-17-d406-lessons-channel.md")
+if [ "$RC" -eq 0 ]; then pass "#1436: 非常规首行 + Note 存在 → exit 0（后续检查继续且通过）"; else fail "#1436 非常规首行 + Note 存在 — 期望 exit=0 实际=$RC"; fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

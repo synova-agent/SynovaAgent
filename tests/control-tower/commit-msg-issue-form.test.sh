@@ -13,14 +13,16 @@
 #
 # 覆盖矩阵（铁律 48: 正常 / 降级 / 边界 + 判别性）:
 #   C1 正常  — `feat(#1284): …` + claim 声明（开关开）→ exit 0（**新形态通过**）
-#   C2 边界  — `feat(): …`（空 scope）→ exit 1（格式门禁拒绝）
+#   C2 边界  — `feat(): …`（空 scope）→ 格式仅提示；claim 一致性仍 exit 1（认领解析失败）
+#   C2b 正常 — 非常规首行 + 无暂存/无认领 → exit 0（#1436 起格式不再阻断，提示可见）
 #   C3 兼容  — `chore(D1099): …` + legacy brief → exit 0（**旧形态在兼容期仍通过**）
 #   C4 边界  — `feat(#1284): …` 但暂存文件**不在**该 claim 写集 → exit 1（新形态不得白名单化）
 #   C5 边界  — 开关关（迁移期默认）+ 新形态 → 格式面通过（观察口径，不断言身份判定）
 #   C6 边界  — 分支名锚点(D1099) 与消息声明(D1230) **冲突**、且无 claim → exit 1（R4 fail-closed）
 #   C7 边界  — 分支名锚点(D1099) 与消息声明(D1099) **一致** → exit 0（不误伤；R4 只拦冲突）
+#   C8 边界  — 非常规首行 + 消息声明 #9999 vs claim #1284 → exit 1（#1436 降噪不绕过认领冲突）
 #   M1 变异  — 中和 MSG_ISSUE 提取（issue 号解析被删）⇒ **C1 必红**（判别性核心）
-#   M2 变异  — 从格式门禁字符类移除 `#` ⇒ **C1 必红**（字符集是硬条件，不是装饰）
+#   M2 变异  — 把首行格式恢复为 exit 1 ⇒ **C2b 必翻转**（证明降噪判据承重）
 #   M3 变异  — 删掉 R4 冲突检查（把 stderr 重定向恢复成丢弃）⇒ **C6 必红**（最弱锚点劫持面复开）
 #
 # 语义边界（本件**不**断言的事，防假绿）:
@@ -52,6 +54,10 @@ done
 [ -n "$PYBIN" ] || { echo "  ❌ 无可用 python（检查自身失败）"; exit 2; }
 
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
+OUT_FILE="$TMPD/rc-out.txt"
+# C4 依赖 resolver 的"今日 brief"日期窗口：夹具文件名必须用**当天**日期，
+# 否则跨日即失配（2026-11-19 实测：写死 2026-10-07 ⇒ C4 恒 exit 0 = 假绿）。
+TODAY="$(date +%Y-%m-%d)"
 
 echo "=== 提交端 issue 新形态夹具（D1230/② · 新旧兼容 + 判别性）==="
 
@@ -66,7 +72,7 @@ writeset:
 done:
   - verify: bash tests/x.test.sh
 YAML
-  cat > "$d/.claude/task-briefs/2026-10-07-D1099-legacy-probe.md" <<'MD'
+  cat > "$d/.claude/task-briefs/$TODAY-D1099-legacy-probe.md" <<'MD'
 # Task Brief: D1099 legacy probe
 #CRITERIA: D
 ## Q0: 定位
@@ -94,11 +100,12 @@ MD
 }
 
 # rc_of <sandbox> <checker> <msg> <staged> <claim_v2>
+#   输出同时落 $OUT_FILE（后续用例断"可见提示/点名原因"，不只看 rc）
 rc_of() {
   local d="$1" chk="$2" msg="$3" staged="$4" v2="$5" mf rc=0
   mf="$(mktemp)"
   printf '%s\n' "$msg" > "$mf"
-  ( cd "$d" && SYNO_STAGED_FILES="$staged" SYNO_CLAIM_V2="$v2" bash "$chk" "$mf" ) >/dev/null 2>&1 || rc=$?
+  ( cd "$d" && SYNO_STAGED_FILES="$staged" SYNO_CLAIM_V2="$v2" bash "$chk" "$mf" ) >"$OUT_FILE" 2>&1 || rc=$?
   rm -f "$mf"
   printf '%s' "$rc"
 }
@@ -110,10 +117,21 @@ RC1=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(#1284): 新形态探�
 [ "$RC1" -eq 0 ] && ok "C1 新形态 feat(#1284): + claim → exit 0（通过）" \
   || no "C1 新形态应 exit 0, 实际 exit=${RC1}（issue 解析或 scope 字符集回归）"
 
-# ── C2 边界: 空 scope ⇒ 必须拒绝 ──
+# ── C2 边界: 空 scope 是格式问题（#1436 降为提示）——后续 claim 一致性仍须拦 ──
 RC2=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'feat(): 空 scope 探针' 'tests/x.test.sh' 1)
-[ "$RC2" -eq 1 ] && ok "C2 空 scope feat(): → exit 1（格式门禁拒绝）" \
-  || no "C2 空 scope 应 exit 1, 实际 exit=$RC2"
+if [ "$RC2" -eq 1 ] && grep -q '认领解析失败' "$OUT_FILE" && grep -q '仅提示，不阻断' "$OUT_FILE"; then
+  ok "C2 空 scope: 格式仅提示；claim 一致性仍 exit 1（认领解析失败）"
+else
+  no "C2 空 scope 应因 claim 一致性 exit 1 且输出格式提示（实际 rc=$RC2）: $(tail -3 "$OUT_FILE")"
+fi
+
+# ── C2b 正常: 非常规首行 + 无暂存/无认领 ⇒ 仅提示并继续（#1436 核心行为）──
+RC2B=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'plain message without conventional prefix' '' 1)
+if [ "$RC2B" -eq 0 ] && grep -q '仅提示，不阻断' "$OUT_FILE"; then
+  ok "C2b 非常规首行 + 无暂存 → exit 0（格式不再阻断，提示可见）"
+else
+  no "C2b 非常规首行应 exit 0 且有提示，实际 rc=$RC2B"
+fi
 
 # ── C3 兼容期: 旧形态 + legacy brief ⇒ 必须仍通过 ──
 RC3=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'chore(D1099): legacy 探针' 'tests/y.test.sh' 1)
@@ -151,10 +169,20 @@ RC7=$(rc_of "$SBB" "$SBB/scripts/commit-msg-check.sh" 'chore(D1099): 分支锚�
 [ "$RC7" -eq 0 ] && ok "C7 分支锚点(D1099) × 消息声明(D1099) 一致 → exit 0（只拦冲突，不误伤）" \
   || no "C7 一致应 exit 0, 实际 exit=${RC7}（R4 检查误伤一致路径）"
 
+# ── C8 边界: 非常规首行 + 消息声明 #9999 vs claim #1284 ⇒ 仍 exit 1 ──
+#   目的（#1436 验收）: 证明"首行格式降为提示"没有连带放开认领一致性（不是整份跳过）。
+RC8=$(rc_of "$SB" "$SB/scripts/commit-msg-check.sh" 'plain conflict probe feat(#9999)' 'tests/x.test.sh' 1)
+if [ "$RC8" -eq 1 ] && grep -q '疑似并行劫持' "$OUT_FILE"; then
+  ok "C8 非常规首行 + 声明 #9999 vs claim #1284 → exit 1（疑似并行劫持）"
+else
+  no "C8 应 exit 1 并点名疑似并行劫持，实际 rc=$RC8: $(tail -3 "$OUT_FILE")"
+fi
+
 # ── 对照组: 接线断言（缺任一 ⇒ 本件恒绿 = 纸老虎）──
 grep -q 'MSG_ISSUE=' "$SUT" && ok "接线①: SUT 含 MSG_ISSUE 提取点" || no "接线①: MSG_ISSUE 提取点缺失"
 grep -q 'claim_store' "$SUT" && ok "接线②: SUT 经 claim_store 单源（不复制正则）" || no "接线②: claim_store 单源缺失"
-grep -qF -- '[a-zA-Z0-9_.+#-]' "$SUT" && ok "接线③: 格式门禁 scope 字符类含 #（本件判据的硬条件）" || no "接线③: scope 字符类缺 #"
+grep -qF -- '[a-zA-Z0-9_.+#-]' "$SUT" && ok "接线③: 格式提示模式仍容 scope 字符 #（新形态可被识别）" || no "接线③: scope 字符类缺 #"
+grep -q '仅提示，不阻断' "$SUT" && ok "接线⑤: 首行格式降噪提示已接线（#1436）" || no "接线⑤: 降噪提示缺失"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 变异体（判别性: 改坏即红）——在沙箱副本上注入，断言 C1 必翻转
@@ -189,19 +217,24 @@ print(f"M1 注入: 中和 {k} 处 MSG_ISSUE 提取", file=sys.stderr)
 PYM1
 expect_c1_mut "M1 issue 号解析被删" "$SB_M1"
 
-# M2: 从格式门禁字符类移除 `#` ⇒ 新形态在格式面即被拒
+# M2: 把首行格式降级回退成 exit 1 ⇒ C2b 必翻转（证明降噪判据承重）
 SB_M2="$TMPD/sb-M2"; build_sb "$SB_M2"
 "$PYBIN" - "$SB_M2/scripts/commit-msg-check.sh" <<'PYM2'
 import sys
 from pathlib import Path
 p = Path(sys.argv[1])
 t = p.read_text(encoding="utf-8")
-old = "[a-zA-Z0-9_.+#-]"
-assert old in t, "未找到 scope 字符类（夹具写集漂移）"
-p.write_text(t.replace(old, "[a-zA-Z0-9_.-]", 1), encoding="utf-8")
-print("M2 注入: scope 字符类移除 #", file=sys.stderr)
+old = 'echo -e "${YELLOW}⚠ Commit 首行不符合 Conventional Commits（仅提示，不阻断；后续检查继续）${RESET}"'
+assert old in t, "未找到格式降级提示行（夹具写集漂移）"
+p.write_text(t.replace(old, 'exit 1  # MUTANT: 恢复格式硬阻断', 1), encoding="utf-8")
+print("M2 注入: 首行格式恢复 exit 1", file=sys.stderr)
 PYM2
-expect_c1_mut "M2 scope 字符类移除 #" "$SB_M2"
+RC_M2=$(rc_of "$SB_M2" "$SB_M2/scripts/commit-msg-check.sh" 'plain message without conventional prefix' '' 1)
+if [ "$RC_M2" -ne 0 ]; then
+  ok "变异体 M2 格式降级回退: C2b 已翻转（exit=$RC_M2 ≠ 0）⇒ 夹具对降噪回退有判别力"
+else
+  no "变异体 M2: C2b 仍 exit 0 —— 判别力失效（降噪回退抓不到）"
+fi
 
 # M3: 删掉 R4 冲突检查（把 stderr 重新吞掉）⇒ C6 必不再红（劫持面复开）
 SB_M3="$TMPD/sb-M3"; build_sb "$SB_M3"
