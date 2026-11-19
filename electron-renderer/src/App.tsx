@@ -9,6 +9,7 @@ import StatusBar from './components/StatusBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
 import ScanContainer from './components/ScanContainer';
+import DshRunContainer from './components/DshRunContainer';
 import RightPanel from './components/RightPanel';
 import ResizeHandle from './components/ResizeHandle';
 import CommandPalette from './components/CommandPalette';
@@ -132,7 +133,13 @@ const App: React.FC = () => {
         {leftPanelOpen && (
           <ResizeHandle side="left" panelWidth={leftPanelWidth} onWidthChange={handleLeftResize} />
         )}
-        <main className="panel-center">{activeView === 'scan' ? <ScanContainer /> : <CenterPanel />}</main>
+        <main className="panel-center">{
+          activeView === 'scan'
+            ? <ScanContainer />
+            : activeView === 'dsh'
+              ? <DshRunContainer />
+              : <CenterPanel />
+        }</main>
         {rightPanelOpen && (
           <ResizeHandle side="right" panelWidth={rightPanelWidth} onWidthChange={handleRightResize} />
         )}
