@@ -219,7 +219,13 @@ export interface PersistedScan {
   replayed: boolean;
 }
 
+export interface ScanManifestSummary {
+  manifestId: string;
+  displayName: string;
+}
+
 export interface EnterpriseScanStorePort {
+  listManifestIds(graph: string): string[];
   listAuthorizations(graph: string, manifestId: string): ScanAuthorization[];
   getRun(graph: string, runId: string): RunRecord | null;
   findRunByRequest(graph: string, operation: 'enterprise-scan', clientRequestId: string): RunRecord | null;

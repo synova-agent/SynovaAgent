@@ -101,6 +101,21 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
     this.db.pragma('foreign_keys = ON');
   }
 
+  /**
+   * @input 服务端 graph。
+   * @output 该企业去重、按 manifest_id 升序的 id；不返回路径或授权字段。
+   * @degraded 无；SQLite 读取失败显式抛出，不以空清单冒充成功。
+   * @authority graph 是强制查询条件，不接受客户端企业参数。
+   * @not-here 不做角色过滤、preflight、文件 IO 或任何业务写入。
+   * @error 数据库错误交由路由归一为 SCAN_STORE_FAILED。
+   */
+  listManifestIds(graph: string): string[] {
+    const rows = this.db.prepare(
+      'SELECT DISTINCT manifest_id FROM scan_authorizations WHERE graph = ? ORDER BY manifest_id',
+    ).all(graph) as Array<{ manifest_id: string }>;
+    return rows.map(row => row.manifest_id);
+  }
+
   listAuthorizations(graph: string, manifestId: string): ScanAuthorization[] {
     const rows = this.db.prepare(
       `SELECT a.*, s.read_scope_json FROM scan_authorizations a

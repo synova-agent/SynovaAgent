@@ -8,6 +8,7 @@ import TitleBar from './components/TitleBar';
 import StatusBar from './components/StatusBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
+import ScanContainer from './components/ScanContainer';
 import RightPanel from './components/RightPanel';
 import ResizeHandle from './components/ResizeHandle';
 import CommandPalette from './components/CommandPalette';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const toggleLeftPanel = useAppStore((s) => s.toggleLeftPanel);
   const setOnlineStatus = useAppStore((s) => s.setOnlineStatus);
   const theme = useAppStore((s) => s.theme);
+  const activeView = useAppStore((s) => s.activeView);
   const alertCount = useAppStore((s) => s.alertCount);
   const leftPanelWidth = useAppStore((s) => s.leftPanelWidth);
   const rightPanelWidth = useAppStore((s) => s.rightPanelWidth);
@@ -130,7 +132,7 @@ const App: React.FC = () => {
         {leftPanelOpen && (
           <ResizeHandle side="left" panelWidth={leftPanelWidth} onWidthChange={handleLeftResize} />
         )}
-        <main className="panel-center"><CenterPanel /></main>
+        <main className="panel-center">{activeView === 'scan' ? <ScanContainer /> : <CenterPanel />}</main>
         {rightPanelOpen && (
           <ResizeHandle side="right" panelWidth={rightPanelWidth} onWidthChange={handleRightResize} />
         )}
