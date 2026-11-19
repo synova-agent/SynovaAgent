@@ -14,13 +14,14 @@ import { metricReadingsMigration } from './migrations/002-metric-readings';
 import { orgsMigration } from './migrations/003-orgs';
 import { graphTriplesRebuildMigration } from './migrations/004-graph-triples-rebuild';
 import { enterpriseScanMigration } from './migrations/006-enterprise-scan';
+import { metricObservationsMigration } from './migrations/007-metric-observations';
 
 const log = createLogger('store/schema-migration');
 
 // ═══ 常量 ═══
 
 /** 当前 schema 版本。每次新增迁移文件时递增。 */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // ═══ Migration 定义 ═══
 
@@ -47,6 +48,8 @@ const migrations: Migration[] = [
   // 🔴 本迁移的 DDL 属 schema 面 ⇒ **落地前须 CTO 逐字批**（见交付件 DDL 待批清单）。
   graphTriplesRebuildMigration,
   enterpriseScanMigration,
+  // #1431（阶段 2 · T1）: 指标观测严格表 metric_observations（四键 + period，旧表零改动）
+  metricObservationsMigration,
 ];
 
 // ═══ 版本门禁类型（#964 Q-8，裁 395） ═══
