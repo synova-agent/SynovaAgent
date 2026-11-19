@@ -134,7 +134,7 @@ try {
   $dshRoot = Join-Path $WorkRoot 'dsh'
   if (-not (Test-Path -LiteralPath $dshRoot)) { throw 'runtime bundle does not contain dsh/<version> installs' }
   New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
-  foreach ($version in @('0.2.2-rc.2', '0.2.2-rc.1')) {
+  foreach ($version in @('0.2.2-rc.5', '0.2.2-rc.2')) {
     $source = Join-Path $dshRoot $version
     if (-not (Test-Path -LiteralPath $source)) { throw "runtime bundle is missing dsh/$version" }
     Move-Item -LiteralPath $source -Destination (Join-Path $InstallRoot $version)
@@ -144,13 +144,13 @@ try {
       'repo\node_modules\better-sqlite3', 'repo\scripts\dsh-sidecar\probe-dsh-runtime.ps1', 'repo\scripts\dsh-sidecar\start.ps1',
       'repo\scripts\dsh-sidecar\stop.ps1', 'repo\scripts\dsh-sidecar\status.ps1', 'repo\scripts\dsh-sidecar\logs.ps1',
       'repo\scripts\dsh-sidecar\backup.ps1', 'repo\scripts\dsh-sidecar\restore.ps1', 'repo\scripts\dsh-sidecar\turn.ps1',
-      'install\0.2.2-rc.2\node_modules\@deepseek-ai\dsh\lib\bin.js',
-      'install\0.2.2-rc.1\node_modules\@deepseek-ai\dsh\lib\bin.js')) {
+      'install\0.2.2-rc.5\node_modules\@deepseek-ai\dsh\lib\bin.js',
+      'install\0.2.2-rc.2\node_modules\@deepseek-ai\dsh\lib\bin.js')) {
     if (-not (Test-Path -LiteralPath (Join-Path $WorkRoot $required))) { throw "probe tree is missing: $required" }
   }
 
   $env:DSH_HOME = $DshHome
-  $env:SYNOVA_DSH_INSTALL_DIR = Join-Path $InstallRoot '0.2.2-rc.2'
+  $env:SYNOVA_DSH_INSTALL_DIR = Join-Path $InstallRoot '0.2.2-rc.5'
   $env:SYNOVA_NODE_DIR = $NodeDir
   $env:PATH = "$NodeDir;$env:PATH"
   $env:CI = '1'

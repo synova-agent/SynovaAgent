@@ -230,9 +230,9 @@ function writeInstallLayout(version: string): { installDir: string; dshHome: str
   return { installDir, dshHome, instanceDir };
 }
 
-describe('T1 固定版本门（生产锁 rc.2；rc.1 仅显式回退）', () => {
+describe('T1 固定版本门（生产锁 rc.5；rc.2 仅显式回退）', () => {
   it('伪造 expected-version rc.3 ⇒ exit 1 + DSH_VERSION_MISMATCH，不落状态文件（不 spawn）', async () => {
-    const layout = writeInstallLayout('0.2.2-rc.1');
+    const layout = writeInstallLayout('0.2.2-rc.2');
     const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
       '--install-dir', layout.installDir, '--expected-version', '0.2.2-rc.3']);
     expect(result.code).toBe(1);
@@ -242,7 +242,7 @@ describe('T1 固定版本门（生产锁 rc.2；rc.1 仅显式回退）', () => 
   }, 30_000);
 
   it('空值 expected-version ⇒ 同样 DSH_VERSION_MISMATCH（不把空串当缺省）', async () => {
-    const layout = writeInstallLayout('0.2.2-rc.2');
+    const layout = writeInstallLayout('0.2.2-rc.5');
     const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
       '--install-dir', layout.installDir, '--expected-version', '']);
     expect(result.code).toBe(1);
@@ -250,8 +250,8 @@ describe('T1 固定版本门（生产锁 rc.2；rc.1 仅显式回退）', () => 
     expect(existsSync(join(layout.dshHome, 'run', 'synova-sidecar.json'))).toBe(false);
   }, 30_000);
 
-  it('已安装 rc.1 且未显式指定 ⇒ DSH_VERSION_MISMATCH，不 spawn', async () => {
-    const layout = writeInstallLayout('0.2.2-rc.1');
+  it('已安装 rc.2 且未显式指定 ⇒ DSH_VERSION_MISMATCH，不 spawn', async () => {
+    const layout = writeInstallLayout('0.2.2-rc.2');
     const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
       '--install-dir', layout.installDir, '--start-timeout-ms', '2000']);
     expect(result.code).toBe(1);
@@ -260,19 +260,29 @@ describe('T1 固定版本门（生产锁 rc.2；rc.1 仅显式回退）', () => 
     expect(existsSync(join(layout.dshHome, 'run', 'synova-sidecar.json'))).toBe(false);
   }, 30_000);
 
-  it('显式 expected-version rc.1 + 注入 ACP ⇒ 启动成功（回退只在显式路径）', async () => {
-    const root = makeTempRoot();
+  it('历史 rc.1 不再是可显式选择回退 ⇒ DSH_VERSION_MISMATCH，不 spawn', async () => {
     const layout = writeInstallLayout('0.2.2-rc.1');
+    const result = await runSidecarCli(['--action', 'start', '--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir,
+      '--install-dir', layout.installDir, '--expected-version', '0.2.2-rc.1']);
+    expect(result.code).toBe(1);
+    expect(result.json.code).toBe('DSH_VERSION_MISMATCH');
+    expect(result.json.retryable).toBe(false);
+    expect(existsSync(join(layout.dshHome, 'run', 'synova-sidecar.json'))).toBe(false);
+  }, 30_000);
+
+  it('显式 expected-version rc.2 + 注入 ACP ⇒ 启动成功（回退只在显式路径）', async () => {
+    const root = makeTempRoot();
+    const layout = writeInstallLayout('0.2.2-rc.2');
     const fake = writeFakeAcp(root);
     const common = ['--dsh-home', layout.dshHome, '--instance-dir', layout.instanceDir, '--install-dir', layout.installDir,
-      '--acp-command', process.execPath, '--acp-arg', fake, '--expected-version', '0.2.2-rc.1'];
+      '--acp-command', process.execPath, '--acp-arg', fake, '--expected-version', '0.2.2-rc.2'];
     const started = await runSidecarCli(['--action', 'start', ...common, '--start-timeout-ms', '30000']);
     expect(started.code).toBe(0);
     expect(started.json.ready).toBe(true);
     expect(started.json.expectedVersion).toBeUndefined();
     const status = await runSidecarCli(['--action', 'status', ...common]);
     expect(status.code).toBe(0);
-    expect(status.json.installedVersion).toBe('0.2.2-rc.1');
+    expect(status.json.installedVersion).toBe('0.2.2-rc.2');
     const stopped = await runSidecarCli(['--action', 'stop', ...common]);
     expect(stopped.code).toBe(0);
     expect(stopped.json.stopped).toBe(true);

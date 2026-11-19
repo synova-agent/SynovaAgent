@@ -4,7 +4,7 @@
  * 为什么单独成文件：1A 基线把 `defaultInstallDir()` 指向桌面应用的安装根
  * （`%LOCALAPPDATA%\Programs\DeepSeek Harness`），既没有版本层级，也无法证明
  * 「装的是哪一个版本」。本票把「固定版本」从口头约定变成可被 sidecar／session
- * 共同校验的代码事实：版本常量、允许的显式回退（仅 rc.1）、含版本目录、
+ * 共同校验的代码事实：版本常量、允许的显式回退（仅 rc.2）、含版本目录、
  * 已安装版本读取与不匹配拒绝，全部只在这里定义。
  *
  * 契约（铁律 47）:
@@ -19,11 +19,11 @@ import { homedir } from 'node:os';
 import { join, resolve, win32 as win32Path } from 'node:path';
 import { DshError } from './errors';
 
-/** 生产唯一允许的固定版本（#1411 锁定 0.2.2-rc.2）。 */
-export const PINNED_DSH_VERSION = '0.2.2-rc.2';
+/** 生产唯一允许的固定版本（#1430 候选升 0.2.2-rc.5；#1411 原锁 0.2.2-rc.2）。 */
+export const PINNED_DSH_VERSION = '0.2.2-rc.5';
 
-/** 唯一允许的显式回退版本（必须显式 `--expected-version` 才能选择）。 */
-export const PREVIOUS_DSH_VERSION = '0.2.2-rc.1';
+/** 唯一允许的显式回退版本（必须显式 `--expected-version` 才能选择；rc.1 已退役为历史记录）。 */
+export const PREVIOUS_DSH_VERSION = '0.2.2-rc.2';
 
 /** 可被显式选择的版本白名单（白名单之外一律 DSH_VERSION_MISMATCH）。 */
 const SELECTABLE_DSH_VERSIONS = [PINNED_DSH_VERSION, PREVIOUS_DSH_VERSION] as const;

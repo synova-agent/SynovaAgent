@@ -166,7 +166,7 @@ function createFixture(): EvidenceFixture {
     inputManifestSha256: sha256(manifestPath),
     runtimeBundleSha256,
     nodeVersion: 'v24.21.0',
-    dshVersion: '0.2.2-rc.2',
+    dshVersion: '0.2.2-rc.5',
     probes,
   };
   const evidencePath = join(outgoing, 'evidence.json');
@@ -199,6 +199,18 @@ describeWindows('T2 证据验证器（Test-DshEvidence）', () => {
     expect(result.code).toBe(0);
     expect(result.json.code).toBe('EVIDENCE_OK');
     expect(result.json.ok).toBe(true);
+  }, 120_000);
+
+  it('证据 dshVersion 仍指 rc.2／rc.1 ⇒ EVIDENCE_DSH_VERSION（exit 1）', async () => {
+    for (const wrong of ['0.2.2-rc.2', '0.2.2-rc.1']) {
+      const f = createFixture();
+      mutate(f, evidence => {
+        evidence.dshVersion = wrong;
+      });
+      const result = await runValidator(f.evidencePath, f.orchestrationPath);
+      expect(result.code, wrong).toBe(1);
+      expect(String(result.json.message), wrong).toContain('EVIDENCE_DSH_VERSION');
+    }
   }, 120_000);
 
   it('9 项 / 重复 id / 布尔字符串 / exitCode 不等 ⇒ exit 1', async () => {
