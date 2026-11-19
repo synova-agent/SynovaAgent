@@ -1,0 +1,30 @@
+writeset:
+  - .claude/claims/1440.yaml
+  - WORKLOG-20260608.md
+  - WORKLOG-20260609.md
+  - WORKLOG-20260611.md
+  - WORKLOG-20260612.md
+  - WORKLOG-20260613.md
+  - WORKLOG-20260616.md
+  - WORKLOG-20260621.md
+  - docs/archive/sentinels/collaboration-health/computes/cpc.ts
+  - docs/archive/sentinels/eob/computes/boundary.ts
+  - docs/archive/sentinels/eob/computes/types.ts
+  - docs/archive/sentinels/financial-snapshot/computes/snapshot.ts
+  - docs/archive/sentinels/gap-dynamics/computes/dynamics.ts
+  - docs/archive/sentinels/hacd/computes/density.ts
+  - docs/archive/sentinels/hona/computes/network.ts
+  - docs/archive/sentinels/htm/computes/trust.ts
+  - docs/archive/sentinels/path-dependency/computes/detect.ts
+  - docs/archive/sentinels/self-awareness/computes/bias.ts
+  - docs/archive/sentinels/seven-powers/computes/score.ts
+  - docs/archive/sentinels/token-economics/computes/cost.ts
+  - docs/authority/chronicle-drafts/2026-06.md
+  - docs/authority/chronicle-drafts/2026-07.md
+  - docs/authority/chronicle-drafts/2026-08.md
+done:
+  - "verify: bash -c 'test $(git ls-tree -r --name-only HEAD -- WORKLOG-20260608.md WORKLOG-20260609.md WORKLOG-20260611.md WORKLOG-20260612.md WORKLOG-20260613.md WORKLOG-20260616.md WORKLOG-20260621.md docs/archive docs/authority/chronicle-drafts | wc -l) -eq 0' ⇒ 本批 22 件已不在主树"
+  - "verify: bash -c 'test -f CHRONICLE.md && test -f LOOP-ENGINEERING-CHANGELOG.md && test -f loop-run-log.md' ⇒ 活引用扣留 3 件在位"
+  - "verify: bash scripts/doc-system/doc-registry-gate.sh ⇒ RC=0（DOC-0003 CHRONICLE.md 存活检查通过）"
+  - "verify: bash scripts/pre-commit-check.sh ⇒ 全组通过（原始输出见主仓 PR 六字段回执）"
+note: "#1440 根目录历史日志与既有归档区出库：22 件承接 synova-agent/synova-process-archive 分支 docs/1440-root-logs-archive（commit ae96fdaa，逐件 Git blob hash／sha256 1:1；缺失 0 差异 0）；主仓基线 15dbcd2c6；活引用扣留 3 件（CHRONICLE.md／LOOP-ENGINEERING-CHANGELOG.md／loop-run-log.md）。"
