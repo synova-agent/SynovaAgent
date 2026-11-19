@@ -20,8 +20,9 @@
 #          并 exit 1；`status: active` 但**无 path 字段**同样红（否则删掉 path 行即可绕过）；
 #          path 含通配（如 `WORKLOG-*.md`）按**字面路径**判 —— 通配不是"存在的文件"，不能算活
 #          任一未登记 → exit 1（硬阻断）；全部登记 → exit 0
-#          **编号 R1/R2（#1123 批1）**：新登记 DOC 条目 id 必须 `DOC-<Issue#>` 或 `DOC-<Issue#>-NN`；
-#            来源须可派生（front-matter `任务: "#N"` 或文件名含 `-<N>-`），两处皆无 ⇒ 逐条点名 exit 1；
+#          **编号 R1/R2（#1123 批1；#1436 降噪）**：新登记 DOC 条目建议 id 为 `DOC-<Issue#>` 或
+#            `DOC-<Issue#>-NN`，来源宜可派生（front-matter `任务: "#N"` 或文件名含 `-<N>-`）；
+#            不合规 ⇒ 逐条点名**仅报告、不阻断**（不参与退出码）；
 #            存量 `DOC-0xxx` 按基线冻结（跳过，不因形态不合红）；非 DOC- 前缀 id（夹具）不参与
 #   降级:  DOCS-REGISTRY.yaml 缺失 → ⚠️ 警告 exit 0（台账未建立不阻断）
 #          base 全链不可解析 / merge-base 为空 → ⚠️ **显式降级**：源③跳过但**打印留痕**
@@ -214,12 +215,14 @@ else
   while IFS= read -r rel; do check_file "$rel"; done < <(find "$ROOT" -type f \( -name '*.md' -o -name '*.yaml' \) 2>/dev/null | sed "s|^$ROOT/||") # swallow-ok:
 fi
 
-# ── 编号 R1/R2（#1123 批1）：新登记 DOC 条目的形态 + Issue 来源 ──
-# R1 形态: `DOC-<Issue#>` 或 `DOC-<Issue#>-NN`（一卡多件，-NN 两位）
-# R2 来源: front-matter `任务: "#N"` 或文件名含 `-<N>-`；两处皆无 ⇒ 红并点名
+# ── 编号 R1/R2（#1123 批1；#1436 降噪）：新登记 DOC 条目的形态 + Issue 来源 ──
+# R1 形态: 建议 `DOC-<Issue#>` 或 `DOC-<Issue#>-NN`（一卡多件，-NN 两位）
+# R2 来源: 建议 front-matter `任务: "#N"` 或文件名含 `-<N>-`；两处皆无 ⇒ **仅报告、不阻断**
+# 判据边界（#1436）: R1/R2 属**措辞/形态**问题，不参与退出码；未登记、DOC id 重号、
+#   active path 失配仍是硬阻断（三态行为不变：0 通过 / 1 真红 / 2 检查自身失败）。
 # R4 存量冻结: 基线（gitea/TRUNK → TRUNK → origin/main）已存在的 id 一律跳过；
 #   夹具模式（无基线）下 `DOC-0xxx` legacy 形态同样跳过 —— 不因形态不合误伤存量
-ID_CHECKED=0; ID_SKIPPED=0; ID_FAIL=0
+ID_CHECKED=0; ID_SKIPPED=0; ID_REPORT=0
 BASE_IDS=""
 for _ref in "gitea/${TRUNK:-main}" origin/main; do   # 只用远端真源：夹具仓只有本地 main，应走降级而非误判
   if git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --verify -q "$_ref" >/dev/null 2>&1; then
@@ -238,8 +241,8 @@ while IFS=$'\t' read -r _did _dpath; do
   if [ -z "$BASE_IDS" ] && [[ "$_did" =~ ^DOC-0[0-9]{3}$ ]]; then ID_SKIPPED=$((ID_SKIPPED+1)); continue; fi
   ID_CHECKED=$((ID_CHECKED+1))
   if ! [[ "$_did" =~ ^DOC-[1-9][0-9]*(-[0-9]{2})?$ ]]; then
-    echo "  ❌ [R1] 新登记 id 形态不合规: ${_did} （应为 DOC-<Issue#> 或 DOC-<Issue#>-NN）"
-    ID_FAIL=$((ID_FAIL+1)); continue
+    echo "  ⚠️ [R1] 新登记 id 形态不合规（仅报告，不阻断）: ${_did} （建议 DOC-<Issue#> 或 DOC-<Issue#>-NN）"
+    ID_REPORT=$((ID_REPORT+1)); continue
   fi
   _src=""
   if [ "$_dpath" != "<NO-PATH>" ] && [ -f "$ROOT/$_dpath" ]; then
@@ -249,8 +252,8 @@ while IFS=$'\t' read -r _did _dpath; do
     _src="$(printf '%s' "${_dpath##*/}" | grep -oE '(^|[-_])[0-9]{2,}([-_]|\.|$)' | grep -oE '[0-9]{2,}' | head -1)" # swallow-ok:
   fi
   if [ -z "$_src" ]; then
-    echo "  ❌ [R2] 无法派生 Issue 来源: ${_did} （path=${_dpath}；front-matter 任务:\"#N\" 与文件名 -N- 均无）"
-    ID_FAIL=$((ID_FAIL+1)); continue
+    echo "  ⚠️ [R2] 无法派生 Issue 来源（仅报告，不阻断）: ${_did} （path=${_dpath}；front-matter 任务:\"#N\" 与文件名 -N- 均无）"
+    ID_REPORT=$((ID_REPORT+1)); continue
   fi
   echo "  ✅ [R1/R2] ${_did} ← #${_src}"
 done < <(awk '
@@ -269,14 +272,13 @@ fi
 
 echo "── 唯一性: ${TOTAL_DOC_IDS} 条 DOC id，重号 ${DUPFAIL} 个 ──"
 echo "── 存活: ${ALIVE_TOTAL} 条 status=active，path 失配 ${ALIVE_FAIL} 个（status 字段 ${STATUS_FIELDS} 条）──"
-echo "── 编号: 新条目 ${ID_CHECKED}（跳过存量 ${ID_SKIPPED}），不合规 ${ID_FAIL} ──"
+echo "── 编号: 新条目 ${ID_CHECKED}（跳过存量 ${ID_SKIPPED}），R1/R2 报告项 ${ID_REPORT}（仅提示，不阻断）──"
 echo "── 汇总: 检查 $CHECKED 个文档，$FAIL 个未登记 ──"
-if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ] && [ "$ID_FAIL" -eq 0 ]; then
+if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ]; then
   echo "  ✅ 登记门禁通过"; exit 0
 else
   [ "$FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（未登记 ${FAIL} 个）"
   [ "$DUPFAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（DOC id 重号 ${DUPFAIL} 个；唯一性不是风格问题，不许只告警）"
   [ "$ALIVE_FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（active 条目 path 失配 ${ALIVE_FAIL} 个；台账不许指向不存在的文件）"
-  [ "$ID_FAIL" -gt 0 ] && echo "  ❌ 登记门禁阻断（R1/R2 编号形态/Issue 来源不合规 ${ID_FAIL} 个；新条目必须 DOC-<Issue#> 且可派生来源）"
   exit 1
 fi
