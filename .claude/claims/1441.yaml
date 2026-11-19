@@ -1,0 +1,11 @@
+writeset:
+  - .claude/claims/1441.yaml
+  - src/providers/egress-guard.ts
+  - src/providers/base.ts
+  - tests/security/egress-guard.test.ts
+  - tests/security/egress-guard.real-path.test.ts
+  - memory/notes/implemented/1441-egress-guard.md
+done:
+  - verify: npx vitest run tests/security/egress-guard.test.ts tests/security/egress-guard.real-path.test.ts
+  - verify: npx tsc --noEmit
+note: "I-3 第一刀（旧 Provider 链发送前硬禁止拦截）。Mandate synova-1441-egress-guard-v1（Gitea #1441 评论 13695）／DEV DOC v3（评论 13694）；base 851b8900a；6 条改坏必红逐条验过并已恢复。"
