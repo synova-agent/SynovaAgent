@@ -8,7 +8,7 @@
 #   组 3 门禁: 触发(无 Note→阻断) / 放行(含 Note→放行) / Note 不存在→阻断 /
 #              不触发(改 src/l3/→跳过)
 #   组 4 模板: generate-task-brief.py 含「### d) 相关 Note 引用」
-#   组 5 回归: commit-msg Conventional Commits 格式检查不回归
+#   组 5 回归: #1436 首行格式降噪 —— 非法 Conventional Commits 只提示不阻断
 #
 # 用法: bash tests/control-tower/notes-four-state.test.sh
 # 退出码: 0 = 全部通过, 1 = 有失败
@@ -142,13 +142,14 @@ else
 fi
 echo ""
 
-# ═══ 组 5: 回归 — Conventional Commits 格式检查不回归 ═══
-echo "── 组 5: 回归 — Conventional Commits 格式检查不回归 ──"
+# ═══ 组 5: #1436 降噪 — 首行格式仅提示不阻断（后续检查仍执行）═══
+echo "── 组 5: #1436 降噪 — 非法 Conventional Commits 首行仅提示不阻断 ──"
 printf 'not-a-valid-commit-message\n' > "$TMP/msg_bad.txt"
-if SYNO_STAGED_FILES="src/l3/foo.ts" bash "$COMMIT_MSG_CHECK" "$TMP/msg_bad.txt" >/dev/null 2>&1; then
-  fail "回归: 非法 Conventional Commits 格式 → 应阻断 exit 1"
+OUT_BAD="$(SYNO_STAGED_FILES="src/l3/foo.ts" bash "$COMMIT_MSG_CHECK" "$TMP/msg_bad.txt" 2>&1)"; RC_BAD=$?
+if [ "$RC_BAD" -eq 0 ] && printf '%s' "$OUT_BAD" | grep -q '仅提示，不阻断'; then
+  pass "降噪: 非法 Conventional Commits 首行 → 仅提示不阻断 exit 0（#1436）"
 else
-  pass "回归: 非法 Conventional Commits 格式 → 阻断 exit 1（原检查未回归）"
+  fail "降噪: 非法首行应 exit 0 且有提示（实际 rc=$RC_BAD）"
 fi
 echo ""
 

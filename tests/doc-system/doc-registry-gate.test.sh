@@ -414,7 +414,8 @@ rm -f "$MUT" "$KF/reg.k5.bak"
 
 echo ""
 
-# ═══ R1/R2（#1123 批1）：DOC 编号形态 + Issue 来源 ═══
+# ═══ R1/R2（#1123 批1；#1436 降噪）：DOC 编号形态 + Issue 来源 ═══
+# #1436 起 R1/R2 只报告不阻断；重号/存活/未登记仍是硬判据（本段末尾 O 与既有 I1/K2 共证）。
 export SYNO_DOCID_CHECK=1   # 本段夹具需要 R1/R2 生效（真实仓由基线驱动，无需此变量）
 # 每个用例独立 fixture，避免状态耦合；非 DOC- 前缀 id 不参与 R1/R2
 mkfix() { # $1=目录
@@ -430,25 +431,27 @@ wreg "$H" 'documents:
     status: active'
 DOC_TRUTH_ROOT="$H" bash "$SCRIPT" >/dev/null 2>&1; t "H 形态合规+来源可达" 0 $?
 
-# I 形态不合规（DOC-1234-1，两位后缀要求）⇒ 1 且点名 R1
+# I 形态不合规（DOC-1234-1，两位后缀要求）⇒ #1436 起**仅报告**：rc=0 且点名 R1
 I=$(mktemp -d); mkfix "$I"; : > "$I/gate-exemptions/2026-10-29-1234-demo.md"
 wreg "$I" 'documents:
   - id: DOC-1234-1
     path: gate-exemptions/2026-10-29-1234-demo.md
     status: active'
 OUTI=$(DOC_TRUTH_ROOT="$I" bash "$SCRIPT" 2>&1); RCI=$?
-t "I 形态不合规→红" 1 $RCI
+t "I 形态不合规→仅报告 rc=0" 0 $RCI
 echo "$OUTI" | grep -q '\[R1\]'; t "I2 点名 R1" 0 $?
+echo "$OUTI" | grep -q '仅报告，不阻断'; t "I3 报告显式标注不阻断" 0 $?
 
-# J 无来源（id 合规但文件名无 -N-、无 front-matter）⇒ 1 且点名 R2
+# J 无来源（id 合规但文件名无 -N-、无 front-matter）⇒ #1436 起**仅报告**：rc=0 且点名 R2
 J=$(mktemp -d); mkfix "$J"; : > "$J/gate-exemptions/plain-demo.md"
 wreg "$J" 'documents:
   - id: DOC-2001
     path: gate-exemptions/plain-demo.md
     status: active'
 OUTJ=$(DOC_TRUTH_ROOT="$J" bash "$SCRIPT" 2>&1); RCJ=$?
-t "J 无来源→红" 1 $RCJ
+t "J 无来源→仅报告 rc=0" 0 $RCJ
 echo "$OUTJ" | grep -q '\[R2\]'; t "J2 点名 R2" 0 $?
+echo "$OUTJ" | grep -q '仅报告，不阻断'; t "J3 报告显式标注不阻断" 0 $?
 
 # K 同卡两件 DOC-3333-01 / -02（文件名各含 -3333-）⇒ 0
 K=$(mktemp -d); mkfix "$K"
@@ -470,16 +473,35 @@ wreg "$L" 'documents:
     status: archived'
 DOC_TRUTH_ROOT="$L" bash "$SCRIPT" >/dev/null 2>&1; t "L 存量 DOC-0xxx 不误伤" 0 $?
 
-# M 改坏即红：变异体把后缀 `(-[0-9]{2})?` 放宽为 `(-[0-9]+)?` ⇒ 用例 I 的 fixture 变 0（证明形态检查承重）
+# M 判别力自证（#1436）：变异体把 R1/R2 报告项重新并入阻断条件 ⇒ I 必须翻转 rc=1
+#   证明 I 的 rc=0 确实由"报告不阻断"产生，而不是别的恒绿。（变异在仓外副本，树保持干净）
 MUT=$(mktemp -d); cp "$SCRIPT" "$MUT/gate-mut.sh"
-sed -i 's/(-\[0-9\]{2})?/(-\[0-9\]+)?/' "$MUT/gate-mut.sh"
-M=$(mktemp -d); mkfix "$M"; : > "$M/gate-exemptions/2026-10-29-1234-demo.md"
-wreg "$M" 'documents:
-  - id: DOC-1234-1
-    path: gate-exemptions/2026-10-29-1234-demo.md
+python3 - "$MUT/gate-mut.sh" <<'PYEOF'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1])
+s = p.read_text(encoding="utf-8")
+old = 'if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ]; then'
+new = 'if [ "$FAIL" -eq 0 ] && [ "$DUPFAIL" -eq 0 ] && [ "$ALIVE_FAIL" -eq 0 ] && [ "$ID_REPORT" -eq 0 ]; then'
+assert old in s, "未找到阻断条件（夹具写集漂移）"
+p.write_text(s.replace(old, new, 1), encoding="utf-8")
+PYEOF
+OUTM=$(DOC_TRUTH_ROOT="$I" bash "$MUT/gate-mut.sh" 2>&1); RCM=$?
+if [ "$RCM" -eq 1 ]; then t "M 变异体恢复阻断 → I 翻转 rc=1（降噪判据承重）" 0 0; else t "M 变异体未翻转（I 仍 rc=$RCM）" 0 1; fi
+
+# O 报告项不与硬判据互斥：同一台账里 R2 报告 + DOC id 重号 ⇒ rc=1（降噪未吞掉重号硬判据）
+O=$(mktemp -d); mkfix "$O"; : > "$O/gate-exemptions/plain-demo.md"
+wreg "$O" 'documents:
+  - id: DOC-2001
+    path: gate-exemptions/plain-demo.md
+    status: active
+  - id: DOC-2001
+    path: gate-exemptions/plain-demo.md
     status: active'
-DOC_TRUTH_ROOT="$M" bash "$MUT/gate-mut.sh" >/dev/null 2>&1; RCM=$?
-if [ "$RCM" -eq 0 ]; then t "M 变异体放行→证明形态检查承重" 0 0; else t "M 改坏即红(变异体仍红)" 0 1; fi
+OUTO=$(DOC_TRUTH_ROOT="$O" bash "$SCRIPT" 2>&1); RCO=$?
+t "O 报告项 + 重号 → rc=1（硬判据不变）" 1 $RCO
+printf '%s\n' "$OUTO" | grep -q '重号: DOC-2001' && { echo "  ✅ O 重号仍点名"; PASS=$((PASS+1)); } || { echo "  ❌ O 重号未点名"; FAIL=$((FAIL+1)); }
+printf '%s\n' "$OUTO" | grep -q '\[R2\]' && { echo "  ✅ O R2 报告仍可见"; PASS=$((PASS+1)); } || { echo "  ❌ O R2 报告被硬判据吞掉"; FAIL=$((FAIL+1)); }
 
 # N 来源走 front-matter `任务: "#N"`（文件名无号）⇒ 0
 N=$(mktemp -d); mkfix "$N"
@@ -491,7 +513,7 @@ wreg "$N" 'documents:
 DOC_TRUTH_ROOT="$N" bash "$SCRIPT" >/dev/null 2>&1; t "N front-matter 任务来源" 0 $?
 
 unset SYNO_DOCID_CHECK
-rm -rf "$H" "$I" "$J" "$K" "$L" "$M" "$N" "$MUT" 2>/dev/null # swallow-ok:
+rm -rf "$H" "$I" "$J" "$K" "$L" "$N" "$O" "$MUT" 2>/dev/null # swallow-ok:
 
 echo "── 汇总: $PASS 通过 / $FAIL 失败 ──"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

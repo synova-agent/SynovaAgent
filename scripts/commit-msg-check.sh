@@ -1,8 +1,10 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
 # Anthropic 标准: Conventional Commits + issue 引用
-# 格式: type(scope): subject
-# 要求: commit body 含 issue/task 引用 (#C1, P1-2, SOG-001 等)
+# 格式建议: type(scope): subject
+# #1436 降噪: 首行格式不符 = **纯形态问题** ⇒ 只提示、不阻断；后续认领一致性 /
+#   Note 引用检查照常执行（不得整份跳过）。格式合规性不参与退出码。
+# 建议: commit body 含 issue/task 引用 (#C1, P1-2, SOG-001 等)
 # ═══════════════════════════════════════════════════════════════════════════════
 # D513/①(Win 8f33e82a): merge 提交豁免 D328 —— 本地 merge 的构成提交各自已过
 # D328（声明一致），merge commit 本身无新声明语义（GitHub 网页 merge 也不经本地
@@ -24,25 +26,31 @@ if echo "$COMMIT_MSG" | grep -qE '^Merge |^Revert '; then exit 0; fi
 #   正是 check-gate-integrity.sh 头注释记录的跨方言陷阱）。
 PATTERN='^(feat|fix|chore|docs|test|refactor|perf|style|ci|build)(\([a-zA-Z0-9_.+#-]+\))?: .{1,140}$'
 
-if ! echo "$COMMIT_MSG" | head -1 | LC_ALL=C grep -qE "$PATTERN"; then
+FIRST_LINE="$(printf '%s\n' "$COMMIT_MSG" | head -1)"
+FORMAT_OK=0
+if printf '%s\n' "$FIRST_LINE" | LC_ALL=C grep -qE "$PATTERN"; then
+  FORMAT_OK=1
+else
   echo ""
-  echo -e "${RED}╔══════════════════════════════════════════════════════════════╗${RESET}"
-  echo -e "${RED}║  ❌ Commit 格式不符合 Conventional Commits                  ║${RESET}"
-  echo -e "${RED}╚══════════════════════════════════════════════════════════════╝${RESET}"
-  echo ""
-  echo "  正确格式: type(scope): subject"
+  echo -e "${YELLOW}⚠ Commit 首行不符合 Conventional Commits（仅提示，不阻断；后续检查继续）${RESET}"
+  echo "  当前首行: ${FIRST_LINE}"
+  echo "  建议格式: type(scope): subject"
   echo "  type: feat | fix | chore | docs | test | refactor | perf | ci"
-  echo "  示例: feat(p1-3): 接线 EvidenceManager 到诊断流程"
-  echo "        fix(#C1): 修复 Phase 0 状态机流转 bug"
+  echo "  示例: feat(#1436): 接线证据回收"
   echo ""
-  exit 1
 fi
 
 # Anthropic 标准: 检查 issue/task 引用 (warning, not block)
 if echo "$COMMIT_MSG" | grep -qE '#[A-Z]+[0-9]+|P[0-9]+-[0-9]+|[A-Z]+-[0-9]{3}|#[0-9]+'; then
-  echo -e "${GREEN}✅ Commit 格式正确 + 含 issue 引用${RESET}"
+  if [ "$FORMAT_OK" = "1" ]; then
+    echo -e "${GREEN}✅ Commit 格式正确 + 含 issue 引用${RESET}"
+  else
+    echo -e "${YELLOW}ℹ Commit 首行格式仅提示（已降噪），消息含 issue 引用${RESET}"
+  fi
 else
-  echo -e "${GREEN}✅ Commit 格式正确${RESET}"
+  if [ "$FORMAT_OK" = "1" ]; then
+    echo -e "${GREEN}✅ Commit 格式正确${RESET}"
+  fi
   echo -e "${YELLOW}   ⚠ 建议在 commit body 中包含 issue/task 引用 (如 #C1, P1-2, SOG-001)${RESET}"
 fi
 
