@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS metric_observations (
   observed_at   TEXT    NOT NULL,                       -- 观测时间，不得用写入时间冒充
   degraded      INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
-)`;
+);`;
 
 /**
  * 3 个索引（逐条独立执行，便于失败定位）—— 逐字照 DEV DOC v2 §3。
@@ -65,11 +65,11 @@ CREATE TABLE IF NOT EXISTS metric_observations (
  */
 const METRIC_OBSERVATIONS_INDEX_DDL: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS ux_metric_observations_key
-     ON metric_observations (org_id, object_id, metric_id, period)`,
+     ON metric_observations (org_id, object_id, metric_id, period);   -- run_id 不入唯一键`,
   `CREATE INDEX IF NOT EXISTS ix_metric_observations_series
-     ON metric_observations (org_id, object_id, metric_id, period)`,
+     ON metric_observations (org_id, object_id, metric_id, period);`,
   `CREATE INDEX IF NOT EXISTS ix_metric_observations_run
-     ON metric_observations (org_id, run_id)`,
+     ON metric_observations (org_id, run_id);`,
 ];
 
 /**
