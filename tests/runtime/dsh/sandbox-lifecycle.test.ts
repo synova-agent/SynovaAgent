@@ -368,8 +368,6 @@ describeWindows('T2 生产接线与全局终止禁令', () => {
     const startText = readFileSync(START, 'utf8');
     expect(startText).toContain('Invoke-SandboxLifecycle');
     expect(startText).toContain('RealSandboxProcessAdapter.ps1');
-    expect(startText).toContain('Get-DshRuntimeBundleSha256.ps1');
-    expect(startText).toContain('-RuntimeBundleSha256ProviderPath');
     expect(startText).not.toContain('CloseMainWindow');
     expect(startText).not.toContain('Stop-Process');
   });
@@ -384,13 +382,20 @@ describeWindows('T2 生产接线与全局终止禁令', () => {
     expect(moduleText).toContain('function Invoke-SandboxLifecycle');
     expect(moduleText).toContain('Close-SandboxMainWindow');
   });
+});
 
-  it('bundle 哈希生产者只在 host 侧：沙箱入口脚本不写 orchestration 字段', () => {
-    const buildText = readFileSync(join(SANDBOX_DIR, 'Invoke-DshSandboxBuild.ps1'), 'utf8');
-    expect(buildText).not.toContain('runtimeBundleSha256');
-    expect(buildText).not.toContain('Get-DshRuntimeBundleSha256');
+// 只读仓库文本、不 spawn 进程 ⇒ 与平台无关，放在平台闸外，Linux CI 也真实执行
+// （#1427 §2.4 同型：静态接线用例被文件级 Windows 闸误拦）。
+describe('T2 生产接线与静态契约（跨平台）', () => {
+  it('bundle 哈希生产者只在 host 侧：Start 注入、lifecycle 不碰 bundle 路径、沙箱入口脚本不写字段', () => {
+    const startText = readFileSync(START, 'utf8');
+    expect(startText).toContain('Get-DshRuntimeBundleSha256.ps1');
+    expect(startText).toContain('-RuntimeBundleSha256ProviderPath');
     const moduleText = readFileSync(MODULE, 'utf8');
     expect(moduleText).toContain('RuntimeBundleSha256ProviderPath');
     expect(moduleText).not.toMatch(/runtime-bundle\.zip/);
+    const buildText = readFileSync(join(SANDBOX_DIR, 'Invoke-DshSandboxBuild.ps1'), 'utf8');
+    expect(buildText).not.toContain('runtimeBundleSha256');
+    expect(buildText).not.toContain('Get-DshRuntimeBundleSha256');
   });
 });
