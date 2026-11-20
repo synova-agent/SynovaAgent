@@ -1,8 +1,9 @@
 # .claude/claims/1429.yaml — #1429（I-2）可见 UI 接认证 API＋SSE（DSH 会话可见）写集声明
 #
 # DEV DOC v1: Issue #1429 评论 13511 ｜CTO 裁定: 13512（B1–B7）｜v2 增量: 13517 ｜Mandate: 13518
+# 复核退回 B1/B2 → CTO 裁定选 A（补登录入口，写集 15 → 17）：新增受控登录面板 1 件 ＋ 登录测试 1 件，接线改 DshRunContainer。
 # Base: d0312a0057a91f0924f478c691a48eda4557b723 ｜Branch: feat/1429-dsh-run-ui
-# 写集 15 件：renderer 源码 8 ＋ 测试 5（4 新＋1 改）＋ 记账 2。
+# 写集 17 件：renderer 源码 9（8＋1 新）＋ 测试 6（5 新＋1 改）＋ 记账 2。
 writeset:
   - .claude/claims/1429.yaml
   - memory/notes/implemented/1429-dsh-run-ui.md
@@ -11,6 +12,7 @@ writeset:
   - electron-renderer/src/stores/dsh-run-store.ts
   - electron-renderer/src/components/DshRunPanel.tsx
   - electron-renderer/src/components/DshRunContainer.tsx
+  - electron-renderer/src/components/DshLoginPanel.tsx
   - electron-renderer/src/App.tsx
   - electron-renderer/src/stores/app-store.ts
   - electron-renderer/src/components/LeftPanel.tsx
@@ -18,8 +20,9 @@ writeset:
   - tests/dsh-ui/dsh-run-api.test.ts
   - tests/dsh-ui/dsh-run-panel.render.test.ts
   - tests/dsh-ui/dsh-wiring.test.ts
+  - tests/dsh-ui/dsh-login-panel.test.ts
   - tests/scan-ui/scan-wiring.test.ts
 done:
   - verify: npx vitest run tests/dsh-ui tests/scan-ui
   - verify: npx tsc -p electron-renderer/tsconfig.json
-note: "#1429 I-2：renderer 接真认证（DevMode/token 双模式，token 仅内存）＋ DSH 四调用与 SSE 事件流；Panel 受控无 hook（输入框＋提交/取消/关闭/重连）；只显示工具 title/kind/status；断流不显示完成、取消以 run.cancelled 为准、空成功显示无结果；未做真实登录端到端（另立切片）与实机 Electron 点击。"
+note: "#1429 I-2：renderer 接真认证（DevMode/token 双模式，token 仅内存）＋ DSH 四调用与 SSE 事件流；Panel 受控无 hook；B1 补受控登录面板＋容器接线（未登录/过期显示登录表单，成功后 token 写 auth-session 内存并 syncAuth，失败显示服务端 code，401 回登录态）；B2 已对真实本地服务取 login→202→SSE 证据（run.failed 因默认安装目录缺 0.2.2-rc.2，属 I-4 停点）；未实机 Electron 点击。"
