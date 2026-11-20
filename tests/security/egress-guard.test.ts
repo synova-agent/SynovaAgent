@@ -1,8 +1,9 @@
 /**
  * tests/security/egress-guard.test.ts — I-3 外发硬禁止拦截（单元）
  *
- * 覆盖 DEV DOC v3 §5 的键分类 / 递归 / 值形态 / 正例 / 端点 / 只读 / 日志，
+ * 覆盖 DEV DOC v3 §5 的键分类 / 递归 / 值形态 / 正例 / 只读 / 日志，
  * 判据来源：Gitea #1441 评论 13694（DEV DOC v3 §1/§4/§5）。
+ * R3（PR #1444 评论 13928）：端点相等校验从本刀移除 — 本文件不含端点断言。
  *
  * 铁律 48：每个用例至少 1 条 expect；禁 skip。
  */
@@ -25,10 +26,8 @@ vi.mock('@synova/logger', () => ({
 
 import { guardEgress, EgressGuardError } from '../../src/providers/egress-guard';
 
-const ALLOWED = 'https://api.deepseek.com/v1';
-
-function guard(body: Record<string, unknown>, baseUrl = ALLOWED, allowedBaseUrl = ALLOWED) {
-  return guardEgress({ body, baseUrl, allowedBaseUrl });
+function guard(body: Record<string, unknown>) {
+  return guardEgress({ body });
 }
 
 beforeEach(() => {
@@ -169,16 +168,6 @@ describe('guardEgress — 值形态拒（四种，仅这四种）', () => {
     expect(guard({ id: 110101199003070011 })).toEqual({
       ok: false, code: 'EGRESS_HIGH_SENSITIVE', field: 'id',
     });
-  });
-});
-
-// ═══ 反例：端点（DEV DOC v3 §5.13）═══
-
-describe('guardEgress — 端点守卫', () => {
-  it('Given baseUrl !== allowedBaseUrl, When guard, Then EGRESS_ENDPOINT（无 field）', () => {
-    const verdict = guard({ messages: [{ role: 'user', content: '合法内容' }] },
-      'https://evil.example.com/v1', ALLOWED);
-    expect(verdict).toEqual({ ok: false, code: 'EGRESS_ENDPOINT' });
   });
 });
 

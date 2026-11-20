@@ -120,13 +120,9 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
   const modelsPath = cfg.modelsPath ?? '/models';
   const healthTimeout = cfg.healthTimeoutMs ?? 10_000;
 
-  // I-3: 构造时冻结的授权端点，作为端点守卫的比对基准（请求 base 必须与之一致；
-  // fetch 一律 redirect:'error'，3xx 不得把请求带到另一个端点）
-  const allowedBaseUrl = baseUrl;
-
   /** I-3: 发送前硬禁止拦截 — 命中即抛错，fetch 零请求（不修改 body、不半脱敏放行） */
   function assertEgressAllowed(body: Record<string, unknown>): void {
-    const verdict = guardEgress({ body, baseUrl, allowedBaseUrl });
+    const verdict = guardEgress({ body });
     if (!verdict.ok) {
       throw new EgressGuardError(verdict.code, verdict.field);
     }
@@ -218,7 +214,6 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
     }
     const start = Date.now();
     try {
-      assertEgressAllowed({});
       const res = await fetch(`${baseUrl}${modelsPath}`, {
         headers: cfg.getHeaders(),
         redirect: 'error',
@@ -308,7 +303,10 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
       } catch (err: unknown) {
         log.warn({ err: err instanceof Error ? err.message : String(err) }, "提示注入检测");
         const e = err instanceof Error ? err : new Error(String(err));
-        cb.onError?.(finalizeAdapterFailure(cfg.onError ? cfg.onError(e, 'stream') : e, cfg.name, 'stream'));
+        // I-3: 外发硬禁止拦截是安全边界错误 — 不交给 adapter onError 归一化
+        // （否则 deepseek 等适配器会把它包成 ClassifiedLlmError(INTERNAL)，原始 EGRESS_* code 丢失）
+        const adapted = e instanceof EgressGuardError ? e : (cfg.onError ? cfg.onError(e, 'stream') : e);
+        cb.onError?.(finalizeAdapterFailure(adapted, cfg.name, 'stream'));
         breaker.recordFailure();
       }
     },

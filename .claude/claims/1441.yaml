@@ -8,4 +8,4 @@ writeset:
 done:
   - verify: npx vitest run tests/security/egress-guard.test.ts tests/security/egress-guard.real-path.test.ts
   - verify: npx tsc --noEmit
-note: "I-3 第一刀（旧 Provider 链发送前硬禁止拦截）。Mandate synova-1441-egress-guard-v1（Gitea #1441 评论 13695）／DEV DOC v3（评论 13694）；base 851b8900a；6 条改坏必红逐条验过并已恢复。"
+note: "I-3 第一刀（旧 Provider 链发送前硬禁止拦截）R2/R3 收口：EgressGuardError 在 chat/stream 原样透传（原始 EGRESS_* code，非 ClassifiedLlmError(INTERNAL)，fetch 0 次）；端点相等校验（EGRESS_ENDPOINT）按 CTO 裁定 R3 移除，改真实 302/307 双端点证据。Mandate synova-1441-egress-guard-v1（#1441 评论 13695）／DEV DOC v3（评论 13694）／CTO 裁定（PR #1444 评论 13928）；同一分支追加、不 force。"
