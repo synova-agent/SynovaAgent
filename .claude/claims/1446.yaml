@@ -1,0 +1,12 @@
+writeset:
+  - .claude/claims/1446.yaml
+  - scripts/dsh-sidecar/sandbox/SandboxLifecycle.psm1
+  - scripts/dsh-sidecar/sandbox/Start-DshSandbox.ps1
+  - scripts/dsh-sidecar/sandbox/Get-DshRuntimeBundleSha256.ps1
+  - tests/runtime/dsh/sandbox-lifecycle.test.ts
+  - tests/runtime/dsh/sandbox-handoff.test.ts
+  - memory/notes/implemented/1446-bundle-hash-producer.md
+done:
+  - verify: npx vitest run tests/runtime/dsh
+  - verify: npx tsc --noEmit
+note: "Issue #1446；base 851b8900；只补 host 侧 runtimeBundleSha256 生产者（bundle 存在 ⇒ 64 hex，缺失 ⇒ null）；不改 handoff/probe/Test-DshEvidence 校验与 New-DshSandboxConfig 的 PREPARED null 语义。"
