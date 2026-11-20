@@ -5,6 +5,8 @@
 #   identity, sentinel wait, finished/failed/timeout, CloseMainWindow, same-PID Stop when
 #   needed, DESTROYED decision and orchestration writes. Start-DshSandbox.ps1 is a thin CLI
 #   that injects RealSandboxProcessAdapter.ps1; tests inject a synthetic adapter.
+#   The runtime bundle sha256 is never hashed here: the host CLI injects a host-side producer
+#   script with -RuntimeBundleSha256ProviderPath and this module only records the returned value.
 #
 #   The adapter is dot-sourced inside Invoke-SandboxLifecycle's scope and must provide:
 #     Start-SandboxProcess    -ConfigPath <string>                        -> {Pid, StartTime}
@@ -135,6 +137,7 @@ function Invoke-SandboxLifecycle {
     [Parameter(Mandatory = $true)][string]$IncomingDir,
     [Parameter(Mandatory = $true)][string]$OutgoingDir,
     [Parameter(Mandatory = $true)][string]$AdapterPath,
+    [string]$RuntimeBundleSha256ProviderPath = '',
     [int]$FinishTimeoutSec = 3600,
     [int]$CloseGraceSec = 30,
     [int]$PollMilliseconds = 500
@@ -320,6 +323,26 @@ function Invoke-SandboxLifecycle {
     $fields.state = 'TIMED_OUT'
   } else {
     $fields.state = 'FAILED'
+  }
+
+  # -- runtime bundle sha256 (host producer; this state machine only records it) --
+  $runtimeBundleProblem = $null
+  if ($fields.state -eq 'FINISHED' -and -not [string]::IsNullOrEmpty($RuntimeBundleSha256ProviderPath)) {
+    $provided = $null
+    try {
+      $provided = & $RuntimeBundleSha256ProviderPath -OutgoingDir $OutgoingDir
+    } catch {
+      $runtimeBundleProblem = "bundle hash producer failed: $($_.Exception.Message)"
+    }
+    if ($null -eq $runtimeBundleProblem -and $null -ne $provided -and ([string]$provided) -notmatch '^[0-9a-f]{64}$') {
+      $runtimeBundleProblem = "bundle hash producer returned a non-sha256 value: '$([string]$provided)'"
+    }
+    if ($null -ne $runtimeBundleProblem) {
+      $fields.state = 'FAILED'
+      Write-FailureRecord -RunDir $runDir -Code 'RUNTIME_BUNDLE_HASH_INVALID' -Message $runtimeBundleProblem
+    } elseif ($null -ne $provided) {
+      $fields.runtimeBundleSha256 = [string]$provided
+    }
   }
   $fields.finishedAt = $finishedAt
   $fields.scriptExitCode = if ($null -eq $scriptExitCode) { $null } else { [int]$scriptExitCode }

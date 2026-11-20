@@ -6,7 +6,9 @@
  *
  * 覆盖：happy path（只复制探针入口脚本 + runtime-bundle.zip、原子改名为 incoming、写
  * handoff.json）、缺 build-result、0 tests、failed>0、日志哈希错、bundle 被改、
- * codeArchive 不一致、probe 目录非空、重复交接、staging 多文件、orchestration 未 DESTROYED。
+ * codeArchive 不一致、probe 目录非空、重复交接、staging 多文件、orchestration 未 DESTROYED；
+ * 以及 #1446 的生产链：lifecycle 用 host 侧生产者写入 runtimeBundleSha256 ⇒ handoff 接受，
+ * bundle 缺失 ⇒ 字段保持 null 且 handoff 以 HANDOFF_ORCHESTRATION 拒绝。
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -19,7 +21,40 @@ const WINDOWS = process.platform === 'win32';
 const describeWindows = WINDOWS ? describe : describe.skip;
 const REPO_ROOT = process.cwd();
 const PS = process.env.SYNO_TEST_POWERSHELL ?? 'powershell';
-const HANDOFF = join(REPO_ROOT, 'scripts', 'dsh-sidecar', 'sandbox', 'Complete-DshBuildHandoff.ps1');
+const SANDBOX_DIR = join(REPO_ROOT, 'scripts', 'dsh-sidecar', 'sandbox');
+const HANDOFF = join(SANDBOX_DIR, 'Complete-DshBuildHandoff.ps1');
+const LIFECYCLE_MODULE = join(SANDBOX_DIR, 'SandboxLifecycle.psm1');
+const BUNDLE_PRODUCER = join(SANDBOX_DIR, 'Get-DshRuntimeBundleSha256.ps1');
+
+const SYNTHETIC_ADAPTER = `$script:SynthStart = $null
+$script:SynthExited = $false
+function Start-SandboxProcess {
+  param([Parameter(Mandatory = $true)][string]$ConfigPath)
+  $script:SynthStart = Get-Date
+  return [pscustomobject]@{ Pid = 424242; StartTime = $script:SynthStart }
+}
+function Get-SandboxProcess {
+  param([Parameter(Mandatory = $true)][int]$Pid)
+  if ($script:SynthExited) { return $null }
+  $start = $script:SynthStart
+  if ($null -eq $start) { $start = Get-Date }
+  return [pscustomobject]@{ Pid = $Pid; StartTime = $start }
+}
+function Wait-SandboxProcessExit {
+  param([Parameter(Mandatory = $true)][int]$Pid, [int]$TimeoutMs = 30000)
+  $script:SynthExited = $true
+  return $true
+}
+function Close-SandboxMainWindow {
+  param([Parameter(Mandatory = $true)][int]$Pid)
+  return $true
+}
+function Stop-SandboxProcess {
+  param([Parameter(Mandatory = $true)][int]$Pid)
+  $script:SynthExited = $true
+  return $true
+}
+`;
 
 const tempRoots: string[] = [];
 
@@ -79,14 +114,16 @@ interface HandoffFixture {
   probeDir: string;
   codeSha: string;
   codeArchiveSha256: string;
-  bundleSha256: string;
+  bundleSha256: string | null;
   manifestPath: string;
   orchestrationPath: string;
   buildResultPath: string;
   configPath: string;
+  adapterPath: string;
+  runnerPath: string;
 }
 
-function createFixture(): HandoffFixture {
+function createFixture(options: { prepare?: boolean; withBundle?: boolean } = {}): HandoffFixture {
   const taskRoot = makeTempRoot();
   const buildId = randomUUID();
   const probeId = randomUUID();
@@ -139,9 +176,10 @@ function createFixture(): HandoffFixture {
   writeJson(manifestPath, manifest);
 
   // build artifacts in outgoing
+  const withBundle = options.withBundle ?? true;
   const bundlePath = join(outgoing, 'runtime-bundle.zip');
-  writeFileSync(bundlePath, Buffer.from('runtime-bundle-fixture-bytes'));
-  const bundleSha256 = sha256(bundlePath);
+  if (withBundle) { writeFileSync(bundlePath, Buffer.from('runtime-bundle-fixture-bytes')); }
+  const bundleSha256 = withBundle ? sha256(bundlePath) : null;
   const startedAt = new Date(Date.now() - 60_000).toISOString();
   const finishedAt = new Date(Date.now() - 30_000).toISOString();
   const destroyedAt = new Date(Date.now() - 10_000).toISOString();
@@ -195,7 +233,50 @@ function createFixture(): HandoffFixture {
     handoff: null,
   });
 
-  return { taskRoot, buildId, buildDir, incoming, outgoing, probeId, probeDir, codeSha, codeArchiveSha256, bundleSha256, manifestPath, orchestrationPath, buildResultPath, configPath };
+  // Chain fixtures start from PREPARED so the real lifecycle writes the final orchestration.
+  if (options.prepare === true) {
+    writeJson(orchestrationPath, {
+      schemaVersion: 1,
+      issue: 1411,
+      mode: 'build',
+      baseSha: 'b'.repeat(40),
+      codeSha,
+      codeArchivePath: codeArchiveName,
+      codeArchiveSha256,
+      sandboxId: buildId,
+      nonce,
+      configSha256: sha256(configPath),
+      inputManifestSha256: sha256(manifestPath),
+      runtimeBundleSha256: null,
+      state: 'PREPARED',
+      hostPid: null,
+      hostProcessStartTime: null,
+      startedAt: null,
+      finishedAt: null,
+      destroyedAt: null,
+      scriptExitCode: null,
+      hostExitCode: null,
+      startedSentinel: null,
+      finishedSentinel: null,
+      handoff: null,
+    });
+  }
+
+  const adapterPath = join(taskRoot, 'synthetic-adapter.ps1');
+  writeFileSync(adapterPath, SYNTHETIC_ADAPTER);
+  const runnerPath = join(taskRoot, 'run-lifecycle.ps1');
+  writeFileSync(runnerPath, [
+    "$ErrorActionPreference = 'Stop'",
+    `Import-Module -Name '${LIFECYCLE_MODULE}' -Force`,
+    `$code = Invoke-SandboxLifecycle -Mode Build -ConfigPath '${configPath}' -OrchestrationPath '${orchestrationPath}' ` +
+      `-IncomingDir '${incoming}' -OutgoingDir '${outgoing}' -AdapterPath '${adapterPath}' ` +
+      `-RuntimeBundleSha256ProviderPath '${BUNDLE_PRODUCER}' ` +
+      '-FinishTimeoutSec 5 -CloseGraceSec 1 -PollMilliseconds 100',
+    'exit $code',
+    '',
+  ].join('\n'));
+
+  return { taskRoot, buildId, buildDir, incoming, outgoing, probeId, probeDir, codeSha, codeArchiveSha256, bundleSha256, manifestPath, orchestrationPath, buildResultPath, configPath, adapterPath, runnerPath };
 }
 
 function mutateJson(path: string, mutate: (value: Record<string, unknown>) => void): void {
@@ -206,6 +287,10 @@ function mutateJson(path: string, mutate: (value: Record<string, unknown>) => vo
 
 function runHandoff(f: HandoffFixture): Promise<PsResult> {
   return runPs(HANDOFF, ['-BuildDir', f.buildDir, '-ProbeDir', f.probeDir]);
+}
+
+function runLifecycle(f: HandoffFixture): Promise<PsResult> {
+  return runPs(f.runnerPath, []);
 }
 
 afterAll(() => {
@@ -323,4 +408,50 @@ describeWindows('T2 构建→探针交接（Complete-DshBuildHandoff）', () => 
     expect(result.code).toBe(2);
     expect(result.json.code).toBe('HANDOFF_STAGING_EXTRA');
   }, 120_000);
+});
+
+describeWindows('T2 构建→交接生产链（lifecycle 写值 + handoff 消费，#1446）', () => {
+  it('正例：host 侧生产者写入 runtimeBundleSha256 ⇒ handoff 接受且双侧哈希一致', async () => {
+    const f = createFixture({ prepare: true });
+    const lifecycle = await runLifecycle(f);
+    expect(lifecycle.code).toBe(0);
+    const bundlePath = join(f.outgoing, 'runtime-bundle.zip');
+    const orchestration = JSON.parse(readFileSync(f.orchestrationPath, 'utf8')) as Record<string, unknown>;
+    expect(orchestration.state).toBe('DESTROYED');
+    expect(orchestration.runtimeBundleSha256).toBe(sha256(bundlePath));
+    expect(String(orchestration.runtimeBundleSha256)).toMatch(/^[0-9a-f]{64}$/);
+    const result = await runHandoff(f);
+    expect(result.code).toBe(0);
+    expect(result.json.ok).toBe(true);
+    expect(result.json.runtimeBundleSha256).toBe(orchestration.runtimeBundleSha256);
+    const handoff = JSON.parse(readFileSync(join(f.probeDir, 'handoff.json'), 'utf8')) as Record<string, unknown>;
+    expect(handoff.sourceSha256).toBe(orchestration.runtimeBundleSha256);
+    expect(handoff.destinationSha256).toBe(orchestration.runtimeBundleSha256);
+    expect(sha256(join(f.probeDir, 'incoming', 'runtime-bundle.zip'))).toBe(orchestration.runtimeBundleSha256);
+  }, 240_000);
+
+  it('反例 A：bundle 不存在 ⇒ 字段保持 null，handoff 仍以 HANDOFF_ORCHESTRATION 拒绝', async () => {
+    const f = createFixture({ prepare: true, withBundle: false });
+    const lifecycle = await runLifecycle(f);
+    expect(lifecycle.code).toBe(0);
+    expect(existsSync(join(f.outgoing, 'runtime-bundle.zip'))).toBe(false);
+    const orchestration = JSON.parse(readFileSync(f.orchestrationPath, 'utf8')) as Record<string, unknown>;
+    expect(orchestration.state).toBe('DESTROYED');
+    expect(orchestration.runtimeBundleSha256).toBeNull();
+    const result = await runHandoff(f);
+    expect(result.code).toBe(2);
+    expect(result.json.code).toBe('HANDOFF_ORCHESTRATION');
+    expect(existsSync(join(f.probeDir, 'incoming'))).toBe(false);
+  }, 240_000);
+
+  it('反例 B：收尾后 bundle 被替换 ⇒ handoff 以 HANDOFF_BUNDLE_HASH 拒绝', async () => {
+    const f = createFixture({ prepare: true });
+    const lifecycle = await runLifecycle(f);
+    expect(lifecycle.code).toBe(0);
+    writeFileSync(join(f.outgoing, 'runtime-bundle.zip'), Buffer.from('tampered-after-finish'));
+    const result = await runHandoff(f);
+    expect(result.code).toBe(2);
+    expect(result.json.code).toBe('HANDOFF_BUNDLE_HASH');
+    expect(existsSync(join(f.probeDir, 'incoming'))).toBe(false);
+  }, 240_000);
 });

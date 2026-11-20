@@ -11,6 +11,9 @@
 #   - Start itself never calls a package manager, a JavaScript runtime, the runtime binary,
 #     the probe script, backup or restore. All of that happens inside the sandboxed entry
 #     script after LogonCommand.
+#   - For Build runs Start injects the host-side bundle hash producer
+#     (Get-DshRuntimeBundleSha256.ps1) into the lifecycle; the lifecycle records that value in
+#     orchestration.runtimeBundleSha256 and never hashes the bundle itself (Issue #1446).
 #   - Exit codes are the lifecycle module's: 0 destroyed after success; 1 script failed or
 #     timed out (destroyed when possible); 2 config/hash/identity/destroy/validator failure.
 
@@ -71,8 +74,17 @@ $adapterPath = Join-Path $PSScriptRoot 'RealSandboxProcessAdapter.ps1'
 if (-not (Test-Path -LiteralPath $modulePath)) { Fail 'MODULE_MISSING' "missing $modulePath" 2 }
 if (-not (Test-Path -LiteralPath $adapterPath)) { Fail 'ADAPTER_MISSING' "missing $adapterPath" 2 }
 
+# Build runs only: the host-side producer that hashes outgoing/runtime-bundle.zip after the
+# sandbox finished. Probe runs take the value from handoff.json (never recomputed here).
+$runtimeBundleSha256ProviderPath = ''
+if ($modeLower -eq 'build') {
+  $runtimeBundleSha256ProviderPath = Join-Path $PSScriptRoot 'Get-DshRuntimeBundleSha256.ps1'
+  if (-not (Test-Path -LiteralPath $runtimeBundleSha256ProviderPath)) { Fail 'BUNDLE_HASH_PRODUCER_MISSING' "missing $runtimeBundleSha256ProviderPath" 2 }
+}
+
 Import-Module -Name $modulePath -Force
 $exitCode = Invoke-SandboxLifecycle -Mode $Mode -ConfigPath $configFull -OrchestrationPath $orchestrationPath `
   -IncomingDir $incoming -OutgoingDir $outgoing -AdapterPath $adapterPath `
+  -RuntimeBundleSha256ProviderPath $runtimeBundleSha256ProviderPath `
   -FinishTimeoutSec $FinishTimeoutSec -CloseGraceSec $CloseGraceSec
 exit $exitCode

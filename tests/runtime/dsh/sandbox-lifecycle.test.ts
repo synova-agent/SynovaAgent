@@ -6,7 +6,8 @@
  * 确实调用同一核心 + Real adapter、且自身不实现关闭逻辑。
  *
  * 覆盖：正常完成、脚本失败、超时、进程先退出、陈旧 nonce、PID/StartTime 漂移、拒绝销毁；
- * 另断言不存在按进程名全局终止。
+ * runtime bundle 哈希由 host 侧生产者脚本提供（存在 ⇒ 64 位 hex，缺失 ⇒ 保持 null，
+ * 生产者给非法值 ⇒ FAILED 且不写伪造值）；另断言不存在按进程名全局终止。
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -23,6 +24,7 @@ const SANDBOX_DIR = join(REPO_ROOT, 'scripts', 'dsh-sidecar', 'sandbox');
 const MODULE = join(SANDBOX_DIR, 'SandboxLifecycle.psm1');
 const START = join(SANDBOX_DIR, 'Start-DshSandbox.ps1');
 const REAL_ADAPTER = join(SANDBOX_DIR, 'RealSandboxProcessAdapter.ps1');
+const PRODUCER = join(SANDBOX_DIR, 'Get-DshRuntimeBundleSha256.ps1');
 
 const tempRoots: string[] = [];
 
@@ -116,6 +118,7 @@ interface LifecycleFixture {
   runnerPath: string;
   startedPath: string;
   finishedPath: string;
+  bundlePath: string;
   sandboxId: string;
 }
 
@@ -132,7 +135,12 @@ function writeSentinel(path: string, extra: Record<string, unknown>, binding: { 
   }, null, 2));
 }
 
-function createFixture(options: { sentinels: 'none' | 'started-only' | 'finished' | 'finished-failed' | 'stale-nonce'; scenario: string }): LifecycleFixture {
+function createFixture(options: {
+  sentinels: 'none' | 'started-only' | 'finished' | 'finished-failed' | 'stale-nonce';
+  scenario: string;
+  bundle?: Buffer;
+  providerScript?: string;
+}): LifecycleFixture {
   const taskRoot = makeTempRoot();
   const buildId = randomUUID();
   const buildDir = join(taskRoot, 'build', buildId);
@@ -218,6 +226,13 @@ function createFixture(options: { sentinels: 'none' | 'started-only' | 'finished
 
   const adapterPath = join(taskRoot, 'synthetic-adapter.ps1');
   writeFileSync(adapterPath, SYNTHETIC_ADAPTER);
+  const bundlePath = join(outgoing, 'runtime-bundle.zip');
+  if (options.bundle !== undefined) { writeFileSync(bundlePath, options.bundle); }
+  let providerPath = PRODUCER;
+  if (options.providerScript !== undefined) {
+    providerPath = join(taskRoot, 'synthetic-producer.ps1');
+    writeFileSync(providerPath, options.providerScript);
+  }
   const runnerPath = join(taskRoot, 'run-lifecycle.ps1');
   writeFileSync(runnerPath, [
     "$ErrorActionPreference = 'Stop'",
@@ -225,12 +240,13 @@ function createFixture(options: { sentinels: 'none' | 'started-only' | 'finished
     `Import-Module -Name '${MODULE}' -Force`,
     `$code = Invoke-SandboxLifecycle -Mode Build -ConfigPath '${configPath}' -OrchestrationPath '${orchestrationPath}' ` +
       `-IncomingDir '${incoming}' -OutgoingDir '${outgoing}' -AdapterPath '${adapterPath}' ` +
+      `-RuntimeBundleSha256ProviderPath '${providerPath}' ` +
       '-FinishTimeoutSec 2 -CloseGraceSec 1 -PollMilliseconds 100',
     'exit $code',
     '',
   ].join('\n'));
 
-  return { taskRoot, buildId, buildDir, incoming, outgoing, nonce, configPath, orchestrationPath, adapterPath, runnerPath, startedPath, finishedPath, sandboxId: buildId };
+  return { taskRoot, buildId, buildDir, incoming, outgoing, nonce, configPath, orchestrationPath, adapterPath, runnerPath, startedPath, finishedPath, bundlePath, sandboxId: buildId };
 }
 
 function readOrchestration(path: string): Record<string, unknown> {
@@ -244,8 +260,9 @@ afterAll(() => {
 });
 
 describeWindows('T2 沙箱生命周期核心（合成适配器）', () => {
-  it('正常完成 ⇒ FINISHED→DESTROYED，exit 0，哨兵哈希入账', async () => {
-    const f = createFixture({ sentinels: 'finished', scenario: 'complete' });
+  it('正常完成 ⇒ FINISHED→DESTROYED，exit 0，哨兵与 runtime bundle 哈希入账', async () => {
+    const bundleBytes = Buffer.from('runtime-bundle-fixture-bytes');
+    const f = createFixture({ sentinels: 'finished', scenario: 'complete', bundle: bundleBytes });
     const result = await runPsFile(f.runnerPath, []);
     expect(result.code).toBe(0);
     const state = readOrchestration(f.orchestrationPath);
@@ -254,11 +271,42 @@ describeWindows('T2 沙箱生命周期核心（合成适配器）', () => {
     expect(state.destroyedAt).not.toBeNull();
     expect(state.scriptExitCode).toBe(0);
     expect(state.hostExitCode).toBe(0);
+    expect(state.runtimeBundleSha256).toBe(sha256(f.bundlePath));
+    expect(String(state.runtimeBundleSha256)).toMatch(/^[0-9a-f]{64}$/);
     const started = state.startedSentinel as { path: string; sha256: string };
     const finished = state.finishedSentinel as { path: string; sha256: string };
     expect(started.path).toBe(`build/${f.buildId}/outgoing/RUN_STARTED.json`);
     expect(started.sha256).toBe(sha256(f.startedPath));
     expect(finished.sha256).toBe(sha256(f.finishedPath));
+  }, 120_000);
+
+  it('bundle 不存在 ⇒ FINISHED→DESTROYED，runtimeBundleSha256 保持 null（不写空串/占位）', async () => {
+    const f = createFixture({ sentinels: 'finished', scenario: 'complete' });
+    const result = await runPsFile(f.runnerPath, []);
+    expect(result.code).toBe(0);
+    expect(existsSync(f.bundlePath)).toBe(false);
+    const state = readOrchestration(f.orchestrationPath);
+    expect(state.state).toBe('DESTROYED');
+    expect(state.runtimeBundleSha256).toBeNull();
+    const raw = readFileSync(f.orchestrationPath, 'utf8');
+    expect(raw).toMatch(/"runtimeBundleSha256":\s+null/);
+    expect(raw).not.toMatch(/"runtimeBundleSha256":\s+""/);
+  }, 120_000);
+
+  it('生产者返回非 sha256 值 ⇒ FAILED + RUNTIME_BUNDLE_HASH_INVALID，不写伪造哈希', async () => {
+    const f = createFixture({
+      sentinels: 'finished',
+      scenario: 'complete',
+      bundle: Buffer.from('runtime-bundle-fixture-bytes'),
+      providerScript: "param([Parameter(Mandatory = $true)][string]$OutgoingDir)\nreturn 'placeholder-hash'\n",
+    });
+    const result = await runPsFile(f.runnerPath, []);
+    expect(result.code).toBe(1);
+    const state = readOrchestration(f.orchestrationPath);
+    expect(state.state).toBe('FAILED');
+    expect(state.runtimeBundleSha256).toBeNull();
+    const failure = JSON.parse(readFileSync(join(f.buildDir, 'failure.json'), 'utf8')) as { code: string };
+    expect(failure.code).toBe('RUNTIME_BUNDLE_HASH_INVALID');
   }, 120_000);
 
   it('脚本失败（RUN_FINISHED.scriptExitCode=1）⇒ 状态 FAILED，exit 1，仍销毁', async () => {
@@ -333,5 +381,21 @@ describeWindows('T2 生产接线与全局终止禁令', () => {
     expect(adapterText).toContain('Stop-Process -Id');
     expect(moduleText).toContain('function Invoke-SandboxLifecycle');
     expect(moduleText).toContain('Close-SandboxMainWindow');
+  });
+});
+
+// 只读仓库文本、不 spawn 进程 ⇒ 与平台无关，放在平台闸外，Linux CI 也真实执行
+// （#1427 §2.4 同型：静态接线用例被文件级 Windows 闸误拦）。
+describe('T2 生产接线与静态契约（跨平台）', () => {
+  it('bundle 哈希生产者只在 host 侧：Start 注入、lifecycle 不碰 bundle 路径、沙箱入口脚本不写字段', () => {
+    const startText = readFileSync(START, 'utf8');
+    expect(startText).toContain('Get-DshRuntimeBundleSha256.ps1');
+    expect(startText).toContain('-RuntimeBundleSha256ProviderPath');
+    const moduleText = readFileSync(MODULE, 'utf8');
+    expect(moduleText).toContain('RuntimeBundleSha256ProviderPath');
+    expect(moduleText).not.toMatch(/runtime-bundle\.zip/);
+    const buildText = readFileSync(join(SANDBOX_DIR, 'Invoke-DshSandboxBuild.ps1'), 'utf8');
+    expect(buildText).not.toContain('runtimeBundleSha256');
+    expect(buildText).not.toContain('Get-DshRuntimeBundleSha256');
   });
 });
