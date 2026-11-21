@@ -5,7 +5,7 @@ import type { SelectedCap } from './capability';
 import { getSeedIdentity } from './ga-collab';
 
 export type OnlineStatus = 'connected' | 'disconnected' | 'connecting';
-export type ActiveView = 'chat' | 'dashboard' | 'settings' | 'scan';
+export type ActiveView = 'chat' | 'dashboard' | 'settings' | 'scan' | 'dsh';
 export type ThemeMode = 'dark' | 'light';
 export type UserRole = 'admin' | 'manager' | 'ga' | 'liaison' | 'staff';
 

@@ -8,7 +8,7 @@
  *      点击 → setSelectedCap(toggleCap(...)) 右栏联动；折叠态为 Lucide 图标条，点击同步联动。
  */
 import React, { useEffect, useState } from 'react';
-import { Search, MessageSquare, Folder, Bell, Radar, RefreshCw, ListChecks, Users, ChevronRight, Ticket, Settings, Building2, type LucideIcon } from 'lucide-react';
+import { Search, MessageSquare, Folder, Bell, Radar, RefreshCw, ListChecks, Users, ChevronRight, Ticket, Settings, Building2, Terminal, type LucideIcon } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { getApiBase } from '../lib/api';
 import { CAPABILITY_IDS, toggleCap, canAccessCap, capabilityLabel, badgeColorFor, type CapabilityId, type SelectedCap } from '../stores/capability';
@@ -227,6 +227,10 @@ const LeftPanel: React.FC = () => {
             <button className="cap-item" data-cap="nav-scan" onClick={() => setActiveView('scan')}>
               <span className="cap-ico"><Building2 size={16} strokeWidth={2} /></span>
               <span className="cap-label">企业扫描</span>
+            </button>
+            <button className="cap-item" data-cap="nav-dsh" onClick={() => setActiveView('dsh')}>
+              <span className="cap-ico"><Terminal size={16} strokeWidth={2} /></span>
+              <span className="cap-label">DSH 会话</span>
             </button>
             <button className="cap-item" data-cap="nav-conv" onClick={() => { setActiveSection('conversations'); setActiveView('chat'); }}>
               <span className="cap-ico"><MessageSquare size={16} strokeWidth={2} /></span>

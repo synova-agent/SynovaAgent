@@ -18,14 +18,17 @@ describe('#1413 真实导航与主栏分派 WIRE CHECK', () => {
     expect(scanButton).not.toContain('canAccessCap');
   });
 
-  it('ActiveView 包含 scan，App 仅在 scan 视图挂载唯一 ScanContainer', () => {
+  it('ActiveView 包含 scan，App 双视图分派且 scan 视图挂载唯一 ScanContainer', () => {
     const store = renderer('stores/app-store.ts');
     const app = renderer('App.tsx');
-    expect(store).toContain("export type ActiveView = 'chat' | 'dashboard' | 'settings' | 'scan';");
+    expect(store).toContain("export type ActiveView = 'chat' | 'dashboard' | 'settings' | 'scan' | 'dsh';");
     expect(app).toContain("import ScanContainer from './components/ScanContainer';");
     expect(app).toContain('const activeView = useAppStore((s) => s.activeView);');
+    expect(app).toContain("activeView === 'scan'");
+    // #1429 I-2：App 新增 dsh 视图分派后，scan 分支必须保持唯一挂载（双视图互不吞并）
     expect(app.match(/<ScanContainer \/>/g)).toHaveLength(1);
-    expect(app).toContain("<main className=\"panel-center\">{activeView === 'scan' ? <ScanContainer /> : <CenterPanel />}</main>");
+    expect(app.match(/<DshRunContainer \/>/g)).toHaveLength(1);
+    expect(app).toContain("activeView === 'dsh'");
   });
 });
 
