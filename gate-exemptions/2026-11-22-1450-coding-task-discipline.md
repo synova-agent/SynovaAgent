@@ -1,4 +1,4 @@
-# review: #TBD
+# review: #1451
 # 任务: "#1450"
 # #1450 coding 任务纪律接线：Gitea coding 任务表单、coding 预设开工硬停、PR 回执模板三处同源。
 # 仅覆盖：.dsh/skills/** 镜像（源在 .synova/skills/**，不属受保护路径）、DOCS-REGISTRY 登记行、本豁免自覆盖。
