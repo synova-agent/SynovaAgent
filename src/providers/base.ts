@@ -16,6 +16,7 @@ import type {
 } from './types';
 import { CircuitBreaker } from '../llm/circuit-breaker';
 import { createLogger } from '@synova/logger';
+import { EgressGuardError, guardEgress } from './egress-guard';
 import { PromptInjectionDetector, PolicyDeniedError } from '../security/prompt-injection-detector';
 import { AuditService } from '../services/audit-service';
 import {
@@ -36,6 +37,8 @@ const log = createLogger('providers/base');
 function finalizeAdapterFailure(err: unknown, provider: string, context: string): Error {
   if (err instanceof ClassifiedLlmError) return err;
   if (err instanceof PolicyDeniedError) return err;
+  // I-3: 外发硬禁止拦截是安全边界错误 — 原样透传（code 可见、不可被重试语义吞掉）
+  if (err instanceof EgressGuardError) return err;
   const failure = normalizeLlmFailure(err);
   const errType = err instanceof Error ? err.name : '';
   const detail = [failure.code, errType, failure.message].filter(Boolean).join(' ');
@@ -117,6 +120,14 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
   const modelsPath = cfg.modelsPath ?? '/models';
   const healthTimeout = cfg.healthTimeoutMs ?? 10_000;
 
+  /** I-3: 发送前硬禁止拦截 — 命中即抛错，fetch 零请求（不修改 body、不半脱敏放行） */
+  function assertEgressAllowed(body: Record<string, unknown>): void {
+    const verdict = guardEgress({ body });
+    if (!verdict.ok) {
+      throw new EgressGuardError(verdict.code, verdict.field);
+    }
+  }
+
   // 熔断器实例 — D5: 统一LLM调用保护 (threshold=5, cooldown=30s)
   const breaker = new CircuitBreaker({ threshold: 5, cooldownMs: 30_000 });
 
@@ -151,10 +162,13 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
     // 空数组/未传 → 不写字段（与旧行为一致，provider 契约语义不变）。
     if (opts?.tools && opts.tools.length > 0) body.tools = opts.tools;
 
+    assertEgressAllowed(body);
+
     return fetch(`${baseUrl}${chatPath}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...cfg.getHeaders() },
       body: JSON.stringify(body),
+      redirect: 'error',
       signal: opts?.signal ?? AbortSignal.timeout(120_000),
     });
   }
@@ -162,8 +176,8 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
   /** 共享非 OK 错误处理 — 消除 12 行重复 (块 D) */
   async function checkResponse(res: Response, context: string): Promise<void> {
     if (res.ok) return;
-    const t = await res.text().catch(() => '');
-    const err = new Error(`${cfg.name} ${context} (${res.status}): ${t.slice(0, 300)}`);
+    // I-3: 非 2xx 不回显响应体（上游可能把敏感串回显在错误体里）
+    const err = new Error(`${cfg.name} ${context} (${res.status})`);
     throw cfg.onError ? cfg.onError(err, context) : err;
   }
 
@@ -202,6 +216,7 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
     try {
       const res = await fetch(`${baseUrl}${modelsPath}`, {
         headers: cfg.getHeaders(),
+        redirect: 'error',
         signal: AbortSignal.timeout(healthTimeout),
       });
       const lat = Date.now() - start;
@@ -288,7 +303,10 @@ export function createOpenAICompatibleProvider(cfg: ProviderAdapterConfig): LLMP
       } catch (err: unknown) {
         log.warn({ err: err instanceof Error ? err.message : String(err) }, "提示注入检测");
         const e = err instanceof Error ? err : new Error(String(err));
-        cb.onError?.(finalizeAdapterFailure(cfg.onError ? cfg.onError(e, 'stream') : e, cfg.name, 'stream'));
+        // I-3: 外发硬禁止拦截是安全边界错误 — 不交给 adapter onError 归一化
+        // （否则 deepseek 等适配器会把它包成 ClassifiedLlmError(INTERNAL)，原始 EGRESS_* code 丢失）
+        const adapted = e instanceof EgressGuardError ? e : (cfg.onError ? cfg.onError(e, 'stream') : e);
+        cb.onError?.(finalizeAdapterFailure(adapted, cfg.name, 'stream'));
         breaker.recordFailure();
       }
     },
