@@ -19,7 +19,7 @@ writeset:
   - tests/store/schema-migration.test.ts            # forced-sync: SCHEMA_VERSION 6→7
   - tests/store/metric-readings-schema.test.ts      # forced-sync: SCHEMA_VERSION 6→7
   - tests/store/migrations/003-orgs.test.ts         # forced-sync: SCHEMA_VERSION 6→7
-  - tests/enterprise-scan/migration.test.ts         # forced-sync: v6 字面量 → SCHEMA_VERSION
+  - tests/enterprise-scan/migration.test.ts         # forced-sync: v6 字面量 → v7 字面量（SCHEMA_VERSION 仅用于 :94 tooNew 用例）
 done:
   - verify: npx vitest run tests/sentinel/metric-observations-writer.test.ts tests/sentinel/metric-observations-reader.test.ts tests/store/metric-observations-migration.test.ts
   - verify: npx tsc --noEmit
