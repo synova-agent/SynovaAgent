@@ -93,6 +93,36 @@ interface GraphEdgeRow {
 }
 
 /**
+ * 图节点**严格**查询的 typed error（铁律 32：`.code` / `.phase` / `.retryable` 三件齐）。
+ *
+ * 两类码（#1431 阶段 2 · T2）：
+ *   · `VALIDATION`         —— 入参非法（phase=validate, retryable=false），由服务层在任何查询**之前**抛出；
+ *   · `GRAPH_LOOKUP_FAILED` —— 查询/读回失败（phase=graph-lookup, retryable=true），由 `getNodeStrict` 抛出。
+ *
+ * 与 `getNode` 的分工：`getNode` 为兼容既有调用方**保持吞错返 null**；
+ * 需要区分「查不到」与「查不了」的调用方用 `getNodeStrict`（本错误即其失败出口）。
+ */
+export type GraphLookupErrorCode = "VALIDATION" | "GRAPH_LOOKUP_FAILED";
+
+export class GraphLookupError extends Error {
+  readonly code: GraphLookupErrorCode;
+  readonly phase: "validate" | "graph-lookup";
+  readonly retryable: boolean;
+
+  constructor(
+    code: GraphLookupErrorCode,
+    message: string,
+    options: { phase: "validate" | "graph-lookup"; retryable: boolean },
+  ) {
+    super(message);
+    this.name = "GraphLookupError";
+    this.code = code;
+    this.phase = options.phase;
+    this.retryable = options.retryable;
+  }
+}
+
+/**
  * SqliteGraphStore — 将 SQLite 数据库包装为 GraphStore 接口。
  *
  * 创建节点 → INSERT INTO graph_nodes
@@ -352,6 +382,44 @@ export class SqliteGraphStore {
       const msg = err instanceof Error ? err.message : String(err);
       log.warn({ err: msg, id }, "获取图节点失败");
       return null;
+    }
+  }
+
+  /**
+   * **严格**获取单个节点（仅未删除）：与 `getNode` 同一 SQL / 列 / 软删除判据，但**不吞错**。
+   *
+   * @input  id —— `graph_nodes.id`（`node-<uuid>`）；graph —— **必填**（无默认值：调用方必须显式给定企业分区）
+   * @output 命中 ⇒ `{id,type,props}`；未找到 ⇒ `null`
+   * @error  查询/读回异常（SQL 失败、props 非法 JSON 等）⇒ 抛 `GraphLookupError(GRAPH_LOOKUP_FAILED)`，
+   *         使「查不到」与「查不了」可区分（#1431 阶段 2 · T2，DEV DOC v2 §3-4）
+   * @not-here 入参校验（空串/非字符串）在服务层 `getObjectById` 内、**查询之前**完成；本方法只做介质层读取
+   */
+  getNodeStrict(
+    id: string,
+    graph: string,
+  ): { id: string; type: string; props: Record<string, unknown> } | null {
+    try {
+      const row = this.db
+        .prepare("SELECT id, type, props FROM graph_nodes WHERE id = ? AND graph = ? AND valid_to IS NULL")
+        .get(id, graph) as GraphNodeRow | undefined;
+
+      if (!row) return null;
+      return {
+        id: row.id,
+        type: row.type,
+        props: JSON.parse(row.props || "{}") as Record<string, unknown>,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.warn(
+        { err: msg, id, graph, code: "GRAPH_LOOKUP_FAILED", phase: "graph-lookup", retryable: true },
+        "严格查询图节点失败 — 抛出（不降级为 null）",
+      );
+      throw new GraphLookupError(
+        "GRAPH_LOOKUP_FAILED",
+        `图节点查询失败（id=${id}, graph=${graph}）: ${msg}`,
+        { phase: "graph-lookup", retryable: true },
+      );
     }
   }
 
