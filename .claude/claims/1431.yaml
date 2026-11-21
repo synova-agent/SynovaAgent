@@ -1,26 +1,18 @@
-# .claude/claims/1431.yaml — #1431（阶段 2 · T1）②①④a 最小状态面：metric_observations 严格表 + writer/reader
+# .claude/claims/1431.yaml — #1431（阶段 2 · T2）②↔④a 对象对查：getObjectById + getNodeStrict
 # 纪律：只列本 PR 真正改动的文件；变更集 ⊆ writeset（check-brief-vs-code G12）。
-# DEV DOC: Issue #1431 评论 13555（v2）｜放行: 评论 13556（只放行 T1）｜base: d0312a0057a91f0924f478c691a48eda4557b723
-#
-# 🔴 写集口径说明（需 CTO 追认，见 PR 回执「与 DEV DOC 的偏差」）：
-#   派单写集 = 9 件。但新增迁移把 SCHEMA_VERSION 6→7，**4 个既有测试硬编码版本 6**（非禁改文件），
-#   不改则全量测试/CI 必红（先例：cb7e488b9 加 v6 时同步改的正是其中 3 件）。
-#   故本 PR 实际 13 件 = 派单 9 件 + 被迫版本同步 4 件（下面以 `# forced-sync` 标注）。
+# DEV DOC: Issue #1431 评论 14176（v2）｜CTO 裁定: 评论 14175｜定向复审: 评论 14195｜Mandate: 评论 14196
+# base: c794737f8d9bd0c51639f9174a32b74c8cd47ade ｜ branch: feat/1431-t2-object-lookup
+# 第 0 步核定（强制）：`git grep -n "GRAPH_\|LOOKUP_" src` ⇒ 21 行命中 / LOOKUP_ 0 行；
+#   既有 GRAPH_* 无「查询失败」等价 typed 码（GRAPH_QUERY_ERROR 只是 routes/ontology.ts 的 HTTP 响应码）
+#   ⇒ 按 v2 §7-0 fallback 新增 GRAPH_LOOKUP_FAILED（phase=graph-lookup, retryable=true）。
 writeset:
   - .claude/claims/1431.yaml
-  - memory/notes/implemented/1431-stage2-state.md
-  - src/store/migrations/007-metric-observations.ts
-  - src/store/schema-migration.ts
-  - src/sentinel/metric-observations-writer.ts
-  - src/sentinel/metric-observations-reader.ts
-  - tests/sentinel/metric-observations-writer.test.ts
-  - tests/sentinel/metric-observations-reader.test.ts
-  - tests/store/metric-observations-migration.test.ts
-  - tests/store/schema-migration.test.ts            # forced-sync: SCHEMA_VERSION 6→7
-  - tests/store/metric-readings-schema.test.ts      # forced-sync: SCHEMA_VERSION 6→7
-  - tests/store/migrations/003-orgs.test.ts         # forced-sync: SCHEMA_VERSION 6→7
-  - tests/enterprise-scan/migration.test.ts         # forced-sync: v6 字面量 → v7 字面量（SCHEMA_VERSION 仅用于 :94 tooNew 用例）
+  - memory/notes/implemented/1431-t2-object-lookup.md
+  - src/adapters/sqlite-graph-store.ts
+  - src/agent/graph-store-service.ts
+  - tests/agent/graph-store-service.objects.test.ts
 done:
-  - verify: npx vitest run tests/sentinel/metric-observations-writer.test.ts tests/sentinel/metric-observations-reader.test.ts tests/store/metric-observations-migration.test.ts
+  - verify: npx vitest run tests/agent/graph-store-service.objects.test.ts
+  - verify: npx vitest run tests/agent tests/store
   - verify: npx tsc --noEmit
-note: "#1431 T1：新表 metric_observations（迁移 007，DDL 逐字照 v2 §3；唯一键 (org_id,object_id,metric_id,period)，run_id 不入唯一键；object_id<>'*'、period length>0、source_type 四值 CHECK；value 可空=NULL）。新链严格：缺键/objectId='*'/period='' /非法 sourceType/NaN ⇒ MetricObservationError(VALIDATION) 且零写入；存储失败抛 WRITE_FAILED（不降级）。幂等同四键 ⇒ {written:false,duplicate:true} 不覆盖。reader 只做四键精确读回（同一 id/跨 org 空/T4 两用户同 id）。旧表/旧 writer/旧 reader/routes/禁改项零改动。实际迁移号 007（max 006+1），SCHEMA_VERSION 6→7，4 个既有版本常量测试被迫同步（需 CTO 追认）。"
+note: "#1431 T2：新增 getNodeStrict(id, graph)（与 getNode 同一 SQL；未找到→null；DB/解析异常→抛 GraphLookupError(GRAPH_LOOKUP_FAILED, phase=graph-lookup, retryable=true)，不吞成 null）＋ getObjectById(orgId, nodeId)（graph 只由 orgId 派生、签名无 graph 入参；入参非空字符串校验先于构造 store ⇒ VALIDATION 且零查询）。getNode 零改动、既有测试零改动；业务键↔节点 id 解析另票未实现。验证：新测试 8/8 绿；tests/agent+tests/store 去掉 3 个基线已红文件后 76 文件/693 用例绿（该 3 文件在基线 c794737f 同跑同样 14 红，属沙箱 EPERM/spawn 与未 await 断言）；tsc --noEmit exit 0；4 条改坏必红逐条留原始失败行。"
