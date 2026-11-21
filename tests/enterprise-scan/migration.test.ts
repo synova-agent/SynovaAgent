@@ -33,10 +33,10 @@ function v5Db(): Database.Database {
 }
 
 describe('#1398 v6 真实迁移、约束与备份恢复', () => {
-  it('空库到6、真实v5到6、重复迁移零变化且旧表DDL/旧行不变', () => {
+  it('空库到7、真实v5到7、重复迁移零变化且旧表DDL/旧行不变', () => {
     const empty = new BetterSqlite3(':memory:');
     reconcileSchema(empty);
-    expect(empty.prepare('SELECT MAX(version) AS v FROM schema_version').get()).toEqual({ v: 6 });
+    expect(empty.prepare('SELECT MAX(version) AS v FROM schema_version').get()).toEqual({ v: 7 });
     expect(empty.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name LIKE 'scan_%'").get()).toEqual({ n: 11 });
     empty.close();
 
@@ -104,7 +104,7 @@ describe('#1398 v6 真实迁移、约束与备份恢复', () => {
     live.prepare("INSERT INTO graph_nodes(id, graph, type, name, props) VALUES ('old-node', 'org-a', 'resource/team', '旧团队', '{}')").run();
     await live.backup(backupPath);
     reconcileSchema(live);
-    expect(live.prepare('SELECT MAX(version) AS v FROM schema_version').get()).toEqual({ v: 6 });
+    expect(live.prepare('SELECT MAX(version) AS v FROM schema_version').get()).toEqual({ v: 7 });
     live.close();
     const backup = new BetterSqlite3(backupPath);
     await backup.backup(livePath);
