@@ -1,0 +1,96 @@
+# Synova coding 任务卡（Gitea Issue Forms）
+# 与 docs/synova/presets/synova-coding/ 的「开工硬停」九项同源；改任一侧必须同改另一侧。
+# 设计依据：Issue #1450（把 coding 任务纪律接到任务创建入口，不新增 CI 门禁）。
+name: "Synova coding 任务卡"
+about: "coding session 单任务施工卡：九项必填；缺任一项 coding 预设会硬停，不写码。"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本表单 = `synova-coding` 预设「开工硬停」的必核项，与 `.synova/skills/dev-doc-spec/template/编码指令模板.md` 同字段。
+        **缺任一项，coding 不得写码**，只会停在 Issue 评论点名缺失项要求补卡。
+
+        - 证据写 `path:line@sha` 或「命令原文 + 原始输出」；禁“我核过”“应该没问题”。
+        - 期望值必须独立于被测对象；不得取自被测代码的输出快照。
+        - 一个 Issue 只放一个任务；写不下说明任务没拆好。
+
+  - type: textarea
+    id: module_anchor
+    attributes:
+      label: 模块锚
+      description: 服务的真实客户／用户动作；本卡完成后用户能做什么；与首个客户闭环/部署的关系；必须遵守的长期产品边界；本卡明确不做；尚未确认的产品问题。
+      placeholder: "客户／用户动作：\n完成后用户能做什么：\n与闭环/部署的关系：\n长期边界：\n本卡不做：\n尚未确认："
+    validations:
+      required: true
+
+  - type: textarea
+    id: task_goal
+    attributes:
+      label: 本任务目标
+      description: 一句话可观察结果（Done）。一个 Issue 只含一个任务。
+      placeholder: "完成后可观察到的结果："
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope_not_do
+    attributes:
+      label: 范围 / 不做
+      description: 范围逐文件/逐模块写 `<path> — 改什么`；不做逐条写并带路径。最小改动是什么。
+      placeholder: "范围：\n- <path> — <改什么>\n不做：\n- <path> — <为什么不做>"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_evidence
+    attributes:
+      label: 现状证据（path:line@sha）
+      description: 每条前提给 `path:line@sha` 或「命令原文 + 原始输出」。禁“我认为／应该没问题”；前提不成立 ⇒ 停，退回 CTO。
+      placeholder: "例：src/routes/x.ts:42@4a78be9cf —— 现状是……（命令：……；原始输出：……）"
+    validations:
+      required: true
+
+  - type: textarea
+    id: real_entry_acceptance
+    attributes:
+      label: 真实入口与验收
+      description: 正常路径与失败/边界路径各写「从哪个真实入口跑 → 命令 → 期望结果」；写清回退与恢复。
+      placeholder: "正常：入口 ……；命令 ……；期望 ……\n失败/边界：入口 ……；命令 ……；期望 ……\n回退与恢复：……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_value_source
+    attributes:
+      label: 期望值来源（独立于被测对象）
+      description: 期望值取自产品契约／客户源表／独立基线／另一实现；不得取自被测代码的当前输出或快照。
+      placeholder: "期望值来源：<契约条款／客户源表／独立基线／另一实现>；为什么它独立于被测对象：……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: anti_fake_green
+    attributes:
+      label: 防假绿三问（零对象／跳过／同源数据）
+      description: 分别写怎么防止「零个被测对象也算绿」「测试被跳过也算绿」「期望值与被测对象同源」。
+      placeholder: "零对象：……\n跳过：……\n同源数据：……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_rollback
+    attributes:
+      label: 失败与回退
+      description: 失败的可观察表现（谁看到什么）；回退方式与恢复步骤。
+      placeholder: "失败表现：……\n回退方式：……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: stop_points
+    attributes:
+      label: 停点（命中即退回 CTO）
+      description: 哪些情况出现必须停、带证据退回，不自行决定、不静默改方向。
+      placeholder: "- <停点 1>\n- <停点 2>"
+    validations:
+      required: true
