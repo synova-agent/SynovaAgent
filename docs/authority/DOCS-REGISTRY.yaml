@@ -2076,3 +2076,22 @@ documents:
     status: active
     owner: CTO
     note: "#1394 外部审计默认关闭的限定豁免；仅覆盖 hook、配对测试、安装说明、必要登记与豁免自覆盖；同批 #1400 文档修正不新增门禁。"
+  # ---- #1450 coding 任务纪律三处接线（Gitea 任务表单／coding 开工硬停／PR 回执模板）----
+  - id: DOC-1450-01
+    type: governance
+    path: gate-exemptions/2026-11-22-1450-coding-task-discipline.md
+    status: active
+    owner: CTO
+    note: "#1450 门禁豁免：.dsh/skills 镜像同步、DOCS-REGISTRY 登记行与本豁免自覆盖；不新增 CI 门禁。"
+  - id: DOC-1450-02
+    type: governance
+    path: .gitea/ISSUE_TEMPLATE/synova-coding.yaml
+    status: active
+    owner: CTO
+    note: "#1450 Gitea coding 任务表单（九项必填）；与 coding 预设开工硬停、PR 回执模板同源。"
+  - id: DOC-1450-03
+    type: governance
+    path: .gitea/PULL_REQUEST_TEMPLATE.md
+    status: active
+    owner: CTO
+    note: "#1450 Gitea PR 回执模板：六字段＋独立期望值来源／防假绿／改坏必红／path:line@sha。"

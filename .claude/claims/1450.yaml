@@ -1,0 +1,21 @@
+writeset:
+  - .claude/claims/1450.yaml
+  - .dsh/skills/dev-doc-spec/SKILL.md
+  - .dsh/skills/dev-doc-spec/template/编码指令模板.md
+  - .dsh/skills/squad-discipline/SKILL.md
+  - .gitea/ISSUE_TEMPLATE/synova-coding.yaml
+  - .gitea/PULL_REQUEST_TEMPLATE.md
+  - .synova/skills/dev-doc-spec/SKILL.md
+  - .synova/skills/dev-doc-spec/template/编码指令模板.md
+  - .synova/skills/squad-discipline/SKILL.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/synova/presets/synova-coding/README.md
+  - docs/synova/presets/synova-coding/cordis.patch.yml
+  - docs/synova/presets/synova-coding/preset.yml
+  - gate-exemptions/2026-11-22-1450-coding-task-discipline.md
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1450 --root .
+  - verify: bash scripts/control-tower/check-preset-bundles.sh --repo
+  - verify: bash scripts/workflow/sync-dsh-skills.sh --check
+  - verify: bash scripts/doc-system/doc-registry-gate.sh
+  - verify: bash scripts/pre-commit-check.sh
