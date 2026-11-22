@@ -59,6 +59,7 @@ S2 把「哨兵轮次 → ④a」的真实生产者接上了：`runSentinelForTe
 | `vitest run tests/l3/diagnosis-s2b-period.test.ts` | （新文件不存在） | exit 0｜`Tests 5 passed (5)` |
 | `vitest run tests/l3 tests/sentinel` | exit 1｜`Test Files 4 failed \| 267 passed \| 1 skipped (272)`｜`Tests 9 failed \| 1337 passed \| 1 skipped (1347)` | exit 1｜`Test Files 4 failed \| 268 passed \| 1 skipped (273)`｜`Tests 9 failed \| 1342 passed \| 1 skipped (1352)`；**同 4 文件、同 9 条**既有失败，新增 1 文件/5 用例全绿 |
 | `tsc --noEmit` | exit 0 | exit 0（零输出） |
+| `vitest run tests/contract/time-injection.test.ts`（CI 契约面） | exit 0｜`Tests 10 passed (10)` | **首轮 CI 红**：新增注释里的 `new Date()` 字面量被时钟棘轮计入（详见下「CI 首轮红与修复」）⇒ 改注释措辞后 exit 0｜`Tests 10 passed (10)` |
 
 既有 9 条失败（`caf61fcde` 上就红，同因，非本卡引入）：`tests/sentinel/d752-type-net-gate.integration.test.ts` 4｜
 `tests/sentinel/field-name-alignment.test.ts` 1｜`tests/sentinel/metric-readings-reader.integration.test.ts` 3｜
@@ -76,6 +77,16 @@ S2 把「哨兵轮次 → ④a」的真实生产者接上了：`runSentinelForTe
 
 > 注：系统当前月为 2026-11，卡面字面正例 `period='2026-11'` 与 `new Date()` 派生值同月 ⇒ 单靠它无法区分时钟派生。
 > 故加「正例·非当期」（固定 `2034-06`）作为判别用例——这是改坏①必红的实际触发点。
+
+## CI 首轮红与修复（真实门禁抓到的问题，如实记录）
+
+- 现象：PR #1454 首轮 `core-gates / core (pull_request_target)` 在「实际核心测试」步红（run 4605，1m33s）：
+  `tests/contract/time-injection.test.ts > R1 … AssertionError: expected '新文件直取：src/l3/synova-diagnosis-engine.…' to be ''`。
+- 原因：该棘轮按**字面子串**统计 `src/**` 的 `new Date()`／`Date.now()`（**含注释/字符串**，见测试文件 `@known-limitations`），
+  而 `src/l3/synova-diagnosis-engine.ts` 原本零直取、不在冻结清单 ⇒ 本卡新增契约注释里写了 `new Date()` 字面量，
+  被记为「新文件直取」（`…-impl.ts` 的同类注释亦会 +1）。**代码行为无问题，是注释文本触发计数**。
+- 修复：两处注释改为「直取系统时钟派生」，`src/**` 不再出现该字面量；代码零改动。
+- 复验：`vitest run tests/contract/time-injection.test.ts` → `Tests 10 passed (10)`；本卡测试 5/5；`tsc` exit 0；CI 二轮以 Gitea 为准。
 
 ## 与卡面／Mandate 的偏差（如实记录，需 CTO 知悉）
 

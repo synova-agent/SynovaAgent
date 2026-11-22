@@ -51,7 +51,7 @@ export interface DiagnosisScope {
   compareWith?: 'last_quarter' | 'last_month' | 'baseline';
   /**
    * #1431 阶段 2 · S2b：④a 观测周期（`YYYY-MM`），**由调用方显式携带**。
-   * 引擎/哨兵**不得**用 `new Date()` 派生；缺省 ⇒ 本轮不写 `metric_observations`
+   * 引擎/哨兵**不得**直取系统时钟派生；缺省 ⇒ 本轮不写 `metric_observations`
    * （降级码 `S2_DEGRADED_NO_PERIOD`）；非法形态 ⇒ 不写（`S2_DEGRADED_BAD_PERIOD`）。
    */
   period?: string;

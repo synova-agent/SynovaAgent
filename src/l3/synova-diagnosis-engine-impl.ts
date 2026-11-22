@@ -277,7 +277,7 @@ export class SynovaDiagnosisEngineImpl implements SynovaDiagnosisEngine {
             //   #1431 S2b 合并口径：请求显式携带（scope.period）优先 → 请求未带则回落 ② 资料
             //   （资料里没有期间 ⇒ 不传 period，既有 `S2_DEGRADED_NO_PERIOD` 语义按原样暴露）。
             // #1431 阶段 2 · S2b：period/objectKey 由请求显式携带（经 DiagnosisScope 透传到哨兵轮次），
-            // 引擎内**不得**用 `new Date()` 派生 period；缺失/非法 ⇒ ③ 哨兵层按 S2 降级码不写 ④a。
+            // 引擎内**不得**直取系统时钟派生 period；缺失/非法 ⇒ ③ 哨兵层按 S2 降级码不写 ④a。
             let period = scope?.period;
             if (period === undefined) {
               try {
