@@ -1,6 +1,6 @@
 # R3 chain — DSH 最小真实复用证明链（Gitea #1455）· 实机证据
 
-> **结论：R3 达成（Done 1–7 PASS、9/10 PASS、反例 PASS）。Done 8：**Sidecar stop（b）PASS**；**8(a) UNVERIFIED**（产品缺陷 #1456）；**"会话关闭（session/close）"部分 UNVERIFIED**（证据层无该调用的原始记录，本目录不主张会话已关闭）。**
+> **结论：R3 达成（Done 1–7 PASS、9/10 PASS、反例 PASS）。Done 8：**session close（真实产品路由）PASS**、**Sidecar stop（b）PASS**、**8(a) UNVERIFIED**（产品缺陷 #1456）。T6 收尾验证**未发出任何模型请求**，模型轮次仍为 **1/1**（主链那一次）。**
 > 链在 **rc.5 实物**上真实跑通：桌面端登录 → 输入合成 prompt → 发起 → **DSH 调 `synova_context_get` 拿到真实 ② 数据** → 模型复述条目数 → 桌面收到 `run.completed`。
 > 依据：DEV DOC **v3**（评论 14384）＋ **v3.1 勘误**（评论 14395）＋ 关卡 A（评论 14394）＋ Mandate（14396）＋ **CTO 补充裁定 S1（评论 14400：T3 走"复用隔离 server"，Done 8(a) 记 UNVERIFIED）**。
 
@@ -55,7 +55,7 @@
 | 5 | DSH 侧工具调用与返回 | **PASS** | `07-dsh-session-log.jsonl` 含 `tool/call`(name=`synova_context_get`) + `tool/result`(`synthetic:false`,`count=2`)；`11-mcp-tools-list.json` 证明 Synova 侧只广告该只读工具 |
 | 6 | DSH 产事件 | **PASS** | `05-sse-events.txt` 的 `reasoning.delta`/`tool.*`/`text.delta` 与 `07` 的 DSH 记录时间与内容一一对应（非 Synova 自造） |
 | 7 | 桌面收到 run.completed | **PASS** | `08-desktop.png` + `T3-cdp-result.json`（DOM `data-run-status=done`、运行编号=runId、事件 2 条）+ `09-desktop-console.txt` |
-| 8 | close/stop 后进程退出 | **Sidecar stop（b）PASS / 8(a) UNVERIFIED / 会话关闭 UNVERIFIED** | (b) `02-acp-initialize.json`：`stop.ps1` → supervisor 22680 + ACP 11060 双 PID 消失 ⇒ **Sidecar stop PASS**；(a) Electron 自起后端 → `before-quit` → `backendHandle.stop()` 不可达（§6，产品缺陷 #1456）；**ACP `session/close`（`POST /api/dsh/sessions/:id/close`）在证据层没有执行记录** ⇒ "会话关闭"部分 **UNVERIFIED**，本目录**不主张**会话已关闭（见 §6.1） |
+| 8 | close/stop 后进程退出 | **session close（产品路由）PASS / Sidecar stop（b）PASS / 8(a) UNVERIFIED** | ① **session close**：`13-session-close.json` —— `POST /api/dsh/sessions/0e8772b5-…/close` → **HTTP 200 `{"ok":true,"closed":true}`**（T6 独立失败路径 run，**不耗模型轮次**，§6.1）；② **Sidecar stop**：`02-acp-initialize.json` —— `stop.ps1` → supervisor 22680 + ACP 11060 双 PID 消失；③ **8(a)**：Electron 自起后端 → `before-quit` → `backendHandle.stop()` 不可达（§6，产品缺陷 #1456）。主链那次 run 自身的 close 未留证据，故 Done 8 的会话关闭判定**以 T6 的同一条产品路由证据**为准 |
 | 9 | 同 CodeSha / runId / 时间窗 | **PASS** | 全产物 `codeSha=caf61fcd`；runId/sessionId 贯穿 03–10；时间窗 02:33–02:40 (+08) 内 |
 | 10 | 无 Secrets / 数据边界明确 | **PASS** | `T5-secrets-scan.txt`（0 命中）、`CREDENTIAL-CLEANUP.txt`、§7 边界声明 |
 
@@ -99,13 +99,25 @@
 
 **T4 本次实际动作**：Electron 经 CDP browser 端点 `Browser.close` 退出（`10-process-exit.txt`）；在 reused 模式下产品 `before-quit` 本就无 `backendHandle.stop` 可调，故不构成进程回收证据。隔离 server 随后按**测试卫生**停止（`T4b-server-test-hygiene.txt`，**不计入 Done 8**，非外部 taskkill 冒充）。
 
-### 6.1 会话关闭（Done 8 的另一半）：证据层无原始记录 ⇒ UNVERIFIED
+### 6.1 会话关闭（Done 8 的另一半）：T6 补齐后 **PASS**（真实产品路由，0 模型轮次）
 
-本目录**没有** ACP `session/close` 帧记录，也**没有** `POST /api/dsh/sessions/<id>/close` 的请求/响应落盘。
-与"结束"相关的**证据**只有两件：T2 的 supervisor `stop.ps1`（**Sidecar stop**，Done 8(b)）与收尾的**测试卫生**停 server（`T4b-*`，不计入 Done 8）。
-⇒ 按"无证据不计通过"口径：**Done 8 的"会话关闭"部分 = UNVERIFIED**；本 README 与全部证据**不主张**该 ACP 会话已关闭。
-事实补充（不改判定）：coding 会话内该请求曾发出，工具输出里拿到过 `{"ok":true,…, "closed":true}`，但该响应**未落盘为证据**，因此不能作为通过依据。
-（补证成本很低：`session/close` 是产品 API，可在**不消耗模型轮次**的前提下单独补一条原始响应记录——留给 CTO 决定是否要补。）
+主链那次 run（`run_da2adbf821994bad8de96d30d0a174be`）的 close 调用**没有落盘为证据**，因此按"无证据不计通过"当时记 UNVERIFIED。
+**T6 收尾验证**用同一条产品路由补齐（`13-session-close.json`）：
+
+| 项 | 值 |
+|---|---|
+| 前提 | 两份凭据文件**均已删除** ⇒ DSH rc.5 **请求时**解析凭据 ⇒ prompt 在**发出模型请求前**失败 |
+| 隔离 server | T1 同 env（`SYNOVA_DATA_DIR`/`SYNOVA_DSH_*`/`JWT_SECRET`/`PORT=18790`），pids `10180→18876`；起 `02:54:18`，停 `02:55:57`（测试卫生，见 `T6-server-test-hygiene.txt`，**不计入 Done 8**） |
+| run（run 2） | `run_e048ff75308b4ac4b3b4692c0fcbd6f6`，prompt 15 字符「T6 收尾验证：只回答 OK。」 |
+| run 终态 | **`run.failed`**，`code=SIDECAR_PROTOCOL_ERROR`（Synova 侧码），message 原文：`[-32603] Internal error: turn failed: llm-deepseek: no API key for provider route "deepseek-official"; store DEEPSEEK_API_KEY through the credentials service …` — 即"等价无凭据码" |
+| stats | `{textDeltas:0, reasoningDeltas:0, toolCalls:0, chars:0}`；`run.started → run.failed` 仅 **~78 ms** |
+| **close** | `POST /api/dsh/sessions/0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc/close` → **HTTP 200 `{"ok":true,"sessionId":"0e8772b5-…","closed":true}`** ⇒ **PASS** |
+| DSH 侧无模型请求证明 | 两次 T6 run 的 DSH 会话记录（`T6-run1-session.jsonl` / `T6-run2-session.jsonl`，各 6 帧、字节覆盖通过）末段为 `assistant/attempt`(chunk.finish `reason=error`) + `turn/end`(error)；**0 个 `assistant/message`、0 个 usage chunk、0 个内容块、0 次 tool/call** |
+| 结论 | **session close（真实产品路由）= PASS**；**本轮未发出任何模型请求，模型轮次仍为 1/1**（唯一一轮属于 R3 主链） |
+
+补充说明（如实记录）：
+- T6 的 **run 1** 因我的执行脚本序列化 bug（`ReferenceError`）**丢了 HTTP 层证据**，但其 DSH 会话记录保留（`T6-run1-session.jsonl`，同样的无凭据错误、同样 0 输出）⇒ 两轮互证；run 1 不计入任何通过判定。
+- 该 run 属**失败路径**，单独标注 runId/时间，**不并入 R3 主链判定**。
 
 ### 6.2 CI 失败分类（PR #1457 / run 4607 / job 4837）：非产品代码失败
 
@@ -169,6 +181,9 @@ CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran af
 | `09-desktop-console.txt` / `T3-cdp-result.json` | 渲染层 console + 面板 DOM 状态（`data-run-status=done`，2 条事件） |
 | `10-process-exit.txt` | T4：Electron 退出（CDP `Browser.close`）+ reuse 三项证据 + 明确不主张 8(a) |
 | `T4b-server-test-hygiene.txt` | 隔离 server 测试卫生停止（不计入 Done 8） |
+| `13-session-close.json` | **T6**：真实产品关闭会话路由 —— 无凭据 `run.failed` + `POST /api/dsh/sessions/:id/close` → `{ok:true,closed:true}`；两轮 run、PID/时间、无模型请求证明 |
+| `T6-run1-session.jsonl` / `T6-run2-session.jsonl`（+ `.decompress-report.json`） | 两次 T6 run 的 DSH 会话记录（帧感知解压，字节覆盖通过；末段 `turn/end`=error，0 个 assistant/usage/内容块） |
+| `T6-server-test-hygiene.txt` | T6 隔离 server 测试卫生停止记录（不计入 Done 8） |
 | `11-mcp-tools-list.json` / `12-negative-domain-empty.json` | MCP 工具面探针 + 反例 `DOMAIN_EMPTY` |
 | `T1-*` / `T2-*` | 准备用 server PID 记录 + 合成②校验；supervisor start/status/stop（脱敏版）+ 脱敏对照 |
 | `T3-BREAK-*` / `T3-electron-stdout-raw.txt` / `T3-desktop-no-backend.png` | **已知差距 #1456** 的原始证据（首次尝试） |
@@ -182,5 +197,6 @@ CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran af
 ## 10 结论与后续
 
 - **R3 = 达成**：`initialize → session/new → prompt → synova_context_get（真实 ②）→ run.completed` 在 rc.5 实物上端到端跑通，桌面端可见，DSH 侧原始记录可核，模型轮次只用 1 次。
-- **未达成 3 项**：① Done 8(a)（Electron 自起后端 → `before-quit` → `backendHandle.stop()`）—— 产品缺陷 **#1456**；② Done 8 的"会话关闭（session/close）"部分 —— 证据层无该调用的原始记录（§6.1），**不主张已关闭**；③ CI `core-gates / core` —— `reason=affected-no-tests`（§6.2），非产品代码失败，PR 不 merge。
+- **未达成 2 项**：① Done 8(a)（Electron 自起后端 → `before-quit` → `backendHandle.stop()`）—— 产品缺陷 **#1456**；② CI `core-gates / core` —— `reason=affected-no-tests`（§6.2），非产品代码失败，PR 不 merge。
+- **Done 8 的会话关闭部分已由 T6 补齐**（真实产品路由 `POST /api/dsh/sessions/:id/close` → `{ok:true,closed:true}`，0 模型轮次，§6.1）；主链那次的 close 未留证据，判定以 T6 同路由证据为准。
 - 后续建议：修 #1456 后补一次 Done 8(a) 的**单点**验证（可用同一合成夹具，不需要再烧模型轮次：只需确认 `backendHandle.stop()` 结束后端树）。
