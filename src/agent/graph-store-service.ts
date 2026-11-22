@@ -188,6 +188,51 @@ export function createRelation(
   return store.createEdge(type, fromId, toId, undefined, props ?? {}, orgId);
 }
 
+// ═══ #1431 阶段 2 · S2：业务键 → ② 对象 id 的幂等解析 ═══
+
+/**
+ * resolveOrCreate — 按业务键解析 ② 对象 id；不存在则创建（**幂等**，#1431 阶段 2 · S2）。
+ *
+ * 契约（铁律 47；S2 卡 v2 §设计决策 2，Issue #1431 评论 14333 / Mandate 评论 14335）:
+ *   @input  orgId —— 企业身份（非空字符串；**同时是图分区**）
+ *           businessKey —— 业务身份（非空字符串；落 `props.businessKey`，是**幂等判据**）
+ *           type —— ② 对象类型（非空字符串，如 `Team`）
+ *           props —— 对象属性（纯对象；**新建时**必须满足 `createObject` 契约：`period` 为 `YYYY-MM`、
+ *                    `defVersion` 非空 —— 命中既有对象时不再校验 props，因为不写库）
+ *   @output 节点 id（`node-<uuid>`）—— 命中既有对象 ⇒ 复用其 id（不新建、不改 props）；
+ *           未命中 ⇒ 走 `createObject` 新建后返回
+ *   @error  `GraphWriteError(VALIDATION)` —— 入参非法 / 新建时 props 违约（**校验先于写入** ⇒ 零写入）；
+ *           查重/写入的介质层异常**原样上抛**（查重失败由 `queryNodes` 记 error 日志后返回空，
+ *           随后 `createObject` 在介质层失败时同样抛出 ⇒ 不返回假 id）
+ *   @invariant ① 幂等键 = `(orgId, type, businessKey)` —— 与既有 `scan_ontology_links` 的
+ *              `(graph, kind, type, business_key)` **同形**（先例：`src/runtime/dsh/domain-context.ts:85`
+ *              也是按 `queryNodes(type, { businessKey }, graph)` 解析）；`queryNodes` 必须带 type，
+ *              故 type 是幂等键的一部分（同 businessKey 不同 type 视为不同对象）；
+ *              ② **先查后建** ⇒ 同键重复调用不产生第二个节点；
+ *              ③ `props.businessKey` 由本函数统一写入（调用方同名键被**覆盖** ⇒ 业务键单一真源）；
+ *              ④ 图分区只由 `orgId` 派生（签名无 graph 入参，不回落 `'default'`）
+ *   @not-here 属性更新（命中后不 update）；业务键跨 type 全局唯一；SOG schema 校验；①快照
+ */
+export function resolveOrCreate(
+  orgId: string,
+  businessKey: string,
+  type: string,
+  props?: Record<string, unknown>,
+): string {
+  requireNonEmptyString(orgId, 'orgId');
+  requireNonEmptyString(businessKey, 'businessKey');
+  requireNonEmptyString(type, 'type');
+  const objectProps = props === undefined ? {} : props;
+  requirePlainObject(objectProps, 'props');
+
+  // 先查后建（幂等）：同 (orgId, type, businessKey) ⇒ 复用首建节点的 id
+  const existing = createSystemGraphStore().queryNodes(type, { businessKey }, orgId);
+  if (existing.length > 0) return existing[0].id;
+
+  // 未命中 ⇒ 走 S1 的 createObject（同一套校验/分区语义）；businessKey 由本函数注入 ⇒ 下次必命中
+  return createObject(orgId, type, { ...objectProps, businessKey });
+}
+
 function validationError(field: string, message: string): GraphWriteError {
   return new GraphWriteError('VALIDATION', message, { field });
 }
