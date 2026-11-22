@@ -171,7 +171,8 @@ export class SynovaDiagnosisEngineImpl implements SynovaDiagnosisEngine {
    *   @output 诊断结果（ConsultationResult；单阶段失败记 degradedModules，不中断整体）
    *   @degraded 既有降级集合不变：各阶段 catch ⇒ `log.warn` + `degradedModules.push`；
    *             Phase 2 的 ④a period 不可解析 ⇒ `log.warn(degraded)` + 按无 period 调哨兵（不编造期间）
-   *   @authority period 只来自 ② 资料（`resolveLatestMaterialPeriod`），禁 `now()` 派生；
+   *   @authority period 只来自 ② 资料（`resolveLatestMaterialPeriod`）或请求显式携带（`scope.period`），
+   *              禁 `now()` 派生（#1431 S2b 合并口径：显式携带优先，未带则回落 ② 资料）；
    *              哨兵上下文的企业分区由 teamId 决定
    *   @not-here 不改哨兵阈值判据、不改既有降级码、不写 ④a（写侧在 registry）
    *   @error  不向调用方抛：阶段失败进 degradedModules；最终结果照常返回（既有语义）
@@ -272,17 +273,24 @@ export class SynovaDiagnosisEngineImpl implements SynovaDiagnosisEngine {
           try {
             const { runSentinelForTeam, formatFindingsForLLM } = await import('../sentinel/sentinel-runner');
             const store = this.graphStore as { queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string; type: string; props: Record<string, unknown> }> };
-            // #1486 裁定 c：period **只能来自资料**（② 节点 props.period），禁 `now()` 派生；
-            // 资料里没有期间 ⇒ 不传 options（既有 `S2_DEGRADED_NO_PERIOD` 语义按原样暴露 ⇒ 行为与改动前一致）。
-            let observation: { period: string } | undefined;
-            try {
-              const { resolveLatestMaterialPeriod } = await import('../agent/graph-store-service');
-              const period = resolveLatestMaterialPeriod(teamId);
-              if (period !== undefined) observation = { period };
-            } catch (periodErr: unknown) {
-              log.warn({ err: periodErr, teamId, degraded: true }, '④a 周期不可解析 ⇒ 本轮按无 period 运行（不编造期间）');
+            // #1486 裁定 c（main/#1489）：period **只能来自资料**（② 节点 props.period），禁 `now()` 派生；
+            //   #1431 S2b 合并口径：请求显式携带（scope.period）优先 → 请求未带则回落 ② 资料
+            //   （资料里没有期间 ⇒ 不传 period，既有 `S2_DEGRADED_NO_PERIOD` 语义按原样暴露）。
+            // #1431 阶段 2 · S2b：period/objectKey 由请求显式携带（经 DiagnosisScope 透传到哨兵轮次），
+            // 引擎内**不得**用 `new Date()` 派生 period；缺失/非法 ⇒ ③ 哨兵层按 S2 降级码不写 ④a。
+            let period = scope?.period;
+            if (period === undefined) {
+              try {
+                const { resolveLatestMaterialPeriod } = await import('../agent/graph-store-service');
+                period = resolveLatestMaterialPeriod(teamId);
+              } catch (periodErr: unknown) {
+                log.warn({ err: periodErr, teamId, degraded: true }, '④a 周期不可解析 ⇒ 本轮按无 period 运行（不编造期间）');
+              }
             }
-            const findings = await runSentinelForTeam(teamId, store, observation);
+            const findings = await runSentinelForTeam(teamId, store, {
+              period,
+              objectKey: scope?.objectKey,
+            });
             if (findings.length > 0) {
               for (const f of findings) {
                 // 若 SessionLearner 有该假设的权重记录, 调整置信度

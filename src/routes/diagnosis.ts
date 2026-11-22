@@ -190,7 +190,14 @@ router.post('/api/diagnosis/consult', async (req: Request, res: Response) => {
   const { teamId, initiator, scope } = req.body as {
     teamId?: string;
     initiator?: { role: string; name?: string; teamId?: string; concerns?: string[] };
-    scope?: { depth?: string; layers?: string[]; language?: string; reportDepth?: string; sentinelIds?: string[]; compareWith?: string };
+    scope?: {
+      depth?: string; layers?: string[]; language?: string; reportDepth?: string;
+      sentinelIds?: string[]; compareWith?: string;
+      /** #1431 阶段 2 · S2b：④a 观测周期（`YYYY-MM`），由请求显式携带；缺省 ⇒ 不写 ④a（S2_DEGRADED_NO_PERIOD） */
+      period?: string;
+      /** #1431 阶段 2 · S2b：④a 观测对象业务键，非空；缺省 ⇒ 不写 ④a（S2_DEGRADED_NO_OBJECT） */
+      objectKey?: string;
+    };
   };
 
   if (!teamId) {
@@ -315,7 +322,14 @@ router.post('/api/diagnosis/consult', async (req: Request, res: Response) => {
     );
     const engine: DiagnosisEngine = {
       async runConsultation(teamId, initiator, onEvent) {
-        return newEngine.runConsultation(teamId, initiator, undefined, onEvent as Parameters<typeof newEngine.runConsultation>[3]);
+        // #1431 阶段 2 · S2b：请求 scope 的 period/objectKey 必须到达 L3 引擎的哨兵轮次
+        // （L2 DiagnosisEngine 接口 3 参不含 scope ⇒ 在路由构造引擎的适配边界注入；
+        //   其余 scope 字段仍不传，与改动前等价）。
+        const engineScope: { period?: string; objectKey?: string } = {
+          ...(typeof scope?.period === 'string' ? { period: scope.period } : {}),
+          ...(typeof scope?.objectKey === 'string' ? { objectKey: scope.objectKey } : {}),
+        };
+        return newEngine.runConsultation(teamId, initiator, engineScope, onEvent as Parameters<typeof newEngine.runConsultation>[3]);
       },
     };
 
