@@ -1,0 +1,65 @@
+{
+  "file": "04-prompt.json",
+  "issue": 1455,
+  "phase": "T3",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "generatedAt": "2026-11-22T18:40:21.523Z",
+  "submittedFrom": "real desktop renderer (electron main.cjs -> vite 5173 -> DshRunPanel #dsh-run-input), preload-check OK",
+  "promptText": "这是一次合成数据测试。请只调用一次工具 synova_context_get，参数 problemId = synth-problem-1455-q3，然后只用中文回答三点：(1) 返回 JSON 里的 count 数值；(2) 每个条目的 $id；(3) 每个条目的 period 和 defVersion。不要调用其它工具，不要臆造数据；如果工具报错，请原样复述错误码。",
+  "promptChars": 187,
+  "promptSha256": "e9175075bd7e93fc35398bc83b80dd58be02021b0e0bbf6e98ee4113ac51948b",
+  "egressFrame": {
+    "event": "egress.recorded",
+    "data": {
+      "seq": 3,
+      "runId": "run_da2adbf821994bad8de96d30d0a174be",
+      "type": "egress.recorded",
+      "at": "2026-11-22T18:35:52.182Z",
+      "data": {
+        "purpose": "run.prompt",
+        "destination": "dsh-acp",
+        "sha256": "e9175075bd7e93fc35398bc83b80dd58be02021b0e0bbf6e98ee4113ac51948b",
+        "chars": 187
+      }
+    }
+  },
+  "egressSha256MatchesPrompt": true,
+  "egressCharsMatchesPrompt": true,
+  "toolStartedFrame": {
+    "event": "tool.started",
+    "data": {
+      "seq": 5,
+      "runId": "run_da2adbf821994bad8de96d30d0a174be",
+      "type": "tool.started",
+      "at": "2026-11-22T18:35:52.950Z",
+      "data": {
+        "toolCallId": "call_00_QFR4AzRr1IVqsOp1KwnN0461",
+        "title": "mcp__synova-sidecar__synova_context_get",
+        "kind": "other",
+        "status": "in_progress"
+      }
+    }
+  },
+  "terminalFrame": {
+    "event": "run.completed",
+    "data": {
+      "seq": 8,
+      "runId": "run_da2adbf821994bad8de96d30d0a174be",
+      "type": "run.completed",
+      "at": "2026-11-22T18:35:53.957Z",
+      "data": {
+        "stopReason": "end_turn",
+        "stats": {
+          "textDeltas": 1,
+          "reasoningDeltas": 1,
+          "toolCalls": 1,
+          "chars": 304
+        },
+        "empty": false
+      }
+    }
+  },
+  "syntheticDataOnly": true,
+  "secretsInPrompt": false,
+  "note": "the prompt is synthetic test text only (no customer data, no credential); sha256 binds what the server recorded as egress to the bytes the UI submitted"
+}

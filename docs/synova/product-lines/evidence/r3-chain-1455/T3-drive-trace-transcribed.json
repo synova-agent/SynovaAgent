@@ -1,0 +1,43 @@
+{
+  "file": "T3-drive-trace-transcribed.json",
+  "issue": 1455,
+  "phase": "T3 (desktop drive: navigate -> login -> prompt -> submit -> terminal)",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "provenance": "TRANSCRIBED (not machine-written) — this is the verbatim stdout JSON of scripts/dsh-sidecar/r3-chain/run-drive.mjs for the successful drive run at 2026-11-22T18:35:46.989Z. It was overwritten on disk by the later --capture-only invocation (which rewrote T3-cdp-result.json with the post-run DOM/screenshot evidence), so the drive step trace is preserved here as a transcription of the process stdout. Every later evidence file (05/06/07/08/09/03/04) is machine-written.",
+  "whyKeptSeparately": "the drive step trace records that login submitted, the prompt was filled (#dsh-run-input) and 发起会话 was clicked through the real UI; run-drive.mjs --capture-only only re-reads the finished panel and cannot re-create those steps without a second model round",
+  "transcribedStdout": {
+    "ok": true,
+    "phase": "done",
+    "reason": null,
+    "runId": "运行编号：run_da2adbf821994bad8de96d30d0a174be",
+    "sessionId": "会话编号：6f9a803d-c6e7-41bc-aa2e-ea2cafc168c7",
+    "status": "done",
+    "statusText": "运行完成",
+    "eventCount": 0,
+    "toolEventCount": 0,
+    "textEventCount": 0,
+    "errorCode": null,
+    "steps": [
+      {
+        "at": "2026-11-22T18:35:47.098Z",
+        "step": "pageTarget",
+        "detail": { "id": "DE79090109021D8A973C6CF3153B17AE", "url": "http://localhost:5173/", "title": "SynovaAgent", "targetCount": 1 }
+      },
+      { "at": "2026-11-22T18:35:47.112Z", "step": "cdpConnected", "detail": { "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/DE79090109021D8A973C6CF3153B17AE" } },
+      { "at": "2026-11-22T18:35:47.433Z", "step": "navigateToDsh", "detail": { "clicked": false } },
+      { "at": "2026-11-22T18:35:47.434Z", "step": "panelPresent", "detail": { "href": "http://localhost:5173/", "hasRunPanel": true, "hasLoginPanel": false, "hasLoginEntry": true, "auth": "devmode", "bodyTextSize": 291 } },
+      { "at": "2026-11-22T18:35:47.445Z", "step": "fillEmail", "detail": "synth-1455@example.invalid" },
+      { "at": "2026-11-22T18:35:47.447Z", "step": "fillPasswordLength", "detail": 18 },
+      { "at": "2026-11-22T18:35:47.451Z", "step": "loginSubmitted", "detail": true },
+      { "at": "2026-11-22T18:35:47.757Z", "step": "authAfterLogin", "detail": { "hasRunPanel": true, "auth": "authenticated", "loginErrorCode": null, "loginErrorText": null } },
+      { "at": "2026-11-22T18:35:47.759Z", "step": "fillPromptLength", "detail": 187 },
+      { "at": "2026-11-22T18:35:47.772Z", "step": "submit", "detail": { "clicked": true, "reason": null } },
+      { "at": "2026-11-22T18:35:54.846Z", "step": "runTerminal", "detail": { "terminal": true, "lastStatus": "done", "submittedAt": "2026-11-22T18:35:47.772Z" } },
+      { "at": "2026-11-22T18:35:54.949Z", "step": "screenshot", "detail": { "bytes": 123764 } }
+    ]
+  },
+  "transcriptionNotes": [
+    "eventCount / toolEventCount / textEventCount are 0 in this trace because the first version of the driver queried `#dsh-run-events li` while the panel renders `[data-testid=\"dsh-run-events\"]` — a selector bug that was fixed before the --capture-only re-read, which reports eventCount=2 (1 tool + 1 text). The run itself was unaffected: the server-side record (06) and the DSH session log (07) both show toolCalls=1.",
+    "auth: devmode -> authenticated after submitting the synthetic account proves the desktop login step ran (a DevMode run would have carried userId=dev-admin/orgId=default; 05 shows userId=node-d5954723…/enterpriseId=synth-org-1455)."
+  ]
+}

@@ -1,14 +1,24 @@
 # hash-manifest.txt — sha256 of every committed evidence/script artifact (Issue #1455)
-# generated: 2026-11-22T18:27:05.093Z
-# files: 29
+# generated: 2026-11-22T18:41:15.031Z
+# files: 44
 # excluded (derived, self-referential): T5-secrets-scan.txt, hash-manifest.txt
 2c90f7bc4d5ddbbba5f143a9ebb8b238c196075c40cdc9e1059319d1a3aa1335       3116  docs/synova/product-lines/evidence/r3-chain-1455/00-env.txt
 01804748213b2af3be78f3078a5d82153a66049b5fd3c9b54880bc5d1f3da92e       3459  docs/synova/product-lines/evidence/r3-chain-1455/01-install.out.json
 f0971273ab0e67e940f45b1e0267f24787a6080984d3cf77a00a6861104852b1       7227  docs/synova/product-lines/evidence/r3-chain-1455/02-acp-initialize.json
+4dcdc5735a50ad68d4f40dd8de7f471592dac6d3801d5b91e14e2248d83a23f6       3472  docs/synova/product-lines/evidence/r3-chain-1455/03-session.json
+23d21e1fe1ebecd3288b28c87016539ce669f3c22977d92ca8b6e5643875230e       2347  docs/synova/product-lines/evidence/r3-chain-1455/04-prompt.json
+cf03acf3294bf26274030cc7cd5823274d742b38202353138b3425638d92cee8       2384  docs/synova/product-lines/evidence/r3-chain-1455/05-sse-events.txt
+44d54c46531bf7cbe3cdd83c6c199b08c7329610f0882b59bd391ff4454fd3d7       1133  docs/synova/product-lines/evidence/r3-chain-1455/06-run-snapshot.json
+a791afd6bbcb1dbb77d848bea8fc2d94b9455a18792e064dfdd1c64c8766e267       3270  docs/synova/product-lines/evidence/r3-chain-1455/07-dsh-session-log.decompress-report.json
+665e148283acc9c62c8baaf4d66426abbc7f71608cb98b35fb622e9000ac2f21      16930  docs/synova/product-lines/evidence/r3-chain-1455/07-dsh-session-log.jsonl
+34fe361c2710c2bae10661fad450260b1dd20a7c828353ef90cbd8dd4081be9e       7154  docs/synova/product-lines/evidence/r3-chain-1455/07-dsh-session-log.jsonl.zstd
+5c0fb2a6625b2f5eb2d0ad36f3002fb78ff49d78e563ec0c408ef28cb4d7955c     123764  docs/synova/product-lines/evidence/r3-chain-1455/08-desktop.png
+64b7c1e5a4c0d2eb6836ddeeb496de5d0cdaef2feebbf313dae1399b232cbc3d        815  docs/synova/product-lines/evidence/r3-chain-1455/09-desktop-console.txt
+4caf51010eed05941ea83c2666f759f5a32f9bee4ec05a1c3e5f38ced863e453       1383  docs/synova/product-lines/evidence/r3-chain-1455/10-process-exit.txt
 cfb0b19fc50c106f9863ed4419677ab00ebfe8d1bbbafb2330d2d906978927d1       8196  docs/synova/product-lines/evidence/r3-chain-1455/11-mcp-tools-list.json
 cecfb4b06e8d3c5ce047511680d19bac3d5e08b3785c2de47afcecbf5a4056fd       1904  docs/synova/product-lines/evidence/r3-chain-1455/12-negative-domain-empty.json
-9165bea060e2cd72d5031aae088a890ec3feeeeacf2fa17b0dc5e17b40eb8d43        569  docs/synova/product-lines/evidence/r3-chain-1455/CREDENTIAL-CLEANUP.txt
-3b930e9c47157f4165881a926f2e9eda6e7a14a6b2e8f81531ff6573082ebaae      13465  docs/synova/product-lines/evidence/r3-chain-1455/README.md
+613fda1becd0ca4e8442622005518c75a958e48467e399e84cf8d8fd4b0cc978       1066  docs/synova/product-lines/evidence/r3-chain-1455/CREDENTIAL-CLEANUP.txt
+3f11cb9ce8d4f9257aa84b0b8d031bfd06ba45c97880d74fd2e751ac069717bf      15523  docs/synova/product-lines/evidence/r3-chain-1455/README.md
 6567998308bce4a525184ba009f01d8d3f32c1b88efc7651bd90d90578d2f576      14272  docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-config-patched.txt
 1a771b8bdaebb53de7b6eec326c884a8e091bd7aa306967857f1b58d02cf727b      12721  docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-default-config.txt
 5f216aa2f46a75b0c1c502cf92fed48fc564828549b9afe6ef44481b4bbd9617        514  docs/synova/product-lines/evidence/r3-chain-1455/T0-host-probe.txt
@@ -23,11 +33,16 @@ f1be553a395bb2486629b9c7e6fbca2fb88b5ad040d4c67a7b6e8a5359999d74        840  doc
 4273a36b3d0b281004547c6b4a24bf99a33a389b391160efe5315dd3113d597d         66  docs/synova/product-lines/evidence/r3-chain-1455/T2-stop-2.redacted.json
 04d99d5937ce2c7f9360a5474c7a03edff88cdf387e9d82afa5da245c3041c99         66  docs/synova/product-lines/evidence/r3-chain-1455/T2-stop-raw.redacted.json
 579e15fb52b748a4d8049862e07e5775bdbfc4b43a1f1e078d7ee824507b9eb9       3607  docs/synova/product-lines/evidence/r3-chain-1455/T3-BREAK-electron-dev-self-start-ENOENT.txt
+20efcf974bc13ddc37ab865975849636ff22d0ff13dbc66c8759e412b5c3c2e9       6972  docs/synova/product-lines/evidence/r3-chain-1455/T3-cdp-result.json
 10a89e3e546166e7419ff327a75b0d989569526b452d345803a603ec04d95953      73299  docs/synova/product-lines/evidence/r3-chain-1455/T3-desktop-no-backend.png
+b2a4dc18649f2c0313a26187d4a425bec80ab2b60304c5249d711579a673fa39       3722  docs/synova/product-lines/evidence/r3-chain-1455/T3-drive-trace-transcribed.json
 1e433598e620c4bd43cae49f91262e2b6996aae2d33584cbd9974b25e5faa01a       1936  docs/synova/product-lines/evidence/r3-chain-1455/T3-electron-stdout-raw.txt
+a1c35927a8aedbf94f571e791bb36b14bdcf2c0a78cba231a83d3283896f4ce9       2393  docs/synova/product-lines/evidence/r3-chain-1455/T3-sse-meta.json
 7b2ca26985e91f241d1a5e6146e0d7f881b0ecdbfb0cf9acc678b31459e22bb8        640  docs/synova/product-lines/evidence/r3-chain-1455/T4-cleanup-external-terminate.txt
+920b8448ccaf1459e896dffd4f006ca08272a3e43bfad8d7894398b98078621a        660  docs/synova/product-lines/evidence/r3-chain-1455/T4b-server-test-hygiene.txt
 6a5c3113ef11d91600765bb87cc2c2b712610d9ddb29f608cce5198e206245cb       4544  scripts/dsh-sidecar/r3-chain/capture-run.mjs
 a33acc5a7387888383c986bf4f1b31c2b05df3f2e63e01e84d28011abfa9733f       1848  scripts/dsh-sidecar/r3-chain/install-profile.ts
 5a1f029988a74f34ed1df1e415f5812bc2abb3e1707e8ac442840ea934e6fd73       6491  scripts/dsh-sidecar/r3-chain/mcp-probe.ts
-644b69d5d03c582c8bab33bc3898a52cd6bcd5ba988ccbb147280274a2b782b9      15528  scripts/dsh-sidecar/r3-chain/run-drive.mjs
+bd1091f45403de968eacda340bb60401b8eac4d05d240a53d5ef0e7c393bf778      19589  scripts/dsh-sidecar/r3-chain/run-drive.mjs
 7f19a9aca87e8909d885fd6ae84a0f2dbe29ad65eec64fab77e466aac2c29ed0       4494  scripts/dsh-sidecar/r3-chain/seed-synthetic.ts
+6ca908963e1c2e3c744c7bc249105bd82cdf24e848ab8313e42c95edc11077c6       6883  scripts/dsh-sidecar/r3-chain/session-decompress.mjs

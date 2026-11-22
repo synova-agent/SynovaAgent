@@ -1,0 +1,7 @@
+T4b-server-test-hygiene.txt — isolated server stop (TEST HYGIENE; NOT part of Done 8)
+generated: 2026-11-23T02:39:19.6338435+08:00
+server: npx tsx src/index.ts (T1 task env), tree root npx node pid=11184, tsx node pid=11940, 18790 listener pid=11940
+stopped by this task at 2026-11-23T02:39:14.8195994+08:00 via: taskkill /PID 11184 /T /F
+after stop: 11940 alive=False ; 18790 listener=
+why this is not Done 8: Done 8(a) is Electron-self-start + before-quit -> backendHandle.stop (UNVERIFIED, product defect #1456);
+Done 8(b) is the supervisor stop.ps1 path already proven in T2. This stop is only housekeeping and is not used as acceptance evidence.

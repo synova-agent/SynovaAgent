@@ -34,6 +34,7 @@ const password = args.get('password');
 const problemId = args.get('problem-id');
 const waitMs = Number(args.get('wait-ms') ?? '240000');
 const appWaitMs = Number(args.get('app-wait-ms') ?? '180000');
+const captureOnly = args.get('capture-only') === 'true';
 if (!evidenceDir || !email || !password || !problemId) {
   throw new Error('run-drive: --evidence --email --password --problem-id are required');
 }
@@ -157,7 +158,24 @@ try {
   await cdp.send('Page.enable');
   record('cdpConnected', { webSocketDebuggerUrl: page.webSocketDebuggerUrl });
 
-  // 1) wait for the DSH panel (either the login entry or the run panel is enough)
+  // 1) navigate to the DSH view through the app's own navigation, then wait for its panel.
+  //    The desktop boots into the welcome / LLM-setup view, so the run panel only exists after
+  //    the user selects "DSH 会话" in the left navigation (@see electron-renderer/src/components/LeftPanel.tsx data-cap="nav-dsh").
+  const navDeadline = Date.now() + 60_000;
+  let navState = null;
+  while (Date.now() < navDeadline) {
+    navState = await cdp.evaluate(`(() => {
+      const panel = document.querySelector('[data-testid="dsh-run-panel"]');
+      const loginPanel = document.querySelector('[data-testid="dsh-login-panel"]');
+      const nav = document.querySelector('[data-cap="nav-dsh"]');
+      if (panel === null && loginPanel === null && nav !== null) { nav.click(); return { clicked: true }; }
+      return { clicked: false };
+    })()`);
+    if (navState.clicked === false) break;
+    await sleep(300);
+  }
+  record('navigateToDsh', navState ?? null);
+
   const panelDeadline = Date.now() + 60_000;
   let panelState = null;
   while (Date.now() < panelDeadline) {
@@ -180,6 +198,56 @@ try {
   record('panelPresent', panelState);
   if (!panelState || (!panelState.hasRunPanel && !panelState.hasLoginPanel)) {
     throw new Error('run-drive: DSH panel did not appear in the renderer');
+  }
+
+  // Capture-only mode: a run already reached its terminal status in this app instance; read the
+  // live panel DOM + screenshot + console without starting a second model round.
+  if (captureOnly) {
+    result.phase = 'capturing';
+    const live = await cdp.evaluate(`(() => {
+      const panel = document.querySelector('[data-testid="dsh-run-panel"]');
+      const events = Array.from(document.querySelectorAll('[data-testid="dsh-run-events"] li'));
+      const runIdEl = document.querySelector('.dsh-run-id');
+      const sessionEl = document.querySelector('.dsh-session-id');
+      const status = document.querySelector('.dsh-status');
+      const errorEl = document.querySelector('.dsh-error');
+      return {
+        hasRunPanel: panel !== null,
+        runStatus: panel ? panel.getAttribute('data-run-status') : null,
+        auth: panel ? panel.getAttribute('data-auth') : null,
+        statusText: status ? status.innerText : null,
+        runIdText: runIdEl ? runIdEl.innerText : null,
+        sessionIdText: sessionEl ? sessionEl.innerText : null,
+        errorCode: errorEl ? errorEl.getAttribute('data-error-code') : null,
+        errorText: errorEl ? errorEl.innerText : null,
+        eventCount: events.length,
+        toolEventCount: events.filter(e => e.getAttribute('data-event-kind') === 'tool').length,
+        textEventCount: events.filter(e => e.getAttribute('data-event-kind') === 'text').length,
+        events: events.map(e => ({
+          seq: e.getAttribute('data-event-seq'),
+          kind: e.getAttribute('data-event-kind'),
+          toolCallId: e.getAttribute('data-tool-call-id'),
+          toolStatus: e.getAttribute('data-tool-status'),
+          text: e.innerText,
+        })),
+        runPanelOuterHTML: panel ? panel.outerHTML : null,
+        runPanelText: panel ? panel.innerText : null,
+      };
+    })()`);
+    record('captureOnlyState', { runStatus: live.runStatus, eventCount: live.eventCount, toolEventCount: live.toolEventCount, textEventCount: live.textEventCount });
+    result.run = live;
+    const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    writeFileSync(join(evidenceDir, '08-desktop.png'), Buffer.from(shot.data, 'base64'));
+    record('screenshot', { bytes: Buffer.from(shot.data, 'base64').length });
+    collectConsole(cdp.events);
+    result.console = consoleLines;
+    result.phase = 'done';
+    result.ok = true;
+    writeFileSync(join(evidenceDir, 'T3-cdp-result.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+    writeFileSync(join(evidenceDir, '09-desktop-console.txt'), `${consoleLines.join('\n')}\n`, 'utf8');
+    cdp.close();
+    process.stdout.write(`${JSON.stringify({ ok: true, mode: 'capture-only', runStatus: live.runStatus, statusText: live.statusText, runIdText: live.runIdText, sessionIdText: live.sessionIdText, eventCount: live.eventCount, toolEventCount: live.toolEventCount, textEventCount: live.textEventCount, events: live.events }, null, 2)}\n`);
+    process.exit(0);
   }
 
   // 2) login with the synthetic account (devmode shows a "使用账号登录" entry)
@@ -268,7 +336,8 @@ try {
       const runIdEl = document.querySelector('.dsh-run-id');
       const sessionEl = document.querySelector('.dsh-session-id');
       const errorEl = document.querySelector('.dsh-error');
-      const events = Array.from(document.querySelectorAll('#dsh-run-events li'));
+      // the panel renders <ol data-testid="dsh-run-events">, not an id
+      const events = Array.from(document.querySelectorAll('[data-testid="dsh-run-events"] li'));
       return {
         status: panel ? panel.getAttribute('data-run-status') : null,
         auth: panel ? panel.getAttribute('data-auth') : null,
@@ -297,7 +366,7 @@ try {
   // 5) capture the panel DOM exactly as the user sees it
   result.dom = await cdp.evaluate(`(() => {
     const panel = document.querySelector('[data-testid="dsh-run-panel"]');
-    const events = Array.from(document.querySelectorAll('#dsh-run-events li')).map(event => ({
+    const events = Array.from(document.querySelectorAll('[data-testid="dsh-run-events"] li')).map(event => ({
       seq: event.getAttribute('data-event-seq'),
       kind: event.getAttribute('data-event-kind'),
       toolCallId: event.getAttribute('data-tool-call-id'),

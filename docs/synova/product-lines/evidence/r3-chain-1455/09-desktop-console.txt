@@ -1,0 +1,10 @@
+[console.debug] [vite] connecting...
+[console.info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[console.log] [Synova] v33.4.11
+[console.log] [Synova] v33.4.11
+[log.error] Refused to connect to 'ws://localhost:5173/?token=S5LK9OJX6zuE' because it violates the following Content Security Policy directive: "connect-src http://localhost:* http://127.0.0.1:*".
+
+[log.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[log.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[log.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[log.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
