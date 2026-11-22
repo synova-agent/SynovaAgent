@@ -1,0 +1,87 @@
+node.exe : {"level":30,"time":1795370291033,"pid":5040,"hostname":"PC-202605261327","name":"synova-agent","service":"se
+rvices/config-file","path":"D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\synova.json","msg":"配置文件加载成功"}
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ({"level":30,"ti...sg":"配置文件加载成功"}:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+{"level":30,"time":1795370291034,"pid":5040,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port
+":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795370291035,"pid":5040,"hostname":"PC-202605261327","name":"synova-agent","service":"services/conf
+ig-recovery","path":"D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\synova.json","size":693,"msg":"配置校验通过"
+}
+{"level":30,"time":1795370291035,"pid":5040,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port
+":18790,"devMode":true,"dbPath":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\data/synova.db","model":"deepseek
+-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795370291044,"pid":5040,"hostname":"PC-202605261327","name":"synova-agent","service":"init/engine-c
+ontext","path":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\data/synova.db","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1795370291045,"pid":5040,"hostname":"PC-202605261327","name":"synova-agent","service":"init/engine-c
+ontext","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{
+  "ok": true,
+  "orgId": "synth-org-1455",
+  "problemId": "synth-problem-1455-q3",
+  "foreignGraphProbe": "synth-org-1455-other-tenant",
+  "rootId": "node-f2fe030e-b4b1-47d0-18e5-d455c8e61110",
+  "createdThisRun": true,
+  "neighbourIds": [
+    "node-cf13215b-d4ed-4d24-3b3f-fd078301b61f",
+    "node-5d0b0911-d2b6-4a3a-df9a-e9dda2241f84"
+  ],
+  "edgeIds": [
+    "edge-236df362-9413-4994-0f20-3edeb4e77567",
+    "edge-f91bdfb4-2860-4055-5f3b-76eae3dfd840"
+  ],
+  "dbCounts": {
+    "nodes": 3,
+    "edges": 2
+  },
+  "toolSnapshot": {
+    "synthetic": false,
+    "problemId": "synth-problem-1455-q3",
+    "count": 2,
+    "truncated": false,
+    "items": [
+      {
+        "layer": "②",
+        "$id": "node-5d0b0911-d2b6-4a3a-df9a-e9dda2241f84",
+        "cycleVersion": null,
+        "sentinelRun": null,
+        "period": "2026-Q3",
+        "defVersion": "v1",
+        "evidenceId": null,
+        "status": "observed",
+        "visibility": "enterprise",
+        "source": {
+          "kind": "synova.domain",
+          "api": "synova.domain/v1"
+        }
+      },
+      {
+        "layer": "②",
+        "$id": "node-cf13215b-d4ed-4d24-3b3f-fd078301b61f",
+        "cycleVersion": null,
+        "sentinelRun": null,
+        "period": "2026-Q3",
+        "defVersion": "v1",
+        "evidenceId": null,
+        "status": "observed",
+        "visibility": "enterprise",
+        "source": {
+          "kind": "synova.domain",
+          "api": "synova.domain/v1"
+        }
+      }
+    ]
+  },
+  "toolSnapshotInvariant": {
+    "syntheticIsFalse": true,
+    "problemIdMatches": true,
+    "countAtLeastTwo": true,
+    "allItemsLayer2": true,
+    "allItemsEnterpriseVisibility": true,
+    "allItemsDomainApi": true,
+    "allItemsPeriodDefVersion": true
+  }
+}

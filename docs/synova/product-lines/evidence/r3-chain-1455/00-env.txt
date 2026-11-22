@@ -1,0 +1,41 @@
+00-env.txt — R3 chain (Gitea #1455) environment & rc.5 contract facts
+generated: 2026-11-23T01:56:10.7169492+08:00
+codeSha (worktree HEAD): caf61fcdeb3e00c79abe9211546690ca963549a2
+branch: feat/1455-r3-chain
+worktree: D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain
+taskRoot: D:\novis-backup-20260526\Novis\_r3chain-20261123
+OS: Microsoft Windows NT 10.0.26200.0 (AMD64)
+node: v24.16.0  npm: 11.13.0
+powershell: 5.1.26100.9818 (Windows PowerShell; pwsh 7 absent -> see T0-host-probe.txt)
+global dsh CLI (NOT used for this run): 0.2.1-alpha.2
+
+[rc.5 install]
+installRoot: D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5
+installed @deepseek-ai/dsh version: 0.2.2-rc.5
+bin entry (lib/bin.js): True
+packages installed under @deepseek-ai: 338
+
+[T0 contract review — rc.5 实物]
+1) lib/bin.js entry: PRESENT (installer asserts it; also ran --dump-config/--dump-default-config successfully)
+2) --profile family: SUPPORTED (lib/bin-CwxESKe-.js: '-profile' selects profile; --patch/--dump-config/--dump-default-config/--dump-config-schema present)
+3) agentInfo.name: 'deepseek-harness-acp' @ dsh-acp/lib/index.js:1123 and :1295 -> MATCHES acp-client contract
+4) 17 disable ids: ALL recognized by rc.5 composed config (--dump-config); each appears with disabled: true
+   sandbox-policy: mode=read-only, workspaceRoot=!!js process.cwd()  -> accepted
+   approval: policy=ask -> accepted
+   (compare: T0-dump-default-config.txt = bundle layers; T0-dump-config-patched.txt = + synova-sidecar patch)
+5) credentials layer: provider = @deepseek-ai/dsh-credentials-local, document = <DSH_HOME>/.credentials.yaml
+   - layer order in rc.5: provider-managed store FIRST, inherited process env/.env as fallback
+     (DEV DOC v3 §2.3 states env > file; rc.5 fact is file > env. Non-blocking: buildChildEnv strips model-key env anyway)
+   - document version: rc.5 expects version:1 + refs: layout; a FLAT 'KEY: value' document is auto-migrated on first read
+     (dsh-credentials-local/lib/index.js:664,674,681-696 renderFlatLayoutMigration) -> the Mandate's flat write is accepted
+   - key name: DEEPSEEK_API_KEY is the default apiKeyEnv of @deepseek-ai/dsh-llm-deepseek-api-key (config schema default)
+6) session records: entry session-persistence-jsonl config root=dshHomePath('sessions') -> <DSH_HOME>/sessions
+   path shape: sessions/<projectKey(cwd)>/<sessionId>/session.v<N>.jsonl.zstd (zstd suffix when compression=zstd)
+   rc.5 package exports: '.' | './src/*' | './package.json' | './locale/*'  (no deep './lib/zstd.js')
+   lib/index.js exports: { Config, JsonlCompressionSchema, apply, name } -> frame readers NOT exported (matches v3.1 erratum)
+
+[T0 package取件事实 — v3.1 erratum item 1]
+ls D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5\node_modules\@deepseek-ai\dsh-session-persistence-jsonl\lib :
+types, index.js, worker.cjs
+exports of package.json: [".","./src/*","./package.json","./locale/*.json"]
+=> usable frame reader is NOT exported; T5 decompression uses magic 28 B5 2F FD full-scan + per-frame zstdDecompressSync

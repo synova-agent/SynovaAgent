@@ -1,0 +1,34 @@
+# T0 install-dsh-runtime.ps1 — attempt 1 RAW FAILURE (verbatim from job pwsh-85a36f79a51d49c9)
+# host: Windows PowerShell 5.1.26100.9818 (pwsh 7 NOT installed; see T0-host-probe.txt)
+# command:
+#   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dsh-sidecar\install-dsh-runtime.ps1
+#     -Version 0.2.2-rc.5
+#     -Integrity sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw==
+#     -InstallRoot D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5
+# start: 2026-11-23T01:49:26+08:00
+# exit code: 1
+
+=== install rc.5 start 2026-11-23T01:49:26.2684777+08:00 ===
+powershell.exe : ConvertFrom-Json : Cannot process argument because the value of argument "name" is not valid. Change the value of the "
+所在位置 行:7 字符: 8
++ $out = & powershell -NoProfile -ExecutionPolicy Bypass -File "scripts ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ConvertFrom-Jso... value of the ":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+name" argument and run the operation again.
+At D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\scripts\dsh-sidecar\install-dsh-runtime.ps1:129 char:82
++ ...  -LiteralPath $packageLockPath -Raw -Encoding UTF8 | ConvertFrom-Json
++                                                          ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [ConvertFrom-Json], PSArgumentException
+    + FullyQualifiedErrorId : Argument,Microsoft.PowerShell.Commands.ConvertFromJsonCommand
+
+
+=== install exit=1 ===
+
+# 判读（事实，不含推断的成功/失败替代）
+# · npm install 本身成功：install root 出现 node_modules/ + package-lock.json(527224 B)
+# · 脚本 line 119-124 的「installed package.json version == 0.2.2-rc.5」检查已通过（否则不会走到 129）
+# · 失败点是 line 128-136 的 package-lock.json 解析：PS 5.1 ConvertFrom-Json 无法处理
+#   npm v11 lockfileVersion=3 的 packages 根键 ""（空键名）→ PSArgumentException
+# · 该失败与 integrity / version / 网络无关；未写 dsh-install-lock.json（脚本第 143-153 行未执行）

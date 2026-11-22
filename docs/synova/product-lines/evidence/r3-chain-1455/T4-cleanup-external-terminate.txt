@@ -1,0 +1,6 @@
+T4-cleanup-external-terminate.txt — this attempt's cleanup (NOT the product stop path; Done 8(a) NOT claimed)
+generated: 2026-11-23T02:24:39.4223484+08:00
+reason: T3 blocked (electron dev self-start spawn npx ENOENT); the Electron/Vite processes started by this task were terminated externally to leave the host clean.
+electron main pid 4564 terminated by: taskkill /PID 4564 /T /F at 2026-11-23T02:24:35.7224248+08:00
+electron alive after kill: False ; remaining electron.exe processes: 0
+NOTE: per DEV DOC v3 §3 停法契约 this external termination does NOT count as before-quit/backendHandle.stop; Done 8(a) stays UNVERIFIED.

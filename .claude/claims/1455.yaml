@@ -1,0 +1,56 @@
+# .claude/claims/1455.yaml — #1455 DSH 最小真实复用证明链（R2 → R3）
+# 依据：DEV DOC v3（Issue #1455 评论 14384）＋ v3.1 勘误（评论 14395）＋ 关卡 A 结论（评论 14394）＋ 正式 Mandate（评论 14396）
+# base: caf61fcdeb3e00c79abe9211546690ca963549a2 ｜ branch: feat/1455-r3-chain
+# worktree: D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain（主树未写一字节）
+#
+# 状态：T0 全绿 / T1 全绿 / T2 全绿（含反例）/ **T3 阻塞** / T4-T5 未进入
+#   阻塞点：electron/backend-spawn.cjs buildCommand('dev') = spawn('npx', [...], shell:false)
+#           ⇒ Windows ENOENT（npx 只有 npx.cmd）⇒ 桌面端无法自起后端 ⇒ Mandate 的 started:true 结构性不可达
+#   模型轮次消耗 0 / 1（从未发出 POST /api/dsh/runs）
+#   产品代码：0 件改动（条件写集 A/B 均未触发）；electron/** 不在写集内，故未修
+writeset:
+  - .claude/claims/1455.yaml
+  - docs/synova/product-lines/evidence/r3-chain-1455/README.md
+  - docs/synova/product-lines/evidence/r3-chain-1455/00-env.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/01-install.out.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/02-acp-initialize.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/11-mcp-tools-list.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/12-negative-domain-empty.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-default-config.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-config-patched.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T0-host-probe.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T0-install-attempt1-failure.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T1-seed-output.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T1-server-pids.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-start-2.redacted.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-start-raw.redacted.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-status-2.redacted.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-status-installdir-2.redacted.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-stop-2.redacted.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-stop-raw.redacted.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T2-raw-redaction.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T3-BREAK-electron-dev-self-start-ENOENT.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T3-desktop-no-backend.png
+  - docs/synova/product-lines/evidence/r3-chain-1455/T3-electron-stdout-raw.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T4-cleanup-external-terminate.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/CREDENTIAL-CLEANUP.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/T5-secrets-scan.txt
+  - docs/synova/product-lines/evidence/r3-chain-1455/hash-manifest.txt
+  - scripts/dsh-sidecar/r3-chain/install-profile.ts
+  - scripts/dsh-sidecar/r3-chain/seed-synthetic.ts
+  - scripts/dsh-sidecar/r3-chain/mcp-probe.ts
+  - scripts/dsh-sidecar/r3-chain/run-drive.mjs
+  - scripts/dsh-sidecar/r3-chain/capture-run.mjs
+done:
+  - verify: npm ci (worktree)                                                   # added 814 packages, exit 0
+  - verify: scripts/dsh-sidecar/install-dsh-runtime.ps1 -Version 0.2.2-rc.5      # INSTALL_OK；integrity 与钉死值逐字一致；PS5.1 需 ConvertFrom-Json shim（原始失败见 T0-install-attempt1-failure.txt）
+  - verify: node lib/bin.js --profile synova-sidecar --dump-config              # exit 0；17/17 disable id 逐条 disabled:true；sandbox-policy=read-only；approval=ask
+  - verify: npx tsx scripts/dsh-sidecar/r3-chain/install-profile.ts             # profile 四件进隔离 DSH_HOME
+  - verify: npx tsx scripts/dsh-sidecar/r3-chain/seed-synthetic.ts              # count=2, synthetic:false, layer=②, visibility=enterprise（产品工具路径）
+  - verify: start.ps1 -InstanceDir ... -DshHome ... -InstallDir ...             # ready=true, protocolVersion=1, agentName=deepseek-harness-acp
+  - verify: stop.ps1                                                            # stopped=true；supervisor 22680 + ACP 11060 双 PID 消失（Done 8(b)）
+  - verify: npx tsx scripts/dsh-sidecar/r3-chain/mcp-probe.ts <out>             # 11/11 断言 true；tools/list 只广告 synova_context_get；反例 DOMAIN_EMPTY
+  - verify: npx electron electron/main.cjs --remote-debugging-port=9222 --inspect=9223
+                                                                                # 阻塞：backend-spawn spawn npx ENOENT；桌面 UI 已加载但后端未起
+  - verify: node ops/spawn-repro.mjs                                            # A(npx)=ENOENT / B(npx.cmd)=EINVAL / C(node+npx-cli.js)=exit 0
+note: "#1455 真实执行票，写集默认 0 件产品代码（条件写集 A/B 均未触发：rc.5 实测接受全部 17 条 disable id 与 sandbox/approval 形状，MCP 探针也证明只读工具面可发现）。链停在一个产品缺陷上：Electron dev 模式 spawn('npx', ...)（shell:false）在 Windows 恒 ENOENT ⇒ ensureBackend 降级、没有 backendHandle.stop ⇒ Mandate 要求的 Electron 自起后端 started:true 结构性不可达，而 reused:true 又是明写停点 ⇒ 按停点纪律停报，不伪造完成。已交付：rc.5 实机安装与六项契约复核、准备用 server + 合成②（产品工具路径 count=2）、supervisor start/status/stop（protocolVersion=1 / agentName=deepseek-harness-acp / 双 PID 消失）、MCP tools/list + 正例 + 反例 DOMAIN_EMPTY、断点最小复现（spawn 三变体）、凭据清理、secrets 扫描 0 命中。未达成：Done 3/4/5/6/7 与 8(a) NOT REACHED（无 run、模型轮次 0/1），Done 9 PARTIAL（无 runId），Done 2 的 run 侧 initialize UNVERIFIED。修复建议（已实测 exit 0）：dev 命令改为 spawn(process.execPath, [npm/bin/npx-cli.js, 'tsx', 'src/index.ts'])；electron/backend-spawn.cjs 不在写集，需 CTO 授权后从 T3 续跑（模型轮次仍未消耗）。"

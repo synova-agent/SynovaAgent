@@ -1,0 +1,188 @@
+{
+  "ok": true,
+  "generatedAt": "2026-11-22T18:02:43.474Z",
+  "url": "http://127.0.0.1:62209/mcp",
+  "enterpriseId": "synth-org-1455",
+  "problemId": "synth-problem-1455-q3",
+  "missingProblemId": "synth-problem-1455-does-not-exist",
+  "tokenIssued": true,
+  "tokenLengthNotRecorded": true,
+  "toolCount": 1,
+  "toolNames": [
+    "synova_context_get"
+  ],
+  "toolInputSchema": {
+    "type": "object",
+    "properties": {
+      "problemId": {
+        "type": "string",
+        "description": "问题 ID：本企业 ② 对象的 businessKey 或 $id"
+      }
+    },
+    "required": [
+      "problemId"
+    ]
+  },
+  "positivePayload": {
+    "synthetic": false,
+    "problemId": "synth-problem-1455-q3",
+    "count": 2,
+    "truncated": false,
+    "items": [
+      {
+        "layer": "②",
+        "$id": "node-5d0b0911-d2b6-4a3a-df9a-e9dda2241f84",
+        "cycleVersion": null,
+        "sentinelRun": null,
+        "period": "2026-Q3",
+        "defVersion": "v1",
+        "evidenceId": null,
+        "status": "observed",
+        "visibility": "enterprise",
+        "source": {
+          "kind": "synova.domain",
+          "api": "synova.domain/v1"
+        }
+      },
+      {
+        "layer": "②",
+        "$id": "node-cf13215b-d4ed-4d24-3b3f-fd078301b61f",
+        "cycleVersion": null,
+        "sentinelRun": null,
+        "period": "2026-Q3",
+        "defVersion": "v1",
+        "evidenceId": null,
+        "status": "observed",
+        "visibility": "enterprise",
+        "source": {
+          "kind": "synova.domain",
+          "api": "synova.domain/v1"
+        }
+      }
+    ]
+  },
+  "negativePayload": {
+    "ok": false,
+    "code": "DOMAIN_EMPTY",
+    "phase": "tool",
+    "retryable": false,
+    "message": "本企业 ② 对象中解析不到 problemId: synth-problem-1455-does-not-exist"
+  },
+  "assertions": {
+    "initializeHttp200": true,
+    "initializedAccepted": true,
+    "toolsListHttp200": true,
+    "toolsListAdvertisesExactlyOneTool": true,
+    "toolsListAdvertisesSynovaContextGet": true,
+    "toolSchemaOnlyProblemId": true,
+    "positiveIsNotError": true,
+    "positiveSyntheticFalse": true,
+    "positiveCountAtLeastTwo": true,
+    "negativeIsError": true,
+    "negativeCodeDomainEmpty": true
+  },
+  "steps": [
+    {
+      "name": "initialize",
+      "method": "initialize",
+      "httpStatus": 200,
+      "contentType": "application/json",
+      "bodyText": "{\"result\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"synova-agent\",\"version\":\"0.1.0\"},\"instructions\":\"Synova Sidecar MCP — 回环 HTTP、只读、一次性 token（服务端注入身份，入参不得携带身份字段）。\\n工具面：仅 synova_context_get（真实领域只读，本切片只产 ② 结构）；写工具不广告且调用被拒（-32000）。\\n契约: SYNOVA-MCP-CONTRACT: 1\"},\"jsonrpc\":\"2.0\",\"id\":1}",
+      "bodyJson": {
+        "result": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {
+            "tools": {}
+          },
+          "serverInfo": {
+            "name": "synova-agent",
+            "version": "0.1.0"
+          },
+          "instructions": "Synova Sidecar MCP — 回环 HTTP、只读、一次性 token（服务端注入身份，入参不得携带身份字段）。\n工具面：仅 synova_context_get（真实领域只读，本切片只产 ② 结构）；写工具不广告且调用被拒（-32000）。\n契约: SYNOVA-MCP-CONTRACT: 1"
+        },
+        "jsonrpc": "2.0",
+        "id": 1
+      }
+    },
+    {
+      "name": "notifications/initialized",
+      "method": "notifications/initialized",
+      "httpStatus": 202,
+      "contentType": null,
+      "bodyText": "",
+      "bodyJson": null
+    },
+    {
+      "name": "tools/list",
+      "method": "tools/list",
+      "httpStatus": 200,
+      "contentType": "application/json",
+      "bodyText": "{\"result\":{\"tools\":[{\"name\":\"synova_context_get\",\"description\":\"读取一个问题对应的真实只读 ContextSnapshot（本切片只产 ② 本体结构，带 $id/期间/定义版本/状态）\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"problemId\":{\"type\":\"string\",\"description\":\"问题 ID：本企业 ② 对象的 businessKey 或 $id\"}},\"required\":[\"problemId\"]},\"permission\":\"read\"}]},\"jsonrpc\":\"2.0\",\"id\":2}",
+      "bodyJson": {
+        "result": {
+          "tools": [
+            {
+              "name": "synova_context_get",
+              "description": "读取一个问题对应的真实只读 ContextSnapshot（本切片只产 ② 本体结构，带 $id/期间/定义版本/状态）",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "problemId": {
+                    "type": "string",
+                    "description": "问题 ID：本企业 ② 对象的 businessKey 或 $id"
+                  }
+                },
+                "required": [
+                  "problemId"
+                ]
+              },
+              "permission": "read"
+            }
+          ]
+        },
+        "jsonrpc": "2.0",
+        "id": 2
+      }
+    },
+    {
+      "name": "tools/call (positive)",
+      "method": "tools/call (positive)",
+      "httpStatus": 200,
+      "contentType": "application/json",
+      "bodyText": "{\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"synthetic\\\":false,\\\"problemId\\\":\\\"synth-problem-1455-q3\\\",\\\"count\\\":2,\\\"truncated\\\":false,\\\"items\\\":[{\\\"layer\\\":\\\"②\\\",\\\"$id\\\":\\\"node-5d0b0911-d2b6-4a3a-df9a-e9dda2241f84\\\",\\\"cycleVersion\\\":null,\\\"sentinelRun\\\":null,\\\"period\\\":\\\"2026-Q3\\\",\\\"defVersion\\\":\\\"v1\\\",\\\"evidenceId\\\":null,\\\"status\\\":\\\"observed\\\",\\\"visibility\\\":\\\"enterprise\\\",\\\"source\\\":{\\\"kind\\\":\\\"synova.domain\\\",\\\"api\\\":\\\"synova.domain/v1\\\"}},{\\\"layer\\\":\\\"②\\\",\\\"$id\\\":\\\"node-cf13215b-d4ed-4d24-3b3f-fd078301b61f\\\",\\\"cycleVersion\\\":null,\\\"sentinelRun\\\":null,\\\"period\\\":\\\"2026-Q3\\\",\\\"defVersion\\\":\\\"v1\\\",\\\"evidenceId\\\":null,\\\"status\\\":\\\"observed\\\",\\\"visibility\\\":\\\"enterprise\\\",\\\"source\\\":{\\\"kind\\\":\\\"synova.domain\\\",\\\"api\\\":\\\"synova.domain/v1\\\"}}]}\"}]},\"jsonrpc\":\"2.0\",\"id\":3}",
+      "bodyJson": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"synthetic\":false,\"problemId\":\"synth-problem-1455-q3\",\"count\":2,\"truncated\":false,\"items\":[{\"layer\":\"②\",\"$id\":\"node-5d0b0911-d2b6-4a3a-df9a-e9dda2241f84\",\"cycleVersion\":null,\"sentinelRun\":null,\"period\":\"2026-Q3\",\"defVersion\":\"v1\",\"evidenceId\":null,\"status\":\"observed\",\"visibility\":\"enterprise\",\"source\":{\"kind\":\"synova.domain\",\"api\":\"synova.domain/v1\"}},{\"layer\":\"②\",\"$id\":\"node-cf13215b-d4ed-4d24-3b3f-fd078301b61f\",\"cycleVersion\":null,\"sentinelRun\":null,\"period\":\"2026-Q3\",\"defVersion\":\"v1\",\"evidenceId\":null,\"status\":\"observed\",\"visibility\":\"enterprise\",\"source\":{\"kind\":\"synova.domain\",\"api\":\"synova.domain/v1\"}}]}"
+            }
+          ]
+        },
+        "jsonrpc": "2.0",
+        "id": 3
+      }
+    },
+    {
+      "name": "tools/call (negative)",
+      "method": "tools/call (negative)",
+      "httpStatus": 200,
+      "contentType": "application/json",
+      "bodyText": "{\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"ok\\\":false,\\\"code\\\":\\\"DOMAIN_EMPTY\\\",\\\"phase\\\":\\\"tool\\\",\\\"retryable\\\":false,\\\"message\\\":\\\"本企业 ② 对象中解析不到 problemId: synth-problem-1455-does-not-exist\\\"}\"}],\"isError\":true},\"jsonrpc\":\"2.0\",\"id\":4}",
+      "bodyJson": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"ok\":false,\"code\":\"DOMAIN_EMPTY\",\"phase\":\"tool\",\"retryable\":false,\"message\":\"本企业 ② 对象中解析不到 problemId: synth-problem-1455-does-not-exist\"}"
+            }
+          ],
+          "isError": true
+        },
+        "jsonrpc": "2.0",
+        "id": 4
+      }
+    }
+  ],
+  "passed": true
+}

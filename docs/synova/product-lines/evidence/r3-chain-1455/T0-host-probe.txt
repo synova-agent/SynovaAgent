@@ -1,0 +1,13 @@
+T0-host-probe.txt — host capability probe (why the installer needed a caller-scope shim)
+generated: 2026-11-23T01:56:30.0450334+08:00
+
+[pwsh 7 presence]
+Get-Command pwsh => 
+
+[windows powershell]
+PSVersion: 5.1.26100.9818
+PSEdition: Desktop
+
+[reproduce the PS 5.1 defect on rc.5 package-lock.json]
+ConvertFrom-Json: THROWS -> 无法处理参数，因为参数“name”的值无效。请更改“name”参数的值，然后再次运行此操作。
+lockfileVersion=3 root packages key present: true

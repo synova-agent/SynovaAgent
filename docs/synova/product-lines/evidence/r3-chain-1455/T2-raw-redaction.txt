@@ -1,0 +1,31 @@
+T2-raw-redaction.txt — raw vs committed supervisor captures (Issue #1455)
+generated: 2026-11-22T18:26:51.972Z
+
+Why: the supervisor status JSON carries a transient loopback control token. Per the data boundary of this
+ticket no token value is committed. The untouched raw captures stay in the task root outside the repo;
+the committed copies differ from them ONLY in that one field, and both hashes are listed below.
+
+file: T2-start-2.redacted.json
+  raw (NOT committed): D:\novis-backup-20260526\Novis\_r3chain-20261123\evidence\T2-start-2.json  sha256=12c48c7d20a2d808228d860608795c1d6680085c15324e1e3b44d2c6e517fc10  bytes=1808
+  committed          : T2-start-2.redacted.json  sha256=39b779280401d104087d3ed0f980ffee7d3f6367b9ff21d587a2465ab7b17afa
+  change             : only the controlToken value replaced by "<redacted>"; every other byte identical
+file: T2-start-raw.redacted.json
+  raw (NOT committed): D:\novis-backup-20260526\Novis\_r3chain-20261123\evidence\T2-start-raw.json  sha256=2b258a889262fb1c7323484cdf9e45ad075b60b63b0bf7459948ae61ab036072  bytes=1806
+  committed          : T2-start-raw.redacted.json  sha256=aef6ba854ab99f224751ff45db6a0e8e8fbfbc4d20455e0fb7d9c26cbc216d51
+  change             : only the controlToken value replaced by "<redacted>"; every other byte identical
+file: T2-status-2.redacted.json
+  raw (NOT committed): D:\novis-backup-20260526\Novis\_r3chain-20261123\evidence\T2-status-2.json  sha256=3abe78abc864bccec2c7de50ed985f066b4c247efb909ccdef2e095fcb1ded66  bytes=1758
+  committed          : T2-status-2.redacted.json  sha256=f1be553a395bb2486629b9c7e6fbca2fb88b5ad040d4c67a7b6e8a5359999d74
+  change             : only the controlToken value replaced by "<redacted>"; every other byte identical
+file: T2-status-installdir-2.redacted.json
+  raw (NOT committed): D:\novis-backup-20260526\Novis\_r3chain-20261123\evidence\T2-status-installdir-2.json  sha256=3e9409582e362086459462ea49d8a20a59b058715c9c8677520d0ed36e285cc3  bytes=1774
+  committed          : T2-status-installdir-2.redacted.json  sha256=8333c254ae9bb4c2a5785c4368885c6e1292c2bd1d5b8a08a0b5139a48c14372
+  change             : only the controlToken value replaced by "<redacted>"; every other byte identical
+file: T2-stop-2.redacted.json
+  raw (NOT committed): D:\novis-backup-20260526\Novis\_r3chain-20261123\evidence\T2-stop-2.json  sha256=c2c054aa3b7a1ff44b557afd598e5cc595a368a8a56911b3989851bc88aeb234  bytes=134
+  committed          : T2-stop-2.redacted.json  sha256=4273a36b3d0b281004547c6b4a24bf99a33a389b391160efe5315dd3113d597d
+  change             : only the controlToken value replaced by "<redacted>"; every other byte identical
+file: T2-stop-raw.redacted.json
+  raw (NOT committed): D:\novis-backup-20260526\Novis\_r3chain-20261123\evidence\T2-stop-raw.json  sha256=8e733aa34564252f08e8a535c64933834a65db85045973efed7554cd92d8e7bf  bytes=134
+  committed          : T2-stop-raw.redacted.json  sha256=04d99d5937ce2c7f9360a5474c7a03edff88cdf387e9d82afa5da245c3041c99
+  change             : only the controlToken value replaced by "<redacted>"; every other byte identical
