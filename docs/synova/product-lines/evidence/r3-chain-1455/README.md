@@ -1,6 +1,6 @@
 # R3 chain — DSH 最小真实复用证明链（Gitea #1455）· 实机证据
 
-> **结论：R3 达成（Done 1–7 PASS，8(b) PASS，**8(a) UNVERIFIED**（产品缺陷，见 §6），9/10 PASS）。**
+> **结论：R3 达成（Done 1–7 PASS、9/10 PASS、反例 PASS）。Done 8：**Sidecar stop（b）PASS**；**8(a) UNVERIFIED**（产品缺陷 #1456）；**"会话关闭（session/close）"部分 UNVERIFIED**（证据层无该调用的原始记录，本目录不主张会话已关闭）。**
 > 链在 **rc.5 实物**上真实跑通：桌面端登录 → 输入合成 prompt → 发起 → **DSH 调 `synova_context_get` 拿到真实 ② 数据** → 模型复述条目数 → 桌面收到 `run.completed`。
 > 依据：DEV DOC **v3**（评论 14384）＋ **v3.1 勘误**（评论 14395）＋ 关卡 A（评论 14394）＋ Mandate（14396）＋ **CTO 补充裁定 S1（评论 14400：T3 走"复用隔离 server"，Done 8(a) 记 UNVERIFIED）**。
 
@@ -55,7 +55,7 @@
 | 5 | DSH 侧工具调用与返回 | **PASS** | `07-dsh-session-log.jsonl` 含 `tool/call`(name=`synova_context_get`) + `tool/result`(`synthetic:false`,`count=2`)；`11-mcp-tools-list.json` 证明 Synova 侧只广告该只读工具 |
 | 6 | DSH 产事件 | **PASS** | `05-sse-events.txt` 的 `reasoning.delta`/`tool.*`/`text.delta` 与 `07` 的 DSH 记录时间与内容一一对应（非 Synova 自造） |
 | 7 | 桌面收到 run.completed | **PASS** | `08-desktop.png` + `T3-cdp-result.json`（DOM `data-run-status=done`、运行编号=runId、事件 2 条）+ `09-desktop-console.txt` |
-| 8 | close/stop 后进程退出 | **(b) PASS / (a) UNVERIFIED** | (b) `02-acp-initialize.json`：`stop.ps1` → supervisor 22680 + ACP 11060 双 PID 消失；(a) 见 §6（产品缺陷 #1456，S1 裁定不做） |
+| 8 | close/stop 后进程退出 | **Sidecar stop（b）PASS / 8(a) UNVERIFIED / 会话关闭 UNVERIFIED** | (b) `02-acp-initialize.json`：`stop.ps1` → supervisor 22680 + ACP 11060 双 PID 消失 ⇒ **Sidecar stop PASS**；(a) Electron 自起后端 → `before-quit` → `backendHandle.stop()` 不可达（§6，产品缺陷 #1456）；**ACP `session/close`（`POST /api/dsh/sessions/:id/close`）在证据层没有执行记录** ⇒ "会话关闭"部分 **UNVERIFIED**，本目录**不主张**会话已关闭（见 §6.1） |
 | 9 | 同 CodeSha / runId / 时间窗 | **PASS** | 全产物 `codeSha=caf61fcd`；runId/sessionId 贯穿 03–10；时间窗 02:33–02:40 (+08) 内 |
 | 10 | 无 Secrets / 数据边界明确 | **PASS** | `T5-secrets-scan.txt`（0 命中）、`CREDENTIAL-CLEANUP.txt`、§7 边界声明 |
 
@@ -86,7 +86,7 @@
 
 ## 5 T1/T2 已取得（沿用本次提交）
 
-- **T1**：`/api/healthz` 200；合成账号 register 201 + login 200（`role=admin`、`orgId=synth-org-1455`）；合成②走产品工具路径 `buildContextSnapshot` ⇒ `synthetic:false,count=2,layer=②,visibility=enterprise`（`T1-seed-output.json`）；准备用 server 停掉并记录 PID（`T1-server-pids.txt`，非产品停法）。
+- **T1**：`/api/healthz` 200；合成账号 register 201 + login 200（`role=admin`、`orgId=synth-org-1455`）；合成②走产品工具路径 `buildContextSnapshot` ⇒ `synthetic:false,count=2,layer=②,visibility=enterprise`（`T1-seed-output.log`——原始 stdout 含 pino 日志头 + JSON 体，**不是合法 JSON 文件**，故按 `.log` 提交）；准备用 server 停掉并记录 PID（`T1-server-pids.txt`，非产品停法）。
 - **T2**：supervisor `start/status/stop` ⇒ `ready=true, protocolVersion=1, agentName=deepseek-harness-acp`，stop 后 supervisor+ACP 双 PID 消失（`02-acp-initialize.json`，**Done 8(b)**）；MCP 探针 11/11 断言（`11-mcp-tools-list.json`）+ 反例（`12-negative-domain-empty.json`）。
 
 ---
@@ -98,6 +98,30 @@
 证据：`T3-BREAK-electron-dev-self-start-ENOENT.txt`（主进程 console 回放 + 三段最小复现）、`T3-electron-stdout-raw.txt`、`T3-desktop-no-backend.png`、`T4-cleanup-external-terminate.txt`（首次尝试的外部清理记录，明确不计入 Done 8）。
 
 **T4 本次实际动作**：Electron 经 CDP browser 端点 `Browser.close` 退出（`10-process-exit.txt`）；在 reused 模式下产品 `before-quit` 本就无 `backendHandle.stop` 可调，故不构成进程回收证据。隔离 server 随后按**测试卫生**停止（`T4b-server-test-hygiene.txt`，**不计入 Done 8**，非外部 taskkill 冒充）。
+
+### 6.1 会话关闭（Done 8 的另一半）：证据层无原始记录 ⇒ UNVERIFIED
+
+本目录**没有** ACP `session/close` 帧记录，也**没有** `POST /api/dsh/sessions/<id>/close` 的请求/响应落盘。
+与"结束"相关的**证据**只有两件：T2 的 supervisor `stop.ps1`（**Sidecar stop**，Done 8(b)）与收尾的**测试卫生**停 server（`T4b-*`，不计入 Done 8）。
+⇒ 按"无证据不计通过"口径：**Done 8 的"会话关闭"部分 = UNVERIFIED**；本 README 与全部证据**不主张**该 ACP 会话已关闭。
+事实补充（不改判定）：coding 会话内该请求曾发出，工具输出里拿到过 `{"ok":true,…, "closed":true}`，但该响应**未落盘为证据**，因此不能作为通过依据。
+（补证成本很低：`session/close` 是产品 API，可在**不消耗模型轮次**的前提下单独补一条原始响应记录——留给 CTO 决定是否要补。）
+
+### 6.2 CI 失败分类（PR #1457 / run 4607 / job 4837）：非产品代码失败
+
+CI 结论：`core-gates / core` = **Failing after 1m52s**（commit `5ed8130ef`，combined=failure）。失败行原文（从 job 4837 日志逐字摘出）：
+
+```
+relevant changes produced no affected test files
+CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran affected_passed=0 reason=affected-no-tests
+##[error]Process completed with exit code 1.
+```
+
+判读：
+- `contract_passed=92` / `user_visible_passed=10` ⇒ **契约测试与用户可见测试全部通过**；红来自 `affected_passed=0`。
+- `reason=affected-no-tests`：本 PR 含 3 个 `scripts/dsh-sidecar/r3-chain/*.ts`（`install-profile.ts` / `seed-synthetic.ts` / `mcp-probe.ts`），门禁把它们算作"代码面变更"，而 `vitest --changed` 找不到受影响测试 ⇒ 命中 `scripts/ci/core-tests.sh:349` 的 `fail_test "relevant changes produced no affected test files" "affected-no-tests"`。
+- ⇒ **不是产品代码失败**（本票 `src/**` 0 行、`electron/**` 0 行改动）。
+- **不为绕门禁做任何事**：不移动脚本位置、不加假测试、不改 `scripts/ci/**` 或 workflow；PR **保持 open、不 merge**，口径由 CTO 改判（例如 affected 集合口径，或证据脚本的豁免范围）。
 
 ---
 
@@ -158,5 +182,5 @@
 ## 10 结论与后续
 
 - **R3 = 达成**：`initialize → session/new → prompt → synova_context_get（真实 ②）→ run.completed` 在 rc.5 实物上端到端跑通，桌面端可见，DSH 侧原始记录可核，模型轮次只用 1 次。
-- **未达成 1 项**：Done 8(a)（Electron 自起后端 → `before-quit` → `backendHandle.stop()`）—— 产品缺陷 **#1456**，本票不改，按 S1 记 UNVERIFIED。
+- **未达成 3 项**：① Done 8(a)（Electron 自起后端 → `before-quit` → `backendHandle.stop()`）—— 产品缺陷 **#1456**；② Done 8 的"会话关闭（session/close）"部分 —— 证据层无该调用的原始记录（§6.1），**不主张已关闭**；③ CI `core-gates / core` —— `reason=affected-no-tests`（§6.2），非产品代码失败，PR 不 merge。
 - 后续建议：修 #1456 后补一次 Done 8(a) 的**单点**验证（可用同一合成夹具，不需要再烧模型轮次：只需确认 `backendHandle.stop()` 结束后端树）。

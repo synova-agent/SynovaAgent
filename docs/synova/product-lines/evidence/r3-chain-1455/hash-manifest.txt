@@ -1,5 +1,5 @@
 # hash-manifest.txt — sha256 of every committed evidence/script artifact (Issue #1455)
-# generated: 2026-11-22T18:41:15.031Z
+# generated: 2026-11-22T18:50:35.922Z
 # files: 44
 # excluded (derived, self-referential): T5-secrets-scan.txt, hash-manifest.txt
 2c90f7bc4d5ddbbba5f143a9ebb8b238c196075c40cdc9e1059319d1a3aa1335       3116  docs/synova/product-lines/evidence/r3-chain-1455/00-env.txt
@@ -18,12 +18,12 @@ a791afd6bbcb1dbb77d848bea8fc2d94b9455a18792e064dfdd1c64c8766e267       3270  doc
 cfb0b19fc50c106f9863ed4419677ab00ebfe8d1bbbafb2330d2d906978927d1       8196  docs/synova/product-lines/evidence/r3-chain-1455/11-mcp-tools-list.json
 cecfb4b06e8d3c5ce047511680d19bac3d5e08b3785c2de47afcecbf5a4056fd       1904  docs/synova/product-lines/evidence/r3-chain-1455/12-negative-domain-empty.json
 613fda1becd0ca4e8442622005518c75a958e48467e399e84cf8d8fd4b0cc978       1066  docs/synova/product-lines/evidence/r3-chain-1455/CREDENTIAL-CLEANUP.txt
-3f11cb9ce8d4f9257aa84b0b8d031bfd06ba45c97880d74fd2e751ac069717bf      15523  docs/synova/product-lines/evidence/r3-chain-1455/README.md
+a176479a4535d15a46eee9d5fa2def7936a9f7414024a2e96153236d8b28a1e0      18580  docs/synova/product-lines/evidence/r3-chain-1455/README.md
 6567998308bce4a525184ba009f01d8d3f32c1b88efc7651bd90d90578d2f576      14272  docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-config-patched.txt
 1a771b8bdaebb53de7b6eec326c884a8e091bd7aa306967857f1b58d02cf727b      12721  docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-default-config.txt
 5f216aa2f46a75b0c1c502cf92fed48fc564828549b9afe6ef44481b4bbd9617        514  docs/synova/product-lines/evidence/r3-chain-1455/T0-host-probe.txt
 b06451c88ce8f8bf7ac70f50df07b4d4bc90607b9404c6b0c044c685c5b0d633       2215  docs/synova/product-lines/evidence/r3-chain-1455/T0-install-attempt1-failure.txt
-bd183dee701a2e616ac09a27859985da68908d78d2fbd1ec72be4bb700537ff1       3608  docs/synova/product-lines/evidence/r3-chain-1455/T1-seed-output.json
+bd183dee701a2e616ac09a27859985da68908d78d2fbd1ec72be4bb700537ff1       3608  docs/synova/product-lines/evidence/r3-chain-1455/T1-seed-output.log
 3c307a25a0495bf9f1794b8b7e85e3f23f9d75de186b62f54267ac8b8b78cb51       1002  docs/synova/product-lines/evidence/r3-chain-1455/T1-server-pids.txt
 08141513724339843c7b4fa4c13c78a9fb3df3368c730afc9e77c3ae69af0816       3090  docs/synova/product-lines/evidence/r3-chain-1455/T2-raw-redaction.txt
 39b779280401d104087d3ed0f980ffee7d3f6367b9ff21d587a2465ab7b17afa        865  docs/synova/product-lines/evidence/r3-chain-1455/T2-start-2.redacted.json

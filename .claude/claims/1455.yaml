@@ -31,7 +31,7 @@ writeset:
   - docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-config-patched.txt
   - docs/synova/product-lines/evidence/r3-chain-1455/T0-host-probe.txt
   - docs/synova/product-lines/evidence/r3-chain-1455/T0-install-attempt1-failure.txt
-  - docs/synova/product-lines/evidence/r3-chain-1455/T1-seed-output.json
+  - docs/synova/product-lines/evidence/r3-chain-1455/T1-seed-output.log
   - docs/synova/product-lines/evidence/r3-chain-1455/T1-server-pids.txt
   - docs/synova/product-lines/evidence/r3-chain-1455/T2-start-2.redacted.json
   - docs/synova/product-lines/evidence/r3-chain-1455/T2-start-raw.redacted.json
@@ -73,4 +73,4 @@ done:
   - verify: node scripts/dsh-sidecar/r3-chain/session-decompress.mjs ...         # 11 帧 / 7154B→16930B / 25 行；Σ帧字节==文件字节；tool/call+tool/result(synthetic:false,count=2)
   - verify: node ops/quit-electron.mjs / CDP Browser.close (T4)                  # Electron 退出；隔离 server 仍存活（reuse 证据）；Done 8(a) 未主张
   - verify: node ops/manifest-and-scan.mjs (evidence + scripts)                  # 44 文件，secrets 0 命中；hash-manifest.txt 重算
-note: "#1455 真实执行票。R3 达成：桌面端（真实 renderer，JWT 身份 userId=node-d595…/org=synth-org-1455，非 DevMode）发出 187 字符合成 prompt -> DSH 经回环 MCP 调 synova_context_get(problemId=synth-problem-1455-q3) -> 拿到真实 ②（synthetic:false,count=2）-> 模型复述 count/两个 \$id/period/defVersion -> run.completed(stats.toolCalls=1, empty=false)；DSH 侧 session.v4.jsonl.zstd 帧感知解压（11 帧、字节覆盖通过）证到 tool/call + tool/result。产品代码 0 件改动：条件写集 A/B 未触发（rc.5 接受 17 条 disable 与 sandbox/approval；只读工具面可发现），条件写集 C（修 electron/backend-spawn.cjs）未获授权且已由 CTO 另立 #1456。Done 8(a) 按 S1 记 UNVERIFIED（复用的隔离 server 不产生 backendHandle.stop）；Done 8(b) 由 T2 supervisor stop 成立。模型轮次 1/1 用尽、未重试。一次性凭据两轮共删除两次（T5 记录路径+时间）。"
+note: "#1455 真实执行票。R3 达成：桌面端（真实 renderer，JWT 身份 userId=node-d595…/org=synth-org-1455，非 DevMode）发出 187 字符合成 prompt -> DSH 经回环 MCP 调 synova_context_get(problemId=synth-problem-1455-q3) -> 拿到真实 ②（synthetic:false,count=2）-> 模型复述 count/两个 \$id/period/defVersion -> run.completed(stats.toolCalls=1, empty=false)；DSH 侧 session.v4.jsonl.zstd 帧感知解压（11 帧、字节覆盖通过）证到 tool/call + tool/result。产品代码 0 件改动：条件写集 A/B 未触发（rc.5 接受 17 条 disable 与 sandbox/approval；只读工具面可发现），条件写集 C（修 electron/backend-spawn.cjs）未获授权且已由 CTO 另立 #1456。Done 8(a) 按 S1 记 UNVERIFIED（复用的隔离 server 不产生 backendHandle.stop）；Done 8 的"会话关闭（session/close）"部分同样 UNVERIFIED（证据层无该调用的原始记录，本票不主张会话已关闭）；Done 8(b)（Sidecar stop）由 T2 supervisor stop 成立。CI core-gates/core 红因 reason=affected-no-tests（证据脚本被算作代码面变更且无受影响测试，contract_passed=92/user_visible_passed=10 全过），非产品代码失败，PR 不 merge、不绕门禁。模型轮次 1/1 用尽、未重试。一次性凭据两轮共删除两次（T5 记录路径+时间）。"
