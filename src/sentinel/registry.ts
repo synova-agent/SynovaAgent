@@ -7,11 +7,32 @@
  * @state: real — 生产可用, 与 CronScheduler 集成
  */
 
-import type { Sentinel, SentinelConfig, SentinelCategory, SentinelPriority, SentinelRegistry, SentinelFinding, SentinelContext } from './types';
+import type { Sentinel, SentinelConfig, SentinelCategory, SentinelPriority, SentinelRegistry, SentinelFinding, SentinelContext, SentinelCheckResult } from './types';
 import { createLogger } from '@synova/logger';
-
+import type Database from 'better-sqlite3';
+import { randomUUID } from 'crypto';
 import { writeRoundReadings } from './metric-readings-writer';
+import { writeMetricObservation } from './metric-observations-writer';
+import { resolveOrCreate } from '../agent/graph-store-service';
 const log = createLogger('sentinel/registry');
+
+/**
+ * 轮次级 ④a 写入选项（#1431 阶段 2 · S2）。
+ *
+ * 三者**都由调用方/装配方显式给**，本模块不推导：
+ * @field period —— 业务周期（`YYYY-MM`）。禁 `now()` 派生、禁用写入时间顶替；
+ *                  缺 ⇒ 不写 `metric_observations` + `log.warn` `S2_DEGRADED_NO_PERIOD`。
+ * @field objectKey —— ② 对象的业务键（`resolveOrCreate` 的幂等键）；缺 ⇒ 不写 + `S2_DEGRADED_NO_OBJECT`，
+ *                   **不回落 `'*'`**（`metric_observations.object_id <> '*'` 是表级不变量）。
+ * @field db —— 引擎库句柄（由 runner 经注入给出；registry 不自行 `getDatabase`）。缺 ⇒ 不写 + `S2_DEGRADED_NO_DB`。
+ *
+ * @not-here 不扩 `SentinelContext`（S2 卡 v2 停点：当前设计不需要）；period 的生产者（调度接入）归 S2b。
+ */
+export interface SentinelRoundObservationOptions {
+  period?: string;
+  objectKey?: string;
+  db?: Database.Database;
+}
 
 // ═══ SentinelRegistryImpl ═══
 
@@ -92,14 +113,27 @@ export class SentinelRegistryImpl implements SentinelRegistry {
     return this.list();
   }
 
-  /** 运行所有哨兵 (按需诊断用), 返回 Finding[]。每哨兵独立降级。 */
-  async runAll(context: SentinelContext): Promise<SentinelFinding[]> {
+  /**
+   * 运行所有哨兵 (按需诊断用), 返回 Finding[]。每哨兵独立降级。
+   *
+   * #1054：旧链轮次级写入（`metric_readings`）**保持原样**（本卡零改动）。
+   * #1431 S2：可选 `observation` 给出 period/objectKey/db 时，**追加**一轮 ④a 写入
+   * （新表 `metric_observations`，`object_id` 指向 `resolveOrCreate` 得到的真实 ② 节点）；
+   * 缺任一项 ⇒ 该轮**不写 ④a** + `log.warn`（降级码见 `SentinelRoundObservationOptions`）。
+   */
+  async runAll(
+    context: SentinelContext,
+    observation?: SentinelRoundObservationOptions,
+  ): Promise<SentinelFinding[]> {
     const all: SentinelFinding[] = [];
+    const observationTarget = resolveRoundObservationTarget(context, observation);
     for (const s of this.sentinels.values()) {
       try {
         const result = await s.check(context);
-        // #1054（2-1b）轮次级写入（覆盖面 = 其余 44 哨兵；sink 未注入 ⇒ no-op）
+        // #1054（2-1b）轮次级写入（覆盖面 = 其余 44 哨兵；sink 未注入 ⇒ no-op）—— 旧链，零改动
         writeRoundReadings(context.metricSink, s.config.id, result, context.teamId);
+        // #1431 S2：④a 轮次级写入（新表；缺 period/objectKey/db ⇒ 本轮已降级，target 为 null）
+        if (observationTarget) writeRoundObservations(observationTarget, s.config, result);
         if (result.findings) all.push(...result.findings);
       } catch (err: unknown) {
         log.warn({ err, id: s.config.id }, '哨兵执行失败 — degraded');
@@ -107,6 +141,165 @@ export class SentinelRegistryImpl implements SentinelRegistry {
     }
     if (all.length > 0) log.info({ findings: all.length }, '哨兵运行完成');
     return all;
+  }
+}
+
+// ═══ #1431 阶段 2 · S2：轮次级 ④a 写入（新表 metric_observations）═══
+
+/** ④a 写入指向的 ② 对象类型（企业团队） */
+const ROUND_OBSERVATION_OBJECT_TYPE = 'Team';
+
+/**
+ * 哨兵轮次生产的 ② 对象 `defVersion`（S1 `createObject` 必填的**对象定义版本**）。
+ * ⚠️ 与观测行的 `def_version`（= 哨兵 `config.version`）**不是同一个东西**：
+ *    前者标 ② 对象形态的版本，后者标指标定义的版本。
+ */
+const ROUND_OBJECT_DEF_VERSION = 'sentinel-round-v1';
+
+/** `period` 形态（`YYYY-MM`）—— 与 S1 `createObject` / `metric_observations.period` 口径一致 */
+const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** 一轮 ④a 写入的目标（对象已解析、runId 已生成） */
+interface RoundObservationTarget {
+  db: Database.Database;
+  orgId: string;
+  objectId: string;
+  period: string;
+  runId: string;
+  /** `checkedAt` 缺失时的观测时间兜底 —— 取**注入的** `context.now`（tests/contract/time-injection 禁新代码直取系统时钟） */
+  fallbackObservedAt: string;
+}
+
+/**
+ * 解析本轮 ④a 的目标；任一前提缺失 ⇒ `log.warn` + 返回 null（**本轮不写 ④a**）。
+ *
+ * 降级码（机器可过滤，铁律 11/24/31）：
+ *   · `S2_DEGRADED_NO_PERIOD` —— 调用方未显式传入 period（禁 `now()` 派生）；
+ *   · `S2_DEGRADED_BAD_PERIOD` —— period 非 `YYYY-MM`；
+ *   · `S2_DEGRADED_NO_OBJECT` —— 未传 objectKey（不得回退 `'*'`）；
+ *   · `S2_DEGRADED_NO_ORG` —— 无 teamId（org 维度未接 ⇒ fail-closed，不写错租户行）；
+ *   · `S2_DEGRADED_NO_DB` —— 引擎库句柄不可用（不抛、不中断哨兵轮次）；
+ *   · `S2_DEGRADED_OBJECT_FAILED` —— ② 对象解析/创建失败（严格链抛错 ⇒ 本轮不写 ④a）。
+ */
+function resolveRoundObservationTarget(
+  context: SentinelContext,
+  observation: SentinelRoundObservationOptions | undefined,
+): RoundObservationTarget | null {
+  const period = observation?.period;
+  if (typeof period !== 'string' || period === '') {
+    log.warn(
+      { code: 'S2_DEGRADED_NO_PERIOD', teamId: context.teamId },
+      '缺调用方显式传入的 period（YYYY-MM）⇒ 本轮不写 metric_observations（禁 now() 派生、禁写 *）',
+    );
+    return null;
+  }
+  if (!PERIOD_PATTERN.test(period)) {
+    log.warn(
+      { code: 'S2_DEGRADED_BAD_PERIOD', period, teamId: context.teamId },
+      'period 不是 YYYY-MM ⇒ 本轮不写 metric_observations',
+    );
+    return null;
+  }
+  const objectKey = observation?.objectKey;
+  if (typeof objectKey !== 'string' || objectKey === '') {
+    log.warn(
+      { code: 'S2_DEGRADED_NO_OBJECT', teamId: context.teamId },
+      '缺 objectKey ⇒ 本轮不写 metric_observations（不得回退写 *）',
+    );
+    return null;
+  }
+  const orgId = context.teamId;
+  if (typeof orgId !== 'string' || orgId === '') {
+    log.warn(
+      { code: 'S2_DEGRADED_NO_ORG', objectKey },
+      '无 teamId（org 维度未接）⇒ 本轮不写 metric_observations（fail-closed）',
+    );
+    return null;
+  }
+  const db = observation?.db;
+  if (!db) {
+    log.warn(
+      { code: 'S2_DEGRADED_NO_DB', orgId, objectKey },
+      '引擎库句柄不可用 ⇒ 本轮不写 metric_observations（不抛、不中断哨兵轮次）',
+    );
+    return null;
+  }
+  let objectId: string;
+  try {
+    objectId = resolveOrCreate(orgId, objectKey, ROUND_OBSERVATION_OBJECT_TYPE, {
+      name: objectKey,
+      period,
+      defVersion: ROUND_OBJECT_DEF_VERSION,
+    });
+  } catch (err: unknown) {
+    log.warn(
+      { code: 'S2_DEGRADED_OBJECT_FAILED', orgId, objectKey, err: err instanceof Error ? err.message : String(err) },
+      '② 对象解析/创建失败 ⇒ 本轮不写 metric_observations（不中断哨兵轮次）',
+    );
+    return null;
+  }
+  // runId 每轮一个（不入唯一键 ⇒ 同周期重跑只留首行，run_id 仅用于追账）
+  return {
+    db,
+    orgId,
+    objectId,
+    period,
+    runId: `run-${randomUUID()}`,
+    fallbackObservedAt: context.now.toISOString(),
+  };
+}
+
+/**
+ * 写一轮 ④a（每个哨兵 2 行可得量：findings 条数 + 耗时）。
+ *
+ * 与旧链 `writeRoundReadings` 的差别：**严格链**（`writeMetricObservation` 校验失败即抛），
+ * 故此处必须逐行 `try/catch` + `log.warn`：单行写失败**不中断**哨兵轮次（铁律 24/31），
+ * 也不伪造成功 —— 没写进去就是没写进去。
+ */
+function writeRoundObservations(
+  target: RoundObservationTarget,
+  sentinel: Pick<SentinelConfig, 'id' | 'version'>,
+  result: Pick<SentinelCheckResult, 'findings' | 'durationMs' | 'checkedAt'>,
+): void {
+  const sentinelId = sentinel.id;
+  const observedAt =
+    typeof result.checkedAt === 'string' && result.checkedAt !== ''
+      ? result.checkedAt
+      : target.fallbackObservedAt;
+  const rows: ReadonlyArray<{ metricId: string; value: number; unit?: string }> = [
+    { metricId: `SENTINEL-FINDINGS-${sentinelId}`, value: result.findings?.length ?? 0 },
+    { metricId: `SENTINEL-DURATION-${sentinelId}`, value: result.durationMs ?? 0, unit: 'ms' },
+  ];
+  for (const row of rows) {
+    try {
+      writeMetricObservation(target.db, {
+        orgId: target.orgId,
+        objectId: target.objectId,
+        metricId: row.metricId,
+        period: target.period,
+        value: row.value,
+        unit: row.unit,
+        // 指标定义版本 = 哨兵自己的 config.version（不是轮次对象的 defVersion）
+        defVersion: sentinel.version,
+        runId: target.runId,
+        sourceType: 'compute',
+        sourceId: `SENTINEL-${sentinelId}`,
+        evidenceRef: `sentinel:${sentinelId}`,
+        observedAt,
+      });
+    } catch (err: unknown) {
+      log.warn(
+        {
+          code: 'S2_DEGRADED_WRITE_FAILED',
+          orgId: target.orgId,
+          objectId: target.objectId,
+          metricId: row.metricId,
+          period: target.period,
+          err: err instanceof Error ? err.message : String(err),
+        },
+        'metric_observations 写入失败 ⇒ 该行不落库（严格链；不中断哨兵轮次）',
+      );
+    }
   }
 }
 

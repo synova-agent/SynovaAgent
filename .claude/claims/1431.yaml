@@ -1,20 +1,25 @@
-# .claude/claims/1431.yaml — #1431（阶段 2 · S1）② 对象与关系真实落库：createObject + createRelation
+# .claude/claims/1431.yaml — #1431（阶段 2 · S2）哨兵轮次 → ④a 真实指标生产者
 # 纪律：只列本 PR 真正改动的文件；变更集 ⊆ writeset（check-brief-vs-code G12）。
-# 六节卡：Issue #1431 评论 14225 ｜ DEV DOC v1（含编码指令）：评论 14226
-# base: 4a78be9cf51a690c4a15f89570a0ca4b5193fa28 ｜ branch: feat/1431-s1-objects
-# 第 0 步核定（@4a78be9cf 实读；CTO 已核 + 本会话逐行复核）：
-#   · createNode(type, props, graph='default'): string → `node-<uuid>`（sqlite-graph-store.ts:182-199，id 生成 :207）
-#   · standardKeyGuard 只在 `props.standardKey` 存在时介入（standard-key-guard.ts:30-31）⇒ period/defVersion 直通、props 不改写
-#   · name 取 props.name || props.label || type（sqlite-graph-store.ts:208）⇒ 测试显式给 props.name
-#   · createEdge(type, from, to, weight?, props?, graph) 内部 getNode 失败即写 "unknown"（:234-237）
-#     ⇒ createRelation 先 getNodeStrict 查两端再写；测试断言边两端类型 = 输入 type 且 ≠ "unknown"
+# S2 卡 v2（含实读证据）：Issue #1431 评论 14333 ｜ Mandate：评论 14335（synova-1431-s2-producer-v1）
+# base: b4c1ec5ee87e20ca3800e12fd8d158e59c9b2a1c ｜ branch: feat/1431-s2-producer
+# 第 0 步核定（@b4c1ec5ee 实读；与 Mandate「已核事实」逐条复核一致）：
+#   · runSentinelForTeam(teamId, store, options?) 原无 period/objectKey（sentinel-runner.ts:30-34）
+#   · ctx 只有 now: new Date()（:55-60）；org_id == teamId（:37-38；轮次写入传 context.teamId）
+#   · writer 支持 entityId?（metric-readings-writer.ts:68），轮次级写死 '*'（:196）
+#   · types.ts 全文 0 命中 period ⇒ period 只能由调用方显式传入（禁止 now() 派生）
+#   · 既有 createObject 必须 props.period(YYYY-MM)+defVersion（graph-store-service.ts:128-135）
+#   · SqliteGraphStore 构造即 reconcileSchema ⇒ graph_nodes 与 metric_observations（迁移 007）同库，
+#     测试用 :memory: 即可同时断言"新表行"与"object_id 在 graph_nodes 可查"
+#   · 旧链 metric_readings 的轮次写入在 registry.runAll 里（registry.ts:102）⇒ S2 追加新表写入、旧调用逐字保留
 writeset:
   - .claude/claims/1431.yaml
-  - memory/notes/implemented/1431-s1-objects.md
+  - memory/notes/implemented/1431-s2-producer.md
+  - src/sentinel/sentinel-runner.ts
+  - src/sentinel/registry.ts
   - src/agent/graph-store-service.ts
-  - tests/agent/stage2-s1-objects.test.ts
+  - tests/sentinel/stage2-s2-producer.test.ts
 done:
-  - verify: npx vitest run tests/agent/stage2-s1-objects.test.ts
-  - verify: npx vitest run tests/agent
-  - verify: npx tsc --noEmit
-note: "#1431 阶段 2 · S1：graph-store-service.ts 纯新增 GraphWriteError（VALIDATION|EDGE_ENDPOINT_MISSING，.code/.phase/.retryable/field）+ createObject(orgId,type,props) + createRelation(orgId,type,fromId,toId,props?)。graph 只由 orgId 派生（两函数签名均无 graph 入参，禁默认 'default'）；createObject 校验 orgId/type/props 为纯对象/period=YYYY-MM/defVersion 非空，全部校验先于构造 store ⇒ 违约零写入、零 getDatabase 触达；createRelation 先 getNodeStrict(id, orgId) 查两端（同 org），缺失或跨 org ⇒ EDGE_ENDPOINT_MISSING 且零写入 ⇒ createEdge 内部 getNode 必得真实类型，不落 'unknown'；介质层/写入异常原样上抛不吞。既有 getObjectById/getNodeStrict/createNode 零改动。验证：新测试 7/7 绿（:memory:）；tests/agent 全量改动后 2 failed|566 passed(568)，与基线同两条（context-compaction.test.ts:95/:410 未 await 的既有断言）；tsc --noEmit 改动前后均 exit 0；3 条改坏必红逐条留原始失败行（4/1/2 条用例红）后恢复，文件 SHA256 回到 ECD7310C…、7/7 复绿。"
+  - verify: npx vitest run tests/sentinel/stage2-s2-producer.test.ts   # 6/6 通过（正例/两反例/period 形态/幂等/resolveOrCreate 边界）
+  - verify: npx vitest run tests/sentinel tests/agent                 # 改动后 11 failed|1661 passed|1 skipped（1673）；与基线 5 文件/11 条**同因**，新增 6 条全绿
+  - verify: npx tsc --noEmit                                         # exit 0，零输出
+note: "#1431 阶段 2 · S2：runSentinelForTeam 增可选 period/objectKey（透传到 registry.runAll 第二参，不扩 SentinelContext）；registry 在旧链 writeRoundReadings 之后**追加**轮次 ④a 写入 metric_observations（writeMetricObservation，object_id 由 resolveOrCreate(orgId=teamId, businessKey=objectKey, type='Team') 得到），缺 period/objectKey/db/org ⇒ 本轮不写 + log.warn（S2_DEGRADED_NO_PERIOD/BAD_PERIOD/NO_OBJECT/NO_ORG/NO_DB/OBJECT_FAILED/WRITE_FAILED），禁止 now() 派生、禁止写 '*'；graph-store-service 新增 resolveOrCreate(orgId,businessKey,type,props?)：先按 props.businessKey 查（queryNodes(type,{businessKey},graph)），命中复用 id，未命中走 createObject（props 必须含 period/defVersion），props.businessKey 由本函数注入 ⇒ 同 (orgId,type,businessKey) 幂等。旧链 metric-readings-writer/reader、迁移、routes、renderer、adapters、scripts、门禁零改动；旧表仍写（既有 A2 判据用例保持绿）。observed_at 兜底用注入的 context.now（不新增系统时钟直取；tests/contract/time-injection 首版曾点名 registry.ts，已修）。验证：新测试 6/6（:memory:）；tests/sentinel+tests/agent 改动前 11 failed|1655 passed(1667)、改动后 11 failed|1661 passed(1673)（同 5 文件同 11 条既有失败：context-compaction 2 / d752 4 / field-name-alignment 1 / metric-readings-reader.integration 3 / tenant-filter-keys 1）；tsc exit 0；CI 必跑面 CI=1 vitest run tests/contract tests/user-visible = 16 files/102 tests 全绿；3 条改坏必红逐条留原始失败行后恢复，两文件 SHA256 回到 A3873501…/5D1557CD…、6/6 复绿。"
