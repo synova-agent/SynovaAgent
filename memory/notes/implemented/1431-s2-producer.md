@@ -23,11 +23,11 @@ T1 只交付了严格表与 writer/reader（表 `metric_observations` 的唯一�
 
 ## 改了什么（6 件，见 `.claude/claims/1431.yaml`）
 
-1. **`src/sentinel/sentinel-runner.ts`（+32/-10）**
+1. **`src/sentinel/sentinel-runner.ts`（+27/−5，numstat）**
    - 新导出 `RunSentinelForTeamOptions { metricSink?, period?, objectKey? }`（原内联 `{metricSink?}` 扩成命名类型，**不扩 `SentinelContext`**）。
    - 仅当调用方**尝试了 ④a**（给了 period 或 objectKey 任一）才多取一次引擎库句柄 `db`；旧调用点不传 options ⇒ 不多一次 `getDatabase`，行为逐字不变。
    - `registry.runAll(context, { period, objectKey, db })` 透传。
-2. **`src/sentinel/registry.ts`（+194/-2）**
+2. **`src/sentinel/registry.ts`（+198/−5，numstat）**
    - 新导出 `SentinelRoundObservationOptions { period?, objectKey?, db? }`；`runAll(context, observation?)` 第二参可选（既有 `runAll(context)` 调用点 `src/server.ts:278` 零改动）。
    - 轮次写入顺序：旧链 `writeRoundReadings(...)`（**逐字保留**）→ 新链 `writeRoundObservations(...)`（`writeMetricObservation` 落 `metric_observations`）。
    - `resolveRoundObservationTarget`：period 缺 ⇒ `S2_DEGRADED_NO_PERIOD`；非 `YYYY-MM` ⇒ `S2_DEGRADED_BAD_PERIOD`；objectKey 缺 ⇒ `S2_DEGRADED_NO_OBJECT`；无 teamId ⇒ `S2_DEGRADED_NO_ORG`；db 缺 ⇒ `S2_DEGRADED_NO_DB`；`resolveOrCreate` 抛错 ⇒ `S2_DEGRADED_OBJECT_FAILED`。任一命中 ⇒ **本轮不写 ④a**（`target=null`），**不中断**哨兵轮次。
