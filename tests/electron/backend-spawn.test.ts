@@ -7,7 +7,10 @@
  *     探活失败 → spawn 后端 → 探活成功 → { started: true, pid }
  *     spawn 后探活仍失败 → 重启（≤maxRestarts）→ 超限 { degraded: true, error }
  *     spawn ENOENT（后端不存在）→ { degraded: true } 不抛
- *     prod 模式 env 注入 SYNOVA_DB_PATH；dev 模式命令 = npx tsx src/index.ts
+ *     prod 模式 env 注入 SYNOVA_DB_PATH
+ *     dev 模式命令（#1456）: win32 = process.execPath + ELECTRON_RUN_AS_NODE + 本地 tsx CLI（非 npx）；
+ *                            POSIX = npx tsx src/index.ts（逐字不变）
+ *     spawn 同步抛 / error 事件 / 命令解析失败 → 立即 degraded，不空转探活窗口
  *   stop() → SIGTERM 回收子进程（无孤儿）
  * 铁律 48: 正常（spawn→healthy）/ 降级（超限/ENOENT → degraded）/ 边界（reused/env 注入/双模式）。
  *
@@ -273,13 +276,34 @@ describe('ensureBackend — env 与命令契约（DS8 双模式）', () => {
     await new Promise((r) => setTimeout(r, 300));
   }, 40000);
 
-  it('dev 模式默认命令 = npx tsx src/index.ts（模块导出 buildCommand 纯函数，可直测）', () => {
+  // 改写原因（#1456）: 本用例原来断言 dev 默认命令 = `npx tsx src/index.ts`，
+  //   把 Windows 上的真实缺陷写成了契约。实测（DEV DOC §2.2）:
+  //   `spawn('npx', …, {shell:false})` → ENOENT；`spawn('npx.cmd', …, {shell:false})` → 同步抛 EINVAL。
+  //   ⇒ win32 dev 改为「真 executable（process.execPath + ELECTRON_RUN_AS_NODE）+ 本地 tsx CLI」；
+  //     POSIX dev 与 prod 逐字不变（§3.2 / §5）。
+  it('dev 模式默认命令：win32 = 本地 tsx CLI（非 npx/.cmd）；POSIX 逐字不变；prod 不变', () => {
     const { buildCommand } = require_(backendSpawnPath) as {
-      buildCommand: (mode: string, opts?: Record<string, unknown>) => { bin: string; args: string[] };
+      buildCommand: (
+        mode: string,
+        ctx?: Record<string, unknown>,
+      ) => { bin: string; args: string[]; env?: Record<string, string>; error?: string };
     };
-    const dev = buildCommand('dev');
-    expect(dev.bin).toBe('npx');
-    expect(dev.args).toEqual(['tsx', 'src/index.ts']);
+    // #1456 win32 dev: 本地 tsx CLI（解析起点 ctx.cwd）
+    const winDev = buildCommand('dev', { platform: 'win32', cwd: ROOT });
+    expect(winDev.bin).toBe(process.execPath);
+    expect(path.basename(winDev.args[0])).toBe('cli.mjs');
+    expect(path.isAbsolute(winDev.args[0])).toBe(true);
+    expect(fs.existsSync(winDev.args[0])).toBe(true);
+    expect(winDev.args[1]).toBe('src/index.ts');
+    expect(winDev.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
+    expect(winDev.error).toBeUndefined();
+
+    // POSIX dev 逐字不变（Mac 上已验的路径不动——避免回归）
+    const posixDev = buildCommand('dev', { platform: 'linux' });
+    expect(posixDev.bin).toBe('npx');
+    expect(posixDev.args).toEqual(['tsx', 'src/index.ts']);
+    expect(posixDev.env).toBeUndefined();
+
     const prod = buildCommand('prod');
     // D518 prod 运行时: 包内 Electron 二进制（node 模式）跑 esbuild 单文件 bundle
     expect(prod.bin).toBe(process.execPath);
@@ -584,5 +608,235 @@ describe('ensureBackend — 日志契约（降级可见，铁律 11/24）', () =
 
     const logContent = fs.readFileSync(logFile, 'utf-8');
     expect(logContent).toContain('backend-up-line');
+  }, 40000);
+});
+
+/**
+ * #1456 — Windows dev 模式 Electron 自启后端（DEV DOC §3 / §5 / §7）
+ *
+ * 契约:
+ *   buildCommand('dev') on win32 → { bin: process.execPath, args: [<abs tsx cli.mjs>, 'src/index.ts'],
+ *                                    env: { ELECTRON_RUN_AS_NODE: '1' } }
+ *   buildCommand('dev') on POSIX → { bin: 'npx', args: ['tsx', 'src/index.ts'] }（逐字不变）
+ *   tsx CLI 解析不到 → { bin: '', args: [], error: <可操作提示> }（不回退 npx、不联网）
+ *   ensureBackend: cmd.error / spawn 同步抛 / spawn 'error' 事件 ⇒ 立即 { degraded: true }，不空转探活窗口
+ *   env 合并顺序 { ...process.env } ← prod 注入 ← cmd.env（cmd.env 最后生效）
+ * 判据纪律: 快失败用「配置了 60s 窗口 + 实测耗时 < 1s」证明，不用"函数被调用过"冒充。
+ */
+
+/** 取一个当前空闲的本地端口（探活必失败）——从既有 ENOENT 用例提取的同一手法 */
+async function freePort(): Promise<number> {
+  const srv = http.createServer();
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const port = (srv.address() as { port: number }).port;
+  await new Promise<void>((r) => srv.close(() => r()));
+  return port;
+}
+
+type SpawnCmd = { bin: string; args: string[]; env?: Record<string, string>; error?: string };
+
+describe('#1456 — win32 dev 自启命令（§7 A.1）', () => {
+  const buildCommandFn = (): ((mode: string, ctx?: Record<string, unknown>) => SpawnCmd) =>
+    (require_(backendSpawnPath) as { buildCommand: (mode: string, ctx?: Record<string, unknown>) => SpawnCmd }).buildCommand;
+
+  // 真实平台断言（本票验收宿主 = Windows）：不注入 platform，直测默认值
+  it.skipIf(process.platform !== 'win32')(
+    'A.1 win32 dev（真实平台）= process.execPath + 存在的 tsx/dist/cli.mjs + ELECTRON_RUN_AS_NODE=1，且不含 npx/.cmd',
+    () => {
+      const dev = buildCommandFn()('dev');
+      expect(dev.bin).toBe(process.execPath);
+      expect(dev.args).toHaveLength(2);
+      expect(path.isAbsolute(dev.args[0])).toBe(true);
+      expect(fs.existsSync(dev.args[0])).toBe(true);
+      expect(dev.args[0].split(path.sep).slice(-3, -1)).toEqual(['tsx', 'dist']);
+      expect(dev.args[1]).toBe('src/index.ts');
+      expect(dev.env?.ELECTRON_RUN_AS_NODE).toBe('1');
+      expect(dev.error).toBeUndefined();
+      expect(dev.args.some((a) => /^npx(\.cmd)?$/i.test(path.basename(a)))).toBe(false);
+      expect(dev.args.some((a) => a.toLowerCase().endsWith('.cmd'))).toBe(false);
+    },
+  );
+
+  it('A.1 平台注入：ctx.platform=win32 在任意宿主产出同一契约；POSIX 分支逐字不变', () => {
+    const dev = buildCommandFn()('dev', { platform: 'win32', cwd: ROOT });
+    expect(dev.bin).toBe(process.execPath);
+    expect(dev.args[1]).toBe('src/index.ts');
+    expect(dev.args[0].endsWith(path.join('tsx', 'dist', 'cli.mjs'))).toBe(true);
+    expect(dev.args.some((a) => a.toLowerCase().endsWith('.cmd'))).toBe(false);
+    expect(dev.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
+
+    const posix = buildCommandFn()('dev', { platform: 'linux' });
+    expect(posix).toEqual({ bin: 'npx', args: ['tsx', 'src/index.ts'] });
+
+    // prod 逐字不变（D518）
+    expect(buildCommandFn()('prod')).toEqual({ bin: process.execPath, args: ['dist/backend.mjs'] });
+  });
+});
+
+describe('#1456 — 命令解析失败（§7 A.2）', () => {
+  it('A.2 CLI 缺失 ⇒ buildCommand 返回 error（含 npm ci 可操作提示）；ensureBackend 立即 degraded 且未 spawn', async () => {
+    const { buildCommand, ensureBackend } = require_(backendSpawnPath) as {
+      buildCommand: (mode: string, ctx?: Record<string, unknown>) => SpawnCmd;
+      ensureBackend: (o: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    };
+    const failed = buildCommand('dev', {
+      platform: 'win32',
+      cwd: path.join(os.tmpdir(), `no-tsx-here-1456-${Date.now()}`),
+      exists: () => false, // 模拟本地 tsx 未安装
+    });
+    expect(failed.bin).toBe('');
+    expect(failed.args).toEqual([]);
+    expect(typeof failed.error).toBe('string');
+    expect(failed.error).toMatch(/npm ci/); // 可操作提示，不是"未知错误"
+    expect(failed.error).toMatch(/tsx/);
+
+    // ensureBackend 转 degraded：把"真 buildCommand 的失败结果"交给它；
+    // bin/args 指向"一旦被 spawn 就写 marker"的命令 ⇒ marker 不存在 = 物理证明未 spawn。
+    const marker = path.join(os.tmpdir(), `1456-nospawn-${Date.now()}.marker`);
+    handles.push(() => { try { fs.unlinkSync(marker); } catch { /* gone */ } });
+    const port = await freePort();
+    const t0 = Date.now();
+    const result = await ensureBackend({
+      serverUrl: `http://127.0.0.1:${port}`,
+      cwd: process.cwd(),
+      mode: 'dev',
+      command: {
+        bin: process.execPath,
+        args: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)}, 'spawned')`],
+        error: failed.error,
+      },
+      probeTimeoutMs: 60000, // 配置了完整窗口，仍必须立即返回
+      pollIntervalMs: 1000,
+    });
+    const elapsed = Date.now() - t0;
+
+    expect(result.degraded).toBe(true);
+    expect(result.started).toBe(false);
+    expect(String(result.error)).toMatch(/npm ci/);
+    expect(elapsed).toBeLessThan(1000);
+    expect(fs.existsSync(marker)).toBe(false); // 未发生 spawn（物理断言，非"函数没被调用"）
+  });
+});
+
+describe('#1456 — spawn 失败快失败（§7 A.3 / A.4）', () => {
+  it.skipIf(process.platform !== 'win32')(
+    'A.3 spawn 同步抛 EINVAL（npx.cmd + shell:false）⇒ 不抛、立即 degraded、error 含 EINVAL、不等 60s 窗口',
+    async () => {
+      const { ensureBackend } = require_(backendSpawnPath) as {
+        ensureBackend: (o: Record<string, unknown>) => Promise<Record<string, unknown>>;
+      };
+      const port = await freePort();
+      const t0 = Date.now();
+      const result = await ensureBackend({
+        serverUrl: `http://127.0.0.1:${port}`,
+        cwd: process.cwd(),
+        mode: 'dev',
+        command: { bin: 'npx.cmd', args: ['tsx', 'src/index.ts'] }, // Windows 实测：同步抛 EINVAL
+        probeTimeoutMs: 60000,
+        pollIntervalMs: 1000,
+        maxRestarts: 3,
+      });
+      const elapsed = Date.now() - t0;
+      expect(result.degraded).toBe(true);
+      expect(result.started).toBe(false);
+      expect(String(result.error)).toContain('EINVAL');
+      expect(elapsed).toBeLessThan(1000);
+    },
+  );
+
+  it('A.3 同步抛（任意宿主可验）：注入 command 的 args 取值即抛 EINVAL ⇒ 不抛、立即 degraded', async () => {
+    const { ensureBackend } = require_(backendSpawnPath) as {
+      ensureBackend: (o: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    };
+    const port = await freePort();
+    // 桩：spawn(cmd.bin, cmd.args) 求值 args 时同步抛（与 win32 `.cmd` shim 的 EINVAL 同一路径）
+    const throwingCommand: SpawnCmd = {
+      bin: process.execPath,
+      get args(): string[] {
+        throw Object.assign(new Error('spawn EINVAL（注入同步抛）'), { code: 'EINVAL' });
+      },
+    };
+    const t0 = Date.now();
+    const result = await ensureBackend({
+      serverUrl: `http://127.0.0.1:${port}`,
+      cwd: process.cwd(),
+      mode: 'dev',
+      command: throwingCommand,
+      probeTimeoutMs: 60000,
+      pollIntervalMs: 1000,
+    });
+    const elapsed = Date.now() - t0;
+    expect(result.degraded).toBe(true);
+    expect(String(result.error)).toContain('EINVAL');
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  it('A.4 spawn error 事件（ENOENT）⇒ 立即 degraded、error 含 ENOENT、耗时 < 1s（不等 60s 探活）', async () => {
+    const { ensureBackend } = require_(backendSpawnPath) as {
+      ensureBackend: (o: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    };
+    const port = await freePort();
+    const t0 = Date.now();
+    const result = await ensureBackend({
+      serverUrl: `http://127.0.0.1:${port}`,
+      cwd: process.cwd(),
+      mode: 'prod',
+      command: { bin: 'no-such-backend-binary-1456', args: [] }, // error 事件：ENOENT
+      probeTimeoutMs: 60000,
+      pollIntervalMs: 100,
+      maxRestarts: 3,
+    });
+    const elapsed = Date.now() - t0;
+    expect(result.degraded).toBe(true);
+    expect(String(result.error)).toContain('ENOENT');
+    expect(elapsed).toBeLessThan(1000);
+  });
+});
+
+describe('#1456 — env 合并顺序（§5：cmd.env 最后生效）', () => {
+  it('cmd.env 覆盖 prod 注入的 SYNOVA_DB_PATH（子进程 env 物理断言）', async () => {
+    const fake = await startFakeServer(1200);
+    handles.push(() => fake.close());
+
+    const envLog = path.join(os.tmpdir(), `1456-env-${Date.now()}.json`);
+    const stub = path.join(os.tmpdir(), `1456-env-stub-${Date.now()}.cjs`);
+    fs.writeFileSync(
+      stub,
+      `require('fs').writeFileSync(${JSON.stringify(envLog)}, JSON.stringify({`
+      + ' db: process.env.SYNOVA_DB_PATH || null, runAsNode: process.env.ELECTRON_RUN_AS_NODE || null,'
+      + ' mark: process.env.CMD_ENV_MARK_1456 || null }));\nsetInterval(() => {}, 10000);\n',
+    );
+    handles.push(() => {
+      try { fs.unlinkSync(stub); } catch { /* gone */ }
+      try { fs.unlinkSync(envLog); } catch { /* gone */ }
+    });
+
+    const { ensureBackend } = require_(backendSpawnPath) as {
+      ensureBackend: (o: Record<string, unknown>) => Promise<{ stop?: () => void } & Record<string, unknown>>;
+    };
+    const result = await ensureBackend({
+      serverUrl: `http://127.0.0.1:${fake.port}`,
+      cwd: process.cwd(),
+      mode: 'prod',
+      dbPath: '/tmp/from-dbpath.db',
+      command: {
+        bin: process.execPath,
+        args: [stub],
+        env: { SYNOVA_DB_PATH: '/tmp/from-cmd-env.db', CMD_ENV_MARK_1456: 'cmd-env-wins' },
+      },
+      probeTimeoutMs: 30000,
+      pollIntervalMs: 200,
+    });
+
+    expect(result.degraded).toBeFalsy();
+    await new Promise((r) => setTimeout(r, 400));
+    const recorded = JSON.parse(fs.readFileSync(envLog, 'utf-8')) as {
+      db: string | null; runAsNode: string | null; mark: string | null;
+    };
+    expect(recorded.db).toBe('/tmp/from-cmd-env.db'); // cmd.env 最后生效（覆盖 dbPath 注入）
+    expect(recorded.mark).toBe('cmd-env-wins');       // 新增 env 键确实透传
+    expect(recorded.runAsNode).toBe('1');             // prod 注入未被 cmd.env 抹掉
+    result.stop?.();
+    await new Promise((r) => setTimeout(r, 300));
   }, 40000);
 });
