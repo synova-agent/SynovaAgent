@@ -8,6 +8,8 @@
  *   [反例1] 缺 `period` ⇒ 新表 0 行 + `log.warn` 码 `S2_DEGRADED_NO_PERIOD`；不建 Team 节点。
  *   [反例2] 缺 `objectKey` ⇒ 新表 0 行 + `log.warn` 码 `S2_DEGRADED_NO_OBJECT`（不回退 `'*'`）。
  *   [反例3] `period` 非 `YYYY-MM` ⇒ 新表 0 行 + `log.warn` 码 `S2_DEGRADED_BAD_PERIOD`。
+ *   [反例4] 缺 `teamId`（`''` 或 `undefined`）⇒ 新表 0 行 + `log.warn` 码 `S2_DEGRADED_NO_ORG`（fail-closed）。
+ *   [反例5] 引擎库不可用（不注入 db）⇒ 新表 0 行 + `log.warn` 码 `S2_DEGRADED_NO_DB`。
  *   [幂等]  同 `objectKey` 跑多次（含跨 period）⇒ `graph_nodes` 中 Team 节点恒为 1 个，
  *           且各期观测行的 `object_id` 全部相同（`resolveOrCreate` 同 (orgId,type,businessKey) 复用）。
  *
@@ -253,6 +255,32 @@ describe('#1431 S2 · 哨兵轮次 → metric_observations 真实生产者', () 
 
     expect(observationRows(db)).toHaveLength(0);
     expect(warnCodes()).toContain('S2_DEGRADED_BAD_PERIOD');
+    expect(teamNodeCount(db)).toBe(0);
+  });
+
+  it("[反例4] 缺 teamId（'' 或 undefined）⇒ 新表 0 行 + S2_DEGRADED_NO_ORG（fail-closed）", async () => {
+    // 空串：org 维度为空 —— 不得写错租户行
+    await runSentinelForTeam('', store, { period: PERIOD, objectKey: OBJECT_KEY });
+    // undefined：类型系统要求 string，这里用 Reflect.apply 走**运行期**形态（不引入 as any 家族，铁律 38）
+    await Reflect.apply(runSentinelForTeam, undefined, [undefined, store, { period: PERIOD, objectKey: OBJECT_KEY }]);
+
+    expect(observationRows(db)).toHaveLength(0);
+    expect(warnCodes()).toContain('S2_DEGRADED_NO_ORG');
+    // 缺 org 在解析对象之前就挡住 ⇒ 一个 Team 节点都不建
+    expect(teamNodeCount(db)).toBe(0);
+  });
+
+  it('[反例5] 引擎库不可用（不注入 db）⇒ 新表 0 行 + S2_DEGRADED_NO_DB', async () => {
+    // 运行期真实形态：未 initEngineContext 时 getDatabase() 抛错（引擎侧唯一失败出口）
+    mockedGetDatabase.mockImplementation(() => {
+      throw new Error('数据库未初始化，请先调用 initEngineContext()');
+    });
+
+    await runSentinelForTeam(ORG, store, { period: PERIOD, objectKey: OBJECT_KEY });
+
+    expect(observationRows(db)).toHaveLength(0);
+    expect(warnCodes()).toContain('S2_DEGRADED_NO_DB');
+    // db 缺失在解析对象之前就挡住 ⇒ 不建 Team 节点
     expect(teamNodeCount(db)).toBe(0);
   });
 

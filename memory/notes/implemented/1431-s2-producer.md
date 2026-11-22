@@ -33,7 +33,7 @@ T1 只交付了严格表与 writer/reader（表 `metric_observations` 的唯一�
    - `resolveRoundObservationTarget`：period 缺 ⇒ `S2_DEGRADED_NO_PERIOD`；非 `YYYY-MM` ⇒ `S2_DEGRADED_BAD_PERIOD`；objectKey 缺 ⇒ `S2_DEGRADED_NO_OBJECT`；无 teamId ⇒ `S2_DEGRADED_NO_ORG`；db 缺 ⇒ `S2_DEGRADED_NO_DB`；`resolveOrCreate` 抛错 ⇒ `S2_DEGRADED_OBJECT_FAILED`。任一命中 ⇒ **本轮不写 ④a**（`target=null`），**不中断**哨兵轮次。
    - 每哨兵 2 行：`SENTINEL-FINDINGS-<id>`（findings 条数）＋`SENTINEL-DURATION-<id>`（durationMs，unit=ms）；`def_version` = 哨兵 `config.version`；`run_id` 每轮 `run-<uuid>`（不入唯一键）；`observed_at` = `result.checkedAt`，缺失时用**注入的** `context.now`（新代码不直取系统时钟）。单行写失败 ⇒ `S2_DEGRADED_WRITE_FAILED`，不伪造成功。
 3. **`src/agent/graph-store-service.ts`（+45）**：新 `resolveOrCreate(orgId, businessKey, type, props?)` —— 先 `queryNodes(type, { businessKey }, orgId)` 查；命中复用 id（不改 props）；未命中走 `createObject`（props 必须含 period/defVersion），`props.businessKey` 由本函数注入 ⇒ 同 `(orgId, type, businessKey)` 幂等。既有 `getObjectById`/`createObject`/`createRelation` 零改动。
-4. **`tests/sentinel/stage2-s2-producer.test.ts`（新，6 用例）**：正例（2 行、五键齐、object_id 在 graph_nodes 可查、旧表仍 2 行）／缺 period／缺 objectKey／period 形态／幂等（同 objectKey×3 次含跨 period ⇒ Team 恒 1 个、object_id 唯一）／`resolveOrCreate` 边界（缺参零写入、命中不再校验 props）。
+4. **`tests/sentinel/stage2-s2-producer.test.ts`（新，8 用例）**：正例（2 行、五键齐、object_id 在 graph_nodes 可查、旧表仍 2 行）／缺 period／缺 objectKey／period 形态／**缺 teamId（`''`、`undefined`）⇒ `S2_DEGRADED_NO_ORG`**／**不注入 db（`getDatabase` 抛）⇒ `S2_DEGRADED_NO_DB`**／幂等（同 objectKey×3 次含跨 period ⇒ Team 恒 1 个、object_id 唯一）／`resolveOrCreate` 边界（缺参零写入、命中不再校验 props）。后两条为复核补丁（复核要求：断言 warn 码 + 0 行，禁 skip）。
 5. **`.claude/claims/1431.yaml`**：本票 claim 改为 S2。
 6. **本 Note**。
 
@@ -48,22 +48,24 @@ T1 只交付了严格表与 writer/reader（表 `metric_observations` 的唯一�
 
 | 命令 | 改动前（base `b4c1ec5ee`，同 worktree） | 改动后 |
 |---|---|---|
-| `npx vitest run tests/sentinel/stage2-s2-producer.test.ts` | （新文件不存在） | exit 0｜`Tests 6 passed (6)` |
-| `npx vitest run tests/sentinel tests/agent` | exit 1｜`Test Files 5 failed \| 294 passed \| 1 skipped (300)`｜`Tests 11 failed \| 1655 passed \| 1 skipped (1667)` | exit 1｜`Test Files 5 failed \| 295 passed \| 1 skipped (301)`｜`Tests 11 failed \| 1661 passed \| 1 skipped (1673)`（**同 5 文件、同 11 条**既有失败；新增 6 全绿） |
+| `npx vitest run tests/sentinel/stage2-s2-producer.test.ts` | （新文件不存在） | exit 0｜`Tests 8 passed (8)` |
+| `npx vitest run tests/sentinel tests/agent` | exit 1｜`Test Files 5 failed \| 294 passed \| 1 skipped (300)`｜`Tests 11 failed \| 1655 passed \| 1 skipped (1667)` | exit 1｜`Test Files 5 failed \| 295 passed \| 1 skipped (301)`｜`Tests 11 failed \| 1663 passed \| 1 skipped (1675)`（**同 5 文件、同 11 条**既有失败；新增 8 全绿） |
 | `npx tsc --noEmit` | exit 0 | exit 0（零输出） |
 | `CI=1 npx vitest run tests/contract tests/user-visible`（CI 必跑面） | — | `Test Files 16 passed (16)`｜`Tests 102 passed (102)` |
 
 既有 11 条失败（`b4c1ec5ee` 上就红，同因，非本卡引入）：`tests/agent/context-compaction.test.ts` 2｜`tests/sentinel/d752-type-net-gate.integration.test.ts` 4｜`tests/sentinel/field-name-alignment.test.ts` 1｜`tests/sentinel/metric-readings-reader.integration.test.ts` 3｜`tests/sentinel/tenant-filter-keys.test.ts` 1（`businessKey` 未登记为业务键，来自 #1426 的 `src/runtime/dsh/domain-context.ts:85`，本卡沿用同形先例但未改该测试）。
 
-## 改坏必红（3 条，逐条留原始失败行后恢复；恢复后 6/6 复绿）
+## 改坏必红（5 条 = 卡内 3 条 ＋ 复核补 2 条，逐条留原始失败行后恢复；恢复后 8/8 复绿）
 
 | # | 改坏 | 原始失败行（节选） | 结果 |
 |---|---|---|---|
 | ① | 新表写入 `objectId` 改成 `'*'` | `AssertionError: expected [] to have a length of 2 but got +0`（正例，`tests/sentinel/stage2-s2-producer.test.ts:183`）；`AssertionError: expected [] to have a length of 4 but got +0`（幂等） | `Tests 2 failed \| 4 passed (6)` |
 | ② | `period` 缺省时用 `new Date()` 派生 | `AssertionError: expected [ { …(12) }, { …(12) } ] to have a length of +0 but got 2`（反例1：缺 period 仍写了 2 行） | `Tests 1 failed \| 5 passed (6)` |
 | ③ | `resolveOrCreate` 去掉先查后建（无幂等） | `AssertionError: expected 3 to be 1 // Object.is equality`（幂等：3 次跑出 3 个 Team 节点）；`GraphWriteError: props.period 必须是 YYYY-MM 形态字符串（实得 undefined）`（边界：第二次调用试图新建） | `Tests 2 failed \| 4 passed (6)` |
+| ④ | 去掉 `S2_DEGRADED_NO_ORG` 门（org 维度不挡） | `AssertionError: expected [ 'S2_DEGRADED_OBJECT_FAILED', …(1) ] to include 'S2_DEGRADED_NO_ORG'`（反例4：缺 teamId 时降级码变成 OBJECT_FAILED） | `Tests 1 failed \| 7 passed (8)` |
+| ⑤ | 去掉 `S2_DEGRADED_NO_DB` 门（db 缺失不挡） | `AssertionError: expected [ 'S2_DEGRADED_OBJECT_FAILED' ] to include 'S2_DEGRADED_NO_DB'`（反例5：不注入 db 时降级码变成 OBJECT_FAILED） | `Tests 1 failed \| 7 passed (8)` |
 
-恢复后 SHA256：`src/sentinel/registry.ts` = `A387350109F805FAC632251A9188DBC9F73C7472E9E1458D9A6E9FBEE3D20799`；`src/agent/graph-store-service.ts` = `5D1557CD6B07F5B021934D8A5E12F8EFCCF8D84B5356A81CFB87F1C123EEA2CD`（均回到改坏前值），`6 passed (6)`。
+恢复后 SHA256：`src/sentinel/registry.ts` = `A387350109F805FAC632251A9188DBC9F73C7472E9E1458D9A6E9FBEE3D20799`；`src/agent/graph-store-service.ts` = `5D1557CD6B07F5B021934D8A5E12F8EFCCF8D84B5356A81CFB87F1C123EEA2CD`（均回到改坏前值），`8 passed (8)`。
 
 ## 与 DEV DOC／Mandate 的偏差（如实记录，需 CTO 裁定）
 
