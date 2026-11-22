@@ -1,0 +1,68 @@
+#1456 §7 C 桌面单点验证 —— 2026-11-22T20:01:39.927Z
+cwd=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456
+node=v24.16.0 platform=win32
+electron=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\electron\dist\electron.exe
+tsx cli=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\tsx\dist\cli.mjs
+
+──── 前置：夹具存在性 ────
+electron.exe exists = true
+tsx cli exists     = true
+electron version   = v33.4.11
+外层继承 ELECTRON_RUN_AS_NODE = "1"（桌面夹具必须清掉）
+
+──── §7 D 启动前 netstat -ano | findstr 18790（必须无输出） ────
+(无输出 = 端口空闲)
+
+──── 启动环境（隔离后） ────
+SYNOVA_DB_PATH=C:\Users\ADMINI~1\AppData\Local\Temp\1456-desktop-P9NLFW\synova.db
+ELECTRON_RUN_AS_NODE 已清除 = true
+API_KEY* 键数量=0
+
+──── 启动命令 ────
+D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\electron\dist\electron.exe electron/main.cjs --remote-debugging-port=9222
+Electron 主进程 pid = 4504
+
+──── §7 C.2 GET http://127.0.0.1:18790/api/healthz（原始响应） ────
+HTTP null
+connect ECONNREFUSED 127.0.0.1:18790
+boot 耗时=61554ms sawDegradedLog=true
+
+──── §7 C.1 Electron console 原文（boot 失败时全量） ────
+
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/6412ce12-b11e-4820-9b6d-7e3ffba74547
+[electron] boot mode=dev server=http://localhost:18790
+{"level":30,"time":1795377701830,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/workspace-service","msg":"WorkspaceService 已初始化"}
+{"level":30,"time":1795377701839,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795377701839,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795377701839,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795377701840,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-P9NLFW\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795377701840,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795377701840,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795377701841,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795377701841,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-P9NLFW\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":50,"time":1795377701845,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","err":{"type":"Error","message":"The module '\\\\?\\D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\build\\Release\\better_sqlite3.node'\nwas compiled against a different Node.js version using\nNODE_MODULE_VERSION 137. This version of Node.js requires\nNODE_MODULE_VERSION 130. Please try re-compiling or re-installing\nthe module (for instance, using `npm rebuild` or `npm install`).","stack":"Error: The module '\\\\?\\D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\build\\Release\\better_sqlite3.node'\nwas compiled against a different Node.js version using\nNODE_MODULE_VERSION 137. This version of Node.js requires\nNODE_MODULE_VERSION 130. Please try re-compiling or re-installing\nthe module (for instance, using `npm rebuild` or `npm install`).\n    at process.func [as dlopen] (node:electron/js2c/node_init:2:2559)\n    at Module._extensions..node (node:internal/modules/cjs/loader:1602:18)\n    at Object.func [as .node] (node:electron/js2c/node_init:2:2559)\n    at Module.load (node:internal/modules/cjs/loader:1295:32)\n    at Module._load (node:internal/modules/cjs/loader:1111:12)\n    at c._load (node:electron/js2c/node_init:2:16955)\n    at Module.require (node:internal/modules/cjs/loader:1318:19)\n    at require (node:internal/modules/helpers:179:18)\n    at bindings (D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\bindings\\bindings.js:112:48)\n    at new Database (D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\lib\\database.js:48:64)","code":"ERR_DLOPEN_FAILED"},"msg":"SynovaAgent 启动失败"}
+[backend-spawn] 后端自启降级 — 重启 1 次未恢复: 后端探活在 60000ms 内未转健康（mode=dev）
+[electron] 后端自启 degraded — 后端探活在 60000ms 内未转健康（mode=dev）
+[electron] 后端自启降级 — 后端探活在 60000ms 内未转健康（mode=dev）
+[preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790
+
+──── §7 C.1 判据（失败路径） ────
+含 [electron] boot mode=dev = true
+无 "[backend-spawn] spawn 失败" = true（true ⇒ npx/ENOENT/EINVAL 缺陷已消失）
+
+──── §7 C.4 收尾（boot 失败路径清场后） ────
+netstat -ano | findstr 18790 = ""（必须空）
+残留 backend 进程（命令行含 src/index.ts）= ""（必须空）
+
+======================================================================
+判据汇总:
+  PASS  portFreeBefore
+  FAIL  healthz200
+  PASS  bootModeDevLog
+  PASS  spawnLayerOkNoSpawnFailure
+  PASS  portReleased
+  PASS  noLeftoverBackendProcs
+
+VERDICT = RED-backend-degraded（三态退出码 1）
+

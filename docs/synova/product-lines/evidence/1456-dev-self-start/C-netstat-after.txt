@@ -1,0 +1,1 @@
+Command failed: cmd /c netstat -ano | findstr 18790

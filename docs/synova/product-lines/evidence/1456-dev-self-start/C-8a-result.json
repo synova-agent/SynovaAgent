@@ -1,0 +1,17 @@
+{
+  "verdict": "RED-backend-degraded",
+  "checks": {
+    "portFreeBefore": true,
+    "healthz200": false,
+    "bootModeDevLog": true,
+    "spawnLayerOkNoSpawnFailure": true,
+    "portReleased": true,
+    "noLeftoverBackendProcs": true
+  },
+  "healthz": {
+    "statusCode": null,
+    "body": "connect ECONNREFUSED 127.0.0.1:18790",
+    "bootMs": 61554
+  },
+  "exitCode": 1
+}

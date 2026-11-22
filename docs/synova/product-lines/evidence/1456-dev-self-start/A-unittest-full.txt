@@ -1,0 +1,129 @@
+node : (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become 
+the default in a future major version of Vite:
+所在位置 行:3 字符: 1
++ node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn. ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((!) Your Vite c...ersion of Vite::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  - `__dirname` (vitest.config.ts:4:35). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 D:/novis-backup-20260526/Novis/synova-agent/.synova-wt-1456
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 降级：spawn 后探活始终失败 → 重启 ≤maxRestarts → { degraded
+: true, error }（不静默，铁律 24/31）
+[backend-spawn] 后端自启降级 — 重启 3 次未恢复: 后端探活在 800ms 内未转健康（mode=prod）
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛
+[backend-spawn] spawn 失败: ENOENT spawn no-such-backend-binary ENOENT
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛
+[backend-spawn] 后端自启降级 — spawn 未启动: ENOENT spawn no-such-backend-binary ENOENT（后端可执行文件无法启动: no-such-backend-binary；mode
+=prod；请确认 node_modules 已安装（npm ci）后重试）
+
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: spawn sleep ENOENT
+    at ChildProcess._handle.onexit (node:internal/child_process:287:19)
+    at onErrorNT (node:internal/child_process:508:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on ChildProcess instance at:
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+    at onErrorNT (node:internal/child_process:508:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'spawn sleep',
+  path: 'sleep',
+  spawnargs: [ '60' ]
+}
+
+Node.js v24.16.0
+stderr | tests/electron/backend-spawn.test.ts > D522 teardown — stop() 进程树回收契约 > 降级：Win taskkill 失败（注入抛错的 taskkill runn
+er）→ 不抛 + 继续（幂等，铁律 11/24）
+[backend-spawn] taskkill 失败（幂等继续）: taskkill binary missing
+[backend-spawn] taskkill 失败（幂等继续）: taskkill binary missing
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — 命令解析失败（§7 A.2） > A.2 CLI 缺失 ⇒ buildCommand 返回 error（含 npm ci 可操
+作提示）；ensureBackend 立即 degraded 且未 spawn
+[backend-spawn] 启动命令解析失败（degraded）: Windows dev 模式找不到本地 tsx CLI（node_modules\tsx\dist\cli.mjs）：请先在仓根执行 npm ci 安装依赖（已尝试:
+ C:\Users\ADMINI~1\AppData\Local\Temp\no-tsx-here-1456-1795376594336\node_modules\tsx\dist\cli.mjs | D:\novis-backup-20
+260526\Novis\synova-agent\.synova-wt-1456\node_modules\tsx\dist\cli.mjs）；本命令不回退 npx、不联网取包
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.3 spawn 同步抛 EINVAL（npx.cmd + shel
+l:false）⇒ 不抛、立即 degraded、error 含 EINVAL、不等 60s 窗口
+[backend-spawn] spawn 失败: EINVAL spawn EINVAL
+[backend-spawn] 后端自启降级 — spawn 未启动: EINVAL spawn EINVAL（后端可执行文件无法启动: npx.cmd；mode=dev；请确认 node_modules 已安装（npm ci）后重试）
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.3 同步抛（任意宿主可验）：注入 command 的 args 取
+值即抛 EINVAL ⇒ 不抛、立即 degraded
+[backend-spawn] spawn 失败: EINVAL spawn EINVAL（注入同步抛）
+[backend-spawn] 后端自启降级 — spawn 未启动: EINVAL spawn EINVAL（注入同步抛）（后端可执行文件无法启动: C:\Program Files\nodejs\node.exe；mode=dev；请
+确认 node_modules 已安装（npm ci）后重试）
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.4 spawn error 事件（ENOENT）⇒ 立即 degr
+aded、error 含 ENOENT、耗时 < 1s（不等 60s 探活）
+[backend-spawn] spawn 失败: ENOENT spawn no-such-backend-binary-1456 ENOENT
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.4 spawn error 事件（ENOENT）⇒ 立即 degr
+aded、error 含 ENOENT、耗时 < 1s（不等 60s 探活）
+[backend-spawn] 后端自启降级 — spawn 未启动: ENOENT spawn no-such-backend-binary-1456 ENOENT（后端可执行文件无法启动: no-such-backend-binary
+-1456；mode=prod；请确认 node_modules 已安装（npm ci）后重试）
+
+ ❯ tests/electron/backend-spawn.test.ts (24 tests | 1 failed | 3 skipped) 20822ms
+   ✓ ensureBackend — 契约三路径 (4)
+     ✓ reused：探活成功（已有健康服务）→ 不 spawn，{ started: false, reused: true } 30ms
+     ✓ started：探活失败 → spawn 探活服务 → 探活成功 → { started: true, pid } 2431ms
+     ✓ 降级：spawn 后探活始终失败 → 重启 ≤maxRestarts → { degraded: true, error }（不静默，铁律 24/31） 2890ms
+     ✓ 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛 10ms
+   ✓ ensureBackend — env 与命令契约（DS8 双模式） (5)
+     ✓ prod 模式默认命令 node dist/index.js 且 env 注入 SYNOVA_DB_PATH（断言 spawn argv/env） 2296ms
+     ✓ dev 模式默认命令：win32 = 本地 tsx CLI（非 npx/.cmd）；POSIX 逐字不变；prod 不变 5ms
+     ✓ F4 回归: electron/*.cjs 注释零裸 dist/index.js 残留（P0-1 后 prod 契约 = dist/backend.mjs） 3ms
+     ✓ D518 回归: main.cjs 启动首行含 boot mode 显式日志（模式显式化——日志即证据） 1ms
+     ↓ stop() 生命周期：started 后 stop → 子进程退出（无孤儿，DS 契约 lifecycle）
+   ❯ D522 teardown — stop() 进程树回收契约 (7)
+     ↓ 正常路径：stop() → SIGTERM → 子进程 pid 已死（kill(pid,0) 抛 ESRCH，物理断言非 grep）
+     ↓ 边界：stop() 幂等——连续两次调用不抛、无二次副作用
+     ✓ 升级路径：子进程忽略 SIGTERM → graceMs 后 SIGKILL 杀死（物理断言） 958ms
+     × 进程组：spawn detached 后孙进程也被回收（无孤儿，DS3） 6725ms
+     ✓ 降级：Win taskkill 失败（注入抛错的 taskkill runner）→ 不抛 + 继续（幂等，铁律 11/24） 1ms
+     ✓ 边界：pid≤0 / child.killed → stop no-op 不抛 0ms
+     ✓ 五段链路集成：慢启动假后端 → started+pid → stop() → 假后端进程已死（L2a 全链） 1392ms
+   ✓ ensureBackend — 日志契约（降级可见，铁律 11/24） (1)
+     ✓ logFile：spawn 后 stdout/stderr 写入日志文件 1768ms
+   ✓ #1456 — win32 dev 自启命令（§7 A.1） (2)
+     ✓ A.1 win32 dev（真实平台）= process.execPath + 存在的 tsx/dist/cli.mjs + ELECTRON_RUN_AS_NODE=1，且不含 npx/.cmd 1ms
+     ✓ A.1 平台注入：ctx.platform=win32 在任意宿主产出同一契约；POSIX 分支逐字不变 1ms
+   ✓ #1456 — 命令解析失败（§7 A.2） (1)
+     ✓ A.2 CLI 缺失 ⇒ buildCommand 返回 error（含 npm ci 可操作提示）；ensureBackend 立即 degraded 且未 spawn 3ms
+   ✓ #1456 — spawn 失败快失败（§7 A.3 / A.4） (3)
+     ✓ A.3 spawn 同步抛 EINVAL（npx.cmd + shell:false）⇒ 不抛、立即 degraded、error 含 EINVAL、不等 60s 窗口 3ms
+     ✓ A.3 同步抛（任意宿主可验）：注入 command 的 args 取值即抛 EINVAL ⇒ 不抛、立即 degraded 3ms
+     ✓ A.4 spawn error 事件（ENOENT）⇒ 立即 degraded、error 含 ENOENT、耗时 < 1s（不等 60s 探活） 6ms
+   ✓ #1456 — env 合并顺序（§5：cmd.env 最后生效） (1)
+     ✓ cmd.env 覆盖 prod 注入的 SYNOVA_DB_PATH（子进程 env 物理断言） 2293ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/electron/backend-spawn.test.ts > D522 teardown — stop() 进程树回收契约 > 进程组：spawn detached 后孙进程也被回收（无孤儿，DS3）
+AssertionError: expected NaN to be greater than 0
+ ❯ tests/electron/backend-spawn.test.ts:513:19
+    511|       await new Promise((r) => setTimeout(r, 100));
+    512|     }
+    513|     expect(gcPid).toBeGreaterThan(0);
+       |                   ^
+    514|     process.kill(gcPid, 0); // 孙进程确实活着（前置物理断言）
+    515|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 20 passed | 3 skipped (24)
+   Start at  03:42:55
+   Duration  21.06s (tests 100%)
+

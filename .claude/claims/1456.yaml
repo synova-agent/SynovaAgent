@@ -1,0 +1,11 @@
+writeset:
+  - .claude/claims/1456.yaml
+  - electron/backend-spawn.cjs
+  - tests/electron/backend-spawn.test.ts
+  - docs/synova/product-lines/evidence/1456-dev-self-start/**
+done:
+  - "verify: node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts ⇒ 24 tests / 20 passed / 3 skipped / 1 failed（唯一红 = 存量 sleep 用例，base 同点位同红，见 A-baseline-before-fix.txt）"
+  - "verify: 反例（win32 分支临时关掉 ⇒ dev 命令退回 npx）⇒ A.1 两例必红（expected 'npx' to be node.exe），原始输出 B-negative-npx-revert.txt"
+  - "verify: node .../1456-dev-self-start/verify-desktop-8a.mjs ⇒ boot mode=dev PASS / 无 spawn 失败 PASS / 退出后 18790 空 + 无 src/index.ts 残留 PASS / healthz200 FAIL ⇒ 8(a) UNVERIFIED"
+  - "verify: node .../1456-dev-self-start/verify-runtime-abi.mjs ⇒ ABI-IS-THE-ONLY-BLOCKER：electron-as-node 加载 better-sqlite3 失败（modules 130 vs 137）；系统 node + 同 argv 起后端 healthz 200 并回收"
+note: "#1456 Windows dev Electron 自启后端。已修：dev 命令 win32 改本地 tsx CLI（不再 npx ⇒ 无 ENOENT/EINVAL）、cmd.env 合并、spawn 同步抛/error 事件/命令解析失败快失败（不再空转 60s 窗口）；POSIX dev 与 prod 逐字不变。未闭合：8(a) UNVERIFIED —— 后端被拉起后死于 better-sqlite3 ABI（dev node_modules 为系统 Node 24 的 NODE_MODULE_VERSION 137，Electron 33 的 node 要 130），即冻结规格 §3.1/§5 的 bin=process.execPath 在 dev 结构性不可用；需 CTO 裁定改为系统 node.exe（§2.2 form C 形态）。另：§7 C 命令还需 DEV_MODE=true（否则 deploy/bootstrap 以 MASTER_SECRET_MISSING fail-closed）。证据 docs/synova/product-lines/evidence/1456-dev-self-start/。"

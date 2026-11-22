@@ -1,0 +1,127 @@
+#1456 证据索引 —— Windows dev 模式 Electron 自启后端（§7 A/B/C/D）
+================================================================================
+采集时间   2026-11-23（本机 win32 / node v24.16.0 / npm 11.13.0 / Electron 33.4.11 内置 node v20.18.3）
+worktree   D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456（分支 fix/1456-win-backend-spawn）
+base       caf61fcdeb3e00c79abe9211546690ca963549a2
+node_modules = 只读夹具 junction → D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\node_modules
+             （未修改夹具内容；junction 不进 git）
+
+⚠️ 一句话结论：**spawn 层缺陷已修好**（win32 dev 不再走 npx；Electron 真的把后端拉起来了，
+   无 ENOENT/EINVAL）；**但 8(a) 判 UNVERIFIED** —— 后端进程起来后死在原生模块 ABI 上
+   （better-sqlite3 为 NODE_MODULE_VERSION 137 = 系统 Node 24 编译；Electron 33 的 node 要 130）。
+   本票冻结规格 §3.1/§5 指定的 `bin = process.execPath`（Electron 二进制）在 dev node_modules 上
+   结构性不可用，见 C-runtime-abi-* 与 §7 A.1 的原文（规格层面的技术事实错误，需 CTO 裁定）。
+
+--------------------------------------------------------------------------------
+一、逐份对照（文件 → 证明什么 → 原始判据）
+--------------------------------------------------------------------------------
+A-unittest-full.txt
+  §7 A.1–A.6 全量单测原始输出。命令：
+    node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts
+  结果：Test Files 1 failed | Tests 1 failed | 20 passed | 3 skipped (24)
+  唯一红 = 既有「进程组：spawn detached 后孙进程也被回收（DS3）」用例（它 spawn `sleep 60`，
+   Windows 无此二进制）⇒ 与本次改动无关，base 同样红，见 A-baseline-before-fix.txt。
+  本票新增/改写 7 例全部绿：
+    A.1 win32 dev（真实平台）= process.execPath + 存在的 tsx/dist/cli.mjs + ELECTRON_RUN_AS_NODE=1
+    A.1 平台注入（win32 契约 + POSIX 逐字不变 + prod 逐字不变）
+    A.2 CLI 缺失 ⇒ buildCommand 返回 error（含 npm ci 提示）+ ensureBackend 立即 degraded 且未 spawn
+    A.3 spawn 同步抛 EINVAL（npx.cmd + shell:false，真实 win32）⇒ 不抛、立即 degraded、<1s
+    A.3 同步抛（任意宿主可验，注入桩抛 EINVAL）⇒ 同上
+    A.4 spawn 'error' 事件（ENOENT）⇒ 立即 degraded、<1s（配置窗口仍是 60s）
+    env 合并顺序：cmd.env 覆盖 prod 注入的 SYNOVA_DB_PATH（子进程 env 物理断言）
+
+A-baseline-before-fix.txt
+  §7 A.6 的对照基线。同一命令在 base caf61fcde 的两个文件（git restore --source=caf61fcde --worktree）
+  上的原始输出：Tests 1 failed | 13 passed | 3 skipped (17) —— **红的正是同一个 sleep 用例**。
+  ⇒ 证明该红是存量、非本票引入；也证明 §7 A.6「除被改写的 L276 外全部保持绿」在 Windows 宿主上
+     这一条字面不可满足（存量红），未擅自改该用例（不在本票写集目标内）。
+
+B-negative-npx-revert.txt
+  §7 B 反例（证明「改坏会红」）。做法：把 buildCommand 的 win32 分支条件临时改成不可达
+  （`if (platform === 'win32-NEGATIVE-1456')`，等价"dev 命令退回 {bin:'npx'}"），跑
+    node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts -t "A.1"
+  原始输出：Tests 2 failed | 22 skipped (24)
+    AssertionError: expected 'npx' to be 'C:\Program Files\nodejs\node.exe'
+  随后 `git restore --source=HEAD --worktree -- electron/backend-spawn.cjs` 恢复，`git status` 已确认干净。
+
+C-electron-console.txt
+  §7 C.1 Electron 主进程 console 原文（完整、未截断）。命令见 C-8a-transcript.txt 的「启动命令」段。
+  关键行：`[electron] boot mode=dev server=http://localhost:18790` ⇒ dev 模式确认；
+  后端以 tsx CLI 被拉起（日志里有后端自己的 pino 行、pid=3528）；
+  **无** `[backend-spawn] spawn 失败`（⇒ npx/ENOENT/EINVAL 缺陷消失）；
+  后端自身崩溃：`ERR_DLOPEN_FAILED`（见下一节 ABI）；
+  60s 探活窗口后 `[backend-spawn] 后端自启降级` + `[electron] 后端自启 degraded`。
+
+C-netstat-before.txt
+  §7 D 防假绿：启动前 `netstat -ano | findstr 18790` 原始输出 = 空（端口空闲）
+  ⇒ 本次不可能是 reused:true，任何 started 都必须是"自己拉起来的"。
+
+C-netstat-after.txt
+  §7 C.4 收尾：清场后 `netstat -ano | findstr 18790` 原始输出 = 空。
+
+C-8a-transcript.txt
+  §7 C 全过程逐条原始输出（前置夹具/启动环境/启动命令/healthz/console/判据/收尾），末尾是判据汇总。
+  判据状态（机器可读同 C-8a-result.json）：
+    PASS  portFreeBefore
+    PASS  bootModeDevLog
+    PASS  spawnLayerOkNoSpawnFailure          ← 本票要修的缺陷确实消失
+    PASS  portReleased
+    PASS  noLeftoverBackendProcs
+    FAIL  healthz200                          ← 被 ABI 阻断（下面控制实验定位）
+  VERDICT = RED-backend-degraded（三态退出码 1）⇒ **8(a) = UNVERIFIED**（自启后未健康）
+
+C-8a-result.json
+  同上结论的机器可读版。
+
+C-runtime-abi-transcript.txt / C-runtime-abi-result.json
+  §7 C 附加：运行时 ABI 控制实验（本票未要求，为定位 8(a) 阻断点而做）。
+    A. electron.exe + ELECTRON_RUN_AS_NODE=1 + tsx CLI → 探针
+       {"node":"v20.18.3","electron":"33.4.11","modules":"130","sqlite":"FAIL",
+        "error":"ERR_DLOPEN_FAILED ..."}                       ← 能跑 JS，加载不了 native 模块
+    B. 系统 node.exe + 同一 tsx CLI → 探针
+       {"node":"v24.16.0","electron":null,"modules":"137","sqlite":"OK"}  ← 同一份 node_modules 正常
+    C. 系统 node.exe + 同一 tsx CLI + src/index.ts（临时 DB、无 API key）
+       HTTP 200 + body（database=ok / llm_connectivity=degraded 未配置 key / …）
+       kill 后：pid 已消失、netstat 18790 空、无 src/index.ts 残留
+  结论 VERDICT = ABI-IS-THE-ONLY-BLOCKER（三态退出码 0）
+  ⇒ 即：**argv/env/探活/回收这套"自启管道"是通的；唯一阻断点是 executable 的 ABI 选择**。
+
+C-runtime-abi-backend-console.txt
+  上面 C 段后端的完整 pino 日志（说明后端确实跑到了 SQLite 迁移与 HTTP 就绪）。
+
+C-runtime-abi-backend-console-mastersecret-missing.txt
+  首次控制实验（未设 DEV_MODE=true）的后端日志：`deploy/bootstrap` 以
+  `MASTER_SECRET_MISSING phase=startup retryable=false` fail-closed 终止
+  （"请显式 DEV_MODE=true"）。⇒ dev 起后端还需要 DEV_MODE=true；本票两个 C 脚本都已显式设置，
+     并在此留证，避免该环境前提被误读成缺陷。
+
+verify-desktop-8a.mjs / verify-runtime-abi.mjs
+  生成上述证据的两个脚本（可复跑，三态退出码 0/1/2）。
+
+--------------------------------------------------------------------------------
+二、可复跑命令
+--------------------------------------------------------------------------------
+# 建夹具（一次性）
+cmd /c mklink /J "<worktree>\node_modules" "D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\node_modules"
+
+# §7 A（单测）
+node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts
+
+# §7 C（桌面单点；跑前必须 netstat 18790 无输出）
+netstat -ano | findstr 18790
+node docs/synova/product-lines/evidence/1456-dev-self-start/verify-desktop-8a.mjs
+
+# 运行时 ABI 控制实验
+node docs/synova/product-lines/evidence/1456-dev-self-start/verify-runtime-abi.mjs
+
+⚠️ 环境隔离（实测踩到，判据纪律 ②）：本会话由 DSH（Electron 应用）派生，环境里带
+   ELECTRON_RUN_AS_NODE=1；不清掉会让 electron.exe 退化成纯 Node（main.cjs 一起步就
+   `app` undefined 崩溃）。两个脚本的 isolatedEnv() 都显式清除它，并在 transcript 里记录。
+
+--------------------------------------------------------------------------------
+三、8(a) 判定（§7 C 判据：自启成功 + 退出后回收 两段都成立才算 PASS）
+--------------------------------------------------------------------------------
+自启成功段：**不成立** —— 后端被 Electron 拉起（spawn 层 OK）但在 better-sqlite3 加载处崩溃，
+            healthz 始终不可达（60s 窗口后 degraded）。
+回收段：    成立 —— 清场后 18790 无监听、无 src/index.ts 残留。
+⇒ 8(a) = **UNVERIFIED**（不是 PASS，也不是"缺陷未修"）。理由与根因见 C-runtime-abi-*。
