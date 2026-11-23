@@ -1,15 +1,19 @@
 /**
- * tests/runtime/dsh/domain-context.test.ts — #1426（I-1）真实领域上下文（**本切片只产 ②**）矩阵。
+ * tests/runtime/dsh/domain-context.test.ts — #1426（I-1）真实领域上下文（**本切片只产 ②**）矩阵；
+ * #1459 T-A 增 relation/evidence/insufficient 契约。
  *
  * 配对对象：src/runtime/dsh/domain-context.ts
- * 契约（DEV DOC v3 §3/§5/§7）：
+ * 契约（DEV DOC v3 §3/§5/§7 ＋ #1459 T-A）：
  *   @input  ctx（服务端注入身份）＋ problemId（本企业 ② 对象 businessKey 或 $id）
- *   @output ContextSnapshot（synthetic:false、source.api='synova.domain/v1'、items≤200、truncated=count>items.length）
+ *   @output ContextSnapshot（synthetic:false、source.api='synova.domain/v1'、items≤200、truncated=count>items.length；
+ *           items.relation{type,direction,edgeId}；items.evidence{evidenceStatus,instanceState,sources[].ref}；
+ *           count===0 ⇒ insufficient{code,reason,missing[]}）
  *   @degraded 无：未知 problemId ⇒ DOMAIN_EMPTY；DB 异常 ⇒ PERSISTENCE_ERROR（既有码）；不可见企业域 ⇒ FORBIDDEN
  *
  * 数据纪律（DEV DOC v3 §4 硬规则）：
  *   只连 `:memory:`（vitest env 注入 SYNOVA_DB_PATH；本文件 beforeAll 首行 fail-fast 断言），
  *   不读任何真实库；种子节点全部落在本文件内存图里，跨测试用唯一 businessKey 隔离。
+ *   #1459 的扫描断言/证据行用直查种子（表格是既有 `scan_*` schema，不新增写入路径）。
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { getDatabase, initEngineContext } from '../../../src/init/engine-context';
@@ -31,9 +35,9 @@ function node(type: string, props: Record<string, unknown>, graph: string = ENT_
   return store.createNode(type, props, graph);
 }
 
-/** 建边（真 SqliteGraphStore；1 跳邻接 = 出边 + 入边）。 */
-function edge(from: string, to: string, graph: string = ENT_A, type = 'edge/team_executes_activity'): void {
-  store.createEdge(type, from, to, 1, {}, graph);
+/** 建边（真 SqliteGraphStore；1 跳邻接 = 出边 + 入边）；返回边 id（relation.edgeId 断言用）。 */
+function edge(from: string, to: string, graph: string = ENT_A, type = 'edge/team_executes_activity'): string {
+  return store.createEdge(type, from, to, 1, {}, graph);
 }
 
 /** 合格 ② 节点（props 同时提供 period + defVersion）。 */
@@ -43,6 +47,58 @@ function batch(businessKey: string, period: string, defVersion: string, graph: s
 
 function catchError(fn: () => unknown): unknown {
   try { fn(); return null; } catch (err: unknown) { return err; }
+}
+
+/**
+ * #1459 T-A 直查种子：一条扫描断言版本 + 该版本的证据行（复用既有 `scan_*` schema，不新增写入路径）。
+ * 同一 `assertionId` 再次调用 = 再插一个版本；`createdAt` 可由调用方钉成相同值（验证 rowid tiebreak）。
+ */
+function seedAssertionEvidence(options: {
+  nodeId: string;
+  nodeType: string;
+  businessKey: string;
+  assertionId: string;
+  versionId: string;
+  createdAt: string;
+  evidenceStatus?: string;
+  instanceState?: string;
+  sources: Array<{ evidenceId: string; sourceRef: string }>;
+}): void {
+  const db = getDatabase();
+  db.prepare(
+    `INSERT OR IGNORE INTO scan_ontology_links(graph, subject_kind, type, business_key, object_id)
+     VALUES (?, 'node', ?, ?, ?)`,
+  ).run(ENT_A, options.nodeType, options.businessKey, options.nodeId);
+  db.prepare(
+    `INSERT INTO scan_assertions(assertion_id, graph, assertion_key, target_kind, target_object_id, field, assertion_kind, assertion_type, def_version, formula_ref)
+     VALUES (?, ?, ?, 'node', ?, 'accepted_count', 'direct', 'fact', 'delivery-v1', NULL)
+     ON CONFLICT(graph, assertion_key) DO NOTHING`,
+  ).run(options.assertionId, ENT_A, options.assertionId, options.nodeId);
+  db.prepare(
+    `INSERT INTO scan_assertion_versions(assertion_version_id, graph, assertion_id, source_fingerprint, value_json, unit, denominator, evidence_status, instance_state, valid_from, valid_to, created_at)
+     VALUES (?, ?, ?, ?, '{"value":1}', NULL, NULL, ?, ?, NULL, NULL, ?)`,
+  ).run(options.versionId, ENT_A, options.assertionId, `fp-${options.versionId}`,
+    options.evidenceStatus ?? 'confirmed', options.instanceState ?? 'measured', options.createdAt);
+  for (const source of options.sources) {
+    const sourceId = `${ENT_A}:src-${source.evidenceId}`;
+    const evidenceVersionId = `${source.evidenceId}-v1`;
+    db.prepare(
+      `INSERT INTO scan_sources(source_id, graph, source_kind, locator, visibility, read_scope_json, egress_scope_json, created_by, created_at)
+       VALUES (?, ?, 'csv', ?, 'enterprise', '{}', '{"model":false}', 'seed', '2026-11-23T00:00:00.000Z')`,
+    ).run(sourceId, ENT_A, sourceId);
+    db.prepare(
+      `INSERT INTO scan_evidence(evidence_id, graph, source_id, registered_by, registered_at)
+       VALUES (?, ?, ?, 'seed', '2026-11-23T00:00:00.000Z')`,
+    ).run(source.evidenceId, ENT_A, sourceId);
+    db.prepare(
+      `INSERT INTO scan_evidence_versions(evidence_version_id, graph, evidence_id, sha256, size, mtime_ms, observed_at, period, valid_from, valid_to, parse_status, created_at)
+       VALUES (?, ?, ?, ?, 1, 0, '2026-11-23T00:00:00.000Z', '2026-10', NULL, NULL, 'confirmed', '2026-11-23T00:00:00.000Z')`,
+    ).run(evidenceVersionId, ENT_A, source.evidenceId, `sha-${evidenceVersionId}`);
+    db.prepare(
+      `INSERT INTO scan_assertion_evidence(graph, assertion_version_id, evidence_version_id, source_ref)
+       VALUES (?, ?, ?, ?)`,
+    ).run(ENT_A, options.versionId, evidenceVersionId, source.sourceRef);
+  }
 }
 
 interface SnapshotItemShape {
@@ -56,6 +112,8 @@ interface SnapshotItemShape {
   status: string;
   visibility: string;
   source: { kind: string; api: string };
+  relation?: { type: string; direction: 'out' | 'in'; edgeId: string };
+  evidence?: { evidenceStatus: string; instanceState: string; sources: Array<{ ref: string }> };
 }
 
 interface SnapshotShape {
@@ -64,6 +122,7 @@ interface SnapshotShape {
   count: number;
   truncated: boolean;
   items: SnapshotItemShape[];
+  insufficient?: { code: string; reason: string; missing: string[] };
 }
 
 beforeAll(() => {
@@ -79,7 +138,7 @@ describe('#1426 ② 真实快照（真 store 直读）', () => {
   it('§7.1 真实节点值：synthetic=false、source.api=synova.domain/v1、period/defVersion 等于库内 props（改库值 ⇒ 输出跟着变）', () => {
     const root = batch('root-1426-real', '2026-07', 'def-2026.07');
     const neighbor = batch('batch-1426-real', '2026-07', 'def-2026.07');
-    edge(root, neighbor);
+    const relationEdge = edge(root, neighbor);
     // 根对象本身是 0 跳，不产出条目（本切片只取 1 跳邻接节点）
     expect(root).not.toBe(neighbor);
 
@@ -101,7 +160,10 @@ describe('#1426 ② 真实快照（真 store 直读）', () => {
       status: 'observed',
       visibility: 'enterprise',
       source: { kind: 'synova.domain', api: 'synova.domain/v1' },
+      relation: { type: 'edge/team_executes_activity', direction: 'out', edgeId: relationEdge },
     });
+    // 本夹具无 scan_assertions* ⇒ evidence 字段缺失、evidenceId=null（不补零）
+    expect(first.items[0].evidence).toBeUndefined();
 
     // 改库值 ⇒ 输出跟着变（证明 period/defVersion 不是代码常量）
     store.updateNode(neighbor, { period: '2026-08', defVersion: 'def-2026.08' }, ENT_A);
@@ -274,6 +336,116 @@ describe('#1426 参数校验与零查询（钉死 spy 目标 = SqliteGraphStore.
     const tooLong = catchError(() => buildContextSnapshot(CTX_A, 'p'.repeat(257)));
     expect(tooLong).toBeInstanceOf(DshError);
     expect((tooLong as DshError).code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('#1459 T-A relation / evidence / insufficient（真实 store 直读）', () => {
+  it('#1459-1 evidence 取最新断言版本：created_at 逐字相同 ⇒ rowid DESC 兜底（后插版本胜）', () => {
+    const root = batch('root-1459-evidence', '2026-10', 'delivery-v1');
+    const neighbor = batch('batch-1459-evidence', '2026-10', 'delivery-v1');
+    edge(root, neighbor);
+    const sameCreatedAt = '2026-11-23T13:18:20.404Z';
+    seedAssertionEvidence({
+      nodeId: neighbor, nodeType: 'activity/delivery_batch', businessKey: 'batch-1459-evidence',
+      assertionId: 'assertion-1459-evidence', versionId: 'assertion-version-1459-evidence-v1',
+      createdAt: sameCreatedAt,
+      sources: [{ evidenceId: 'ev-1459-evidence-a', sourceRef: 'first.csv#L1' }],
+    });
+    seedAssertionEvidence({
+      nodeId: neighbor, nodeType: 'activity/delivery_batch', businessKey: 'batch-1459-evidence',
+      assertionId: 'assertion-1459-evidence', versionId: 'assertion-version-1459-evidence-v2',
+      createdAt: sameCreatedAt,
+      sources: [{ evidenceId: 'ev-1459-evidence-b', sourceRef: 'second.md#L2' }],
+    });
+
+    const snapshot = buildContextSnapshot(CTX_A, 'root-1459-evidence') as SnapshotShape;
+    expect(snapshot.count).toBe(1);
+    const item = snapshot.items[0];
+    expect(item.relation?.type).toBe('edge/team_executes_activity');
+    expect(item.relation?.direction).toBe('out');
+    // v1 与 v2 的 created_at 逐字相同 ⇒ 只靠时间无法定序；rowid DESC 必须选 v2
+    expect(item.evidence).toEqual({
+      evidenceStatus: 'confirmed',
+      instanceState: 'measured',
+      sources: [{ ref: 'second.md#L2' }],
+    });
+    expect(item.evidenceId).toBe('ev-1459-evidence-b');
+  });
+
+  it('#1459-2 跨断言择新 + 同版本多来源按 ref 升序 + 两次调用逐字稳定', () => {
+    const root = batch('root-1459-multi', '2026-10', 'delivery-v1');
+    const neighbor = batch('batch-1459-multi', '2026-10', 'delivery-v1');
+    edge(root, neighbor);
+    const sameCreatedAt = '2026-11-23T13:18:20.404Z';
+    seedAssertionEvidence({
+      nodeId: neighbor, nodeType: 'activity/delivery_batch', businessKey: 'batch-1459-multi',
+      assertionId: 'assertion-1459-multi-old', versionId: 'assertion-version-1459-multi-old',
+      createdAt: sameCreatedAt, evidenceStatus: 'confirmed', instanceState: 'measured',
+      sources: [{ evidenceId: 'ev-1459-old', sourceRef: 'z-old.csv#L9' }],
+    });
+    seedAssertionEvidence({
+      nodeId: neighbor, nodeType: 'activity/delivery_batch', businessKey: 'batch-1459-multi',
+      assertionId: 'assertion-1459-multi-new', versionId: 'assertion-version-1459-multi-new',
+      createdAt: sameCreatedAt, evidenceStatus: 'pending', instanceState: 'estimated',
+      sources: [
+        { evidenceId: 'ev-1459-new-c', sourceRef: 'c.json' },
+        { evidenceId: 'ev-1459-new-a', sourceRef: 'a.csv#L3' },
+      ],
+    });
+
+    const first = buildContextSnapshot(CTX_A, 'root-1459-multi') as SnapshotShape;
+    expect(first.items[0].evidence).toEqual({
+      evidenceStatus: 'pending',
+      instanceState: 'estimated',
+      sources: [{ ref: 'a.csv#L3' }, { ref: 'c.json' }],
+    });
+    expect(first.items[0].evidenceId).toBe('ev-1459-new-a');
+
+    const second = buildContextSnapshot(CTX_A, 'root-1459-multi') as SnapshotShape;
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+  });
+
+  it('#1459-3 count===0 ⇒ insufficient 返回字段（不抛 error、不返回成功空快照）', () => {
+    const root = batch('root-1459-insufficient', '2026-10', 'delivery-v1');
+    const team = node('resource/delivery_team', { businessKey: 'team-1459-insufficient', name: '交付一组' });
+    edge(root, team);
+
+    const snapshot = buildContextSnapshot(CTX_A, 'root-1459-insufficient') as SnapshotShape;
+    expect(snapshot.count).toBe(0);
+    expect(snapshot.items).toEqual([]);
+    expect(snapshot.truncated).toBe(false);
+    expect(snapshot.insufficient).toMatchObject({ code: 'INSUFFICIENT_CONTEXT' });
+    expect(snapshot.insufficient?.missing).toEqual(['defVersion', 'period']);
+    expect(snapshot.insufficient?.reason).toContain('不足以形成瓶颈假设');
+  });
+
+  it('#1459-4 根无任何 1 跳关系 ⇒ insufficient.missing=[neighbors]', () => {
+    batch('root-1459-no-neighbor', '2026-10', 'delivery-v1');
+    const snapshot = buildContextSnapshot(CTX_A, 'root-1459-no-neighbor') as SnapshotShape;
+    expect(snapshot.count).toBe(0);
+    expect(snapshot.insufficient?.missing).toEqual(['neighbors']);
+  });
+
+  it('#1459-5 in 方向用例：邻接节点→根命中 direction=in；同节点 out/in 并存取 out（确定性规则）', () => {
+    const root = batch('root-1459-direction', '2026-10', 'delivery-v1');
+    const inOnly = batch('batch-1459-direction-in', '2026-10', 'delivery-v1');
+    const inEdgeId = edge(inOnly, root);
+    const both = batch('batch-1459-direction-both', '2026-10', 'delivery-v1');
+    const outEdgeId = edge(root, both);
+    edge(both, root);
+
+    const snapshot = buildContextSnapshot(CTX_A, 'root-1459-direction') as SnapshotShape;
+    const byId = new Map(snapshot.items.map(item => [item.$id, item]));
+    expect(byId.get(inOnly)?.relation).toEqual({
+      type: 'edge/team_executes_activity',
+      direction: 'in',
+      edgeId: inEdgeId,
+    });
+    expect(byId.get(both)?.relation).toEqual({
+      type: 'edge/team_executes_activity',
+      direction: 'out',
+      edgeId: outEdgeId,
+    });
   });
 });
 

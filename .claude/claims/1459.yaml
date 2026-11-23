@@ -1,31 +1,31 @@
-# .claude/claims/1459.yaml — #1459 切片：扫描②结构 → DSH 生成有依据的瓶颈假设 → 桌面可见
-# 依据：创始人 2026-11-23 指令（含「数据不足 ⇒ 停报最小数据缺口，不自行扩成新扫描或本体大改」）
-# base: caf61fcdeb3e00c79abe9211546690ca963549a2 ｜ branch: docs/1459-bottleneck-devdoc
-# worktree: D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1459-devdoc（主树未写一字节）
-#
-# 状态：DEV DOC **v2.3**（2026-11-23）；关卡 A 第 1/2 轮均退回。DEV DOC 已草拟于
-#   docs/synova/coordination/DEV-DOC-1459-bottleneck-hypothesis-20261123.md（该件由文档分支负责，本分支未改）。
-#   v2.3 关键结论（取代 v1/v2 的停报前提）：
-#   - 根=`resource/delivery_team` 时 synova_context_get **count=2**（batch 节点含 period/defVersion）；
-#     根=batch 才 count=0。v1「恒为空快照」已被推翻。
-#   - 真缺口三条：item 无 predicate/direction/edgeId、evidenceId 恒 null、count=0 不报错（空快照冒充有效）。
-#   - 结构化载荷生产者：DSH `dsh-action-cards` **不在 rc.5 CLI 分发内**（D 依赖成本）⇒ 自研（R）：
-#     领域工具 `synova_hypothesis_submit` 校验**入参**后发 `hypothesis.structured` 事件；代价=改动
-#     #1455 已固化的「只广告一条只读工具」事实，需重新取证并记账。
-#   - 外发边界：本切片只证明数据来源，不证明外发链路受控（egress guard 排除 DSH 链）。
-#
-# T-B 状态（2026-11-24，分支 feat/1459-tb-desktop-hypothesis，base=gitea/main c08ca3f0a）：
-#   编码指令 任务 B 已施工：桌面白名单增 hypothesis 类事件＋卡片四要素；P1（先推 lastEventId 再
-#   switch ⇒ 未知事件永久丢弃）已改为「处理留痕后再推进」＋未知事件留存 pending。
-#   未碰后端 src/**（任务 A/C 另票），未改判据/门禁，未 merge。
+# .claude/claims/1459.yaml — #1459 扫描②结构 → 有依据的瓶颈假设 → 桌面可见
+# 本文件为 **合并 union**（CTO 解决 add/add 冲突）：T-A / T-B / T0 三条分支各自新增同名 claim，此处并集。
+# base: main（含 #1468 T-A）｜分支: feat/1459-tb-desktop-hypothesis（合入 main 后）
+# 任务卡：docs/synova/coordination/编码指令-1459-bottleneck-20261123.md
+# DEV DOC：docs/synova/coordination/DEV-DOC-1459-bottleneck-hypothesis-20261123.md
 writeset:
-  - .claude/claims/1459.yaml
-  - docs/synova/coordination/DEV-DOC-1459-bottleneck-hypothesis-20261123.md
-  - docs/authority/DOCS-REGISTRY.yaml
+  # ---- T-A 上下文契约（已合入 main，PR #1468）----
+  - src/runtime/dsh/domain-context.ts
+  - src/runtime/dsh/tools.ts
+  - tests/runtime/dsh/domain-context.test.ts
+  - tests/runtime/dsh/domain-context-scan.test.ts
+  - tests/runtime/dsh/readonly-tool.test.ts
+  - tests/runtime/dsh/fixtures/synova-context-get.json
+  # ---- T-B 桌面消费 + P1 修复（本分支，PR #1470）----
   - electron-renderer/src/stores/dsh-run-store.ts
   - electron-renderer/src/components/DshRunPanel.tsx
   - tests/dsh-ui/dsh-hypothesis-1459.test.ts
+  # ---- T0 隔离扫描落库（另一分支）----
+  - tests/enterprise-scan/t0-scan-harness.ts
+  - tests/enterprise-scan/t0-scan.test.ts
+  - docs/synova/product-lines/evidence/1459-probes/T0-scan-report.json
+  # ---- 本 claim ----
+  - .claude/claims/1459.yaml
 done:
-  - verify: node node_modules/vitest/vitest.mjs run tests/dsh-ui --pool=threads
-  - verify: node node_modules/typescript/bin/tsc -p electron-renderer/tsconfig.json
-note: "#1459 切片级 claim。DEV-DOC 会话：只做事实核查与 DEV DOC，未改产品代码、未跑真实模型、未碰真实客户数据。T-B 会话（branch feat/1459-tb-desktop-hypothesis）：只改 electron-renderer 两件＋新增前端测试一件——白名单增 hypothesis.structured/hypothesis.invalid 并渲染对象/关系/依据（可回来源）/不确定性，缺字段显式标「未结构化」不猜补；P1 修复为处理留痕后再推进 lastEventId、未知事件留存 pending（断流重连后仍在）。未碰后端 src/**、未改判据/门禁、未 merge。"
+  - verify: 根 team:delivery-a ⇒ count=2 且 relation.type + sources[0].ref + period/defVersion 同时非空（真 EnterpriseScanService 造库）
+  - verify: 根 delivery_batch:B-2026-10-001 ⇒ insufficient.code=INSUFFICIENT_CONTEXT（不抛错）
+  - verify: 改坏 relation.type=null ⇒ 断言必红，还原后全绿
+  - verify: 桌面喂 hypothesis.structured ⇒ 四要素渲染非空；缺字段 ⇒ 显式"未结构化"不崩
+  - verify: 断流重连后未知事件仍在（pending 留存）＋ 同 seq 不产生第二张卡
+  - verify: T0 节点 id 集合 == report_json.ontology.objects[].object_id 集合；无手工 INSERT 播种
+note: "#1459 union claim（CTO 解冲突）。T-A：#1468 已合入 main。T-B：#1470 本分支。T0：tests 侧独立分支。载荷形态钉为 {hypothesis, objects[], relations[], evidence[], uncertainty[]}，四要素为字符串数组（objects=$id／relations=predicate／evidence=source_ref）；T-C 必须照此产出。已知限制：writeset 里的 `**` 在 claim_store.match_path 是字面量、不做 glob ⇒ 逐文件声明。"

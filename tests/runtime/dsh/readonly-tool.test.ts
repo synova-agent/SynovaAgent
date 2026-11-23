@@ -5,8 +5,11 @@
  * → 结构化 JSON（与独立 golden 逐字段一致，golden 数据种在 :memory: 真图里）→ 与直接领域调用一致。
  * 反例：无 token、已撤销 token、伪造身份/路径、4 个写工具、未登记工具、未知 problemId（显式空）。
  *
- * 数据纪律：只连 `:memory:`（beforeAll fail-fast 断言）；节点用固定 id 种子（golden 需要静态 id），
+ * 数据纪律：只连 `:memory:`（beforeAll fail-fast 断言）；节点/边用固定 id 种子（golden 需要静态 id），
  * 读取路径仍是真 `SqliteGraphStore`（不 mock 任何 store 方法）。
+ *
+ * #1459 T-A 语义变更（黄金件）：items 新增 `relation{type,direction,edgeId}`；本夹具无 `scan_assertions*`
+ * 行 ⇒ `evidence` 字段不出现、`evidenceId` 仍为 null（有证据时才非空）。edge id 改为固定值以保持 golden 可比。
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -38,7 +41,7 @@ beforeAll(async () => {
   const db = getDatabase();
   const graph = CONTEXT.enterpriseId;
   // 先构造真 store（建 graph_nodes/graph_triples schema），再种固定 id 的 ② 节点
-  const store = new SqliteGraphStore(db);
+  new SqliteGraphStore(db);
   const insertNode = db.prepare('INSERT INTO graph_nodes (id, graph, type, name, props) VALUES (?, ?, ?, ?, ?)');
   insertNode.run('node-1426-root', graph, 'activity/delivery_batch', '7月根批次',
     JSON.stringify({ businessKey: PROBLEM, name: '7月根批次', period: '2026-07', defVersion: 'def-2026.07' }));
@@ -49,9 +52,17 @@ beforeAll(async () => {
   insertNode.run('node-1426-team', graph, 'resource/delivery_team', '交付一组',
     JSON.stringify({ businessKey: 'team-1426', name: '交付一组' }));
 
-  store.createEdge('edge/team_executes_activity', 'node-1426-root', 'node-1426-batch-a', 1, {}, graph);
-  store.createEdge('edge/team_executes_activity', 'node-1426-batch-b', 'node-1426-root', 1, {}, graph);
-  store.createEdge('edge/team_executes_activity', 'node-1426-team', 'node-1426-root', 1, {}, graph);
+  // 边用**固定 id**（golden 逐字段比对需要稳定 edgeId）：root→A 为 out，B→root 为 in（in 方向用例）。
+  const insertEdge = db.prepare(
+    `INSERT INTO graph_triples (id, graph, subject_type, subject_id, predicate, object_type, object_id, weight, props)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, '{}')`,
+  );
+  insertEdge.run('edge-1426-root-to-batch-a', graph, 'activity/delivery_batch', 'node-1426-root',
+    'edge/team_executes_activity', 'activity/delivery_batch', 'node-1426-batch-a');
+  insertEdge.run('edge-1426-batch-b-to-root', graph, 'activity/delivery_batch', 'node-1426-batch-b',
+    'edge/team_executes_activity', 'activity/delivery_batch', 'node-1426-root');
+  insertEdge.run('edge-1426-team-to-root', graph, 'resource/delivery_team', 'node-1426-team',
+    'edge/team_executes_activity', 'activity/delivery_batch', 'node-1426-root');
 
   server = await startReadonlyMcpServer();
   token = server.tokens.issue(CONTEXT);
@@ -104,11 +115,17 @@ describe('T3 回环 HTTP MCP：只读、token、身份注入', () => {
       expect(typeof item.defVersion).toBe('string');
       expect(item.cycleVersion).toBeNull();   // 全仓零生产者
       expect(item.sentinelRun).toBeNull();    // ③ 不产
-      expect(item.evidenceId).toBeNull();     // ④ 不产
+      expect(item.evidenceId).toBeNull();     // 本夹具无 scan_assertions* ⇒ 无证据
+      expect(item.evidence).toBeUndefined();  // 无断言版本 ⇒ 字段缺失（不是空对象）
       expect(item.status).toBe('observed');
       expect(item.visibility).toBe('enterprise');
       expect(item.source).toEqual({ kind: 'synova.domain', api: 'synova.domain/v1' });
     }
+    // 关系方向在真实入口上也可区分：root→A 命中 out，B→root 命中 in（#1459 钉子 2）
+    expect(items.map(item => [item.$id, (item.relation as { direction: string }).direction])).toEqual([
+      ['node-1426-batch-a', 'out'],
+      ['node-1426-batch-b', 'in'],
+    ]);
     await client.close();
   });
 

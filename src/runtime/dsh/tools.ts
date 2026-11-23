@@ -10,8 +10,10 @@
  *
  * 契约（铁律 47）:
  *   @input   problemId（工具参数）＋ 服务端注入的 ToolCallContext（缺 ⇒ UNAUTHORIZED）
- *   @output  ContextSnapshot JSON（真实 ② 条目：$id/period/defVersion/status/visibility/source）
- *   @degraded 无：未知 problemId 返回显式 DOMAIN_EMPTY（不伪造空成功）；DB 异常 ⇒ PERSISTENCE_ERROR
+ *   @output  ContextSnapshot JSON（真实 ② 条目：$id/period/defVersion/status/visibility/source，
+ *            #1459 T-A 增 relation/evidence 与 evidenceId 语义；count===0 ⇒ 返回字段 insufficient，不抛 error）
+ *   @degraded 无：未知 problemId 返回显式 DOMAIN_EMPTY（不伪造空成功）；根可解析但 0 条目 ⇒ insufficient
+ *            （`INSUFFICIENT_CONTEXT` 字段，不是 error）；DB 异常 ⇒ PERSISTENCE_ERROR
  *   @error   FORGED_IDENTITY / FORGED_PATH / UNAUTHORIZED / VALIDATION_ERROR / FORBIDDEN /
  *            DOMAIN_EMPTY / PERSISTENCE_ERROR
  */
@@ -39,6 +41,33 @@ const FORBIDDEN_IDENTITY_KEYS = ['enterpriseId', 'userId', 'orgId', 'scope', 'te
 /** 路径类越权参数（出现即 FORGED_PATH）。 */
 const FORBIDDEN_PATH_KEYS = ['path', 'filePath', 'absPath', 'cwd', 'dir', 'directory', 'root'];
 
+/** 1 跳关系：`type`←`graph_triples.predicate`；`direction`＝遍历方向（out＝根为 subject／in＝根为 object）。 */
+export interface ContextRelation {
+  type: string;
+  direction: 'out' | 'in';
+  edgeId: string;
+}
+
+/** 证据来源（行号级 `source_ref`，可回到扫描来源）。 */
+export interface ContextEvidenceSource {
+  ref: string;
+}
+
+/** 该对象自身最新扫描断言版本的依据：evidence_status／instance_state ＋ 逐条来源。 */
+export interface ContextEvidence {
+  evidenceStatus: string;
+  instanceState: string;
+  sources: ContextEvidenceSource[];
+}
+
+/** `count===0` 时的显式不足说明（返回字段，不是 error；桌面据此显示「不足以形成瓶颈假设」）。 */
+export interface InsufficientContext {
+  code: 'INSUFFICIENT_CONTEXT';
+  reason: string;
+  /** 机器可读缺项：neighbors／period／defVersion（兜底 items）。 */
+  missing: string[];
+}
+
 /**
  * 真实领域 ContextSnapshot 条目（逐字段来源表见 `domain-context.ts` 文件头）。
  * 类型联合保留 '②'|'③'|'④'：本切片只产 ②，③④ 恒 0（NOT DONE）。
@@ -52,11 +81,18 @@ export interface ContextSnapshotItem {
   sentinelRun: string | null;
   period: string;
   defVersion: string;
-  /** 恒 null：④ 依据本切片 NOT DONE；② 的 sourceIds 与 ④ evidenceId 语义未定，不拼接。 */
+  /**
+   * 该条目自身的扫描证据 id（`scan_evidence_versions.evidence_id`，经断言版本连接）。
+   * #1459 T-A 语义变更：由恒 null → 有证据行时非空；无证据行仍为 null（不补零）。
+   */
   evidenceId: string | null;
   status: 'observed' | 'partial';
   visibility: 'enterprise';
   source: { kind: 'synova.domain'; api: 'synova.domain/v1' };
+  /** 1 跳关系（`graph_triples`）；每个条目恒有，类型保留可选以兼容旧消费方。 */
+  relation?: ContextRelation;
+  /** 该对象自身的最新扫描断言依据；无断言版本 ⇒ 字段缺失（不是空对象）。 */
+  evidence?: ContextEvidence;
 }
 
 export interface ContextSnapshot {
@@ -68,6 +104,8 @@ export interface ContextSnapshot {
   /** count > items.length。 */
   truncated: boolean;
   items: ContextSnapshotItem[];
+  /** 仅 `count===0` 时出现（根解析不到仍是 DOMAIN_EMPTY error，不是本字段）。 */
+  insufficient?: InsufficientContext;
 }
 
 /**
