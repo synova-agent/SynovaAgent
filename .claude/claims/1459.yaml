@@ -1,0 +1,13 @@
+writeset:
+  - .claude/claims/1459.yaml
+  - src/runtime/dsh/domain-context.ts
+  - src/runtime/dsh/tools.ts
+  - tests/runtime/dsh/domain-context-scan.test.ts
+  - tests/runtime/dsh/domain-context.test.ts
+  - tests/runtime/dsh/fixtures/synova-context-get.json
+  - tests/runtime/dsh/readonly-tool.test.ts
+done:
+  - verify: python scripts/control-tower/claim_store.py --check 1459 --root .
+  - verify: npx tsc --noEmit
+  - verify: npx vitest run tests/runtime/dsh tests/mcp/http.test.ts
+note: "#1459 T-A（上下文契约）：items 增 relation{type,direction,edgeId} 与 evidence{evidenceStatus,instanceState,sources[].ref}；evidenceId 由恒 null→有证据时取逻辑 evidence_id；count===0 ⇒ insufficient 返回字段（不抛 error）。单测覆盖 in 边/rowid tiebreak/sources 稳定；真实 EnterpriseScanService 扫描夹具（:memory:）验 team:delivery-a count=2 与 batch 根 insufficient。golden 增 relation 属显式语义变更（PR 正文说明）。"

@@ -14,7 +14,12 @@
       "evidenceId": null,
       "status": "observed",
       "visibility": "enterprise",
-      "source": { "kind": "synova.domain", "api": "synova.domain/v1" }
+      "source": { "kind": "synova.domain", "api": "synova.domain/v1" },
+      "relation": {
+        "type": "edge/team_executes_activity",
+        "direction": "out",
+        "edgeId": "edge-1426-root-to-batch-a"
+      }
     },
     {
       "layer": "②",
@@ -26,7 +31,12 @@
       "evidenceId": null,
       "status": "observed",
       "visibility": "enterprise",
-      "source": { "kind": "synova.domain", "api": "synova.domain/v1" }
+      "source": { "kind": "synova.domain", "api": "synova.domain/v1" },
+      "relation": {
+        "type": "edge/team_executes_activity",
+        "direction": "in",
+        "edgeId": "edge-1426-batch-b-to-root"
+      }
     }
   ]
 }
