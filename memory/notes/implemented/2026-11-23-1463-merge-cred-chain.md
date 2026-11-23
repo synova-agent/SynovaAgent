@@ -10,7 +10,9 @@
   - **无 token ⇒ fail-closed**：禁 helper ＋ 空 HOME ＋ 非仓 cwd ⇒ `degraded: HTTP 403 on /pulls/1461 [code=E_API_HTTP]`，exit 2
   - **有 GCM ⇒ 取到并可用**：`① CI 全绿 pending=0 ......... ok (state=success total_count=1)`（API 认证已过），随后撞**既存** ② 移植 bug：`FileNotFoundError: /tmp/syno-mc.EpUFTT/pulls_p1.json` ⇒ `E_OPENPRS_EMPTY`，exit 2
   - **token 已进 Authorization 头**：假 curl（不出网）`AUTH=PRESENT`，输出/降级日志无 token 值
-  - **配对测试** `tests/control-tower/check-merge-conditions-token.test.sh` ⇒ `结果: 6 通过, 0 失败`（Git Bash 与 WSL 两壳）；改坏必红：去第 4 级 ⇒ 9 失败；host 写死 ⇒ T4 红；取不到返 0 ⇒ T2 红
+  - **配对测试** `tests/control-tower/check-merge-conditions-token.test.sh` ⇒ `结果: 6 通过, 0 失败`（Git Bash 与 WSL 两壳）；改坏必红：去第 4 级 ⇒ **4 失败 / 2 通过**（T1/T2/T4/T6 红；测试仅 6 判定点 T1–T6）；host 写死 ⇒ T4 红；取不到返 0 ⇒ T2 红
+  - **CI 未观测到执行（独立复核 F2，禁读成「已覆盖」）**：`tests/**/*.test.sh` 走 sealed 清单发现制（`sealed-tests.sh` 自动纳入执行集），本批**未观测到 CI 实际执行**该 token 测试；回归证据只有本机两壳（WSL 默认 bash ＋ Git Bash）实跑
+  - **指纹复算必须在本仓内（独立复核 F3）**：`patch_fingerprint` 依赖仓级 `core.quotepath=false` —— 同一提交在裸克隆（无该 config）算出 `8e2234ae…`/42872 B，本仓 `14d54ac223cf…`/42596 B ⇒ 不在本仓（带该 config）复算会被 R3 判红。另：**fp 是 merge-base 起的 diff**，main 前进若改了同一文件（本件实测：`docs/authority/DOCS-REGISTRY.yaml` 的 `index` blob 行）⇒ 分支内容不变 fp 也会变，**重切/重放后必须重算，不能沿用旧值**
   - **判据未回归**（WSL 默认 `bash`）：`SELFCHECK-OK: 13/13`；`bash tests/control-tower/check-merge-conditions.test.sh` ⇒ `结果: 14 通过, 0 失败`
   - Git Bash 下 `--selfcheck`／主配对测试**既存红**（`SELFCHECK-FAIL: A`，12 处 ❌）——base `3ba60318a` 原脚本**同一条同样 12 处**（对照组实测），根因＝MSYS 把 argv 里 `/pulls/100` 转成 `C:/Program Files/Git/pulls/100`，属乙类 A-2 范围
 - **回滚**: `git revert` 本提交即回三级链；`SYNO_MERGE_COND_CRED_TIMEOUT` 只影响第 4 来源；`E_*` 码与退出码语义未动。
