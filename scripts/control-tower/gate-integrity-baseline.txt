@@ -34,7 +34,7 @@
 #   余量 11>SLACK-CAP=10；按 CTO 评论 11616 同批复核并显式上调 FACE-TOTAL 215→216（最小 +1），slack 回到 10。
 # 2026-11-13 #1385 B：十二件旧治理配对测试随获批闭包物理删除，按 sealed-tests.sh 要求显式下调 FACE-TOTAL 216→208；执行逻辑与 SLACK-CAP 不变。
 # 2026-11-13 #1385 C：四件预算／遥测配对测试随获批闭包删除，按 sealed-tests.sh 要求显式下调 FACE-TOTAL 208→204；执行逻辑与 SLACK-CAP 不变。
-# FACE-TOTAL=204   # 2026-11-13 #1385 C：预算／遥测配对测试退役同批显式下调（208→204）   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
+# FACE-TOTAL=189   # 2026-11-24 #1473：控制塔孤儿实现专属测试 15 件随实现退役，同批显式下调 204→189   # **下界语义**：scan >= 此值 = 通过（新增测试不红）；scan < 此值 = 净删除 ⇒ 红。
 #   2026-10-26 显式上调 173→197（CTO·裁 421）：P1–P12 期间新增密封测试（swallow-ratchet／契约测试接入等）
 #   使 scan=197、余量 24 > SLACK-CAP=10 ⇒ 按脚本要求**显式**登记全部现有夹具（slack=0，此后净删 1 个即红）。
 #                   # 代价（如实登记）: **≤ 当前余量 (scan − FACE-TOTAL) 的净删除不可检测** —— 「不做逐条登记」的必然代价。
@@ -57,7 +57,7 @@
 #   口径: 按脚本要求**显式上调下界**（新增测试计入下界＝更严方向）；取值沿用 3~5 余量惯例
 #         （2026-10-19 slack=4／2026-10-30 slack=5）⇒ slack=5。
 #   复算: bash scripts/control-tower/sealed-tests.sh --slack  → 5
-# QUARANTINE-TOTAL=77
+# QUARANTINE-TOTAL=66   # 2026-11-24 #1473：隔离台账 8 条随测试退役摘除（77→66）
 # SLACK-CAP=10
 #   余量上限（#1227 跟进件，Lead 裁 N=10）: 余量 = scan − FACE-TOTAL；> 上限 ⇒ 红。
 #   逼周期性**显式**上调 FACE-TOTAL（一行、低频）；禁止自动上调（会让棘轮失效）。
@@ -118,14 +118,12 @@ tests/control-tower/bypass-union-merge.test.sh
 tests/control-tower/calc-k3-stale.test.py
 tests/control-tower/check-bypass-log.test.sh
 tests/control-tower/check-ci-stale-red.test.sh
-tests/control-tower/check-dataflow-alignment.test.sh
 tests/control-tower/check-dev-doc-write-set.test.sh
 tests/control-tower/check-notes-lifecycle.test.sh
 tests/control-tower/check-orphan-worktrees.test.sh
 tests/control-tower/check-ownership.test.sh
 tests/control-tower/check-secrets.test.sh
 tests/control-tower/check-sentinel-type-net.test.sh
-tests/control-tower/check-test-first.test.sh
 tests/control-tower/ci-strict-mode.test.sh
 tests/control-tower/commit-msg-consistency.test.sh
 tests/control-tower/commit-msg-merge.test.sh
@@ -133,25 +131,20 @@ tests/control-tower/commit-msg-note-mandatory.test.sh
 tests/control-tower/daemon-smoke.test.sh
 tests/control-tower/dashboard-alignment.test.py
 tests/control-tower/decide-next.test.sh
-tests/control-tower/declare-write-set.test.sh
-tests/control-tower/dev-doc-gatekeeper.test.sh
 tests/control-tower/doc-commit-exempt.test.sh
 tests/control-tower/external-auditor.test.sh
 tests/control-tower/g12-taskstate-exempt.test.sh
 tests/control-tower/gen-cto-health-batch-report.test.py
 tests/control-tower/gen-cto-health-repro.test.sh
 tests/control-tower/gen-cto-health.test.sh
-tests/control-tower/gen-plan-status.test.sh
 tests/control-tower/gen-task-board.test.py
 tests/control-tower/generated-gate.test.sh
 tests/control-tower/hard-gate-convergence.test.sh
 tests/control-tower/hook-block-write.test.sh
 tests/control-tower/hook-check-memory.test.sh
-tests/control-tower/hook-check-task-scope.test.sh
 tests/control-tower/hook-git-detect.test.sh
 tests/control-tower/hooks-install.test.sh
 tests/control-tower/incident-loop-hygiene.test.sh
-tests/control-tower/merge-pr-queue.test.sh
 tests/control-tower/notes-four-state.test.sh
 tests/control-tower/pre-dispatch-check.test.sh
 tests/control-tower/product-lines.test.py
@@ -172,7 +165,6 @@ tests/control-tower/verify-incremental.test.sh
 tests/control-tower/weekly-selfcheck.test.sh
 tests/control-tower/worktree-manager.test.py
 tests/control-tower/worktree-manager.test.sh
-tests/control-tower/writeset-c6-gatekeeper.test.sh
 tests/control-tower/precommit-groups-injection.test.sh
 tests/desktop/verify-package-signature.test.sh
 tests/doc-system/doc-truth-probe.test.sh

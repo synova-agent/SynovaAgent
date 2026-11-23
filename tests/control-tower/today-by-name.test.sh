@@ -145,14 +145,13 @@ fi
 
 # ── 4. 生产接线 (DS2) ──
 echo ""
-echo "── 4. 生产调用点 (DS2: ≥4) ──"
+echo "── 4. 生产调用点 (DS2: ≥3) ──"
 CALLS=$(grep -hc "today_files_by" \
   "$TEST_ROOT/scripts/pre-commit-check.sh" \
   "$TEST_ROOT/scripts/workflow/resolve-commit-brief.sh" \
-  "$TEST_ROOT/scripts/workflow/hook-check-task-scope.sh" \
   "$TEST_ROOT/scripts/control-tower/verify-parallel.sh" \
   | awk '{s+=$1} END {print s+0}' || true)
-if [ "$CALLS" -ge 4 ]; then ok "4 脚本 today_files_by 生产调用 ≥4 (实际 $CALLS)"; else fail "生产调用不足 4 (实际 $CALLS)"; fi
+if [ "$CALLS" -ge 3 ]; then ok "3 脚本 today_files_by 生产调用 ≥3 (实际 $CALLS)"; else fail "生产调用不足 3 (实际 $CALLS)"; fi
 
 echo ""
 echo "结果: 通过 $PASS / 失败 $FAIL"

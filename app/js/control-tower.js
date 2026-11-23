@@ -15,7 +15,6 @@ const TOWER_CONFIG = {
     { id: 'gatekeeper', label: 'Gatekeeper', signalPath: '.codex/settings/gatekeeper/.dashboard-signal' },
     { id: 'external-auditor', label: 'External Auditor', signalPath: '.codex/audit-reports/latest.json' },
     { id: 'contract-archiver', label: 'Contract Archiver', signalPath: '.codex/signals/contract-archiver.json' },
-    { id: 'dev-doc-gatekeeper', label: 'Dev Doc Gatekeeper', signalPath: '.codex/signals/dev-doc-gatekeeper.json' },
     { id: 'write-lock', label: 'Write Lock', signalPath: '.codex/signals/write-lock.json' },
   ],
 };

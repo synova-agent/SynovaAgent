@@ -1,2 +1,0 @@
-name: 📋 dev-doc 撰写
-description: 专用 dev doc 撰写线程：北星锚定（front-matter）+ 11 节活规格 + 写时即验 + dev-doc-gatekeeper 验收 + 写集对账。只写 doc 不实现（实现是 Claude Code / 编码线程的活），产出给实现角色照做的活规格。

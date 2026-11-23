@@ -97,7 +97,7 @@
 
 ### DSH 自出 dev doc 的护栏（不变，防"自我闭环"）
 
-1. 结构门禁：过 dev-doc-gatekeeper（Q0-Q3/写集/DS 清单/Done 可证伪）
+1. 结构门禁：按 `.dsh/skills/dev-doc-spec` 八节结构执行；写集用 `scripts/workflow/check-dev-doc-write-set.sh` 对账
 2. 任务编号：**DSH 线自定**，格式 `SYNOVA-IMPL-DSH-{任务名}-{YYYYMMDD}.md`（不再向 Codex 拿 D#）；Claude 线继续 Codex 的 D#
 3. PR 预审：DSH 的 PR → Codex 预审
 4. 独立审计：仅创始人／CTO／任务明确要求时触发；禁止自审
