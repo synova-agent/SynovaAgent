@@ -32,6 +32,9 @@ const require_ = createRequire(import.meta.url);
 const ROOT = path.resolve(__dirname, '../..');
 const backendSpawnPath = path.resolve(__dirname, '../../electron/backend-spawn.cjs');
 
+/** #1456 v2（CTO 裁定 1）：win32 dev 的 runtime 必须是真实 node 可执行文件（node / node.exe），不是 electron.exe */
+const NODE_BIN_RE = /^node(\.exe)?$/i;
+
 // ── W1d/D1164（治理线，2026-10-06）: 子进程登记器 + afterEach 兜底回收 ────────────────
 // 病灶（本机实测，非推断）: 本文件多处让 `ensureBackend` **真 spawn** 一个假后端
 //   （桩脚本用 `setInterval(...)` 保活），而 `afterEach` 的 `handles` 只登记了
@@ -279,23 +282,26 @@ describe('ensureBackend — env 与命令契约（DS8 双模式）', () => {
   // 改写原因（#1456）: 本用例原来断言 dev 默认命令 = `npx tsx src/index.ts`，
   //   把 Windows 上的真实缺陷写成了契约。实测（DEV DOC §2.2）:
   //   `spawn('npx', …, {shell:false})` → ENOENT；`spawn('npx.cmd', …, {shell:false})` → 同步抛 EINVAL。
-  //   ⇒ win32 dev 改为「真 executable（process.execPath + ELECTRON_RUN_AS_NODE）+ 本地 tsx CLI」；
+  //   ⇒ win32 dev 改为「系统 node + 本地 tsx CLI」（**不是** Electron-as-node：dev node_modules 是系统
+  //     Node ABI，Electron-as-node 会在 better-sqlite3 处 ERR_DLOPEN_FAILED，见 CTO 裁定 1）；
   //     POSIX dev 与 prod 逐字不变（§3.2 / §5）。
-  it('dev 模式默认命令：win32 = 本地 tsx CLI（非 npx/.cmd）；POSIX 逐字不变；prod 不变', () => {
+  it('dev 模式默认命令：win32 = 系统 node + 本地 tsx CLI（非 npx/.cmd、无 ELECTRON_RUN_AS_NODE）；POSIX 与 prod 逐字不变', () => {
     const { buildCommand } = require_(backendSpawnPath) as {
       buildCommand: (
         mode: string,
         ctx?: Record<string, unknown>,
       ) => { bin: string; args: string[]; env?: Record<string, string>; error?: string };
     };
-    // #1456 win32 dev: 本地 tsx CLI（解析起点 ctx.cwd）
+    // #1456 win32 dev: 系统 node（解析顺序见 resolveNodeBin）+ 本地 tsx CLI（解析起点 ctx.cwd）
     const winDev = buildCommand('dev', { platform: 'win32', cwd: ROOT });
-    expect(winDev.bin).toBe(process.execPath);
+    expect(NODE_BIN_RE.test(path.basename(winDev.bin))).toBe(true); // node / node.exe，不是 electron.exe
     expect(path.basename(winDev.args[0])).toBe('cli.mjs');
     expect(path.isAbsolute(winDev.args[0])).toBe(true);
     expect(fs.existsSync(winDev.args[0])).toBe(true);
     expect(winDev.args[1]).toBe('src/index.ts');
-    expect(winDev.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
+    // CTO 裁定 1：win32 dev 不再设 ELECTRON_RUN_AS_NODE（那是 Electron-ABI 才需要的东西）
+    expect(winDev.env?.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(winDev.env).toBeUndefined();
     expect(winDev.error).toBeUndefined();
 
     // POSIX dev 逐字不变（Mac 上已验的路径不动——避免回归）
@@ -478,7 +484,10 @@ describe('D522 teardown — stop() 进程树回收契约', () => {
     assertDead(pid);
   }, 40000);
 
-  it('进程组：spawn detached 后孙进程也被回收（无孤儿，DS3）', async () => {
+  // D584 平台豁免登记（#1456 CTO 裁定 3）: 本用例 spawn 的孙进程是 `sleep 60`，Windows 无该二进制
+  //   ⇒ 存量红（base caf61fcde 上同点位同红，原始输出 evidence/1456-dev-self-start/A-baseline-before-fix.txt）。
+  //   只加平台豁免，不动任何断言语义（与同组 3 例 skipIf 先例一致）。
+  it.skipIf(process.platform === 'win32')('进程组：spawn detached 后孙进程也被回收（无孤儿，DS3）', async () => {
     const gcPidFile = path.join(os.tmpdir(), `d522-gc-${Date.now()}.pid`);
     const stub = path.join(os.tmpdir(), `d522-group-${Date.now()}.cjs`);
     fs.writeFileSync(stub, `const g = require('child_process').spawn('sleep', ['60'], { stdio: 'ignore' });\nrequire('fs').writeFileSync(${JSON.stringify(gcPidFile)}, String(g.pid));\nsetInterval(() => {}, 1000);\n`);
@@ -641,16 +650,18 @@ describe('#1456 — win32 dev 自启命令（§7 A.1）', () => {
 
   // 真实平台断言（本票验收宿主 = Windows）：不注入 platform，直测默认值
   it.skipIf(process.platform !== 'win32')(
-    'A.1 win32 dev（真实平台）= process.execPath + 存在的 tsx/dist/cli.mjs + ELECTRON_RUN_AS_NODE=1，且不含 npx/.cmd',
+    'A.1 win32 dev（真实平台）= 系统 node（basename 命中 node(.exe)?）+ 存在的 tsx/dist/cli.mjs，无 ELECTRON_RUN_AS_NODE、不含 npx/.cmd',
     () => {
       const dev = buildCommandFn()('dev');
-      expect(dev.bin).toBe(process.execPath);
+      // CTO 裁定 1：runtime = 系统 node 可执行文件，不是 process.execPath（Electron）
+      expect(NODE_BIN_RE.test(path.basename(dev.bin))).toBe(true);
+      expect(dev.bin.toLowerCase()).not.toContain('electron');
       expect(dev.args).toHaveLength(2);
       expect(path.isAbsolute(dev.args[0])).toBe(true);
       expect(fs.existsSync(dev.args[0])).toBe(true);
       expect(dev.args[0].split(path.sep).slice(-3, -1)).toEqual(['tsx', 'dist']);
       expect(dev.args[1]).toBe('src/index.ts');
-      expect(dev.env?.ELECTRON_RUN_AS_NODE).toBe('1');
+      expect(dev.env?.ELECTRON_RUN_AS_NODE).toBeUndefined(); // win32 dev 不再设
       expect(dev.error).toBeUndefined();
       expect(dev.args.some((a) => /^npx(\.cmd)?$/i.test(path.basename(a)))).toBe(false);
       expect(dev.args.some((a) => a.toLowerCase().endsWith('.cmd'))).toBe(false);
@@ -659,17 +670,38 @@ describe('#1456 — win32 dev 自启命令（§7 A.1）', () => {
 
   it('A.1 平台注入：ctx.platform=win32 在任意宿主产出同一契约；POSIX 分支逐字不变', () => {
     const dev = buildCommandFn()('dev', { platform: 'win32', cwd: ROOT });
-    expect(dev.bin).toBe(process.execPath);
+    expect(NODE_BIN_RE.test(path.basename(dev.bin))).toBe(true);
     expect(dev.args[1]).toBe('src/index.ts');
     expect(dev.args[0].endsWith(path.join('tsx', 'dist', 'cli.mjs'))).toBe(true);
     expect(dev.args.some((a) => a.toLowerCase().endsWith('.cmd'))).toBe(false);
-    expect(dev.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
+    expect(dev.env).toBeUndefined();
 
     const posix = buildCommandFn()('dev', { platform: 'linux' });
     expect(posix).toEqual({ bin: 'npx', args: ['tsx', 'src/index.ts'] });
 
     // prod 逐字不变（D518）
     expect(buildCommandFn()('prod')).toEqual({ bin: process.execPath, args: ['dist/backend.mjs'] });
+  });
+
+  // CTO 裁定 1 的解析顺序：npm_node_execpath → process.execPath（basename 是 node）→ 'node'
+  it('A.1 node 解析优先级：npm_node_execpath 命中时优先于 process.execPath；无用时回落到 process.execPath', () => {
+    const prev = process.env.npm_node_execpath;
+    const fakeDir = fs.mkdtempSync(path.join(os.tmpdir(), '1456-nodebin-'));
+    const fakeNode = path.join(fakeDir, process.platform === 'win32' ? 'node.exe' : 'node');
+    fs.writeFileSync(fakeNode, ''); // 只需存在性（本用例不真的执行它）
+    handles.push(() => { try { fs.rmSync(fakeDir, { recursive: true, force: true }); } catch { /* gone */ } });
+    try {
+      process.env.npm_node_execpath = fakeNode;
+      expect(buildCommandFn()('dev', { platform: 'win32', cwd: ROOT }).bin).toBe(fakeNode);
+
+      process.env.npm_node_execpath = path.join(fakeDir, 'not-node.sh'); // basename 不合格 ⇒ 跳过
+      const fallback = buildCommandFn()('dev', { platform: 'win32', cwd: ROOT });
+      expect(fallback.bin).toBe(process.execPath);
+      expect(NODE_BIN_RE.test(path.basename(fallback.bin))).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.npm_node_execpath;
+      else process.env.npm_node_execpath = prev;
+    }
   });
 });
 

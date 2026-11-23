@@ -70,14 +70,16 @@ async function probeUntil(url, windowMs, pollIntervalMs, shouldAbort) {
 /** tsx CLI 相对包根的路径（#1456: 与 node_modules/tsx/package.json 的 bin 一致，devDependency 固定版本） */
 const TSX_CLI_REL = path.join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
-/**
- * 解析本地 tsx CLI 入口（#1456）。
+/** 真实 node 可执行文件判定：basename 必须是 node / node.exe（排除 electron.exe） */
+const NODE_BIN_RE = /^node(\.exe)?$/i;
+
+/** 解析本地 tsx CLI 入口（#1456）。
  * 背景（实测，DEV DOC §2.2）: Windows 上 `spawn('npx', …, {shell:false})` → ENOENT；
  *   `spawn('npx.cmd', …, {shell:false})` → 同步抛 EINVAL ⇒ 唯一稳的 shell-free 形态＝
- *   真 executable（Electron 以 node 模式跑）+ 真实 JS 入口文件（本地 tsx CLI）。
+ *   真 executable ＋ 真实 JS 入口文件（本地 tsx CLI）。
  * 契约:
  *   @input  ctx.cwd?    解析起点（缺省 process.cwd()；main.cjs dev 下传仓根）
- *           ctx.exists? 存在性探测（缺省 fs.existsSync；测试注入用于模拟 CLI 缺失）
+ *           ctx.exists? 存在性探测（缺省 fs.existsSync；**仅测试注入，生产缺省**——用于模拟 CLI 缺失）
  *   @output { cli, tried } — cli = 命中的绝对路径；cli=null 表示未找到（tried 为已尝试路径，供 actionable 报错）
  *   @degraded 不抛、不联网、不回退 npx —— 找不到由调用方转 degraded
  */
@@ -96,6 +98,32 @@ function resolveTsxCli(ctx = {}) {
 }
 
 /**
+ * 解析 win32 dev 该用哪个 node 可执行文件（#1456 v2，CTO 裁定 1）。
+ * 为什么不是 process.execPath：在 Electron 主进程里它就是 electron.exe（Electron node ABI 130），
+ *   而 dev 的 node_modules 是**系统 Node 编译**的（本机 Node 24 ⇒ NODE_MODULE_VERSION 137）
+ *   ⇒ `better-sqlite3` 直接 ERR_DLOPEN_FAILED（实测见 evidence/1456-dev-self-start/C-runtime-abi-*）。
+ *   Electron-ABI 的原生模块只存在于打包产物（build-synova.cjs:69-73/170-172 打包期才 rebuild）
+ *   ⇒ dev 必须用装依赖的那套 Node 跑。
+ * 解析顺序: npm 生命周期注入的 npm_node_execpath → process.execPath（仅当 basename 是 node/node.exe）
+ *           → 'node'（PATH 上的真实 .exe，可 shell-free spawn）。全都不可用 ⇒ spawn 会 ENOENT，
+ *           由 ensureBackend 快失败转可操作 degraded（禁回退 npx、禁联网）。
+ * 契约:
+ *   @input  ctx.exists? 存在性探测（缺省 fs.existsSync；**仅测试注入，生产缺省**）
+ *   @output { bin, source } — source ∈ 'npm_node_execpath' | 'process.execPath' | 'PATH'
+ */
+function resolveNodeBin(ctx = {}) {
+  const exists = typeof ctx.exists === 'function' ? ctx.exists : fs.existsSync;
+  const npmNode = process.env.npm_node_execpath;
+  if (npmNode && NODE_BIN_RE.test(path.basename(npmNode)) && exists(npmNode)) {
+    return { bin: npmNode, source: 'npm_node_execpath' };
+  }
+  if (process.execPath && NODE_BIN_RE.test(path.basename(process.execPath))) {
+    return { bin: process.execPath, source: 'process.execPath' };
+  }
+  return { bin: 'node', source: 'PATH' };
+}
+
+/**
  * 双模式默认命令（导出供测试直测）。
  * D518 prod 运行时修复（实测三重阻塞后的定案，runbook desktop-dev-prod.md §五）:
  *   ① dist/src/*.js 是 ESM 无扩展名 import——裸 node 直接 ERR_MODULE_NOT_FOUND（main 存量）
@@ -104,18 +132,18 @@ function resolveTsxCli(ctx = {}) {
  *   且 GA 机器无 Node 前提（北星 §二）。
  *   → prod = 包内 Electron 二进制以 node 模式跑 esbuild 单文件 bundle（dist/backend.mjs，
  *     externals 原生模块经 extraResources 落 resources/node_modules，ESM 向上解析可达 + ABI 一致）。
- * #1456 win32 dev:
- *   → bin = process.execPath（Electron 二进制）+ ELECTRON_RUN_AS_NODE=1 跑本地 tsx CLI（实测量过的形态），
- *     与 prod 同一 executable 前提（GA 机器无 Node 也一样成立）。
+ * #1456 win32 dev（v2，CTO 裁定 1）:
+ *   → bin = 解析到的**系统 node**（见 resolveNodeBin）＋ 本地 tsx CLI，**不设** ELECTRON_RUN_AS_NODE。
+ *     理由：dev node_modules 是系统 Node ABI，Electron-as-node 会在 better-sqlite3 处 ERR_DLOPEN_FAILED；
+ *     Electron-ABI 只存在于打包产物（prod 分支）。
  *   契约:
  *     @input  mode: 'prod' | 'dev'
  *             ctx.cwd?       dev 下 tsx CLI 解析起点（缺省 process.cwd()）
- *             ctx.platform?  平台覆盖（缺省 process.platform；仅供测试在任意宿主验证两分支）
- *             ctx.exists?    存在性探测注入（见 resolveTsxCli）
+ *             ctx.platform?  平台覆盖（缺省 process.platform；**仅测试注入，生产缺省**）
+ *             ctx.exists?    存在性探测注入（见 resolveTsxCli；**仅测试注入，生产缺省**）
  *     @output { bin, args, env?, error? }
  *       prod            → { bin: process.execPath, args: ['dist/backend.mjs'] }（逐字不变）
- *       win32 dev       → { bin: process.execPath, args: [<abs tsx cli.mjs>, 'src/index.ts'],
- *                           env: { ELECTRON_RUN_AS_NODE: '1' } }
+ *       win32 dev       → { bin: <系统 node 可执行文件>, args: [<abs tsx cli.mjs>, 'src/index.ts'] }（无 env）
  *       win32 dev 未解析到 CLI → { bin: '', args: [], error: '<可操作提示>' }（不回退 npx、不联网）
  *       POSIX dev       → { bin: 'npx', args: ['tsx', 'src/index.ts'] }（逐字不变）
  */
@@ -134,7 +162,8 @@ function buildCommand(mode, ctx = {}) {
           + '安装依赖（已尝试: ' + tried.join(' | ') + '）；本命令不回退 npx、不联网取包',
       };
     }
-    return { bin: process.execPath, args: [cli, 'src/index.ts'], env: { ELECTRON_RUN_AS_NODE: '1' } };
+    const nodeBin = resolveNodeBin(ctx);
+    return { bin: nodeBin.bin, args: [cli, 'src/index.ts'] };
   }
   return { bin: 'npx', args: ['tsx', 'src/index.ts'] };
 }
@@ -266,8 +295,12 @@ async function ensureBackend(options) {
     const code = err && err.code ? String(err.code) : 'SPAWN_ERROR';
     const message = err && err.message ? String(err.message) : String(err);
     console.error(`[backend-spawn] spawn 失败: ${code} ${message}`);
+    // dev 用的是系统 node（#1456 v2）⇒ 提示同时覆盖"node 不在 PATH"与"依赖没装"两种可操作原因
+    const hint = mode === 'dev'
+      ? 'dev 模式需要本机 Node：请确认 node 在 PATH 上、node_modules 已安装（npm ci）后重试'
+      : '请确认 node_modules 已安装（npm ci）后重试';
     spawnError = `${code} ${message}（后端可执行文件无法启动: ${cmd.bin || '命令解析失败'}；mode=${mode}；`
-      + '请确认 node_modules 已安装（npm ci）后重试）';
+      + `${hint}）`;
     return spawnError;
   };
 
