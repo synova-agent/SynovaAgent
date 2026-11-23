@@ -1,5 +1,5 @@
-# review: #1464
-# 豁免登记 — Issue #1463（合并凭证链路甲类：token 第 4 来源 git credential fill）；PR #1464
+# review: #1465
+# 豁免登记 — Issue #1463（合并凭证链路甲类：token 第 4 来源 git credential fill）；PR #1465（重切自 #1464，基线 6694cb50d）
 #
 # 变更性质：**只增凭据来源**，判据/阈值/退出码语义零改动。
 #   · resolve_token() 第 4 来源 `git credential fill`（host/protocol 由 $API 推导，禁写死 IP）；
