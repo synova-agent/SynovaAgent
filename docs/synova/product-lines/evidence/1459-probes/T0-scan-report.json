@@ -1,0 +1,113 @@
+{
+  "schema": "synova-t0-scan-evidence/v1",
+  "issue": 1459,
+  "task": "T0",
+  "generated_at": "2026-11-23T17:09:04.188Z",
+  "generated_by": "npx vitest run tests/enterprise-scan/t0-scan.test.ts （写证据需 T0_WRITE_EVIDENCE=1）",
+  "db": {
+    "path": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1459-scan\\synova.db",
+    "path_rule": "%TEMP%\\1459-scan\\synova.db（可用 SYNOVA_1459_SCAN_DB 显式覆盖；DSH 会话级 TEMP 已归一）",
+    "temp_env": {
+      "TEMP": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp",
+      "TMP": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp",
+      "os_tmpdir": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp",
+      "SYNOVA_1459_SCAN_DB": null
+    },
+    "size_bytes": 294912,
+    "schema_version": 7,
+    "journal_mode": "wal",
+    "db_handle_name": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1459-scan\\synova.db"
+  },
+  "scan": {
+    "graph": "org-a",
+    "manifest_id": "manifest-1459-t0",
+    "viewer": {
+      "role": "admin",
+      "sub": "owner-a",
+      "orgId": "org-a",
+      "departmentIds": [
+        "dept-delivery"
+      ]
+    },
+    "scan_run_id": "da32d582-e6ab-47b1-93f1-6b552e105321",
+    "client_request_id": "request-1459-t0",
+    "replayed": false,
+    "report_schema_version": "enterprise-scan/v1",
+    "counts_before_run": {
+      "scan_runs": 0,
+      "scan_evidence": 0,
+      "scan_evidence_versions": 0,
+      "graph_nodes": 0,
+      "graph_triples": 0,
+      "scan_ontology_links": 0,
+      "scan_assertions": 0,
+      "scan_assertion_versions": 0,
+      "scan_assertion_evidence": 0,
+      "scan_reports": 0,
+      "scan_report_assertions": 0
+    },
+    "counts_after_run": {
+      "scan_runs": 1,
+      "scan_evidence": 4,
+      "scan_evidence_versions": 4,
+      "graph_nodes": 4,
+      "graph_triples": 2,
+      "scan_ontology_links": 6,
+      "scan_assertions": 11,
+      "scan_assertion_versions": 11,
+      "scan_assertion_evidence": 14,
+      "scan_reports": 1,
+      "scan_report_assertions": 11
+    }
+  },
+  "fixture": {
+    "root": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1459-scan\\fixtures",
+    "files": [
+      "delivery_batches.csv",
+      "delivery_dashboard.csv",
+      "delivery-policy.md",
+      "operator-statement.json"
+    ],
+    "seed_scope": [
+      "scan_sources",
+      "scan_authorizations"
+    ],
+    "seed_counts": {
+      "scan_sources": 4,
+      "scan_authorizations": 4
+    }
+  },
+  "evidence": {
+    "node_ids": [
+      "node-105362c0-6a54-45b9-075c-7f2f63947830",
+      "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6",
+      "node-b7fd9615-380f-4508-a50c-33eb2df6af1d",
+      "node-d303ccca-d3da-4817-1a08-0edf5ac7c6f4"
+    ],
+    "edge_ids": [
+      "edge-980e1936-a324-4a55-e345-a0f74fad7ee4",
+      "edge-d4fbd04f-04b3-4ead-4b75-44751479fc44"
+    ],
+    "object_ids": [
+      "node-b7fd9615-380f-4508-a50c-33eb2df6af1d",
+      "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6",
+      "node-105362c0-6a54-45b9-075c-7f2f63947830",
+      "node-d303ccca-d3da-4817-1a08-0edf5ac7c6f4"
+    ],
+    "relation_object_ids": [
+      "edge-980e1936-a324-4a55-e345-a0f74fad7ee4",
+      "edge-d4fbd04f-04b3-4ead-4b75-44751479fc44"
+    ],
+    "node_id_set_equals_object_ids": true,
+    "graph_nodes_count_equals_object_ids_count": true,
+    "graph_triples_count_equals_relation_count": true,
+    "scan_assertions_count_equals_report_assertions_count": true
+  },
+  "downstream": {
+    "env": {
+      "SYNOVA_DB_PATH": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1459-scan\\synova.db",
+      "SYNOVA_ORG_ID": "org-a"
+    },
+    "note": "下游按本文件的 db.path 原样传 SYNOVA_DB_PATH，并令 SYNOVA_ORG_ID 与 scan.graph 同值；勿落默认 ./data/synova.db"
+  }
+}
