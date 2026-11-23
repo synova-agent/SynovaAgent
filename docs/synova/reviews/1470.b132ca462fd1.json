@@ -1,0 +1,102 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1470,
+  "patch_fingerprint": "sha256:b132ca462fd1ef30be51aa180b9d00ec92c7eda40327fdaab713fb0d8b9403b4",
+  "author": "T-B 编码会话（feat/1459-tb-desktop-hypothesis @ f34a32d34918）",
+  "reviewer": "独立审计会话（fresh-session，未参与实现；仓库外副本复核）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "head_reviewed": "f34a32d349188ab6f355292b19d35b9080fe0b56",
+  "issued_at": "2026-11-24T02:18:05+08:00",
+  "tool": "synova-independent-review（锚定对象/历史事故优先/真实验证/结论/交付自检五步）",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "写集只含约定四件",
+      "result": "pass",
+      "cmd": "git diff --name-status c08ca3f0a f34a32d3",
+      "evidence": ".claude/claims/1459.yaml(A)、electron-renderer/src/components/DshRunPanel.tsx(M)、electron-renderer/src/stores/dsh-run-store.ts(M)、tests/dsh-ui/dsh-hypothesis-1459.test.ts(A)；共 4 件，无第五件"
+    },
+    {
+      "id": "C2",
+      "title": "越界路径零命中（含红线）",
+      "result": "pass",
+      "cmd": "git diff --name-only c08ca3f0a f34a32d3 -- src electron-main electron *.config.* .gitea scripts/audit",
+      "evidence": "输出为空、exit 0；无 src/**、无电子主进程、无后端、无门禁/判据/审计标准改动；全部验证在仓库外副本，主树源码零写"
+    },
+    {
+      "id": "C3",
+      "title": "P1 顺序改为处理留痕后才推进",
+      "result": "pass",
+      "cmd": "git show c08ca3f0a:electron-renderer/src/stores/dsh-run-store.ts | sed -n '169,175p'; git show f34a32d34918:electron-renderer/src/stores/dsh-run-store.ts | sed -n '387,393p'",
+      "evidence": "base 先 seen.add+set(lastEventId) 再 switch，default 直接 return；head 为 handleEvent(event) → retainPending(event) → seen.add → set(lastEventId)，未知事件不再被水位越过即丢弃"
+    },
+    {
+      "id": "C4",
+      "title": "pending 上限/计数与重连后仍在",
+      "result": "pass",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/dsh-ui --pool=threads --reporter=verbose -t P1",
+      "evidence": "PENDING_LIMIT=200、pendingDropped 累加可见；205 条⇒pending=200/pendingDropped=5/首条 seq=6；断流重连后 lastEventId=2 且 pending[0] 仍为 seq=1 reasoning.delta；4 条 P1 用例全绿"
+    },
+    {
+      "id": "C5",
+      "title": "归一严格、缺字段标未结构化不猜补",
+      "result": "pass",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/dsh-ui/dsh-hypothesis-1459.test.ts --pool=threads --reporter=verbose -t 缺字段",
+      "evidence": "readStringArrayExact 拒非数组/空数组/非字符串/空白项；四要素缺任一 structured=false 且 invalidReason 点名；面板 false 分支不渲染任何 data-hypothesis-field 段；9 条相关用例全绿"
+    },
+    {
+      "id": "C6",
+      "title": "invalid 用服务端 reason",
+      "result": "pass",
+      "cmd": "grep -n 'serverInvalidReason' electron-renderer/src/stores/dsh-run-store.ts",
+      "evidence": "hypothesis.invalid 取 data.reason，断言 invalidReason === '四要素缺 evidence'；四要素填全仍不渲染卡片；无 reason 时显示'服务端标记为未结构化'，不静默"
+    },
+    {
+      "id": "C7",
+      "title": "判别力反例（仓库外副本，已还原）",
+      "result": "pass",
+      "cmd": "在 C:/Users/Administrator/AppData/Local/Temp/tb1459-audit-f34a32d3/repo 变异后 node node_modules/vitest/vitest.mjs run tests/dsh-ui --pool=threads，再 git checkout -- electron-renderer/src/stores/dsh-run-store.ts",
+      "evidence": "旧行为（先推水位+不留存）⇒1 failed/5 passed、4 failed/92 passed；仅换顺序仍留存⇒96 passed；归一放宽'缺失即[]'⇒5 failed/91 passed；还原后 6 files/96 tests passed，副本 git status 空"
+    },
+    {
+      "id": "C8",
+      "title": "载荷形态与 T-A 钉的形态一致",
+      "result": "pass",
+      "cmd": "git show 8938201b1:docs/synova/coordination/DEV-DOC-1459-bottleneck-hypothesis-20261123.md | sed -n '149p;250p'; grep -n 'structuredData' tests/dsh-ui/dsh-hypothesis-1459.test.ts",
+      "evidence": "DEV DOC:149/250 与测试夹具均为 {hypothesis, objects[], relations[], evidence[], uncertainty[]} 四要素非空字符串数组；T-C 若用别的字段名/嵌套对象/空数组将被判 structured=false，面板标未结构化（已写清）"
+    },
+    {
+      "id": "C9",
+      "title": "测试/类型检查/假绿排除",
+      "result": "pass",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/dsh-ui --pool=threads; node node_modules/typescript/bin/tsc -p electron-renderer/tsconfig.json; grep -nE 'as any|@ts-ignore|it\\.skip|describe\\.skip|\\.only\\(' <四个变更文件>",
+      "evidence": "6 files/96 tests passed（新增 18）；tsc exit 0 无输出；类型逃逸与跳过零命中(grep exit 1)；断言为 toEqual/toContain/toHaveLength 行为断言，夹具非实现输出同源"
+    },
+    {
+      "id": "C10",
+      "title": "生产接线可达",
+      "result": "pass",
+      "cmd": "grep -n 'handlers.onEvent' electron-renderer/src/lib/dsh-run-api.ts; grep -n 'events={state.events}' electron-renderer/src/components/DshRunContainer.tsx",
+      "evidence": "dsh-run-api.ts:266 无事件类型白名单、data 原样透传；DshRunContainer.tsx:95 传 events 给面板；DshRunPanel.tsx:111-112 分发 HypothesisItem；入口→调用→用户可见链路成立（真实事件生产者属 T-A/C 另票）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "electron-renderer/src/stores/dsh-run-store.ts:387-393",
+      "what": "仅调换顺序而保留 pending 留存时 96 项仍全绿；顺序在异常路径（处理抛错不推进水位）的价值无测试覆盖，非阻断，建议后续补例"
+    },
+    {
+      "severity": "info",
+      "where": "electron-renderer/src/stores/dsh-run-store.ts:122-124",
+      "what": "pending 仅 store 内可复查、无 UI 入口；属白名单投影不渲染未知事件正文的有意设计，需知悉可见性边界"
+    },
+    {
+      "severity": "info",
+      "where": "integration",
+      "what": "feat/1459-t-a-domain-context 未检出 hypothesis.structured 生产者；真实 SSE 端到端与实机 Electron 点击未验证，属 T-C 另票"
+    }
+  ],
+  "reviewer_note": "零上下文独立复核：证据全部锚定 head f34a32d34918 的提交对象；两种变异均在仓库外副本完成并还原，主树源码零写；PR 评论已发布（comment_id 14546）。结论：可合并，P1=0。"
+}
