@@ -1,0 +1,53 @@
+#1456 运行时 ABI 控制实验 —— 2026-11-22T19:59:57.823Z
+node=v24.16.0 platform=win32
+
+──── 夹具 ────
+electron=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\electron\dist\electron.exe
+tsx=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\tsx\dist\cli.mjs
+probe=C:\Users\ADMINI~1\AppData\Local\Temp\1456-abi-38we0a\sqlite-probe.mjs
+
+──── A. electron.exe + ELECTRON_RUN_AS_NODE=1 + tsx CLI → 探针 ────
+{
+  "node": "v20.18.3",
+  "electron": "33.4.11",
+  "modules": "130",
+  "sqlite": "FAIL",
+  "error": "ERR_DLOPEN_FAILED :: The module '\\\\?\\D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\build\\Release\\better_sqlite3.node'"
+}
+(exitCode=0)
+
+──── B. 系统 node.exe + 同一 tsx CLI → 探针 ────
+{
+  "node": "v24.16.0",
+  "electron": null,
+  "modules": "137",
+  "sqlite": "OK",
+  "error": null
+}
+(exitCode=null)
+
+──── C. 启动命令（= buildCommand win32 dev 的 argv/env 形状，但 bin 用系统 node） ────
+C:\Program Files\nodejs\node.exe D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\tsx\dist\cli.mjs src/index.ts
+cwd=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456
+SYNOVA_DB_PATH=C:\Users\ADMINI~1\AppData\Local\Temp\1456-abi-38we0a\synova.db
+pid=12224
+
+──── C.2 GET http://127.0.0.1:18790/api/healthz ────
+HTTP 200
+{"status":"degraded","checks":{"database":{"status":"ok","detail":"SQLite 数据库正常 (760KB)"},"llm_connectivity":{"status":"degraded","detail":"未配置 LLM API key (诊断功能受限)"},"last_sentinel_run":{"status":"degraded","detail":"哨兵日志目录不存在(可能尚未执行)"},"disk_free_gb":{"status":"degraded","detail":"磁盘空间不足: 0.0GB (< 1GB)"},"data_freshness":{"status":"ok","detail":"最近7天内有数据活动 (最新: synova.db)"},"watchdog_alive":{"status":"degraded","detail":"看门狗未运行(无日志文件)"}},"uptime":1}
+boot=2114ms
+
+──── C.4 回收（kill 后） ────
+后端 pid 仍存活=false（必须 false）
+netstat 18790=""（必须空）
+残留=""（必须空）
+
+======================================================================
+结论:
+  NO  electronAsNodeLoadsSqlite
+  YES  systemNodeLoadsSqlite
+  YES  systemNodeBackendHealthy
+  YES  reclaimed
+
+VERDICT = ABI-IS-THE-ONLY-BLOCKER（三态退出码 0）
+

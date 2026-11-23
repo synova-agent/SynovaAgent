@@ -1,0 +1,75 @@
+node : (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become 
+the default in a future major version of Vite:
+所在位置 行:2 字符: 1
++ node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn. ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((!) Your Vite c...ersion of Vite::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  - `__dirname` (vitest.config.ts:4:35). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 D:/novis-backup-20260526/Novis/synova-agent/.synova-wt-1456
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 降级：spawn 后探活始终失败 → 重启 ≤maxRestarts → { degraded
+: true, error }（不静默，铁律 24/31）
+[backend-spawn] 后端自启降级 — 重启 3 次未恢复: 后端探活在 800ms 内未转健康（mode=prod）
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛
+[backend-spawn] spawn 失败: ENOENT spawn no-such-backend-binary ENOENT
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛
+[backend-spawn] 后端自启降级 — spawn 未启动: ENOENT spawn no-such-backend-binary ENOENT（后端可执行文件无法启动: no-such-backend-binary；mode
+=prod；请确认 node_modules 已安装（npm ci）后重试）
+
+stderr | tests/electron/backend-spawn.test.ts > D522 teardown — stop() 进程树回收契约 > 降级：Win taskkill 失败（注入抛错的 taskkill runn
+er）→ 不抛 + 继续（幂等，铁律 11/24）
+[backend-spawn] taskkill 失败（幂等继续）: taskkill binary missing
+[backend-spawn] taskkill 失败（幂等继续）: taskkill binary missing
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — 命令解析失败（§7 A.2） > A.2 CLI 缺失 ⇒ buildCommand 返回 error（含 npm ci 可操
+作提示）；ensureBackend 立即 degraded 且未 spawn
+[backend-spawn] 启动命令解析失败（degraded）: Windows dev 模式找不到本地 tsx CLI（node_modules\tsx\dist\cli.mjs）：请先在仓根执行 npm ci 安装依赖（已尝试:
+ C:\Users\ADMINI~1\AppData\Local\Temp\no-tsx-here-1456-1795396726184\node_modules\tsx\dist\cli.mjs | D:\novis-backup-20
+260526\Novis\synova-agent\.synova-wt-1456\node_modules\tsx\dist\cli.mjs）；本命令不回退 npx、不联网取包
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.3 spawn 同步抛 EINVAL（npx.cmd + shel
+l:false）⇒ 不抛、立即 degraded、error 含 EINVAL、不等 60s 窗口
+[backend-spawn] spawn 失败: EINVAL spawn EINVAL
+[backend-spawn] 后端自启降级 — spawn 未启动: EINVAL spawn EINVAL（后端可执行文件无法启动: npx.cmd；mode=dev；dev 模式需要本机 Node：请确认 node 在 PATH 上
+、node_modules 已安装（npm ci）后重试）
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.3 同步抛（任意宿主可验）：注入 command 的 args 取
+值即抛 EINVAL ⇒ 不抛、立即 degraded
+[backend-spawn] spawn 失败: EINVAL spawn EINVAL（注入同步抛）
+[backend-spawn] 后端自启降级 — spawn 未启动: EINVAL spawn EINVAL（注入同步抛）（后端可执行文件无法启动: C:\Program Files\nodejs\node.exe；mode=dev；d
+ev 模式需要本机 Node：请确认 node 在 PATH 上、node_modules 已安装（npm ci）后重试）
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.4 spawn error 事件（ENOENT）⇒ 立即 degr
+aded、error 含 ENOENT、耗时 < 1s（不等 60s 探活）
+[backend-spawn] spawn 失败: ENOENT spawn no-such-backend-binary-1456 ENOENT
+
+stderr | tests/electron/backend-spawn.test.ts > #1456 — spawn 失败快失败（§7 A.3 / A.4） > A.4 spawn error 事件（ENOENT）⇒ 立即 degr
+aded、error 含 ENOENT、耗时 < 1s（不等 60s 探活）
+[backend-spawn] 后端自启降级 — spawn 未启动: ENOENT spawn no-such-backend-binary-1456 ENOENT（后端可执行文件无法启动: no-such-backend-binary
+-1456；mode=prod；请确认 node_modules 已安装（npm ci）后重试）
+
+ ✓ tests/electron/backend-spawn.test.ts (25 tests | 4 skipped) 13973ms
+   ✓ ensureBackend — 契约三路径 (4)
+     ✓ started：探活失败 → spawn 探活服务 → 探活成功 → { started: true, pid } 2290ms
+     ✓ 降级：spawn 后探活始终失败 → 重启 ≤maxRestarts → { degraded: true, error }（不静默，铁律 24/31） 2849ms
+   ✓ ensureBackend — env 与命令契约（DS8 双模式） (5)
+     ✓ prod 模式默认命令 node dist/index.js 且 env 注入 SYNOVA_DB_PATH（断言 spawn argv/env） 2273ms
+   ✓ D522 teardown — stop() 进程树回收契约 (7)
+     ✓ 升级路径：子进程忽略 SIGTERM → graceMs 后 SIGKILL 杀死（物理断言） 928ms
+     ✓ 五段链路集成：慢启动假后端 → started+pid → stop() → 假后端进程已死（L2a 全链） 1298ms
+   ✓ ensureBackend — 日志契约（降级可见，铁律 11/24） (1)
+     ✓ logFile：spawn 后 stdout/stderr 写入日志文件 1801ms
+   ✓ #1456 — env 合并顺序（§5：cmd.env 最后生效） (1)
+     ✓ cmd.env 覆盖 prod 注入的 SYNOVA_DB_PATH（子进程 env 物理断言） 2457ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed | 4 skipped (25)
+   Start at  09:18:34
+   Duration  14.25s (tests 99%)
+

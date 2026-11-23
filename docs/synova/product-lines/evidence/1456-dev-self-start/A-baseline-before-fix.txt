@@ -1,0 +1,91 @@
+node : (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become 
+the default in a future major version of Vite:
+所在位置 行:4 字符: 1
++ node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn. ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((!) Your Vite c...ersion of Vite::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  - `__dirname` (vitest.config.ts:4:35). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 D:/novis-backup-20260526/Novis/synova-agent/.synova-wt-1456
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 降级：spawn 后探活始终失败 → 重启 ≤maxRestarts → { degraded
+: true, error }（不静默，铁律 24/31）
+[backend-spawn] 后端自启降级 — 重启 3 次未恢复: 后端探活在 800ms 内未转健康（mode=prod）
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛
+[backend-spawn] spawn 失败: spawn no-such-backend-binary ENOENT
+
+stderr | tests/electron/backend-spawn.test.ts > ensureBackend — 契约三路径 > 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛
+[backend-spawn] 后端自启降级 — 重启 1 次未恢复: spawn no-such-backend-binary ENOENT
+
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: spawn sleep ENOENT
+    at ChildProcess._handle.onexit (node:internal/child_process:287:19)
+    at onErrorNT (node:internal/child_process:508:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on ChildProcess instance at:
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+    at onErrorNT (node:internal/child_process:508:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'spawn sleep',
+  path: 'sleep',
+  spawnargs: [ '60' ]
+}
+
+Node.js v24.16.0
+stderr | tests/electron/backend-spawn.test.ts > D522 teardown — stop() 进程树回收契约 > 降级：Win taskkill 失败（注入抛错的 taskkill runn
+er）→ 不抛 + 继续（幂等，铁律 11/24）
+[backend-spawn] taskkill 失败（幂等继续）: taskkill binary missing
+[backend-spawn] taskkill 失败（幂等继续）: taskkill binary missing
+
+ ❯ tests/electron/backend-spawn.test.ts (17 tests | 1 failed | 3 skipped) 18858ms
+   ✓ ensureBackend — 契约三路径 (4)
+     ✓ reused：探活成功（已有健康服务）→ 不 spawn，{ started: false, reused: true } 43ms
+     ✓ started：探活失败 → spawn 探活服务 → 探活成功 → { started: true, pid } 2306ms
+     ✓ 降级：spawn 后探活始终失败 → 重启 ≤maxRestarts → { degraded: true, error }（不静默，铁律 24/31） 2851ms
+     ✓ 异常捕获：spawn ENOENT（后端不存在）→ { degraded: true } 不抛 531ms
+   ✓ ensureBackend — env 与命令契约（DS8 双模式） (5)
+     ✓ prod 模式默认命令 node dist/index.js 且 env 注入 SYNOVA_DB_PATH（断言 spawn argv/env） 2276ms
+     ✓ dev 模式默认命令 = npx tsx src/index.ts（模块导出 buildCommand 纯函数，可直测） 1ms
+     ✓ F4 回归: electron/*.cjs 注释零裸 dist/index.js 残留（P0-1 后 prod 契约 = dist/backend.mjs） 8ms
+     ✓ D518 回归: main.cjs 启动首行含 boot mode 显式日志（模式显式化——日志即证据） 1ms
+     ↓ stop() 生命周期：started 后 stop → 子进程退出（无孤儿，DS 契约 lifecycle）
+   ❯ D522 teardown — stop() 进程树回收契约 (7)
+     ↓ 正常路径：stop() → SIGTERM → 子进程 pid 已死（kill(pid,0) 抛 ESRCH，物理断言非 grep）
+     ↓ 边界：stop() 幂等——连续两次调用不抛、无二次副作用
+     ✓ 升级路径：子进程忽略 SIGTERM → graceMs 后 SIGKILL 杀死（物理断言） 929ms
+     × 进程组：spawn detached 后孙进程也被回收（无孤儿，DS3） 6624ms
+     ✓ 降级：Win taskkill 失败（注入抛错的 taskkill runner）→ 不抛 + 继续（幂等，铁律 11/24） 1ms
+     ✓ 边界：pid≤0 / child.killed → stop no-op 不抛 0ms
+     ✓ 五段链路集成：慢启动假后端 → started+pid → stop() → 假后端进程已死（L2a 全链） 1368ms
+   ✓ ensureBackend — 日志契约（降级可见，铁律 11/24） (1)
+     ✓ logFile：spawn 后 stdout/stderr 写入日志文件 1915ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/electron/backend-spawn.test.ts > D522 teardown — stop() 进程树回收契约 > 进程组：spawn detached 后孙进程也被回收（无孤儿，DS3）
+AssertionError: expected NaN to be greater than 0
+ ❯ tests/electron/backend-spawn.test.ts:489:19
+    487|       await new Promise((r) => setTimeout(r, 100));
+    488|     }
+    489|     expect(gcPid).toBeGreaterThan(0);
+       |                   ^
+    490|     process.kill(gcPid, 0); // 孙进程确实活着（前置物理断言）
+    491|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed | 3 skipped (17)
+   Start at  03:43:37
+   Duration  19.13s (tests 99%)
+

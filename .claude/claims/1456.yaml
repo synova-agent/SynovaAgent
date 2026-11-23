@@ -1,0 +1,11 @@
+writeset:
+  - .claude/claims/1456.yaml
+  - electron/backend-spawn.cjs
+  - tests/electron/backend-spawn.test.ts
+  - docs/synova/product-lines/evidence/1456-dev-self-start/**
+done:
+  - "verify: node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts ⇒ 25 tests / 21 passed / 4 skipped / 0 failed（零红）"
+  - "verify: 反例（win32 分支临时关掉 ⇒ dev 命令退回 npx）⇒ A.1 三条必红，原始输出 evidence/1456-dev-self-start/NEGATIVE-npx-revert.txt"
+  - "verify: node .../1456-dev-self-start/verify-desktop-8a.mjs ⇒ VERDICT = PASS-8a（三态 0）：boot mode=dev + healthz 200 + 18790 owner=node.exe（Electron 孙进程）+ 无 后端自启 degraded + CDP 退出后 pid 消失/18790 无 LISTENING/无 src/index.ts 残留"
+  - "verify: node .../1456-dev-self-start/verify-runtime-abi.mjs ⇒ ABI-IS-THE-ONLY-BLOCKER：electron-as-node 加载 better-sqlite3 失败（modules 130 vs 137）、系统 node + 同 argv 起后端 healthz 200 并回收"
+note: "#1456 Windows dev Electron 自启后端（DEV DOC v2）。实现：win32 dev 命令 = 系统 node（解析顺序 npm_node_execpath → process.execPath(basename node/node.exe) → 'node'）+ 本地 tsx CLI，不设 ELECTRON_RUN_AS_NODE；tsx CLI 缺失 ⇒ 可操作 degraded（禁 npx/禁联网）；cmd.env 最后生效；spawn 同步抛/error 事件/命令解析失败一律快失败，不再空转 60s 窗口；POSIX dev 与 prod 逐字不变。8(a) = PASS（自启成功 + 退出回收两段）。**存量红修复（1 行，D584 同型），非本票引入**：既有「进程组：spawn detached 后孙进程也被回收（DS3）」用例 spawn `sleep 60`、Windows 无该二进制，base caf61fcde 同点位同红（原始输出 evidence/1456-dev-self-start/A-baseline-before-fix.txt），按 CTO 裁定 3 仅加 it.skipIf(win32)，未改任何断言语义。验收环境前提（写进证据 INDEX.txt §二）：DEV_MODE=true、清 ELECTRON_RUN_AS_NODE、SYNOVA_DB_PATH 临时目录、SYNOVA_ORG_ID 固定值。证据 docs/synova/product-lines/evidence/1456-dev-self-start/（INDEX.txt 为入口）。"

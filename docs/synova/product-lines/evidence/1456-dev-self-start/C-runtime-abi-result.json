@@ -1,0 +1,20 @@
+{
+  "verdict": "ABI-IS-THE-ONLY-BLOCKER",
+  "steps": {
+    "electronAsNodeLoadsSqlite": false,
+    "systemNodeLoadsSqlite": true,
+    "systemNodeBackendHealthy": true,
+    "reclaimed": true
+  },
+  "healthz": {
+    "statusCode": 200,
+    "body": "{\"status\":\"degraded\",\"checks\":{\"database\":{\"status\":\"ok\",\"detail\":\"SQLite 数据库正常 (760KB)\"},\"llm_connectivity\":{\"status\":\"degraded\",\"detail\":\"未配置 LLM API key (诊断功能受限)\"},\"last_sentinel_run\":{\"status\":\"degraded\",\"detail\":\"哨兵日志目录不存在(可能尚未执行)\"},\"disk_free_gb\":{\"status\":\"degraded\",\"detail\":\"磁盘空间不足: 0.0GB (< 1GB)\"},\"data_freshness\":{\"status\":\"ok\",\"detail\":\"最近7天内有数据活动 (最新: synova.db)\"},\"watchdog_alive\":{\"status\":\"degraded\",\"detail\":\"看门狗未运行(无日志文件)\"}},\"uptime\":1}",
+    "bootMs": 2114
+  },
+  "backend": {
+    "pid": 12224,
+    "bin": "C:\\Program Files\\nodejs\\node.exe"
+  },
+  "consoleTail": "{\"level\":30,\"time\":1795377601113,\"pid\":7172,\"hostname\":\"PC-202605261327\",\"name\":\"synova-agent\",\"service\":\"agent/synova-agent\",\"msg\":\"[cron] ima-sync 已注册 (每 6 小时)\"}\n{\"level\":30,\"time\":1795377601113,\"pid\":7172,\"hostname\":\"PC-202605261327\",\"name\":\"synova-agent\",\"service\":\"agent/synova-agent\",\"port\":18790,\"msg\":\"SynovaAgent 已启动\"}\n{\"level\":30,\"time\":1795377601113,\"pid\":7172,\"hostname\":\"PC-202605261327\",\"name\":\"synova-agent\",\"service\":\"agent/synova-agent\",\"msg\":\"CommandLanes 已初始化（高风险工具隔离）\"}\n{\"level\":30,\"time\":1795377601113,\"pid\":7172,\"hostname\":\"PC-202605261327\",\"name\":\"synova-agent\",\"msg\":\"SynovaAgent 就绪\"}\n{\"level\":40,\"time\":1795377601145,\"pid\":7172,\"hostname\":\"PC-202605261327\",\"name\":\"synova-agent\",\"service\":\"middleware/rbac\",\"code\":\"RBAC_DENIED\",\"reason\":\"no_authenticated_context\",\"msg\":\"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）\"}\n",
+  "exitCode": 0
+}
