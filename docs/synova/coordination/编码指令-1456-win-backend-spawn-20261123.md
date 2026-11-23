@@ -163,11 +163,11 @@ npm run electron:dev  →  electron electron/main.cjs
 - 必须留证：
   1. 主进程 console 原文（含 `[electron] boot mode=dev`，**不含** `后端自启 degraded`／`spawn 失败`）
   2. `GET http://127.0.0.1:18790/api/healthz` 原始响应（200 + body）
-  3. 后端 PID：Electron 启动前 18790 owner（应为空/非本链）、启动后 owner PID、且该 PID 父进程 = Electron
+  3. 后端 PID：Electron 启动前 18790 owner（应为空/非本链）、启动后 owner PID、且**后端进程链回到 Electron**（实测 tsx CLI 会再 exec 一层 node，故监听 18790 的那个是 Electron 的**孙进程**；Electron 的直接子进程是 tsx CLI 层）
   4. 退出：经 CDP `Browser.close` 或 `taskkill /PID <electron>` 正常退出 → 后端 PID 消失，`netstat` 18790 无监听，无 `tsx|node .*src/index.ts` 残留
 - **判据**：8(a) 只在"自启成功 + 退出后回收"两段都成立时才算 PASS；`reused:true` 一律记 UNVERIFIED（复用不是自启）。
 
-**D. 防假绿**：顺手确认 18790 上**没有**别的 server 在跑（启动前 `netstat -ano | findstr 18790` 必须为空），否则 `reused:true` 会伪装成成功。
+**D. 防假绿**：确认 18790 上**没有 LISTENING**（启动前 `netstat -ano | findstr 18790` **不得有 LISTENING 行**；健康探活留下的 `TIME_WAIT` 客户端行属预期残留，不算占用），否则 `reused:true` 会伪装成自启成功。
 
 ---
 
