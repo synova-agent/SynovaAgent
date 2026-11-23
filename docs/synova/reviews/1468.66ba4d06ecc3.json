@@ -1,0 +1,57 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1468,
+  "patch_fingerprint": "sha256:66ba4d06ecc39e4c44b458ebc9d59eab6578d6ef68148980ec1e0ebbefac1f08",
+  "author": "impl-session-1459-t-a",
+  "reviewer": "independent-reviewer-r1-fresh",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "W1 写集范围",
+      "cmd": "git diff --name-status c08ca3f0a..HEAD",
+      "evidence": "7 files: .claude/claims/1459.yaml, src/runtime/dsh/domain-context.ts, src/runtime/dsh/tools.ts, tests/runtime/dsh/{domain-context-scan.test.ts,domain-context.test.ts,fixtures/synova-context-get.json,readonly-tool.test.ts}; 无越界 events.ts/session.ts/routes/dsh.ts/ontology/扫描写入路径",
+      "result": "pass"
+    },
+    {
+      "id": "W2 契约落地",
+      "cmd": "git show HEAD:src/runtime/dsh/domain-context.ts | grep -E 'relation|evidenceId|insufficient'",
+      "evidence": "items 含 relation{type,direction,edgeId} 与 evidence{evidenceStatus,instanceState,sources[].ref}; evidenceId=sources[0]?.evidence_id??null (有证据非空); count===0 返回 insufficient{code,reason,missing}, 不抛 error",
+      "result": "pass"
+    },
+    {
+      "id": "W3 钉子-择新与稳定",
+      "cmd": "grep -n 'ORDER BY av.created_at DESC, av.rowid DESC' src/runtime/dsh/domain-context.ts; grep -n 'sources 顺序稳定' tests/runtime/dsh/domain-context-scan.test.ts",
+      "evidence": "择新 ORDER BY created_at DESC,rowid DESC LIMIT 1; 同节点连续两次调用 JSON.stringify 逐字相等(#1459-2 与 scan 测试第3条)",
+      "result": "pass"
+    },
+    {
+      "id": "W4 真数据验证",
+      "cmd": "npx vitest run tests/runtime/dsh/domain-context-scan.test.ts --reporter=verbose (隔离副本主线程预检适配: Windows worker tsx 解析缺陷, base golden.test.ts 同失败)",
+      "evidence": "3 passed: 根 team:delivery-a count=2 且 relation.type='edge/team_executes_activity'+sources[0].ref+period+defVersion 非空; 根 delivery_batch:B-2026-10-001 insufficient.code=INSUFFICIENT_CONTEXT",
+      "result": "pass"
+    },
+    {
+      "id": "W5 判别力-改坏必红",
+      "cmd": "仓库外副本改坏后 npx vitest run tests/runtime/dsh/domain-context.test.ts (基线18/18)",
+      "evidence": "relation.type 硬编码null⇒3失败(expected null to be edge/team_executes_activity); 删除count===0分支⇒2失败(expected undefined to match INSUFFICIENT_CONTEXT); 均还原后18/18绿",
+      "result": "pass"
+    },
+    {
+      "id": "W6 红线",
+      "cmd": "git diff --name-only c08ca3f0a..HEAD | grep -E 'scripts/.*\\.ts$|.gitea/|AGENTS.md|docs/authority/'",
+      "evidence": "0 命中: 无新增 scripts/**/*.ts, 未改判据/门禁/.gitea/scripts/audit; 主树改动计数 198 未变",
+      "result": "pass"
+    },
+    {
+      "id": "W7 既有测试回归",
+      "cmd": "npx vitest run tests/runtime/dsh tests/mcp/http.test.ts; npx tsc --noEmit; claim_store --check 1459",
+      "evidence": "160 passed/3 skipped(仅 domain-context-scan 因环境 worker 假阴性, 主线程适配后3 passed); tsc exit0; claim status ok writeset=7 done=3",
+      "result": "pass"
+    }
+  ],
+  "findings": [],
+  "issued_at": "2026-11-24T01:49:30+08:00",
+  "tool": "synova-independent-review skill + code-review-master (零上下文独立复核 R1)",
+  "note": "环境假阴性说明：domain-context-scan.test.ts 在本隔离环境(Windows/Node22)因 preflight worker 用 --import tsx 加载无扩展名 './path-authorizer' 失败; base 既有 tests/enterprise-scan/golden.test.ts 同环境同样失败⇒非本 PR 引入。判别力/真数据验证在仓库外副本用主线程直调同一 inspectAuthorizedSource(扫描落库链路不变)后跑通, 未改产品代码/测试/门禁。待裁定项见 PR 评论。"
+}
