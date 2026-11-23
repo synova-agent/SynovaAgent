@@ -2102,3 +2102,10 @@ documents:
     status: active
     owner: CTO
     note: "#1450 Gitea PR 回执模板：六字段＋独立期望值来源／防假绿／改坏必红／path:line@sha。"
+  # ---- #1463 合并凭证链路（甲类 token 第 4 来源已实现；乙类 ② 移植／E_NO_TOKEN 仅提案）2026-11-23 ----
+  - id: DOC-1463-01
+    type: governance
+    path: docs/synova/coordination/提案-合并凭证与②移植-20261123.md
+    status: draft
+    owner: CTO
+    note: "#1463 合并凭证链路乙类 A 类送审件（只提案、未改脚本）：② POSIX 路径经文件喂 native python 的移植修复（页文件→argv／API 路径→env／合并步 rc 检查）＋ E_NO_TOKEN 降级码；含改动面/风险/三平台回归/改坏必红。甲类（token 第 4 来源 git credential fill）在同 PR 实现，与本提案分 PR。"
