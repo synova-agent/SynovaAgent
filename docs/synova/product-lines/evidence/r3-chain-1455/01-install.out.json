@@ -1,0 +1,61 @@
+{
+  "file": "01-install.out.json",
+  "issue": 1455,
+  "phase": "T0",
+  "generatedAt": "2026-11-23T01:56+08:00",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "script": "scripts/dsh-sidecar/install-dsh-runtime.ps1 (repo, unmodified)",
+  "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dsh-sidecar/install-dsh-runtime.ps1 -Version 0.2.2-rc.5 -Integrity sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw== -InstallRoot D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5",
+  "host": {
+    "pwsh7": "absent (C:\\Program Files\\PowerShell\\7\\pwsh.exe = false)",
+    "windowsPowerShell": "5.1.26100.9818"
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "startedAt": "2026-11-23T01:49:26+08:00",
+      "exitCode": 1,
+      "result": "FAILED_IN_SCRIPT_VERIFY_STEP",
+      "failurePoint": "install-dsh-runtime.ps1:129 ConvertFrom-Json on package-lock.json",
+      "cause": "Windows PowerShell 5.1 cannot parse lockfileVersion=3 packages root key \"\" (PSArgumentException: value of argument \"name\" is not valid). Not an npm/integrity/version failure.",
+      "npmInstallOutcome": "succeeded (node_modules populated, package-lock.json 527224 B)",
+      "versionCheckBeforeFailure": "passed (script line 119-124: installed package.json version == 0.2.2-rc.5)",
+      "rawLog": "evidence/T0-install-attempt1-failure.txt"
+    },
+    {
+      "attempt": 2,
+      "startedAt": "2026-11-23T01:53:16+08:00",
+      "exitCode": 0,
+      "result": "INSTALL_OK",
+      "how": "Same repo script, dot-sourced from a caller-scope host shim that replaces ONLY ConvertFrom-Json with a .NET JavaScriptSerializer parser (ops/run-installer-ps51.ps1). Script body, pinned integrity constant, version check and lockfile write are unchanged; no repo file modified.",
+      "stdout": "{\"ok\":true,\"code\":\"INSTALL_OK\",\"version\":\"0.2.2-rc.5\",\"integrity\":\"sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw==\",\"installRoot\":\"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5\",\"binJs\":\"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js\",\"source\":\"registry\"}"
+    }
+  ],
+  "dshInstallLock": {
+    "schemaVersion": 1,
+    "package": "@deepseek-ai/dsh",
+    "version": "0.2.2-rc.5",
+    "integrity": "sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw==",
+    "source": "registry",
+    "tarballSha256": null,
+    "installedAt": "2026-11-22T17:53:19.5049143Z",
+    "installRoot": "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5"
+  },
+  "pinnedIntegrity": "sha512-cNbp12tLYLUTXaVli7zwwMjzmmEVCD1PRldg4oKtXM4+lFYckcaliMS2PU/FoThB4iAN/fKOSID0nrtRZU4Gjw==",
+  "independentReverify": {
+    "tool": "node -e (JSON.parse, not PS)",
+    "lockfileVersion": 3,
+    "entryVersion": "0.2.2-rc.5",
+    "entryIntegrityEqualsPinned": true,
+    "installedPackageJsonVersion": "0.2.2-rc.5",
+    "binEntryPresent": true,
+    "deepseekAiPackageCount": "see 00-env.txt"
+  },
+  "credentialsLanding": {
+    "dest": "<env:SYNOVA_DSH_HOME>/.credentials.yaml",
+    "layout": "flat: DEEPSEEK_API_KEY: <value>  (rc.5 auto-migrates to version:1 + refs: on first read)",
+    "bytes": 54,
+    "acl": "inheritance removed; only <machine>\\Administrator:(R,W)",
+    "valuePrinted": false
+  }
+}

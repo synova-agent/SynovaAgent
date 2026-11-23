@@ -1,0 +1,34 @@
+T3-electron-stdout-raw.txt — raw stdout of this task's Electron launch (background job output, verbatim)
+captured: 2026-11-23T02:24+08:00 (job pwsh-75d05e7c147f4983, after the process was terminated)
+launch: npx electron electron/main.cjs --remote-debugging-port=9222 --inspect=9223
+cwd: D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain
+env: T1 task env, ELECTRON_RUN_AS_NODE removed
+
+node.exe : Debugger listening on ws://127.0.0.1:9223/3c109512-85ec-4a54-ae6a-eada491eceeb
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Debugger listen...6a-eada491eceeb:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+For help, see: https://nodejs.org/en/docs/inspector
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/2b474c3f-cd61-4cd3-9b2e-0cc35616e62c
+[electron] boot mode=dev server=http://localhost:18790
+[backend-spawn] spawn 失败: spawn npx ENOENT
+[backend-spawn] 后端自启降级 — 重启 1 次未恢复: spawn npx ENOENT
+[electron] 后端自启 degraded — spawn npx ENOENT
+[preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790
+[electron] P0 check failed: fetch failed
+Debugger attached.
+Debugger ending on ws://127.0.0.1:9223/3c109512-85ec-4a54-ae6a-eada491eceeb
+For help, see: https://nodejs.org/en/docs/inspector
+Debugger attached.
+Debugger ending on ws://127.0.0.1:9223/3c109512-85ec-4a54-ae6a-eada491eceeb
+For help, see: https://nodejs.org/en/docs/inspector
+Debugger attached.
+Debugger ending on ws://127.0.0.1:9223/3c109512-85ec-4a54-ae6a-eada491eceeb
+For help, see: https://nodejs.org/en/docs/inspector
+[electron] P0 check failed: fetch failed
+
+(note: the "Debugger attached/ending" lines are this task's own CDP/inspector sessions while reading the main-process console buffer)

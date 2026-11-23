@@ -1,0 +1,237 @@
+{
+  "file": "13-session-close.json",
+  "issue": 1455,
+  "phase": "T6 (real product session-close route; expected zero model rounds)",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "tag": "t6-close-1455",
+  "startedAt": "2026-11-22T18:55:08.294Z",
+  "finishedAt": "2026-11-22T18:55:09.433Z",
+  "preconditions": {
+    "credentialsFilePresent": false,
+    "note": "dsh-home/.credentials.yaml and secrets/deepseek.key were deleted before this run; DSH resolves credentials per request, so the prompt must fail with a missing-credential error before any model call"
+  },
+  "prompt": "T6 收尾验证：只回答 OK。",
+  "promptChars": 15,
+  "runId": "run_e048ff75308b4ac4b3b4692c0fcbd6f6",
+  "sessionId": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+  "runSnapshot": {
+    "ok": true,
+    "runId": "run_e048ff75308b4ac4b3b4692c0fcbd6f6",
+    "status": "failed",
+    "sessionId": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+    "eventCount": 4,
+    "terminal": {
+      "type": "run.failed",
+      "seq": 4,
+      "data": {
+        "ok": false,
+        "code": "SIDECAR_PROTOCOL_ERROR",
+        "phase": "run",
+        "retryable": false,
+        "message": "[-32603] Internal error: turn failed: llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment"
+      }
+    },
+    "stats": {
+      "textDeltas": 0,
+      "reasoningDeltas": 0,
+      "toolCalls": 0,
+      "chars": 0
+    },
+    "proposalDraft": {
+      "ok": true,
+      "created": true,
+      "proposal": {
+        "id": "prop_mws75fia_8a5u",
+        "type": "agent_proposal_draft",
+        "title": "Agent proposal draft (run run_e048ff75308b4ac4b3b4692c0fcbd6f6)",
+        "description": "",
+        "confidence": 0.5,
+        "source": "enterprise:synth-org-1455",
+        "status": "proposed",
+        "createdAt": "2026-11-22T18:55:08.482Z",
+        "expiresAt": "2026-11-29T18:55:08.482Z",
+        "runId": "run_e048ff75308b4ac4b3b4692c0fcbd6f6"
+      }
+    }
+  },
+  "terminalType": "run.failed",
+  "terminalCode": "SIDECAR_PROTOCOL_ERROR",
+  "terminalIsFailed": true,
+  "terminalCodeLooksLikeMissingCredential": false,
+  "sse": {
+    "httpStatus": 200,
+    "bytes": 1304,
+    "rawText": "id: 1\nevent: run.started\ndata: {\"seq\":1,\"runId\":\"run_e048ff75308b4ac4b3b4692c0fcbd6f6\",\"type\":\"run.started\",\"at\":\"2026-11-22T18:55:08.404Z\",\"data\":{\"runId\":\"run_e048ff75308b4ac4b3b4692c0fcbd6f6\",\"enterpriseId\":\"synth-org-1455\",\"userId\":\"node-d5954723-c3a8-4f35-1d35-7fc964548f5a\",\"scope\":\"admin\",\"sessionId\":null}}\n\nid: 2\nevent: session.created\ndata: {\"seq\":2,\"runId\":\"run_e048ff75308b4ac4b3b4692c0fcbd6f6\",\"type\":\"session.created\",\"at\":\"2026-11-22T18:55:08.448Z\",\"data\":{\"sessionId\":\"0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc\"}}\n\nid: 3\nevent: egress.recorded\ndata: {\"seq\":3,\"runId\":\"run_e048ff75308b4ac4b3b4692c0fcbd6f6\",\"type\":\"egress.recorded\",\"at\":\"2026-11-22T18:55:08.448Z\",\"data\":{\"purpose\":\"run.prompt\",\"destination\":\"dsh-acp\",\"sha256\":\"b222699590a1ab4ccb9793135ce17ef81d5f8b6cc123066323234e6fad55f5b6\",\"chars\":15}}\n\nid: 4\nevent: run.failed\ndata: {\"seq\":4,\"runId\":\"run_e048ff75308b4ac4b3b4692c0fcbd6f6\",\"type\":\"run.failed\",\"at\":\"2026-11-22T18:55:08.482Z\",\"data\":{\"ok\":false,\"code\":\"SIDECAR_PROTOCOL_ERROR\",\"phase\":\"run\",\"retryable\":false,\"message\":\"[-32603] Internal error: turn failed: llm-deepseek: no API key for provider route \\\"deepseek-official\\\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment\"}}\n\n"
+  },
+  "closeRequest": {
+    "method": "POST",
+    "path": "/api/dsh/sessions/0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc/close"
+  },
+  "closeResponse": {
+    "httpStatus": 200,
+    "body": {
+      "ok": true,
+      "sessionId": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+      "closed": true
+    }
+  },
+  "closeOk": true,
+  "conclusion": {
+    "sessionCloseViaProductRoute": "PASS",
+    "modelRoundSpentByThisRun": "no (failed before the model request; see t6.noModelRoundProof)",
+    "note": "this failed run is a standalone close-route verification; it is NOT part of the R3 main-chain judgement"
+  },
+  "steps": [
+    {
+      "at": "2026-11-22T18:55:08.399Z",
+      "step": "login",
+      "detail": {
+        "httpStatus": 200,
+        "ok": true,
+        "role": "admin",
+        "orgId": "synth-org-1455"
+      }
+    },
+    {
+      "at": "2026-11-22T18:55:08.406Z",
+      "step": "runStart",
+      "detail": {
+        "httpStatus": 202,
+        "runId": "run_e048ff75308b4ac4b3b4692c0fcbd6f6",
+        "body": {
+          "ok": true,
+          "runId": "run_e048ff75308b4ac4b3b4692c0fcbd6f6",
+          "sessionId": null,
+          "status": "running",
+          "eventCount": 1,
+          "replayed": false,
+          "mcp": {
+            "registered": true,
+            "tool": "synova_context_get"
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-11-22T18:55:09.422Z",
+      "step": "runTerminal",
+      "detail": {
+        "waitedMs": 1000,
+        "status": "failed",
+        "terminal": {
+          "type": "run.failed",
+          "seq": 4,
+          "data": {
+            "ok": false,
+            "code": "SIDECAR_PROTOCOL_ERROR",
+            "phase": "run",
+            "retryable": false,
+            "message": "[-32603] Internal error: turn failed: llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment"
+          }
+        },
+        "sessionId": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+        "stats": {
+          "textDeltas": 0,
+          "reasoningDeltas": 0,
+          "toolCalls": 0,
+          "chars": 0
+        }
+      }
+    },
+    {
+      "at": "2026-11-22T18:55:09.426Z",
+      "step": "sseReplay",
+      "detail": {
+        "httpStatus": 200,
+        "contentType": null,
+        "bytes": 1304
+      }
+    },
+    {
+      "at": "2026-11-22T18:55:09.432Z",
+      "step": "sessionClose",
+      "detail": {
+        "httpStatus": 200,
+        "body": {
+          "ok": true,
+          "sessionId": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+          "closed": true
+        }
+      }
+    }
+  ],
+  "t6": {
+    "purpose": "prove the REAL product session-close route (POST /api/dsh/sessions/:id/close) without spending a model round",
+    "howItCostsNoModelRound": "the one-time model credential files were deleted before this phase; DSH rc.5 resolves provider credentials per request, so the prompt fails at key resolution BEFORE any model request leaves the machine",
+    "credentialsAbsentAtStart": true,
+    "isolatedServer": {
+      "command": "npx tsx src/index.ts (T1 task env: same SYNOVA_DATA_DIR / SYNOVA_DSH_* / JWT_SECRET / DEV_MODE=true / PORT=18790)",
+      "pids": [
+        10180,
+        18876
+      ],
+      "listener18790": 18876,
+      "startedAt": "2026-11-23T02:54:18+08:00",
+      "stoppedAt": "2026-11-23T02:55:57.7063309+08:00",
+      "stopMethod": "taskkill /PID 10180 /T /F — TEST HYGIENE, not part of Done 8 (see T6-server-test-hygiene.txt)"
+    },
+    "runs": [
+      {
+        "note": "run 1 — HTTP evidence lost to an ops-script bug (ReferenceError while serialising the result); the DSH session log survives and already shows the same no-credential failure",
+        "runId": null,
+        "sessionId": "0e4c82ce-e7f4-4a8f-8c56-980beca61fa9",
+        "dshSessionLog": {
+          "file": "T6-run1-session.jsonl",
+          "report": "T6-run1-session.decompress-report.json",
+          "frames": 6,
+          "inputBytes": 4030,
+          "outputBytes": 8858,
+          "lines": 18,
+          "coveragePasses": true,
+          "decodeChecksPass": true,
+          "errorMessage": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment",
+          "hasAssistantMessage": false,
+          "hasModelContentChunk": false,
+          "hasUsageChunk": false,
+          "hasToolCall": false
+        }
+      },
+      {
+        "note": "run 2 — full HTTP evidence (this file); same no-credential failure and the real close route",
+        "runId": "run_e048ff75308b4ac4b3b4692c0fcbd6f6",
+        "sessionId": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+        "dshSessionLog": {
+          "file": "T6-run2-session.jsonl",
+          "report": "T6-run2-session.decompress-report.json",
+          "frames": 6,
+          "inputBytes": 4025,
+          "outputBytes": 8858,
+          "lines": 18,
+          "coveragePasses": true,
+          "decodeChecksPass": true,
+          "errorMessage": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment",
+          "hasAssistantMessage": false,
+          "hasModelContentChunk": false,
+          "hasUsageChunk": false,
+          "hasToolCall": false
+        }
+      }
+    ],
+    "noModelRoundProof": {
+      "synovaSide": "run.failed with stats={textDeltas:0,reasoningDeltas:0,toolCalls:0,chars:0}; run.started -> run.failed took ~78 ms",
+      "dshSide": "both session logs end in assistant/attempt(chunk.finish reason=error) + turn/end(error); ZERO usage chunks (no model request/response) and zero content blocks / tool calls",
+      "errorMessage": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment",
+      "conclusion": "no model request was issued in T6; the model-round budget stays 1/1 (the one round belongs to the R3 main chain)"
+    },
+    "codeWrappingNote": {
+      "synovaTerminalCode": "SIDECAR_PROTOCOL_ERROR",
+      "dshFailureMessage": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment",
+      "explanation": "Synova maps the ACP turn failure to its own typed code (SIDECAR_PROTOCOL_ERROR, phase=run); the underlying DSH failure is the missing-credential error (\"no API key for provider route deepseek-official\"). It is the \"equivalent no-credential code\" allowed by the T6 instruction — not MISSING_CREDENTIAL literally."
+    },
+    "verdict": {
+      "sessionCloseViaProductRoute": "PASS",
+      "evidence": "closeResponse = HTTP 200 {\"ok\":true,\"sessionId\":\"0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc\",\"closed\":true}",
+      "countsAsDone8Part": "session close (real product route) PASS"
+    }
+  }
+}

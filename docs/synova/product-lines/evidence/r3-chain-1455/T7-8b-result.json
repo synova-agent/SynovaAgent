@@ -1,0 +1,199 @@
+{
+    "file":  "T7-8b-result.json",
+    "issue":  1455,
+    "phase":  "T7-8b",
+    "criterion":  "Done 8(b): after the product stop wrapper, the supervisor and ACP processes are actually gone (raw OS observation before/after).",
+    "verdict":  "PASS",
+    "generatedAt":  "2026-11-23T12:48:29.867Z",
+    "codeSha":  "1d0520f64c69bbaac115aad195fe0013f3642842",
+    "codeShaSource":  "git -C \u003crepo\u003e rev-parse HEAD: this evidence branch tip, computed by the collector itself. No value is passed in, so nothing here can be caller-injected. The product code under test (src/, electron/) is unchanged versus the ticket baseline; verify with: git diff --name-only caf61fcde..HEAD -- src electron (expected: empty).",
+    "host":  {
+                 "computerName":  "PC-202605261327",
+                 "psVersion":  "5.1.26100.9818"
+             },
+    "observationSource":  [
+                              "tasklist /FI \"PID eq \u003cpid\u003e\"",
+                              "Get-Process -Id \u003cpid\u003e",
+                              "Get-CimInstance Win32_Process -Filter \"ProcessId=\u003cpid\u003e\" (CommandLine + CreationDate)",
+                              "Get-CimInstance Win32_Process (independent leftover sweep by command-line shape)"
+                          ],
+    "stopCommand":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\scripts\\dsh-sidecar\\stop.ps1\" -InstanceDir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance -DshHome D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home -TimeoutSec 20",
+    "stopIssued":  true,
+    "stopExitCode":  null,
+    "stopExitCodeNote":  "not observed (Windows PowerShell 5.1 Start-Process -PassThru does not populate ExitCode without -Wait (and -Wait would block on the detached supervisor subtree))",
+    "stopRawStdout":  "{\"ok\":true,\"stopped\":true,\"supervisorPid\":12472,\"action\":\"stop\"}",
+    "startCommand":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\scripts\\dsh-sidecar\\start.ps1\" -InstanceDir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance -DshHome D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home -InstallDir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5 -ExpectedVersion 0.2.2-rc.5 -TimeoutSec 120",
+    "startExitCode":  null,
+    "startExitCodeNote":  "not observed (Windows PowerShell 5.1 Start-Process -PassThru does not populate ExitCode without -Wait (and -Wait would block on the detached supervisor subtree))",
+    "startRawStdout":  "{\"schemaVersion\":1,\"profile\":\"synova-sidecar\",\"dshHome\":\"D:\\\\novis-backup-20260526\\\\Novis\\\\_r3chain-20261123\\\\dsh-home\",\"instanceDir\":\"D:\\\\novis-backup-20260526\\\\Novis\\\\_r3chain-20261123\\\\instance\",\"workspaceRoot\":\"D:\\\\novis-backup-20260526\\\\Novis\\\\_r3chain-20261123\\\\instance\",\"installDir\":\"D:\\\\novis-backup-20260526\\\\Novis\\\\_r3chain-20261123\\\\install\\\\0.2.2-rc.5\",\"supervisorPid\":12472,\"acpPid\":9336,\"controlPort\":50841,\"controlToken\":\"\u003credacted\u003e\",\"ready\":true,\"protocolVersion\":1,\"agentName\":\"deepseek-harness-acp\",\"startedAt\":\"2026-11-23T12:48:31.025Z\",\"logPath\":\"D:\\\\novis-backup-20260526\\\\Novis\\\\_r3chain-20261123\\\\dsh-home\\\\logs\\\\sidecar-20261123.log\",\"failure\":null,\"ok\":true,\"running\":true,\"controlReachable\":true,\"sessions\":0,\"lastHealthAt\":null,\"installedVersion\":\"0.2.2-rc.5\",\"code\":null,\"phase\":null,\"retryable\":null,\"message\":null,\"action\":\"start\"}",
+    "judgementBasis":  "The verdict is decided ONLY from the before/after OS observations (pidsObservedBefore, pidsObservedAfter, afterComparison, leftoversAfter). The wrapper JSON in startRawStdout/stopRawStdout is preserved as the wrapper\u0027s own claim and is NOT used to decide.",
+    "beforeObservedAt":  "2026-11-23T12:48:36.271Z",
+    "afterObservedAt":  "2026-11-23T12:48:38.740Z",
+    "pidsObservedBefore":  [
+                               {
+                                   "role":  "supervisor",
+                                   "pid":  12472,
+                                   "present":  true,
+                                   "imageName":  "node.exe",
+                                   "creationDate":  "2026-11-23T20:48:30.7519200+08:00",
+                                   "startTime":  "2026-11-23T20:48:30.7519200+08:00",
+                                   "cmdline":  "\"C:\\Program Files\\nodejs\\node.exe\" --import tsx D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\src\\runtime\\dsh\\sidecar.ts --action supervise --dsh-home D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home --instance-dir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance --install-dir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5 --profile-dir D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\deploy\\dsh\\profiles\\synova-sidecar --control-token \u003credacted\u003e --expected-version 0.2.2-rc.5 --start-timeout-ms 120000 --stop-timeout-ms 15000",
+                                   "tasklist":  {
+                                                    "command":  "tasklist /FI \"PID eq 12472\"",
+                                                    "exitCode":  0,
+                                                    "rowPresent":  true,
+                                                    "raw":  "\nImage Name                     PID Session Name        Session#    Mem Usage\n========================= ======== ================ =========== ============\nnode.exe                     12472 Console                    1     59,992 K"
+                                                },
+                                   "getProcess":  {
+                                                      "command":  "Get-Process -Id 12472",
+                                                      "found":  true,
+                                                      "error":  null,
+                                                      "raw":  "\n\nId          : 12472\nProcessName : node\nStartTime   : 2026/11/23 20:48:30\nPath        : C:\\Program Files\\nodejs\\node.exe"
+                                                  },
+                                   "cim":  {
+                                               "command":  "Get-CimInstance Win32_Process -Filter \"ProcessId=12472\"",
+                                               "found":  true,
+                                               "error":  null,
+                                               "raw":  "\nProcessId       : 12472\nParentProcessId : 10844\nCreationDate    : 11/23/2026 20:48:30\nCommandLine     : \"C:\\Program Files\\nodejs\\node.exe\" --import tsx D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\src\\runtime\\dsh\\sidecar.ts --action supervise --dsh-home D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home --instance-dir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance --install-dir D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5 --profile-dir D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\deploy\\dsh\\profiles\\synova-sidecar --control-token \u003credacted\u003e --expected-version 0.2.2-rc.5 --start-timeout-ms 120000 --stop-timeout-ms 15000"
+                                           }
+                               },
+                               {
+                                   "role":  "acp",
+                                   "pid":  9336,
+                                   "present":  true,
+                                   "imageName":  "node.exe",
+                                   "creationDate":  "2026-11-23T20:48:31.0408430+08:00",
+                                   "startTime":  "2026-11-23T20:48:31.0408430+08:00",
+                                   "cmdline":  "\"C:\\Program Files\\nodejs\\node.exe\" D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js --profile synova-sidecar",
+                                   "tasklist":  {
+                                                    "command":  "tasklist /FI \"PID eq 9336\"",
+                                                    "exitCode":  0,
+                                                    "rowPresent":  true,
+                                                    "raw":  "\nImage Name                     PID Session Name        Session#    Mem Usage\n========================= ======== ================ =========== ============\nnode.exe                      9336 Console                    1    332,224 K"
+                                                },
+                                   "getProcess":  {
+                                                      "command":  "Get-Process -Id 9336",
+                                                      "found":  true,
+                                                      "error":  null,
+                                                      "raw":  "\n\nId          : 9336\nProcessName : node\nStartTime   : 2026/11/23 20:48:31\nPath        : C:\\Program Files\\nodejs\\node.exe"
+                                                  },
+                                   "cim":  {
+                                               "command":  "Get-CimInstance Win32_Process -Filter \"ProcessId=9336\"",
+                                               "found":  true,
+                                               "error":  null,
+                                               "raw":  "\nProcessId       : 9336\nParentProcessId : 12472\nCreationDate    : 11/23/2026 20:48:31\nCommandLine     : \"C:\\Program Files\\nodejs\\node.exe\" D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5\\node_modules\\@deepseek-ai\\dsh\\lib\\bin.js --profile synova-sidecar"
+                                           }
+                               }
+                           ],
+    "pidsObservedAfter":  [
+                              {
+                                  "role":  "supervisor",
+                                  "pid":  12472,
+                                  "present":  false,
+                                  "imageName":  "",
+                                  "creationDate":  "",
+                                  "startTime":  "",
+                                  "cmdline":  "",
+                                  "tasklist":  {
+                                                   "command":  "tasklist /FI \"PID eq 12472\"",
+                                                   "exitCode":  0,
+                                                   "rowPresent":  false,
+                                                   "raw":  "INFO: No tasks are running which match the specified criteria."
+                                               },
+                                  "getProcess":  {
+                                                     "command":  "Get-Process -Id 12472",
+                                                     "found":  false,
+                                                     "error":  "Cannot find a process with the process identifier 12472.",
+                                                     "raw":  "ERROR: Cannot find a process with the process identifier 12472."
+                                                 },
+                                  "cim":  {
+                                              "command":  "Get-CimInstance Win32_Process -Filter \"ProcessId=12472\"",
+                                              "found":  false,
+                                              "error":  null,
+                                              "raw":  "CIM: no Win32_Process row for pid 12472"
+                                          }
+                              },
+                              {
+                                  "role":  "acp",
+                                  "pid":  9336,
+                                  "present":  false,
+                                  "imageName":  "",
+                                  "creationDate":  "",
+                                  "startTime":  "",
+                                  "cmdline":  "",
+                                  "tasklist":  {
+                                                   "command":  "tasklist /FI \"PID eq 9336\"",
+                                                   "exitCode":  0,
+                                                   "rowPresent":  false,
+                                                   "raw":  "INFO: No tasks are running which match the specified criteria."
+                                               },
+                                  "getProcess":  {
+                                                     "command":  "Get-Process -Id 9336",
+                                                     "found":  false,
+                                                     "error":  "Cannot find a process with the process identifier 9336.",
+                                                     "raw":  "ERROR: Cannot find a process with the process identifier 9336."
+                                                 },
+                                  "cim":  {
+                                              "command":  "Get-CimInstance Win32_Process -Filter \"ProcessId=9336\"",
+                                              "found":  false,
+                                              "error":  null,
+                                              "raw":  "CIM: no Win32_Process row for pid 9336"
+                                          }
+                              }
+                          ],
+    "afterComparison":  [
+                            {
+                                "role":  "supervisor",
+                                "pid":  12472,
+                                "presentAfter":  false,
+                                "sameInstanceAlive":  false,
+                                "pidReused":  false,
+                                "creationDateBefore":  "2026-11-23T20:48:30.7519200+08:00",
+                                "creationDateAfter":  "",
+                                "getProcessFound":  false,
+                                "cimFound":  false,
+                                "tasklistRowPresent":  false,
+                                "absenceEvidence":  "INFO: No tasks are running which match the specified criteria. | ERROR: Cannot find a process with the process identifier 12472."
+                            },
+                            {
+                                "role":  "acp",
+                                "pid":  9336,
+                                "presentAfter":  false,
+                                "sameInstanceAlive":  false,
+                                "pidReused":  false,
+                                "creationDateBefore":  "2026-11-23T20:48:31.0408430+08:00",
+                                "creationDateAfter":  "",
+                                "getProcessFound":  false,
+                                "cimFound":  false,
+                                "tasklistRowPresent":  false,
+                                "absenceEvidence":  "INFO: No tasks are running which match the specified criteria. | ERROR: Cannot find a process with the process identifier 9336."
+                            }
+                        ],
+    "leftoversAfter":  [
+
+                       ],
+    "samePidSetInBothSnapshots":  [
+                                      12472,
+                                      9336
+                                  ],
+    "pidReuseGuard":  "Identity = (pid, CreationDate). A target pid still present with a different CreationDate is recorded as pidReused and does NOT count as the original process surviving.",
+    "rawFiles":  [
+                     "T7-8b-process-snapshot-before.txt",
+                     "T7-8b-process-snapshot-after.txt"
+                 ],
+    "redactions":  [
+                       "transient loopback supervisor control token: --control-token \u003chex\u003e and \"controlToken\":\"\u003chex\u003e\" -\u003e \u003credacted\u003e (same discipline as D6/T2-raw-redaction.txt; not a model credential)"
+                   ],
+    "redactionApplied":  true,
+    "collectionErrors":  [
+
+                         ],
+    "notes":  [
+                  "Cost: zero model rounds, zero outbound network. The sidecar start path never reads model credentials (start.ps1 header), so no credential file is needed or read.",
+                  "This collector is acceptance infrastructure we own (delegation ruling 2026-11-23 sec.5: 8(b) process-liveness observation = R/self-built), not a DSH capability.",
+                  "stop.ps1 itself verifies supervisor disappearance (sidecar.ts:479-513); this file records an INDEPENDENT OS observation so the claim does not rest on the wrapper self-reporting."
+              ],
+    "encoding":  "UTF-8 (no BOM). Non-ASCII message text is escaped as \\\\uXXXX by Windows PowerShell 5.1 ConvertTo-Json; parsed values are unchanged.",
+    "complete":  true,
+    "allGone":  true
+}

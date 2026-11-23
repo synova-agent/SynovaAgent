@@ -1,0 +1,27 @@
+# .claude/claims/1458.yaml —— #1458 把取证逻辑抽成带真实单测的小库（B 轨）
+# 依据：#1458 裁定「走 (b) 抽成带真实单测的小库」（CTO 评论 14446）＋后续裁定（PR base 并入 #1457、
+#       codeSha/producer 口径、3 个 .ts 必须同样处理）
+# base: 1d0520f64（= feat/1455-r3-chain head —— 被抽的目标文件只存在于该分支，
+#        main/caf61fcde 上不存在；故本票提交叠在该分支之上，随 PR #1457 一起走）
+# branch: fix/1458-evidence-lib ｜ worktree: D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1458（主树零写入）
+# 接管说明: session-decompress.mjs 原由 1455.yaml 认领 ⇒ 本票把它退化为薄壳，归属转本 claim；
+#          3 个 .ts（install-profile/seed-synthetic/mcp-probe）本次也被本票改成「导出可测函数 + 薄 CLI」，
+#          故一并列入本写集（与 1455.yaml 的重叠属报告项，1455.yaml 不在本票改动范围）。
+writeset:
+  - .claude/claims/1458.yaml
+  - scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs
+  - scripts/dsh-sidecar/r3-chain/session-decompress.mjs
+  - scripts/dsh-sidecar/r3-chain/install-profile.ts
+  - scripts/dsh-sidecar/r3-chain/seed-synthetic.ts
+  - scripts/dsh-sidecar/r3-chain/mcp-probe.ts
+  - tests/dsh-sidecar/frame-decompress.test.ts
+  - tests/dsh-sidecar/install-profile.test.ts
+  - tests/dsh-sidecar/seed-synthetic.test.ts
+  - tests/dsh-sidecar/mcp-probe.test.ts
+  - docs/synova/product-lines/evidence/r3-chain-1455/README.md
+done:
+  - verify: node node_modules/vitest/vitest.mjs run tests/dsh-sidecar   # 4 files / 18 tests passed
+  - verify: CI=1 node node_modules/vitest/vitest.mjs run --changed caf61fcdeb3e00c79abe9211546690ca963549a2   # affected 命中 4 个测试文件（消掉 affected-no-tests）
+  - verify: node scripts/dsh-sidecar/r3-chain/session-decompress.mjs <07-dsh-session-log.jsonl.zstd> <out.jsonl> <report.json>   # report 除 generatedAt/input.path/output.path 外与既有证据件逐字段一致；新增 producer{path,sha256}
+  - verify: node node_modules/tsx/dist/cli.mjs scripts/dsh-sidecar/r3-chain/{install-profile,seed-synthetic,mcp-probe}.ts   # 三个 CLI 退出码与输出键集与 #1455 基线一致
+note: "#1458 通用工程票（不登记为 DSH 借鉴）。抽库 frame-decompress.mjs（帧头解析 + 块链走查 + 三条不变式）并让 3 个取证 .ts 导出可测函数，使 vitest --changed 能映射到 tests/；薄壳/CLI 行为与输出字段不变（codeSha 保留为证据基线，新增 producer 指向真实产出模块）。"

@@ -1,0 +1,22 @@
+10-process-exit.txt — T4 (reused-backend path, CTO ruling S1)
+generated: 2026-11-23T02:38:58.2224741+08:00
+
+[A] Electron quit
+electron main pid=17900 (children 15280 gpu / 6692 utility / 10108 renderer; NO backend node child)
+quit mechanism: CDP 9222 browser endpoint -> Browser.close (Chromium graceful shutdown); see ops/browser-close.mjs
+note: the product's before-quit handler (electron/main.cjs:318-323) finds no backendHandle.stop in reused mode,
+      so this quit exercises no process reclamation. Done 8(a) = UNVERIFIED per CTO ruling S1 (product defect #1456),
+      NOT claimed by this file.
+after quit: electron.exe count=0 ; 9222 listener NONE ; 9223 listener NONE
+
+[B] Reuse evidence (Electron did NOT spawn the backend)
+18790 owner BEFORE Electron launch : 11940  (isolated server started by this task, T1 env)
+18790 owner AFTER  Electron launch : 11940  (same process; healthz uptime kept increasing)
+18790 owner AFTER  Electron quit   : 11940  (server survived the app)
+Electron main-process console (no backend-spawn failure, contrast with T3-BREAK-*):
+  [electron] boot mode=dev server=http://localhost:18790
+  [preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790
+node.exe running src/index.ts as an Electron child: 0
+
+[C] Server stop = TEST HYGIENE (explicitly NOT counted in Done 8)
+see T4b-server-test-hygiene.txt

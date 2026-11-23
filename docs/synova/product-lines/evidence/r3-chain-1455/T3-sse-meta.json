@@ -1,0 +1,105 @@
+{
+  "ok": true,
+  "generatedAt": "2026-11-22T18:36:03.953Z",
+  "baseUrl": "http://127.0.0.1:18790",
+  "runId": "run_da2adbf821994bad8de96d30d0a174be",
+  "snapshotHttpStatus": 200,
+  "snapshot": {
+    "status": "completed",
+    "sessionId": "6f9a803d-c6e7-41bc-aa2e-ea2cafc168c7",
+    "eventCount": 8,
+    "stats": {
+      "textDeltas": 1,
+      "reasoningDeltas": 1,
+      "toolCalls": 1,
+      "chars": 304
+    },
+    "terminal": {
+      "type": "run.completed",
+      "seq": 8,
+      "data": {
+        "stopReason": "end_turn",
+        "stats": {
+          "textDeltas": 1,
+          "reasoningDeltas": 1,
+          "toolCalls": 1,
+          "chars": 304
+        },
+        "empty": false
+      }
+    }
+  },
+  "sseHttpStatus": 200,
+  "sseContentType": "text/event-stream; charset=utf-8",
+  "sseBytes": 2384,
+  "frameCount": 8,
+  "eventTypes": [
+    "run.started",
+    "session.created",
+    "egress.recorded",
+    "reasoning.delta",
+    "tool.started",
+    "tool.finished",
+    "text.delta",
+    "run.completed"
+  ],
+  "counters": {
+    "textDeltas": 1,
+    "toolStarted": 1,
+    "toolFinished": 1,
+    "other": 5
+  },
+  "terminalFrame": {
+    "event": "run.completed",
+    "id": 8,
+    "data": {
+      "seq": 8,
+      "runId": "run_da2adbf821994bad8de96d30d0a174be",
+      "type": "run.completed",
+      "at": "2026-11-22T18:35:53.957Z",
+      "data": {
+        "stopReason": "end_turn",
+        "stats": {
+          "textDeltas": 1,
+          "reasoningDeltas": 1,
+          "toolCalls": 1,
+          "chars": 304
+        },
+        "empty": false
+      }
+    }
+  },
+  "toolStartedFrames": [
+    {
+      "id": 5,
+      "data": {
+        "seq": 5,
+        "runId": "run_da2adbf821994bad8de96d30d0a174be",
+        "type": "tool.started",
+        "at": "2026-11-22T18:35:52.950Z",
+        "data": {
+          "toolCallId": "call_00_QFR4AzRr1IVqsOp1KwnN0461",
+          "title": "mcp__synova-sidecar__synova_context_get",
+          "kind": "other",
+          "status": "in_progress"
+        }
+      }
+    }
+  ],
+  "toolFinishedFrames": [
+    {
+      "id": 6,
+      "data": {
+        "seq": 6,
+        "runId": "run_da2adbf821994bad8de96d30d0a174be",
+        "type": "tool.finished",
+        "at": "2026-11-22T18:35:52.970Z",
+        "data": {
+          "toolCallId": "call_00_QFR4AzRr1IVqsOp1KwnN0461",
+          "status": "completed",
+          "isError": false
+        }
+      }
+    }
+  ]
+}

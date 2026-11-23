@@ -1,0 +1,25 @@
+T1-server-pids.txt — prep server PID tree (T1, NON-product stop; not part of Done 8)
+generated: 2026-11-23T01:58:27.8071154+08:00
+started: cmd.exe pid=17128 (Start-Process, cwd=D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain, command='npx tsx src/index.ts')
+healthz: GET /api/healthz => 200 (see T1-prep-server.log / probe below)
+
+[process tree before stop]
+  pid=22692   ppid=17128   conhost.exe
+  pid=9180    ppid=17128   node.exe
+  pid=3860    ppid=9180    cmd.exe
+  pid=12680   ppid=3860    node.exe
+  pid=23112   ppid=12680   node.exe
+  pid=20520   ppid=23112   esbuild.exe
+  pid=1100    ppid=23112   cmd.exe
+  pid=18268   ppid=1100    node.exe
+  pid=12956   ppid=18268   cmd.exe
+  pid=144     ppid=12956   node.exe
+  pid=17128 (root cmd.exe)
+[listener on 18790 before stop] pid=23112
+
+[after stop]
+  descendants still alive: NONE
+  listener on 18790 after stop: NONE
+  cmd pid 17128 alive: False
+  data/synova.db kept: True size=778240
+  install dir kept: True

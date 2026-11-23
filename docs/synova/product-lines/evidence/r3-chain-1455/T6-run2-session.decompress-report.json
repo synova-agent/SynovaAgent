@@ -1,0 +1,99 @@
+{
+  "file": "07-dsh-session-log.decompress-report.json",
+  "generatedAt": "2026-11-22T18:55:24.639Z",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "input": {
+    "path": "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-_r3chain-20261123-instance--\\0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc\\session.v4.jsonl.zstd",
+    "bytes": 4025,
+    "sha256": "847e4dd00ebcbff1623030ad26eddc74959f1aeb36aca01fcc979330f7663f5e"
+  },
+  "output": {
+    "path": "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\evidence\\T6-run2-session.jsonl",
+    "bytes": 8858,
+    "sha256": "e821afaa851531eac22d8ebd14738f654749b41298c45b119693124dc1e1091a",
+    "lines": 18,
+    "nonEmptyLines": 17
+  },
+  "method": "scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat",
+  "forbiddenMethodNotUsed": "zstdDecompressSync on the whole multi-frame file (decodes only the first frame and does not throw)",
+  "frameCount": 6,
+  "frames": [
+    {
+      "index": 0,
+      "start": 0,
+      "end": 183,
+      "bytes": 183,
+      "decodedBytes": 208,
+      "decodedLines": 1
+    },
+    {
+      "index": 1,
+      "start": 183,
+      "end": 324,
+      "bytes": 141,
+      "decodedBytes": 249,
+      "decodedLines": 3
+    },
+    {
+      "index": 2,
+      "start": 324,
+      "end": 626,
+      "bytes": 302,
+      "decodedBytes": 469,
+      "decodedLines": 3
+    },
+    {
+      "index": 3,
+      "start": 626,
+      "end": 3495,
+      "bytes": 2869,
+      "decodedBytes": 6895,
+      "decodedLines": 6
+    },
+    {
+      "index": 4,
+      "start": 3495,
+      "end": 3663,
+      "bytes": 168,
+      "decodedBytes": 155,
+      "decodedLines": 1
+    },
+    {
+      "index": 5,
+      "start": 3663,
+      "end": 4025,
+      "bytes": 362,
+      "decodedBytes": 882,
+      "decodedLines": 3
+    }
+  ],
+  "coverage": {
+    "fileBytes": 4025,
+    "sumFrameBytes": 4025,
+    "byteCoveragePasses": true,
+    "sumDecodedLines": 17,
+    "decodedNewlines": 17
+  },
+  "header": {
+    "type": "session",
+    "version": 4,
+    "id": "0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc",
+    "createdAt": 1795373708407,
+    "cwd": "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance",
+    "isSeeded": false,
+    "delegationDepth": 0
+  },
+  "checks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": false,
+    "hasToolResult": false,
+    "hasSynovaContextGetCall": false,
+    "synovaToolResultIsReal": false
+  },
+  "toolCallEntries": 0,
+  "toolResultEntries": 0,
+  "allPassed": false
+}

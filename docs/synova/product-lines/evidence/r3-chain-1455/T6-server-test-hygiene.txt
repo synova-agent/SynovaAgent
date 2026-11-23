@@ -1,0 +1,7 @@
+T6-server-test-hygiene.txt — T6 isolated server stop (TEST HYGIENE; NOT part of Done 8)
+generated: 2026-11-23T02:56:01.4554971+08:00
+server: npx tsx src/index.ts with the T1 task env (same SYNOVA_DATA_DIR / SYNOVA_DSH_* / JWT_SECRET / PORT=18790)
+process chain: pid=10180(ppid=6720) ; pid=18876(ppid=10180)
+18790 owner before stop: 18876
+stopped by this task at 2026-11-23T02:55:57.7063309+08:00 via: taskkill /PID 10180 /T /F
+after stop: 18790 listener=

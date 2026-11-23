@@ -1,0 +1,53 @@
+# T7-8b-process-snapshot-after.txt -- raw process observation AFTER the product stop wrapper (Issue #1455, Done 8(b))
+# generated: 2026-11-23T12:48:29.867Z
+# observed at: 2026-11-23T12:48:38.740Z
+# collector: scripts/dsh-sidecar/r3-chain/capture-8b-process-snapshot.ps1
+# observation source: tasklist /FI "PID eq <pid>" | Get-Process -Id <pid> | Get-CimInstance Win32_Process (CommandLine + CreationDate)
+# identity for PID-reuse protection = (pid, CreationDate); a live pid whose CreationDate changed is a DIFFERENT process
+# redaction: transient loopback supervisor control token only -- `--control-token <hex>` and "controlToken":"<hex>" are replaced by <redacted>. No other character is altered.
+# host: PC-202605261327  PSVersion: 5.1.26100.9818  codeSha: 1d0520f64c69bbaac115aad195fe0013f3642842
+
+=== [1] product wrapper: stop (issued) ===
+cmd: powershell -NoProfile -ExecutionPolicy Bypass -File "D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\scripts\dsh-sidecar\stop.ps1" -InstanceDir D:\novis-backup-20260526\Novis\_r3chain-20261123\instance -DshHome D:\novis-backup-20260526\Novis\_r3chain-20261123\dsh-home -TimeoutSec 20
+exit: not observed (Windows PowerShell 5.1 Start-Process -PassThru does not populate ExitCode without -Wait (and -Wait would block on the detached supervisor subtree))
+--- raw stdout (verbatim) ---
+{"ok":true,"stopped":true,"supervisorPid":12472,"action":"stop"}
+--- end raw stdout ---
+=== [2] raw observation: supervisor pid 12472 ===
+cmd: tasklist /FI "PID eq 12472"
+exit: 0
+--- raw output ---
+INFO: No tasks are running which match the specified criteria.
+--- end raw output ---
+
+cmd: Get-Process -Id 12472
+--- raw output ---
+ERROR: Cannot find a process with the process identifier 12472.
+--- end raw output ---
+
+cmd: Get-CimInstance Win32_Process -Filter "ProcessId=12472"
+--- raw output ---
+CIM: no Win32_Process row for pid 12472
+--- end raw output ---
+
+=== [3] raw observation: acp pid 9336 ===
+cmd: tasklist /FI "PID eq 9336"
+exit: 0
+--- raw output ---
+INFO: No tasks are running which match the specified criteria.
+--- end raw output ---
+
+cmd: Get-Process -Id 9336
+--- raw output ---
+ERROR: Cannot find a process with the process identifier 9336.
+--- end raw output ---
+
+cmd: Get-CimInstance Win32_Process -Filter "ProcessId=9336"
+--- raw output ---
+CIM: no Win32_Process row for pid 9336
+--- end raw output ---
+
+
+=== [4] independent leftover sweep (processes shaped like this sidecar's supervisor/ACP) ===
+count: 0
+

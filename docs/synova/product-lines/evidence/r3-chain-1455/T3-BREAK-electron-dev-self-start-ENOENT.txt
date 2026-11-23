@@ -1,0 +1,54 @@
+T3-BREAK-electron-dev-self-start-ENOENT.txt — raw break evidence (Gitea #1455, T3)
+generated: 2026-11-22T18:24:09.525Z
+codeSha: caf61fcdeb3e00c79abe9211546690ca963549a2
+
+[1] Electron main-process console (live replay over the main-process inspector, Runtime.enable)
+    target: file://
+    launch: npx electron electron/main.cjs --remote-debugging-port=9222 --inspect=9223
+    cwd   : D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain
+    env   : T1 task env (SYNOVA_DSH_INSTALL_DIR / SYNOVA_DSH_HOME / SYNOVA_DSH_INSTANCE_DIR / SYNOVA_DATA_DIR / JWT_SECRET / DEV_MODE=true / PORT=18790); ELECTRON_RUN_AS_NODE removed for the app process
+    [main.console.log] [electron] boot mode=dev server=http://localhost:18790
+    [main.console.error] [backend-spawn] spawn 失败: spawn npx ENOENT
+    [main.console.error] [backend-spawn] 后端自启降级 — 重启 1 次未恢复: spawn npx ENOENT
+    [main.console.error] [electron] 后端自启 degraded — spawn npx ENOENT
+    [main.console.log] [preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790
+    [main.console.warning] [electron] P0 check failed: fetch failed
+
+[2] Desktop renderer did load — the failure is the backend self-start only
+    CDP page target: type=page title=SynovaAgent url=http://localhost:5173/
+    (also: [preload-check] OK — window.electronAPI exposed, serverUrl=http://localhost:18790)
+
+[3] Root cause: electron/backend-spawn.cjs buildCommand("dev") = { bin: "npx", args: ["tsx", "src/index.ts"] }, spawned with shell:false
+    Reproduction (same host, same PATH/PATHEXT):
+    host: node v24.16.0 platform=win32 arch=x64
+    PATH contains node dir: true
+    npx.cmd exists at C:\Program Files\nodejs\npx.cmd: true ; npx (extensionless, POSIX shell script) exists: true
+    npx-cli.js exists at C:\Program Files\nodejs\node_modules\npm\bin\npx-cli.js: true
+    
+    [A] product dev command as shipped: spawn("npx", ["--version"], {shell:false})
+        A: ERROR ENOENT spawn npx ENOENT
+    
+    [B] same but the Windows shim: spawn("npx.cmd", ["--version"], {shell:false})
+        B: SYNC_THROW EINVAL spawn EINVAL
+    
+    [C] same but through node: spawn(process.execPath, [npx-cli.js, "--version"], {shell:false})
+        C: EXIT code=0 signal=null
+    
+    => A is what electron/backend-spawn.cjs buildCommand("dev") returns; it fails on Windows (ENOENT).
+    => B also fails on node 24 (EINVAL: spawning a .cmd shim without shell:true is refused), so the shim name alone is not a fix.
+    => C works: spawn(process.execPath, [npx-cli.js, "tsx", "src/index.ts"]) is a one-line, shell-free fix for the dev self-start path.
+
+[4] Consequence for this Mandate
+    - main.cjs ensureBackend({mode:"dev"}) -> {started:false, degraded:true, error:"spawn npx ENOENT"} => no backend, no backendHandle.stop
+    - T3 requires "Electron must self-start the backend (started:true)"; the reused path is a declared stop point and degraded self-start is the same dead end
+    - no POST /api/dsh/runs was ever issued => model rounds consumed: 0 of 1
+    - Done 3/4/5/6/7/8(a) NOT REACHED: a desktop run cannot exist without the backend process
+
+[5] Port / process state at break
+    18790 listener: NONE (backend never started)
+    5173 listener pid: 18984 (vite, our own process)
+    9222/9223 listener pid: 4564 (electron main, our own process)
+    electron main pid: 4564 ; no node.exe running src/index.ts
+
+[6] Not claimed
+    - Done 8(a) is NOT claimed: the Electron instance was terminated externally to clean up this attempt, which per the DEV DOC does not count as the product stop path.

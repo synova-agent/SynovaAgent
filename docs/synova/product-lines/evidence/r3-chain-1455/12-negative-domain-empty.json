@@ -1,0 +1,47 @@
+{
+  "file": "12-negative-domain-empty.json",
+  "issue": 1455,
+  "phase": "T2 (negative case; no model round)",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "generatedAt": "2026-11-22T18:25:29.758Z",
+  "extractedFrom": "11-mcp-tools-list.json (raw step record of the same probe run)",
+  "transport": {
+    "endpoint": "http://127.0.0.1:62209/mcp",
+    "method": "POST",
+    "jsonrpcMethod": "tools/call",
+    "tool": "synova_context_get",
+    "arguments": {
+      "problemId": "synth-problem-1455-does-not-exist"
+    },
+    "authorization": "<one-shot loopback token, never recorded>"
+  },
+  "httpStatus": 200,
+  "contentType": "application/json",
+  "responseBodyText": "{\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"ok\\\":false,\\\"code\\\":\\\"DOMAIN_EMPTY\\\",\\\"phase\\\":\\\"tool\\\",\\\"retryable\\\":false,\\\"message\\\":\\\"本企业 ② 对象中解析不到 problemId: synth-problem-1455-does-not-exist\\\"}\"}],\"isError\":true},\"jsonrpc\":\"2.0\",\"id\":4}",
+  "responseBodyJson": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ok\":false,\"code\":\"DOMAIN_EMPTY\",\"phase\":\"tool\",\"retryable\":false,\"message\":\"本企业 ② 对象中解析不到 problemId: synth-problem-1455-does-not-exist\"}"
+        }
+      ],
+      "isError": true
+    },
+    "jsonrpc": "2.0",
+    "id": 4
+  },
+  "structuredPayload": {
+    "ok": false,
+    "code": "DOMAIN_EMPTY",
+    "phase": "tool",
+    "retryable": false,
+    "message": "本企业 ② 对象中解析不到 problemId: synth-problem-1455-does-not-exist"
+  },
+  "assertions": {
+    "isErrorTrue": true,
+    "codeIsDomainEmpty": true,
+    "positiveCallSucceededInSameRun": true
+  },
+  "judgement": "the tool fails loud for an unknown problemId: structured DOMAIN_EMPTY (ok:false, code, phase, retryable) with HTTP 200 + isError:true — not a fake empty success"
+}

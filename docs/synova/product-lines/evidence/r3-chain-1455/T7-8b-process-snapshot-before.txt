@@ -1,0 +1,86 @@
+# T7-8b-process-snapshot-before.txt -- raw process observation BEFORE the product stop wrapper (Issue #1455, Done 8(b))
+# generated: 2026-11-23T12:48:29.867Z
+# observed at: 2026-11-23T12:48:36.271Z
+# collector: scripts/dsh-sidecar/r3-chain/capture-8b-process-snapshot.ps1
+# observation source: tasklist /FI "PID eq <pid>" | Get-Process -Id <pid> | Get-CimInstance Win32_Process (CommandLine + CreationDate)
+# identity for PID-reuse protection = (pid, CreationDate)
+# redaction: transient loopback supervisor control token only -- `--control-token <hex>` and "controlToken":"<hex>" are replaced by <redacted>. No other character is altered.
+# why: 02-acp-initialize.json:100-106 pidCheckAfterStop is NOT evidence (its booleans came from make-02-acp-initialize.mjs argv). This file replaces it with raw OS output.
+# host: PC-202605261327  PSVersion: 5.1.26100.9818  codeSha: 1d0520f64c69bbaac115aad195fe0013f3642842
+
+=== [1] product wrapper: start ===
+cmd: powershell -NoProfile -ExecutionPolicy Bypass -File "D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\scripts\dsh-sidecar\start.ps1" -InstanceDir D:\novis-backup-20260526\Novis\_r3chain-20261123\instance -DshHome D:\novis-backup-20260526\Novis\_r3chain-20261123\dsh-home -InstallDir D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5 -ExpectedVersion 0.2.2-rc.5 -TimeoutSec 120
+exit: not observed (Windows PowerShell 5.1 Start-Process -PassThru does not populate ExitCode without -Wait (and -Wait would block on the detached supervisor subtree))
+--- raw stdout (verbatim, controlToken redacted) ---
+{"schemaVersion":1,"profile":"synova-sidecar","dshHome":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home","instanceDir":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance","workspaceRoot":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance","installDir":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5","supervisorPid":12472,"acpPid":9336,"controlPort":50841,"controlToken":"<redacted>","ready":true,"protocolVersion":1,"agentName":"deepseek-harness-acp","startedAt":"2026-11-23T12:48:31.025Z","logPath":"D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home\\logs\\sidecar-20261123.log","failure":null,"ok":true,"running":true,"controlReachable":true,"sessions":0,"lastHealthAt":null,"installedVersion":"0.2.2-rc.5","code":null,"phase":null,"retryable":null,"message":null,"action":"start"}
+--- end raw stdout ---
+
+=== [2] state PIDs (read from <dshHome>\run\synova-sidecar.json; only these numbers are used, the file itself is not committed) ===
+supervisorPid: 12472
+acpPid: 9336
+state.ready: True
+=== [3] raw observation: supervisor pid 12472 ===
+cmd: tasklist /FI "PID eq 12472"
+exit: 0
+--- raw output ---
+
+Image Name                     PID Session Name        Session#    Mem Usage
+========================= ======== ================ =========== ============
+node.exe                     12472 Console                    1     59,992 K
+--- end raw output ---
+
+cmd: Get-Process -Id 12472
+--- raw output ---
+
+
+Id          : 12472
+ProcessName : node
+StartTime   : 2026/11/23 20:48:30
+Path        : C:\Program Files\nodejs\node.exe
+--- end raw output ---
+
+cmd: Get-CimInstance Win32_Process -Filter "ProcessId=12472"
+--- raw output ---
+
+ProcessId       : 12472
+ParentProcessId : 10844
+CreationDate    : 11/23/2026 20:48:30
+CommandLine     : "C:\Program Files\nodejs\node.exe" --import tsx D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\src\runtime\dsh\sidecar.ts --action supervise --dsh-home D:\novis-backup-20260526\Novis\_r3chain-20261123\dsh-home --instance-dir D:\novis-backup-20260526\Novis\_r3chain-20261123\instance --install-dir D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5 --profile-dir D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\deploy\dsh\profiles\synova-sidecar --control-token <redacted> --expected-version 0.2.2-rc.5 --start-timeout-ms 120000 --stop-timeout-ms 15000
+--- end raw output ---
+
+=== [4] raw observation: acp pid 9336 ===
+cmd: tasklist /FI "PID eq 9336"
+exit: 0
+--- raw output ---
+
+Image Name                     PID Session Name        Session#    Mem Usage
+========================= ======== ================ =========== ============
+node.exe                      9336 Console                    1    332,224 K
+--- end raw output ---
+
+cmd: Get-Process -Id 9336
+--- raw output ---
+
+
+Id          : 9336
+ProcessName : node
+StartTime   : 2026/11/23 20:48:31
+Path        : C:\Program Files\nodejs\node.exe
+--- end raw output ---
+
+cmd: Get-CimInstance Win32_Process -Filter "ProcessId=9336"
+--- raw output ---
+
+ProcessId       : 9336
+ParentProcessId : 12472
+CreationDate    : 11/23/2026 20:48:31
+CommandLine     : "C:\Program Files\nodejs\node.exe" D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5\node_modules\@deepseek-ai\dsh\lib\bin.js --profile synova-sidecar
+--- end raw output ---
+
+
+=== [5] independent leftover sweep (processes shaped like this sidecar's supervisor/ACP) ===
+pid=12472 shape=supervisor creation=2026-11-23T20:48:30.7519200+08:00
+  cmdline: "C:\Program Files\nodejs\node.exe" --import tsx D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\src\runtime\dsh\sidecar.ts --action supervise --dsh-home D:\novis-backup-20260526\Novis\_r3chain-20261123\dsh-home --instance-dir D:\novis-backup-20260526\Novis\_r3chain-20261123\instance --install-dir D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5 --profile-dir D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\deploy\dsh\profiles\synova-sidecar --control-token <redacted> --expected-version 0.2.2-rc.5 --start-timeout-ms 120000 --stop-timeout-ms 15000
+pid=9336 shape=acp creation=2026-11-23T20:48:31.0408430+08:00
+  cmdline: "C:\Program Files\nodejs\node.exe" D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5\node_modules\@deepseek-ai\dsh\lib\bin.js --profile synova-sidecar
+
