@@ -1,6 +1,6 @@
 # 2026-11-24 · #1473 控制塔全量成批退役
 
-## 现状（施工前，gitea/main @ 8fe8cdd72）
+## 现状（施工前，gitea/main @ a3e087be0；Issue #1471 盘点基线 c08ca3f0a）
 
 - #1472 只退役了 `scripts/hooks/hook-enforce-loop.sh`，属四文件试点；#1473 要求按全量口径清出控制塔孤儿实现、专属测试与失效入口。
 - 本批对 `scripts/control-tower/**`、`tests/control-tower/**`、`scripts/hooks/**`、`scripts/workflow/**` 做完整筛选：以最新 gitea/main 的调用链为准，测试引用不构成保留理由；历史文档与旧 GATE-INVENTORY 提及不构成消费者。
@@ -9,6 +9,7 @@
 ## 决定
 
 - 按 Issue #1473 的判定规则成批退役无真实消费者的实现与专属测试；逐项删除/扣留证据见 PR 评论。
+- 本批删除 43 件：25 个孤儿实现、15 个专属测试、1 个失效基线（`fixture-requires-baseline.txt`）、2 个失效草稿预设；同批更新 `gate-integrity-baseline.txt`（FACE-TOTAL 204→189／QUARANTINE 77→66）。
 - 代码历史由 git 保留，不另开 process-archive PR；失效基线登记与失效入口同批移除。
 - 不新增门禁、台账或报告文件；claim 用 scaffold；必要豁免按既有规则。
 
