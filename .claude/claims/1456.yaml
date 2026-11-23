@@ -3,6 +3,12 @@ writeset:
   - electron/backend-spawn.cjs
   - tests/electron/backend-spawn.test.ts
   - docs/synova/product-lines/evidence/1456-dev-self-start/**
+  - docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  # P2 同步（#1456 遗留项）：上面那行 `**` 在 claim_store.match_path 里是**字面量**（`**` 不做 glob）
+  #   ⇒ 证据目录下的文件仍判未覆盖（G12 会点名）。故按实际改动逐个声明：
+  - docs/synova/product-lines/evidence/1456-dev-self-start/A-spawn-forms-repro.json
+  - docs/synova/product-lines/evidence/1456-dev-self-start/INDEX.txt
 done:
   - "verify: node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts ⇒ 25 tests / 21 passed / 4 skipped / 0 failed（零红）"
   - "verify: 反例（win32 分支临时关掉 ⇒ dev 命令退回 npx）⇒ A.1 三条必红，原始输出 evidence/1456-dev-self-start/NEGATIVE-npx-revert.txt"

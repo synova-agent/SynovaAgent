@@ -38,6 +38,15 @@ A-baseline-before-fix.txt
   据 CTO 裁定 3，只给该 1 例加 `it.skipIf(process.platform === 'win32')`（D584 同组先例），
   **未改任何断言语义**。
 
+A-spawn-forms-repro.json
+  §2.2 断点复现原始输出（win32 / node v24.16.0 实测，未加工的原始 JSON）。三种 spawn 形态 A–E：
+    A `spawn('npx',['tsx',…])` = ENOENT（现状缺陷点）；
+    B `spawn('npx.cmd',…)` + shell:false = EINVAL（同步抛，社区常见误修）；
+    C 系统 node + 本地 tsx CLI = exit 0（TINY_OK v24.16.0）；D/E electron.exe（±ELECTRON_RUN_AS_NODE）= exit 0（v20.18.3）
+  ⇒ D/E 都跑得通 —— 「能不能起 tsx」不是 ABI 判据；真正的阻断点是 dev 原生模块 ABI（better-sqlite3），
+    见 §四 与 C-runtime-abi-*。
+  （采集脚本原为工作树外临时件、未入库；本条只收原始输出，复算口径以 results[].label 为准。）
+
 NEGATIVE-npx-revert.txt
   §7 B 反例（证明「改坏会红」）。做法：把 buildCommand 的 win32 分支条件临时改成不可达
   （`if (platform === 'win32-NEGATIVE-1456')`，等价"dev 命令退回 {bin:'npx'}"），跑
