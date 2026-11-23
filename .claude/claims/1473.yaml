@@ -52,6 +52,7 @@ writeset:
   - tests/control-tower/today-by-name.test.sh
   - tests/control-tower/writeset-c6-gatekeeper.test.sh
   - memory/notes/implemented/2026-11-24-1473-control-tower-bulk-retire.md
+  - tests/control-tower/signal-emitter.test.ts
 done:
   - "verify: python3 scripts/control-tower/claim_store.py --check 1473 --root ."
   - "verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root ."
