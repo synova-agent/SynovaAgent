@@ -24,7 +24,15 @@
  */
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { decodeMultiFrameSessionLog } from './lib/frame-decompress.mjs';
+
+/**
+ * `producer` = **实际产出本报告的代码**（#1458 CTO 裁定 3）。
+ * `codeSha` 保留原义 = **证据基线**（当时锁定的 base SHA），不是生产者。
+ * 刻意用「模块自身 sha256」而不是运行时 git：git 计算会让旧证据件不可复现。
+ */
+const PRODUCER_REPO_PATH = 'scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs';
 
 const [inputPath, outputPath, reportPath] = process.argv.slice(2);
 if (!inputPath || !outputPath || !reportPath) {
@@ -33,6 +41,8 @@ if (!inputPath || !outputPath || !reportPath) {
 }
 
 const file = readFileSync(inputPath);
+const producerPath = fileURLToPath(new URL('./lib/frame-decompress.mjs', import.meta.url));
+const producerSha256 = createHash('sha256').update(readFileSync(producerPath)).digest('hex');
 
 // 1) 解压 + 结构不变式（全部在库里；失败即结构化错误码，不返回不完整结果）
 const decompressed = decodeMultiFrameSessionLog(file);
@@ -95,6 +105,7 @@ const report = {
   file: '07-dsh-session-log.decompress-report.json',
   generatedAt: new Date().toISOString(),
   codeSha: 'caf61fcdeb3e00c79abe9211546690ca963549a2',
+  producer: { path: PRODUCER_REPO_PATH, sha256: producerSha256 },
   input: { path: inputPath, bytes: file.length, sha256: createHash('sha256').update(file).digest('hex') },
   output: { path: outputPath, bytes: decodedBuffer.length, sha256: createHash('sha256').update(decodedBuffer).digest('hex'), lines: lines.length, nonEmptyLines: nonEmptyLines.length },
   method: 'scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat',

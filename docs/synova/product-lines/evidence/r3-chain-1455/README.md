@@ -176,7 +176,7 @@ CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran af
 | `06-run-snapshot.json` | run 快照（status/sessionId/stats/terminal） |
 | `07-dsh-session-log.jsonl.zstd` | DSH 会话记录**原样副本**（7154 B，sha256 见 03） |
 | `07-dsh-session-log.jsonl` | **帧感知**解压副本（11 帧 / 16930 B / 25 行，Σ帧字节==文件字节数） |
-| `07-dsh-session-log.decompress-report.json` | 解压/截断检测 8 项检查全 true + 逐帧明细 |
+| `07-dsh-session-log.decompress-report.json` | 解压/截断检测 8 项检查全 true + 逐帧明细。字段口径（#1458）：`codeSha` = **证据基线**（当时锁定的 base SHA，不是生产者）；`producer` = **实际产出该报告的代码**（`{path, sha256}`，指向 `scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs`）。**本件早于 `producer` 字段存在，故无该字段**；重跑会多出它，其余字段逐字段不变（由 `tests/dsh-sidecar/frame-decompress.test.ts` golden 用例守着） |
 | `08-desktop.png` | 桌面 DSH 面板：已登录 / 运行完成 / runId / 事件（工具+文本） |
 | `09-desktop-console.txt` / `T3-cdp-result.json` | 渲染层 console + 面板 DOM 状态（`data-run-status=done`，2 条事件） |
 | `10-process-exit.txt` | T4：Electron 退出（CDP `Browser.close`）+ reuse 三项证据 + 明确不主张 8(a) |

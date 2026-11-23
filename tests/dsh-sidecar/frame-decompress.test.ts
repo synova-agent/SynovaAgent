@@ -137,6 +137,10 @@ describe('golden / 证据件可复现（#1458 完成判据）', () => {
 
       const produced = JSON.parse(readFileSync(reportPath, 'utf8'));
       const golden = JSON.parse(readFileSync(path.join(EVIDENCE_DIR, '07-dsh-session-log.decompress-report.json'), 'utf8'));
+      // #1458 CTO 裁定 3：`producer` 是**新增**字段（codeSha 保留为"证据基线"）。
+      // 既有证据件生成于该字段存在之前 ⇒ 比较时把 producer 摘出来单列断言，其余字段**逐字段不许变**。
+      const producer = produced.producer;
+      delete produced.producer;
       // 只归一化「每次运行必然不同」的三处：生成时间与两个绝对路径
       const normalise = (report: { generatedAt: string; input: { path: string }; output: { path: string } }) => {
         report.generatedAt = '<normalised>';
@@ -146,6 +150,10 @@ describe('golden / 证据件可复现（#1458 完成判据）', () => {
       };
 
       expect(normalise(produced)).toEqual(normalise(golden));
+      // producer 必须指向**真正产出报告的模块**，且 sha256 与仓库内该模块逐字节相符（不是写死的假值）
+      expect(producer.path).toBe('scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs');
+      const moduleBytes = readFileSync(path.join(REPO_ROOT, 'scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs'));
+      expect(createHash('sha256').update(moduleBytes).digest('hex')).toBe(producer.sha256);
       // 解码产物本身也必须逐字节可复现（不是只有报告字段对上）
       const outBytes = readFileSync(outPath);
       expect(outBytes.length).toBe(golden.output.bytes);
