@@ -1,0 +1,18 @@
+# .claude/claims/1463.yaml — 合并凭证链路：token 第 4 来源（甲类实现）＋ ② 移植／E_NO_TOKEN（乙类 A 类送审）
+# Issue #1463（CTO 2026-11-23 授权新建）：甲类＝B 类直做；乙类（② 移植修复／E_NO_TOKEN）另走 A 类送审，**不在本 PR 实现**。
+writeset:
+  - .claude/claims/1463.yaml
+  - scripts/control-tower/check-merge-conditions.sh
+  - tests/control-tower/check-merge-conditions-token.test.sh
+  - docs/synova/coordination/提案-合并凭证与②移植-20261123.md
+  - docs/authority/DOCS-REGISTRY.yaml
+  - memory/notes/implemented/2026-11-23-1463-merge-cred-chain.md
+  - gate-exemptions/2026-11-23-1464-merge-cred-chain.md
+done:
+  - "verify: bash scripts/control-tower/check-merge-conditions.sh --selfcheck ⇒ SELFCHECK-OK: 13/13（WSL 默认 bash）"
+  - "verify: bash tests/control-tower/check-merge-conditions.test.sh ⇒ 结果: 14 通过, 0 失败（WSL 默认 bash）"
+  - "verify: bash tests/control-tower/check-merge-conditions-token.test.sh ⇒ 结果: 6 通过, 0 失败（Git Bash ＋ WSL 两壳）"
+  - "verify: 无 token 真跑 --pr 1461 ⇒ degraded: HTTP 403 on /pulls/1461 [code=E_API_HTTP] ＋ exit 2（fail-closed 未破）"
+  - "verify: 有 GCM 真跑 --pr 1461 ⇒ ① CI ok（API 认证通过），② 撞既存移植 bug（FileNotFoundError）⇒ E_OPENPRS_EMPTY（乙类提案范围，未修）"
+  - "verify: 改坏必红 ⇒ 去第 4 级 4 失败/2 通过（T1/T2/T4/T6 红，仅 6 判定点）／host 写死 T4 红／取不到返 0 T2 红"
+note: "甲类=resolve_token 第 4 来源 git credential fill（host 由 $API 推导，禁写死 IP；GIT_TERMINAL_PROMPT=0/GCM_INTERACTIVE=never/timeout；取不到 ⇒ 非 0）。乙类（A 类，只提案未改脚本）＝ ② 页文件→argv ＋ API 路径→env ＋ 合并步 rc 检查 ＋ E_NO_TOKEN。判据/退出码语义/阈值零改动；未碰 scripts/audit/**。🔴 已知未覆盖（禁读成 CI 已覆盖）：tests/**/*.test.sh 走 sealed 清单发现制（sealed-tests.sh 自动纳入执行集），本轮**未观测到 CI 实际执行** check-merge-conditions-token.test.sh；本分支判据证据均为本机两壳（WSL 默认 bash ＋ Git Bash）实跑。"

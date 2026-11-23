@@ -30,6 +30,15 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #     --selfcheck               判别力自检（临时 git 仓＋夹具，零网络，13 判定点）
 #     --help
 #     注入缝（测试/自检）：SYNO_MERGE_COND_FIXTURE=<fixture.json>（API 替换层，零网络）
+#     凭据（4 级，按优先级；前一级为空才降级到下一级）:
+#       ① GITEA_TOKEN 环境变量 ② SYNO_GITEA_TOKEN 环境变量
+#       ③ $HOME/gitea/.win-push-token 文件（原三级链，保持不动）
+#       ④ **`git credential fill`**（本机 GCM；#1463）——host 由 SYNO_GITEA_API 推导（**禁写死
+#          IP**：Gitea 地址随 IP 漂移）；`GIT_TERMINAL_PROMPT=0` ＋ `GCM_INTERACTIVE=never`
+#          ⇒ 绝不弹交互窗；墙钟上限 `SYNO_MERGE_COND_CRED_TIMEOUT`（秒，默认 10；非数字 ⇒ 10）。
+#       四级全取不到 ⇒ `resolve_token` 返回非 0（**fail-closed，绝不静默给空 token**）：
+#       TOKEN 为空 ⇒ API 侧 401/403 ⇒ `E_API_HTTP` ⇒ exit 2（`E_NO_TOKEN` 降级码待 A 类提案）。
+#       🔴 token 只进 shell 变量：不 `set -x`、不回显、不落盘（凭据助手 stderr 一律丢弃）。
 #   @output
 #     逐条件证据（4 行）＋ 信息级补充行 ＋ 机器行
 #       `MERGE-COND: can|no|degraded ①=ok|no ②=ok|no[(shared:<n>)] ③=ok(attested)|no ④=ok|no`
@@ -46,13 +55,16 @@ export LC_ALL=C.UTF-8 2>/dev/null   # swallow-ok: locale 不可用时回退默�
 #              「四条件自合」的人/会话。本件不接 CI（CTO 令②）。
 #   @cross_platform  bash 3.2 ＋ git ≥2.20 ＋ python3 ≥3.9 ＋ curl；macOS / Git-Bash(Windows)
 #              同一路径；UTF-8 强制（D732）；禁第三方包；路径全程引号/-z，中文与空格安全。
+#              凭据第 4 级仅在 coreutils `timeout` 存在时加墙钟上限（Git-Bash/Linux 有）；
+#              无 `timeout` 的平台直跑 —— 交互已被 GIT_TERMINAL_PROMPT=0 ＋ GCM_INTERACTIVE=never 关闭。
 #
 # 结构（Source map · 规格 §2.2 七段）
 #   ① 头部契约（本块）            — 契约 / 设计哲学 / 结构 / 已知限制
 #   ② 常量与环境                  — UTF-8、API/repo/token、degraded log、临时目录
 #   ③ 参数与用法                  — 解析 ＋ 互斥检查（非法 ⇒ exit 2）
 #   ④ 基础函数                    — degrade/fail/api_get/scan_open_prs/ensure_ref/
-#                                   diff_files/patch_fingerprint/jget/emit_json
+#                                   diff_files/patch_fingerprint/jget/emit_json/
+#                                   credential_token/resolve_token
 #      错误出口（typed error 统一，只有两个）:
 #        · die_degraded "<CODE>: <原因>"    ⇒ stderr `degraded: <原因> [code=<CODE>]` ＋ degraded log ＋ exit 2
 #          （参数预检同形，只是无 MERGE-COND 机器行）
@@ -207,13 +219,66 @@ fail() { # fail "<规则码> <消息>" —— 红点统一出口；行首 token 
   printf '   ✗ %s\n' "$1" >> "$WORK/fails.txt"
 }
 
-resolve_token() { # token 三级：GITEA_TOKEN → SYNO_GITEA_TOKEN → $HOME/gitea/.win-push-token
+# ── 凭据第 4 级：`git credential fill`（本机 GCM）。host 从 $API 推导，禁写死 IP。
+#    token 只走「管道 → shell 变量」，不落盘、不回显；取不到 ⇒ 非 0（fail-closed）。
+cred_api_host() { # 从 $API 推导 credential host（去 scheme / path / userinfo）
+  local u="${API#*://}"
+  u="${u%%/*}"
+  u="${u##*@}"
+  printf '%s' "$u"
+}
+
+cred_api_proto() { # 从 $API 推导 credential protocol（无 scheme ⇒ http）
+  case "$API" in
+    *://*) printf '%s' "${API%%://*}" ;;
+    *)     printf 'http' ;;
+  esac
+}
+
+cred_fill_secs() { # 墙钟上限（秒）；注入缝 SYNO_MERGE_COND_CRED_TIMEOUT（非正整数 ⇒ 10）
+  local t="${SYNO_MERGE_COND_CRED_TIMEOUT:-10}"
+  case "$t" in
+    ''|0|*[!0-9]*) t=10 ;;
+  esac
+  printf '%s' "$t"
+}
+
+cred_fill_run() { # <secs> ← stdin=credential 请求 ⇒ stdout=credential 块（禁交互；有 timeout 则加墙钟上限）
+  local secs="$1"
+  if command -v timeout >/dev/null 2>&1; then
+    GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never timeout "$secs" git credential fill
+    return $?
+  fi
+  GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git credential fill
+}
+
+credential_token() { # 第 4 来源：git credential fill ⇒ stdout 只输出 token；取不到/超时/空值 ⇒ 非 0
+  local proto host secs raw pw
+  proto="$(cred_api_proto)"
+  host="$(cred_api_host)"
+  [ -n "$host" ] || return 1
+  secs="$(cred_fill_secs)"
+  raw=""
+  # shellcheck disable=SC2310  # 非交互凭据助手的 stderr 可能含凭据线索 ⇒ 一律丢弃；失败由返回码 fail-closed
+  if ! raw="$(printf 'protocol=%s\nhost=%s\n\n' "$proto" "$host" | cred_fill_run "$secs" 2>/dev/null)"; then  # swallow-ok: stderr 可能含凭据线索故丢弃；取不到由返回码 fail-closed，绝不静默空 token
+    raw=""
+    return 1
+  fi
+  pw="$(printf '%s\n' "$raw" | tr -d '\r' | sed -n 's/^password=//p' | sed -n '1p')"
+  raw=""
+  [ -n "$pw" ] || return 1
+  printf '%s' "$pw"
+}
+
+resolve_token() { # token 四级：GITEA_TOKEN → SYNO_GITEA_TOKEN → $HOME/gitea/.win-push-token → git credential fill（GCM）
+  local pw=""
   if [ -n "${GITEA_TOKEN:-}" ]; then printf '%s' "${GITEA_TOKEN}"; return 0; fi
   if [ -n "${SYNO_GITEA_TOKEN:-}" ]; then printf '%s' "${SYNO_GITEA_TOKEN}"; return 0; fi
   if [ -n "${HOME:-}" ] && [ -r "${HOME}/gitea/.win-push-token" ]; then
     tr -d '\r\n' < "${HOME}/gitea/.win-push-token"
     return 0
   fi
+  if pw="$(credential_token)"; then printf '%s' "$pw"; return 0; fi
   return 1
 }
 
