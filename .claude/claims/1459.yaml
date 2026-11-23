@@ -1,13 +1,31 @@
+# .claude/claims/1459.yaml — #1459 扫描②结构 → 有依据的瓶颈假设 → 桌面可见
+# 本文件为 **合并 union**（CTO 解决 add/add 冲突）：T-A / T-B / T0 三条分支各自新增同名 claim，此处并集。
+# base: main（含 #1468 T-A）｜分支: feat/1459-tb-desktop-hypothesis（合入 main 后）
+# 任务卡：docs/synova/coordination/编码指令-1459-bottleneck-20261123.md
+# DEV DOC：docs/synova/coordination/DEV-DOC-1459-bottleneck-hypothesis-20261123.md
 writeset:
-  - .claude/claims/1459.yaml
+  # ---- T-A 上下文契约（已合入 main，PR #1468）----
   - src/runtime/dsh/domain-context.ts
   - src/runtime/dsh/tools.ts
-  - tests/runtime/dsh/domain-context-scan.test.ts
   - tests/runtime/dsh/domain-context.test.ts
-  - tests/runtime/dsh/fixtures/synova-context-get.json
+  - tests/runtime/dsh/domain-context-scan.test.ts
   - tests/runtime/dsh/readonly-tool.test.ts
+  - tests/runtime/dsh/fixtures/synova-context-get.json
+  # ---- T-B 桌面消费 + P1 修复（本分支，PR #1470）----
+  - electron-renderer/src/stores/dsh-run-store.ts
+  - electron-renderer/src/components/DshRunPanel.tsx
+  - tests/dsh-ui/dsh-hypothesis-1459.test.ts
+  # ---- T0 隔离扫描落库（另一分支）----
+  - tests/enterprise-scan/t0-scan-harness.ts
+  - tests/enterprise-scan/t0-scan.test.ts
+  - docs/synova/product-lines/evidence/1459-probes/T0-scan-report.json
+  # ---- 本 claim ----
+  - .claude/claims/1459.yaml
 done:
-  - verify: python scripts/control-tower/claim_store.py --check 1459 --root .
-  - verify: npx tsc --noEmit
-  - verify: npx vitest run tests/runtime/dsh tests/mcp/http.test.ts
-note: "#1459 T-A（上下文契约）：items 增 relation{type,direction,edgeId} 与 evidence{evidenceStatus,instanceState,sources[].ref}；evidenceId 由恒 null→有证据时取逻辑 evidence_id；count===0 ⇒ insufficient 返回字段（不抛 error）。单测覆盖 in 边/rowid tiebreak/sources 稳定；真实 EnterpriseScanService 扫描夹具（:memory:）验 team:delivery-a count=2 与 batch 根 insufficient。golden 增 relation 属显式语义变更（PR 正文说明）。"
+  - verify: 根 team:delivery-a ⇒ count=2 且 relation.type + sources[0].ref + period/defVersion 同时非空（真 EnterpriseScanService 造库）
+  - verify: 根 delivery_batch:B-2026-10-001 ⇒ insufficient.code=INSUFFICIENT_CONTEXT（不抛错）
+  - verify: 改坏 relation.type=null ⇒ 断言必红，还原后全绿
+  - verify: 桌面喂 hypothesis.structured ⇒ 四要素渲染非空；缺字段 ⇒ 显式"未结构化"不崩
+  - verify: 断流重连后未知事件仍在（pending 留存）＋ 同 seq 不产生第二张卡
+  - verify: T0 节点 id 集合 == report_json.ontology.objects[].object_id 集合；无手工 INSERT 播种
+note: "#1459 union claim（CTO 解冲突）。T-A：#1468 已合入 main。T-B：#1470 本分支。T0：tests 侧独立分支。载荷形态钉为 {hypothesis, objects[], relations[], evidence[], uncertainty[]}，四要素为字符串数组（objects=$id／relations=predicate／evidence=source_ref）；T-C 必须照此产出。已知限制：writeset 里的 `**` 在 claim_store.match_path 是字面量、不做 glob ⇒ 逐文件声明。"

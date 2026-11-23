@@ -2,7 +2,8 @@
  * components/DshRunPanel.tsx — I-2 DSH 会话面板（受控纯展示，无 hook）
  *
  * 面板只画 props：输入值、状态、事件项、错误全部由 DshRunContainer／store 提供。
- * 事件白名单投影：text.delta 显示文本；tool.* 只显示 title/kind/status/isError（事件里没有入参/结果，不得虚构）。
+ * 事件白名单投影：text.delta 显示文本；tool.* 只显示 title/kind/status/isError（事件里没有入参/结果，不得虚构）；
+ * hypothesis.* 画结构化卡片（对象/关系/依据（可回来源）/不确定性）；载荷不合格 ⇒ 显式标「未结构化」，不猜补。
  * 失败可见（无空成功）：401/403/404/409/5xx/网络断/断流各有可诊断文案；空成功显示「无结果」而不是完成。
  */
 import React from 'react';
@@ -55,6 +56,46 @@ function errorText(error: DshRunError): string {
   return `网络或服务异常：${error.message}`;
 }
 
+function HypothesisField({ label, field, values }: { label: string; field: string; values: string[] }): React.ReactElement {
+  return (
+    <div className="dsh-hypothesis-field" data-hypothesis-field={field}>
+      <span className="dsh-hypothesis-label">{label}</span>
+      <ul className="dsh-hypothesis-values">
+        {values.map((value, index) => <li key={`${field}-${index}`}>{value}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * 结构化瓶颈假设卡片（#1459 T-B）。
+ * 四要素齐全才画卡片；缺字段/服务端判 invalid ⇒ 显式标「未结构化」＋原因，**不猜补**任何要素。
+ */
+function HypothesisItem({ item }: { item: Extract<DshRunEventItem, { kind: 'hypothesis' }> }): React.ReactElement {
+  const view = item.hypothesis;
+  if (!view.structured) {
+    return (
+      <li className="dsh-event dsh-event-hypothesis" data-event-seq={item.seq} data-event-kind="hypothesis"
+        data-hypothesis-structured="false">
+        <strong>瓶颈假设（未结构化）</strong>
+        <div className="dsh-hypothesis-unstructured">未结构化：{view.invalidReason ?? '载荷字段缺失'}</div>
+        {view.rawText !== null ? <div className="dsh-hypothesis-raw">{view.rawText}</div> : null}
+      </li>
+    );
+  }
+  return (
+    <li className="dsh-event dsh-event-hypothesis" data-event-seq={item.seq} data-event-kind="hypothesis"
+      data-hypothesis-structured="true">
+      <strong>瓶颈假设</strong>
+      {view.claim !== null ? <div className="dsh-hypothesis-claim">{view.claim}</div> : null}
+      <HypothesisField label="对象" field="objects" values={view.objects} />
+      <HypothesisField label="关系" field="relations" values={view.relations} />
+      <HypothesisField label="依据（可回来源）" field="evidence" values={view.evidence} />
+      <HypothesisField label="不确定性" field="uncertainty" values={view.uncertainty} />
+    </li>
+  );
+}
+
 function EventItem({ item }: { item: DshRunEventItem }): React.ReactElement {
   if (item.kind === 'tool') {
     return (
@@ -66,6 +107,9 @@ function EventItem({ item }: { item: DshRunEventItem }): React.ReactElement {
         {item.isError ? <span className="dsh-tool-error">失败</span> : null}
       </li>
     );
+  }
+  if (item.kind === 'hypothesis') {
+    return <HypothesisItem item={item} />;
   }
   return (
     <li className="dsh-event dsh-event-text" data-event-seq={item.seq} data-event-kind="text">
