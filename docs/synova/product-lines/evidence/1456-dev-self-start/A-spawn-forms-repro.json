@@ -1,0 +1,39 @@
+{
+  "node": "v24.16.0",
+  "platform": "win32",
+  "results": [
+    {
+      "label": "A spawn(\"npx\",[tsx,...]) 现状",
+      "errorCode": "ENOENT",
+      "errorMsg": "spawn npx ENOENT",
+      "out": "",
+      "ms": 9
+    },
+    {
+      "label": "B spawn(\"npx.cmd\",[tsx,...]) shell:false",
+      "spawnThrew": "EINVAL: spawn EINVAL",
+      "ms": 0
+    },
+    {
+      "label": "C spawn(node,[tsx/dist/cli.mjs,tiny.ts])",
+      "exitCode": 0,
+      "signal": null,
+      "out": "TINY_OK v24.16.0 win32",
+      "ms": 492
+    },
+    {
+      "label": "D spawn(electron.exe,[tsx cli,tiny]) + ELECTRON_RUN_AS_NODE=1",
+      "exitCode": 0,
+      "signal": null,
+      "out": "TINY_OK v20.18.3 win32",
+      "ms": 864
+    },
+    {
+      "label": "E spawn(electron.exe,[...]) 无 ELECTRON_RUN_AS_NODE（对照）",
+      "exitCode": 0,
+      "signal": null,
+      "out": "TINY_OK v20.18.3 win32",
+      "ms": 1083
+    }
+  ]
+}

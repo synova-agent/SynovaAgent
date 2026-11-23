@@ -1,6 +1,6 @@
 # 编码指令 / DEV DOC — #1456 Windows dev 模式 Electron 自启后端
 
-> 版本 v1（冻结）｜ 撰者 CTO ｜ 2026-11-23 ｜ base `caf61fcdeb3e00c79abe9211546690ca963549a2`（Gitea main）｜
+> 版本 v2.2（冻结）｜ 撰者 CTO ｜ 2026-11-23 ｜ base `caf61fcdeb3e00c79abe9211546690ca963549a2`（Gitea main）｜
 > 分支 `fix/1456-win-backend-spawn` ｜ worktree `.synova-wt-1456`
 > 读者＝**零上下文单任务 coding session**。只凭本件＋仓库即可执行；不得自行改方向。
 
@@ -63,8 +63,9 @@ npm run electron:dev  →  electron electron/main.cjs
 ## §3 目标行为（入口 → 操作 → 结果）
 
 1. **Windows dev 正常路径**：`electron electron/main.cjs` → `buildCommand('dev')` 返回
-   `{ bin: process.execPath, args: [<resolved tsx cli.mjs>, 'src/index.ts'], env: { ELECTRON_RUN_AS_NODE: '1' } }`
+   `{ bin: <解析到的系统 node 可执行文件>, args: [<abs tsx/dist/cli.mjs>, 'src/index.ts'] }`（**env 不含** `ELECTRON_RUN_AS_NODE`）
    → spawn 成功 → 探活转健康 → `{started:true, pid, stop}` → 主进程 console **无** degraded 行 → 窗口连上后端。
+   > v1 曾写 `{bin: process.execPath, …, env:{ELECTRON_RUN_AS_NODE:'1'}}`（Electron-as-node），已被 ABI 实测否决（见 §5「v2 修正依据」）。
 2. **POSIX dev 路径不变**：仍是 `{bin:'npx', args:['tsx','src/index.ts']}`（Mac 上已验的路径不动，避免回归）。
 3. **启动失败可见（快失败）**：spawn 同步抛错或收到 `error` 事件（ENOENT/EINVAL/其他）⇒ **立即**返回
    `{started:false, degraded:true, error:'<原 code> + 可操作提示'}`，**不得**继续空转探活窗口；

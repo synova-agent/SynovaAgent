@@ -14,7 +14,7 @@ documents:
     path: docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md
     status: active
     owner: CTO
-    note: "#1456 Windows dev 模式 Electron 自启后端最小修复 DEV DOC v1（冻结）；base caf61fcde；8(a) 单点验证零模型轮次，复用 #1455 桌面夹具。"
+    note: "#1456 Windows dev 模式 Electron 自启后端最小修复 DEV DOC v2.2（冻结）；v1 的 Electron-as-node 契约已被 ABI 实测否决（v2 修正）；base caf61fcde；8(a) 单点验证零模型轮次，复用 #1455 桌面夹具。"
 
   - id: DOC-1398-01
     type: devdoc

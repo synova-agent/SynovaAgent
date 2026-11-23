@@ -8,7 +8,7 @@
  *     spawn 后探活仍失败 → 重启（≤maxRestarts）→ 超限 { degraded: true, error }
  *     spawn ENOENT（后端不存在）→ { degraded: true } 不抛
  *     prod 模式 env 注入 SYNOVA_DB_PATH
- *     dev 模式命令（#1456）: win32 = process.execPath + ELECTRON_RUN_AS_NODE + 本地 tsx CLI（非 npx）；
+ *     dev 模式命令（#1456）: win32 = 系统 node + 本地 tsx CLI（不设 ELECTRON_RUN_AS_NODE，非 npx）；
  *                            POSIX = npx tsx src/index.ts（逐字不变）
  *     spawn 同步抛 / error 事件 / 命令解析失败 → 立即 degraded，不空转探活窗口
  *   stop() → SIGTERM 回收子进程（无孤儿）
@@ -624,8 +624,8 @@ describe('ensureBackend — 日志契约（降级可见，铁律 11/24）', () =
  * #1456 — Windows dev 模式 Electron 自启后端（DEV DOC §3 / §5 / §7）
  *
  * 契约:
- *   buildCommand('dev') on win32 → { bin: process.execPath, args: [<abs tsx cli.mjs>, 'src/index.ts'],
- *                                    env: { ELECTRON_RUN_AS_NODE: '1' } }
+ *   buildCommand('dev') on win32 → { bin: <解析到的系统 node>, args: [<abs tsx/dist/cli.mjs>, 'src/index.ts'] }
+ *                                  （env **不含** ELECTRON_RUN_AS_NODE —— v1 的 Electron-as-node 已被 ABI 实测否决）
  *   buildCommand('dev') on POSIX → { bin: 'npx', args: ['tsx', 'src/index.ts'] }（逐字不变）
  *   tsx CLI 解析不到 → { bin: '', args: [], error: <可操作提示> }（不回退 npx、不联网）
  *   ensureBackend: cmd.error / spawn 同步抛 / spawn 'error' 事件 ⇒ 立即 { degraded: true }，不空转探活窗口

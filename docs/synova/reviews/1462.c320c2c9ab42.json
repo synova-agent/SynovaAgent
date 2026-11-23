@@ -1,0 +1,126 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1462,
+  "patch_fingerprint": "sha256:c320c2c9ab4285d5d163dcfb21dd295de4eb35d1268eaea2b4cebe7233ef8940",
+  "author": "synova-coding Win 实施端（#1456 P2 文档/注释同步，分支 docs/1456-p2-sync @ 6ddd77a30）",
+  "reviewer": "零上下文独立复核会话 review-1456p2（未参与实现；只读审查 worktree .synova-wt-1456-p2）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "head_reviewed": "6ddd77a30cfdb7108ac7e929e9bafae57313dfee",
+  "base": "3ba60318ab8c7f38e617da352fc62f78656d8db7",
+  "checks": [
+    {
+      "id": "C1",
+      "title": "PR 定位与 head 对齐",
+      "cmd": "python .tmp-gitea-api.py get \"/repos/synova-agent/SynovaAgent/pulls?state=open&limit=50\"；git -C .synova-wt-1456-p2 rev-parse HEAD",
+      "result": "pass",
+      "evidence": "HTTP 200；#1461 head.ref=docs/1456-p2-sync head.sha=6ddd77a30cfdb7108ac7e929e9bafae57313dfee base.ref=main base.sha=3ba60318ab8c7f38e617da352fc62f78656d8db7 mergeable=true merged=false user=synova；本地工作树 HEAD 与之逐字一致"
+    },
+    {
+      "id": "C2",
+      "title": "基线（merge-base）与分支提交数",
+      "cmd": "git merge-base gitea/main 6ddd77a30cfdb7108ac7e929e9bafae57313dfee；git log --oneline d0177f363..6ddd77a30",
+      "result": "pass",
+      "evidence": "merge-base = d0177f363c1a85b17acdf2bb7e65c04680d13a52（与显式 merge-base d0177f363..head 同值）；分支 = d0177f363 + 2 commits：630e7b1d3（P2 同步：DEV DOC v2.2 + 3 处注释 + 证据入库）、6ddd77a30（交叉引用同步：DOCS-REGISTRY note + INDEX 规格行）"
+    },
+    {
+      "id": "C3",
+      "title": "diff 指纹复算（两法同值，算法同 check-merge-conditions.sh patch_fingerprint）",
+      "cmd": "python -c \"subprocess.run(['git','-C',ROOT,'diff','--no-color','-M','--full-index','--binary',MB,HEAD,'--','.',':(exclude)docs/synova/reviews/**'])\" 取 stdout sha256；第二法 git diff --no-color -M --full-index --binary --output=<tmp> MB HEAD -- . ':(exclude)docs/synova/reviews/**' + certutil -hashfile <tmp> SHA256",
+      "result": "pass",
+      "evidence": "法一（python 捕获原始字节）：bytes=13907 fp64=c320c2c9ab4285d5d163dcfb21dd295de4eb35d1268eaea2b4cebe7233ef8940；法二（git --output 落盘 + certutil）：13907 B、SHA256=c320c2c9ab4285d5d163dcfb21dd295de4eb35d1268eaea2b4cebe7233ef8940；fp12=c320c2c9ab42。脚本算法（:426-433）= 同一 git diff 参数 + 文件字节 sha256，本件复算参数逐字相同"
+    },
+    {
+      "id": "C4",
+      "title": "范围：7 文件，全部为文档/注释载体",
+      "cmd": "git diff --name-status d0177f363 6ddd77a30；git diff --numstat d0177f363 6ddd77a30",
+      "result": "pass",
+      "evidence": "7 条：M .claude/claims/1456.yaml(7+/1-)｜M docs/authority/DOCS-REGISTRY.yaml(1+/1-)｜M docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md(3+/2-)｜A docs/synova/product-lines/evidence/1456-dev-self-start/A-spawn-forms-repro.json(39+/0-)｜M …/INDEX.txt(10+/1-)｜M electron/backend-spawn.cjs(1+/1-)｜M tests/electron/backend-spawn.test.ts(3+/3-)。合计 64+/9-"
+    },
+    {
+      "id": "C5",
+      "title": "electron/ + tests/ 非注释改动行 = 0",
+      "cmd": "git diff -U0 d0177f363 6ddd77a30 -- electron/ tests/ | Select-String -Pattern '^[+-]' | ?{$_.Line -notmatch '^(\\+\\+\\+|---)' -and $_.Line -notmatch '^\\s*[+-]\\s*\\*'} | Measure-Object",
+      "result": "pass",
+      "evidence": "过滤后 Count=0。原始改动行共 4 条，全部以 ` *` 开头（electron/backend-spawn.cjs:12；tests/electron/backend-spawn.test.ts:11、627、628），均为 JSDoc 注释行；无任何代码/断言/env 赋值行变化"
+    },
+    {
+      "id": "C6",
+      "title": "改动行确在注释块内（上下文实物）",
+      "cmd": "git show 6ddd77a30:electron/backend-spawn.cjs | head -13；git show 6ddd77a30:tests/electron/backend-spawn.test.ts（行 1-6 与 623-634）",
+      "result": "pass",
+      "evidence": "cjs 第 1 行 `/**` 开块注释，第 12 行（唯一改动行）为块内 ` *` 行；ts 第 1 行 `/**` 开契约头注释、第 623 行 `/**` … 634 行 `*/` 为 #1456 契约块，第 11 行与 627-628 行（全部改动行）均在该块内"
+    },
+    {
+      "id": "C7",
+      "title": "零行为面：src/ scripts/ .gitea/ package.json electron/main.cjs 均未改",
+      "cmd": "git diff --name-only d0177f363 6ddd77a30 | Select-String -Pattern '^(src/|scripts/|\\.gitea/|package\\.json|electron/main\\.cjs)'",
+      "result": "pass",
+      "evidence": "无输出（零命中）。门禁脚本/审计脚本/CI 定义/依赖/Electron 主进程均不在写集内 ⇒ 符合『只做文档/注释同步』"
+    },
+    {
+      "id": "C8",
+      "title": "分支头真实执行测试（非声称）",
+      "cmd": "cd .synova-wt-1456-p2 && node node_modules/vitest/vitest.mjs run tests/electron/backend-spawn.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 1 passed (1)｜Tests 21 passed | 4 skipped (25)｜0 failed｜Duration 14.08s；EXIT=0。node_modules 为指向 .synova-wt-1455-r3-chain/node_modules 的只读 junction，未修改夹具"
+    },
+    {
+      "id": "C9",
+      "title": "CI 状态（head 6ddd77a30）",
+      "cmd": "GET /repos/synova-agent/SynovaAgent/commits/6ddd77a30cfdb7108ac7e929e9bafae57313dfee/status",
+      "result": "pass",
+      "evidence": "HTTP 200 state=success total_count=1：core-gates / core (pull_request_target) success 'Successful in 1m55s'；无 pending、无失败 context"
+    },
+    {
+      "id": "C10",
+      "title": "claim 覆盖（7/7 改动路径均在已跟踪写集内）",
+      "cmd": "git show 6ddd77a30:.claude/claims/1456.yaml；逐条比对 git diff --name-only d0177f363 6ddd77a30",
+      "result": "pass",
+      "evidence": "writeset 显式含 electron/backend-spawn.cjs、tests/electron/backend-spawn.test.ts、编码指令-1456-*.md、docs/authority/DOCS-REGISTRY.yaml、A-spawn-forms-repro.json、INDEX.txt，另含 docs/synova/product-lines/evidence/1456-dev-self-start/** 与 .claude/claims/1456.yaml；7 个改动文件全部命中"
+    },
+    {
+      "id": "C11",
+      "title": "无凭据/密钥进入 diff",
+      "cmd": "git diff d0177f363 6ddd77a30 | Select-String -Pattern 'ghp_|x-access-token|Authorization: token|SYNO_TOK=|password='",
+      "result": "pass",
+      "evidence": "无输出（零命中）；新增证据文件 A-spawn-forms-repro.json 仅为 spawn 形态原始输出（node 版本/errorCode/退出码），不含任何 token 或客户数据"
+    },
+    {
+      "id": "C12",
+      "title": "新增证据数据可解析（JSON 合法性）",
+      "cmd": "python -c \"import json;json.load(open('docs/synova/product-lines/evidence/1456-dev-self-start/A-spawn-forms-repro.json',encoding='utf-8'))\"",
+      "result": "pass",
+      "evidence": "可解析；顶层键 node/platform/results，results 5 条（A/B/C/D/E），仅原始观测字段（label/errorCode/spawnThrew/exitCode/signal/out/ms），无加工结论"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "non-blocking",
+      "where": "refs/heads/docs/1456-p2-sync vs gitea/main（3ba60318a）",
+      "what": "流程级（非 ③ 判据）：分支落后 gitea/main 8 commits（git rev-list --count HEAD..gitea/main=8，ahead=2）⇒ ④ S1『远端 tip 是 head 祖先』当前不成立，合并前须 rebase。已在临时 worktree（D:\\tmp\\rev-1461-rebase）把两提交 cherry-pick 到 3ba60318a 复算：diff 13907 B、fp 仍 c320c2c9ab42…（--full-index 内容寻址；main 这 8 个提交未触碰本 PR 的 7 个文件）⇒ 内容不变的 rebase 后本回执仍有效；临时 worktree 已删除。"
+    },
+    {
+      "id": "F2",
+      "severity": "non-blocking",
+      "where": "docs/authority/DOCS-REGISTRY.yaml:17",
+      "what": "信息级：该文件改动为 1+/1-（改写 note 行，非纯追加）⇒ 按 check-merge-conditions.sh is_pure_append（additions>0 且 deletions==0）判非纯追加 ⇒ 落在 ② 共享追加白名单内仍判硬重叠。经 Gitea API 查 open PR 的 files（limit=100），另有 15 个 open PR 触及该路径（628/629/630/631/632/633/801/970/981/987/994/1198/1208/1344/1445），故 ② 预计为 no。② 判据属四条件脚本，本机缺凭据（HTTP 403，exit 2）无法复跑，本件只报告事实、不作 ② 裁决。"
+    },
+    {
+      "id": "F3",
+      "severity": "non-blocking",
+      "where": ".claude/claims/1456-p2.yaml（主树工作区未跟踪）",
+      "what": "信息级：P2 工作的 claim 文件仍为主树未跟踪文件，未随分支入库；且其 writeset 未包含 docs/authority/DOCS-REGISTRY.yaml（实际覆盖由已跟踪的 .claude/claims/1456.yaml 提供，见 C10）。建议收口时入库或删除，避免出现第二份写集口径。"
+    },
+    {
+      "id": "F4",
+      "severity": "non-blocking",
+      "where": "docs/synova/reviews/1324.131913191319.json、1329.132900000000.json（既有件，非本 PR 改动）",
+      "what": "信息级（越界观察，不建议在本 PR 处理）：这两份既有回执的文件名 fp12（131913191319 / 132900000000）与该文件内 patch_fingerprint（91e15be5… / 053a5586…）前 12 位不一致 ⇒ 按 R1/R3 规则，对应 PR 会被判 ③=no。本 PR 回执写成 `<pr>.<fp12>.json` 且与该件指纹逐字一致。"
+    }
+  ],
+  "receipt_path": "docs/synova/reviews/1461.c320c2c9ab42.json",
+  "issued_at": "2026-11-23T22:16:18+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步；零上下文复核会话 review-1456p2）"
+}

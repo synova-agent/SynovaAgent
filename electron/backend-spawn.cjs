@@ -9,7 +9,7 @@
  *     @input  options: {
  *       serverUrl: string;                  // 探活目标（GET /api/healthz）
  *       cwd: string;                        // spawn 工作目录（亦为 #1456 tsx CLI 解析起点）
- *       mode: 'dev' | 'prod';               // dev: win32=本地 tsx CLI（ELECTRON_RUN_AS_NODE）/ POSIX=npx tsx；
+ *       mode: 'dev' | 'prod';               // dev: win32=系统 node + 本地 tsx CLI（不设 ELECTRON_RUN_AS_NODE）/ POSIX=npx tsx；
  *                                           //      prod: 包内 Electron 以 node 模式跑 dist/backend.mjs（D518）
  *       dbPath?: string;                    // prod: 注入 SYNOVA_DB_PATH（userData 数据目录，L1-7）
  *       logFile?: string;                   // 后端 stdout/stderr 落盘

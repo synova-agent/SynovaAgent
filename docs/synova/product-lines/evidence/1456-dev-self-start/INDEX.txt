@@ -3,7 +3,7 @@
 采集时间   2026-11-23（本机 win32 / node v24.16.0 / npm 11.13.0 / Electron 33.4.11 内置 node v20.18.3）
 worktree   D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456（分支 fix/1456-win-backend-spawn）
 base       caf61fcdeb3e00c79abe9211546690ca963549a2（Gitea main）
-规格       docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md（v2，CTO commit 82b1b613e）
+规格       docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md（v2.2，CTO commits 82b1b613e→…；以文件头版本为准）
 node_modules = 只读夹具 junction → D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\node_modules
              （未修改夹具内容；junction 不进 git）
 
@@ -37,6 +37,15 @@ A-baseline-before-fix.txt
   Windows 无该二进制 ⇒ **存量红，非本票引入**。
   据 CTO 裁定 3，只给该 1 例加 `it.skipIf(process.platform === 'win32')`（D584 同组先例），
   **未改任何断言语义**。
+
+A-spawn-forms-repro.json
+  §2.2 断点复现原始输出（win32 / node v24.16.0 实测，未加工的原始 JSON）。三种 spawn 形态 A–E：
+    A `spawn('npx',['tsx',…])` = ENOENT（现状缺陷点）；
+    B `spawn('npx.cmd',…)` + shell:false = EINVAL（同步抛，社区常见误修）；
+    C 系统 node + 本地 tsx CLI = exit 0（TINY_OK v24.16.0）；D/E electron.exe（±ELECTRON_RUN_AS_NODE）= exit 0（v20.18.3）
+  ⇒ D/E 都跑得通 —— 「能不能起 tsx」不是 ABI 判据；真正的阻断点是 dev 原生模块 ABI（better-sqlite3），
+    见 §四 与 C-runtime-abi-*。
+  （采集脚本原为工作树外临时件、未入库；本条只收原始输出，复算口径以 results[].label 为准。）
 
 NEGATIVE-npx-revert.txt
   §7 B 反例（证明「改坏会红」）。做法：把 buildCommand 的 win32 分支条件临时改成不可达
