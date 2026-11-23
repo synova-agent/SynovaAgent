@@ -13,6 +13,7 @@
  *   @error   身份/输入由路由校验；运行期错误转事件，不向 SSE 外抛
  */
 import { AgentEventStream, contentDigest, type AgentEvent } from './events';
+import { parseHypothesis, truncateHypothesisText } from './hypothesis-adapter';
 import { DshError, isDshError, toDshError } from './errors';
 import type {
   AcpClientOptions,
@@ -304,6 +305,38 @@ export class DshRunManager {
     }
   }
 
+  /**
+   * #1459 T-C：把本轮模型文本校验成结构化假设并按结果发事件。
+   * 文本为空 ⇒ 不发事件（本轮没尝试出假设），但通过 onDiagnostic 留可见记录，不静默丢。
+   */
+  private emitHypothesis(record: RunRecord): void {
+    const turnText = record.stream
+      .snapshot()
+      .filter((event) => event.type === 'text.delta')
+      .map((event) => (typeof event.data.text === 'string' ? event.data.text : ''))
+      .join('');
+
+    if (turnText.trim() === '') {
+      this.options.onDiagnostic?.({
+        code: 'HYPOTHESIS_SKIPPED_EMPTY_TURN',
+        message: 'run 无模型文本（未尝试产出假设），不发 hypothesis 事件',
+      });
+      return;
+    }
+
+    const parsed = parseHypothesis(turnText);
+    if (parsed.ok) {
+      record.stream.append('hypothesis.structured', { ...parsed.payload });
+      return;
+    }
+    const truncated = truncateHypothesisText(turnText);
+    record.stream.append('hypothesis.invalid', {
+      reason: { ...parsed.reason },
+      text: truncated.text,
+      truncated: truncated.truncated,
+    });
+  }
+
   private finishFromStopReason(record: RunRecord, result: AcpPromptResult): void {
     if (result.stopReason === 'cancelled') {
       this.finishCancelled(record);
@@ -314,6 +347,9 @@ export class DshRunManager {
       return;
     }
     record.status = 'completed';
+    // #1459 T-C：在 run.completed 之前把这一轮的模型文本校验成结构化假设。
+    // run ≡ 一轮（每次 run 只 prompt 一次）⇒ 直接聚合 text.delta 即无损重建。
+    this.emitHypothesis(record);
     record.stream.append('run.completed', {
       stopReason: result.stopReason,
       stats: record.stats,

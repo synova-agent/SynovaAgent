@@ -19,6 +19,12 @@ writeset:
   - tests/enterprise-scan/t0-scan-harness.ts
   - tests/enterprise-scan/t0-scan.test.ts
   - docs/synova/product-lines/evidence/1459-probes/T0-scan-report.json
+  # ---- T-C 结构化假设事件（本分支）----
+  - src/runtime/dsh/hypothesis-adapter.ts
+  - src/runtime/dsh/events.ts
+  - src/runtime/dsh/session.ts
+  - tests/runtime/dsh/hypothesis-adapter.test.ts
+  - tests/runtime/dsh/session-events.test.ts
   # ---- 本 claim ----
   - .claude/claims/1459.yaml
 done:
