@@ -1,17 +1,82 @@
 {
-  "verdict": "RED-backend-degraded",
+  "verdict": "PASS-8a",
   "checks": {
     "portFreeBefore": true,
-    "healthz200": false,
+    "healthz200": true,
     "bootModeDevLog": true,
-    "spawnLayerOkNoSpawnFailure": true,
+    "noDegradedLog": true,
+    "backendPidExists": true,
+    "parentChainReachesElectron": true,
+    "commandLineUsesTsxRuntime": true,
+    "backendRuntimeIsNodeExe": true,
+    "notReused": true,
+    "gracefulQuitViaCdp": true,
+    "electronExited": true,
+    "backendPidGone": true,
     "portReleased": true,
     "noLeftoverBackendProcs": true
   },
-  "healthz": {
-    "statusCode": null,
-    "body": "connect ECONNREFUSED 127.0.0.1:18790",
-    "bootMs": 61554
+  "prePort": {
+    "raw": "TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0",
+    "listeningPid": null,
+    "nonListening": [
+      "TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0"
+    ]
   },
-  "exitCode": 1
+  "healthz": {
+    "statusCode": 200,
+    "body": "{\"status\":\"degraded\",\"checks\":{\"database\":{\"status\":\"ok\",\"detail\":\"SQLite 数据库正常 (760KB)\"},\"llm_connectivity\":{\"status\":\"degraded\",\"detail\":\"未配置 LLM API key (诊断功能受限)\"},\"last_sentinel_run\":{\"status\":\"degraded\",\"detail\":\"哨兵日志目录不存在(可能尚未执行)\"},\"disk_free_gb\":{\"status\":\"degraded\",\"detail\":\"磁盘空间不足: 0.0GB (< 1GB)\"},\"data_freshness\":{\"status\":\"ok\",\"detail\":\"最近7天内有数据活动 (最新: synova.db)\"},\"watchdog_alive\":{\"status\":\"degraded\",\"detail\":\"看门狗未运行(无日志文件)\"}},\"uptime\":1}",
+    "bootMs": 2449
+  },
+  "backend": {
+    "pid": 4320,
+    "processName": "node.exe",
+    "parentPid": 2920,
+    "electronPid": 17552,
+    "commandLine": "\"C:\\Program Files\\nodejs\\node.exe\" --require D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\tsx\\dist\\preflight.cjs --import file:///D:/novis-backup-20260526/Novis/.synova-wt-1455-r3-chain/node_modules/tsx/dist/loader.mjs src/index.ts",
+    "chain": [
+      {
+        "pid": 4320,
+        "name": "node.exe",
+        "parentPid": 2920
+      },
+      {
+        "pid": 2920,
+        "name": "node.exe",
+        "parentPid": 17552
+      },
+      {
+        "pid": 17552,
+        "name": "electron.exe",
+        "parentPid": 20656
+      },
+      {
+        "pid": 20656,
+        "name": "node.exe",
+        "parentPid": 14908
+      },
+      {
+        "pid": 14908,
+        "name": "powershell.exe",
+        "parentPid": 2868
+      },
+      {
+        "pid": 2868,
+        "name": "DeepSeek Harness.exe",
+        "parentPid": 22276
+      }
+    ]
+  },
+  "reclaim": {
+    "backendAlive": false,
+    "netstatRaw": "TCP    127.0.0.1:63797        127.0.0.1:18790        TIME_WAIT       0\r\n  TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0\r\n  TCP    [::1]:63798            [::1]:18790            TIME_WAIT       0",
+    "listeningPid": null,
+    "nonListening": [
+      "TCP    127.0.0.1:63797        127.0.0.1:18790        TIME_WAIT       0",
+      "TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0",
+      "TCP    [::1]:63798            [::1]:18790            TIME_WAIT       0"
+    ],
+    "leftovers": ""
+  },
+  "exitCode": 0
 }

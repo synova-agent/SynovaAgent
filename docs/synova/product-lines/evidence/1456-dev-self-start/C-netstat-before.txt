@@ -1,1 +1,1 @@
-Command failed: cmd /c netstat -ano | findstr 18790
+  TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0

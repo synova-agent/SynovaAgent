@@ -65,17 +65,41 @@ function isolatedEnv(extra = {}) {
 function netstat18790() {
   return run('cmd', ['/c', 'netstat -ano | findstr 18790']);
 }
-/** 监听 18790 的 PID（无监听 ⇒ null） */
-function ownerPid() {
-  const { stdout } = netstat18790();
-  const lines = stdout.split(/\r?\n/).filter((l) => l.includes(':18790') && /LISTENING/i.test(l));
-  if (lines.length === 0) return null;
-  const m = lines[0].trim().split(/\s+/);
-  return Number(m[m.length - 1]);
+/** 沿 ParentProcessId 向上取进程链（最多 maxDepth 级）—— tsx CLI 会再 exec 一层 node，
+ *  真正的后端（18790 owner）不是 Electron 的直接子进程，所以必须看"链"而不是"父母"。 */
+function parentChain(pid, maxDepth = 6) {
+  const chain = [];
+  let cur = pid;
+  for (let i = 0; i < maxDepth && cur && cur > 0; i += 1) {
+    const raw = win32Proc(cur, ['Name', 'ParentProcessId']);
+    if (!raw || raw === 'GONE') break;
+    const [name, parentPid] = raw.split('|');
+    chain.push({ pid: cur, name, parentPid: Number(parentPid) });
+    cur = Number(parentPid);
+  }
+  return chain;
 }
-/** Win32_Process 字段查询（父进程 / 命令行） */
+/** 监听 18790 的 PID（无监听 ⇒ null）。
+ *  注意：必须看**本地地址列**并且只认 LISTENING —— 健康探活打出去的长连接会在
+ *  `netstat` 里留 `[::1]:<随机端口> → [::1]:18790 TIME_WAIT` 这类行，那不是服务在跑。 */
+function listeningPidOn18790() {
+  const { stdout } = netstat18790();
+  for (const line of stdout.split(/\r?\n/)) {
+    const f = line.trim().split(/\s+/);
+    // f = [proto, local, remote, state, pid]
+    if (f.length >= 5 && f[1].endsWith(':18790') && /LISTENING/i.test(f[3])) return Number(f[4]);
+  }
+  return null;
+}
+/** 18790 上所有非 LISTENING 的残留行（TIME_WAIT 等，留证不隐藏） */
+function nonListeningLines18790() {
+  return netstat18790().stdout.split(/\r?\n/)
+    .filter((l) => l.includes(':18790') && !/LISTENING/i.test(l))
+    .map((l) => l.trim()).filter(Boolean);
+}
+/** Win32_Process 字段查询（父进程 / 命令行）。注意用 $p.<field>（$_ 只在管道上下文里绑定） */
 function win32Proc(pid, fields) {
-  const sel = fields.map((f) => `$_.${f}`).join(" + '|' + ");
+  const sel = fields.map((f) => `$p.${f}`).join(" + '|' + ");
   const ps = `$p = Get-CimInstance Win32_Process -Filter "ProcessId=${pid}"; if ($p) { ${sel} } else { 'GONE' }`;
   return run('powershell', ['-NoProfile', '-Command', ps]).stdout.trim();
 }
@@ -127,8 +151,15 @@ async function main() {
   // ── D. 防假绿：启动前 18790 必须无监听（否则 reused:true 会伪装成自启成功）──
   const before = netstat18790();
   fs.writeFileSync(path.join(HERE, 'C-netstat-before.txt'), before.stdout + before.stderr, 'utf8');
-  section('§7 D 启动前 netstat -ano | findstr 18790（必须无输出）', before.stdout || '(无输出 = 端口空闲)');
-  OUT.result.checks.portFreeBefore = before.stdout.trim() === '';
+  const preListening = listeningPidOn18790();
+  const preNonListening = nonListeningLines18790();
+  section('§7 D 启动前 netstat -ano | findstr 18790（必须无监听）', [
+    before.stdout.trim() === '' ? '(findstr 原始输出为空)' : before.stdout.trim(),
+    `LISTENING pid = ${preListening}（必须 null）`,
+    `非 LISTENING 行（TIME_WAIT 等，不构成服务在跑）= ${JSON.stringify(preNonListening)}`,
+  ].join('\n'));
+  OUT.result.prePort = { raw: before.stdout.trim(), listeningPid: preListening, nonListening: preNonListening };
+  OUT.result.checks.portFreeBefore = preListening === null;
   if (!OUT.result.checks.portFreeBefore) {
     log('!! 18790 已被占用 ⇒ 本脚本不做验收（reused 会伪装成自启成功）。请先释放端口。');
     OUT.result.verdict = 'UNVERIFIED-PORT-BUSY';
@@ -140,9 +171,11 @@ async function main() {
   const dbPath = path.join(tmpDir, 'synova.db');
   // DEV_MODE=true：src/index.ts 头部写明的 dev 启动方式；缺它 deploy/bootstrap 会以
   // MASTER_SECRET_MISSING fail-closed 终止（实测见 C-runtime-abi-backend-console-mastersecret-missing.txt）
-  const env = isolatedEnv({ SYNOVA_DB_PATH: dbPath, DEV_MODE: 'true' });
+  const env = isolatedEnv({ SYNOVA_DB_PATH: dbPath, DEV_MODE: 'true', SYNOVA_ORG_ID: 'org-1456-verify' });
   section('启动环境（隔离后）', [
     `SYNOVA_DB_PATH=${dbPath}`,
+    `DEV_MODE=${env.DEV_MODE}`,
+    `SYNOVA_ORG_ID=${env.SYNOVA_ORG_ID}`,
     `ELECTRON_RUN_AS_NODE 已清除 = ${env.ELECTRON_RUN_AS_NODE === undefined}`,
     `API_KEY* 键数量=${Object.keys(env).filter((k) => /API_KEY/i.test(k)).length}`,
   ].join('\n'));
@@ -191,11 +224,13 @@ async function main() {
     const afterFail = netstat18790();
     fs.writeFileSync(path.join(HERE, 'C-netstat-after.txt'), afterFail.stdout + afterFail.stderr, 'utf8');
     const leftoversFail = scanBackendProcs();
+    const failListening = listeningPidOn18790();
     section('§7 C.4 收尾（boot 失败路径清场后）', [
-      `netstat -ano | findstr 18790 = ${JSON.stringify(afterFail.stdout.trim())}（必须空）`,
+      `netstat 18790 LISTENING pid = ${failListening}（必须 null）`,
+      `netstat 原始 = ${JSON.stringify(afterFail.stdout.trim())}`,
       `残留 backend 进程（命令行含 src/index.ts）= ${JSON.stringify(leftoversFail)}（必须空）`,
     ].join('\n'));
-    OUT.result.checks.portReleased = afterFail.stdout.trim() === '';
+    OUT.result.checks.portReleased = failListening === null;
     OUT.result.checks.noLeftoverBackendProcs = leftoversFail === '';
     OUT.result.verdict = sawDegraded ? 'RED-backend-degraded' : 'RED-no-healthz';
     return finish(1);
@@ -210,20 +245,30 @@ async function main() {
   OUT.result.checks.bootModeDevLog = hasBootLine;
   OUT.result.checks.noDegradedLog = !hasDegradedLine;
 
-  // ── C.3 PID：18790 owner + 父进程 = Electron 主进程 + 命令行为 tsx CLI + src/index.ts ──
-  const pid = ownerPid();
-  const ownerCmd = pid ? win32Proc(pid, ['ParentProcessId', 'CommandLine']) : 'GONE';
-  const [ppid, cmdline] = ownerCmd.split('|');
-  section('§7 C.3 后端 PID / 父进程 / 命令行', [
-    `18790 owner pid      = ${pid}`,
-    `owner ParentProcessId= ${ppid}（应 = Electron 主进程 ${child.pid}）`,
+  // ── C.3 PID：18790 owner + 进程链回到 Electron 主进程 + runtime = 系统 node + 命令行含 tsx 与 src/index.ts ──
+  const pid = listeningPidOn18790();
+  const chain = pid ? parentChain(pid) : [];
+  const [procName, ppid, cmdline] = pid ? win32Proc(pid, ['Name', 'ParentProcessId', 'CommandLine']).split('|') : ['', '', ''];
+  const chainText = chain.map((n, i) => `${'  '.repeat(i)}${i === 0 ? '' : '└─ '}${n.pid} ${n.name}（父 ${n.parentPid}）`).join('\n');
+  section('§7 C.3 后端 PID / 进程链 / runtime / 命令行', [
+    `18790 owner pid      = ${pid}（Name=${procName}）`,
+    `进程链（自 owner 向上）:\n${chainText}`,
+    `Electron 主进程 pid  = ${child.pid}`,
     `owner CommandLine    = ${cmdline}`,
+    '',
+    '注: tsx CLI 会再 exec 一层 node ⇒ 真正的后端是 Electron 的**孙进程**（链上能看到），',
+    '    所以判据是"链回到 Electron"，不是"直接父子"。',
   ].join('\n'));
-  OUT.result.backend = { pid, parentPid: Number(ppid), electronPid: child.pid, commandLine: cmdline };
+  OUT.result.backend = {
+    pid, processName: procName, parentPid: Number(ppid), electronPid: child.pid, commandLine: cmdline, chain,
+  };
   OUT.result.checks.backendPidExists = typeof pid === 'number' && pid > 0;
-  OUT.result.checks.parentIsElectron = Number(ppid) === child.pid;
-  OUT.result.checks.commandLineUsesTsxCli = typeof cmdline === 'string'
-    && cmdline.includes(TSX_CLI) && cmdline.includes('src/index.ts');
+  OUT.result.checks.parentChainReachesElectron = chain.some((n) => n.pid === child.pid);
+  // tsx 两种形态都要认：直接 `node <cli.mjs> src/index.ts`，或 tsx 再 exec 的 loader 形态
+  OUT.result.checks.commandLineUsesTsxRuntime = typeof cmdline === 'string'
+    && /tsx[\\/]/.test(cmdline) && cmdline.includes('src/index.ts');
+  // CTO 裁定 1：dev runtime 必须是系统 node（不是 electron.exe / 不是 Electron-as-node）
+  OUT.result.checks.backendRuntimeIsNodeExe = /^node(\.exe)?$/i.test(String(procName));
   OUT.result.checks.notReused = true; // 前置 portFreeBefore 已证明：启动前 18790 无监听 ⇒ 本次必为自启
 
   // ── 退出：CDP Browser.close（等价关窗，触发 before-quit → backendHandle.stop）──
@@ -267,19 +312,29 @@ async function main() {
   const after = netstat18790();
   fs.writeFileSync(path.join(HERE, 'C-netstat-after.txt'), after.stdout + after.stderr, 'utf8');
   const leftovers = scanBackendProcs();
+  const postListening = listeningPidOn18790();
+  const postNonListening = nonListeningLines18790();
   section('§7 C.4 退出后回收', [
     `后端 pid ${pid} 仍存活 = ${alive}（必须 false）`,
-    `netstat -ano | findstr 18790 输出 = ${JSON.stringify(after.stdout.trim())}（必须空）`,
+    `netstat 18790 LISTENING pid = ${postListening}（必须 null = 端口已释放）`,
+    `netstat 非 LISTENING 残留行 = ${JSON.stringify(postNonListening)}（TIME_WAIT 属已断开连接，不是监听）`,
     `残留 backend 进程（命令行含 src/index.ts）= ${JSON.stringify(leftovers)}（必须空）`,
   ].join('\n'));
   OUT.result.checks.backendPidGone = !alive;
-  OUT.result.checks.portReleased = after.stdout.trim() === '';
+  OUT.result.checks.portReleased = postListening === null;
   OUT.result.checks.noLeftoverBackendProcs = leftovers === '';
-  OUT.result.reclaim = { backendAlive: alive, netstat: after.stdout.trim(), leftovers };
+  OUT.result.reclaim = {
+    backendAlive: alive,
+    netstatRaw: after.stdout.trim(),
+    listeningPid: postListening,
+    nonListening: postNonListening,
+    leftovers,
+  };
 
   const passed = OUT.result.checks.healthz200 && OUT.result.checks.bootModeDevLog
     && OUT.result.checks.noDegradedLog && OUT.result.checks.backendPidExists
-    && OUT.result.checks.parentIsElectron && OUT.result.checks.commandLineUsesTsxCli
+    && OUT.result.checks.parentChainReachesElectron && OUT.result.checks.commandLineUsesTsxRuntime
+    && OUT.result.checks.backendRuntimeIsNodeExe
     && OUT.result.checks.electronExited && OUT.result.checks.backendPidGone
     && OUT.result.checks.portReleased && OUT.result.checks.noLeftoverBackendProcs;
   OUT.result.verdict = passed ? 'PASS-8a' : 'RED-8a';

@@ -1,4 +1,4 @@
-#1456 §7 C 桌面单点验证 —— 2026-11-22T20:01:39.927Z
+#1456 §7 C 桌面单点验证 —— 2026-11-23T01:18:11.319Z
 cwd=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456
 node=v24.16.0 platform=win32
 electron=D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\electron\dist\electron.exe
@@ -10,59 +10,547 @@ tsx cli exists     = true
 electron version   = v33.4.11
 外层继承 ELECTRON_RUN_AS_NODE = "1"（桌面夹具必须清掉）
 
-──── §7 D 启动前 netstat -ano | findstr 18790（必须无输出） ────
-(无输出 = 端口空闲)
+──── §7 D 启动前 netstat -ano | findstr 18790（必须无监听） ────
+TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0
+LISTENING pid = null（必须 null）
+非 LISTENING 行（TIME_WAIT 等，不构成服务在跑）= ["TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0"]
 
 ──── 启动环境（隔离后） ────
-SYNOVA_DB_PATH=C:\Users\ADMINI~1\AppData\Local\Temp\1456-desktop-P9NLFW\synova.db
+SYNOVA_DB_PATH=C:\Users\ADMINI~1\AppData\Local\Temp\1456-desktop-vGFLC5\synova.db
+DEV_MODE=true
+SYNOVA_ORG_ID=org-1456-verify
 ELECTRON_RUN_AS_NODE 已清除 = true
 API_KEY* 键数量=0
 
 ──── 启动命令 ────
 D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456\node_modules\electron\dist\electron.exe electron/main.cjs --remote-debugging-port=9222
-Electron 主进程 pid = 4504
+Electron 主进程 pid = 17552
 
 ──── §7 C.2 GET http://127.0.0.1:18790/api/healthz（原始响应） ────
-HTTP null
-connect ECONNREFUSED 127.0.0.1:18790
-boot 耗时=61554ms sawDegradedLog=true
+HTTP 200
+{"status":"degraded","checks":{"database":{"status":"ok","detail":"SQLite 数据库正常 (760KB)"},"llm_connectivity":{"status":"degraded","detail":"未配置 LLM API key (诊断功能受限)"},"last_sentinel_run":{"status":"degraded","detail":"哨兵日志目录不存在(可能尚未执行)"},"disk_free_gb":{"status":"degraded","detail":"磁盘空间不足: 0.0GB (< 1GB)"},"data_freshness":{"status":"ok","detail":"最近7天内有数据活动 (最新: synova.db)"},"watchdog_alive":{"status":"degraded","detail":"看门狗未运行(无日志文件)"}},"uptime":1}
+boot 耗时=2449ms sawDegradedLog=false
 
-──── §7 C.1 Electron console 原文（boot 失败时全量） ────
+──── §7 C.1 Electron 主进程 console 原文 ────
 
 
-DevTools listening on ws://127.0.0.1:9222/devtools/browser/6412ce12-b11e-4820-9b6d-7e3ffba74547
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/7e7251d6-d1e5-4734-a0ea-95bbab82ff79
 [electron] boot mode=dev server=http://localhost:18790
-{"level":30,"time":1795377701830,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/workspace-service","msg":"WorkspaceService 已初始化"}
-{"level":30,"time":1795377701839,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
-{"level":30,"time":1795377701839,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
-{"level":30,"time":1795377701839,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
-{"level":30,"time":1795377701840,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-P9NLFW\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
-{"level":30,"time":1795377701840,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
-{"level":30,"time":1795377701840,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
-{"level":30,"time":1795377701841,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
-{"level":30,"time":1795377701841,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-P9NLFW\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
-{"level":50,"time":1795377701845,"pid":8776,"hostname":"PC-202605261327","name":"synova-agent","err":{"type":"Error","message":"The module '\\\\?\\D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\build\\Release\\better_sqlite3.node'\nwas compiled against a different Node.js version using\nNODE_MODULE_VERSION 137. This version of Node.js requires\nNODE_MODULE_VERSION 130. Please try re-compiling or re-installing\nthe module (for instance, using `npm rebuild` or `npm install`).","stack":"Error: The module '\\\\?\\D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\build\\Release\\better_sqlite3.node'\nwas compiled against a different Node.js version using\nNODE_MODULE_VERSION 137. This version of Node.js requires\nNODE_MODULE_VERSION 130. Please try re-compiling or re-installing\nthe module (for instance, using `npm rebuild` or `npm install`).\n    at process.func [as dlopen] (node:electron/js2c/node_init:2:2559)\n    at Module._extensions..node (node:internal/modules/cjs/loader:1602:18)\n    at Object.func [as .node] (node:electron/js2c/node_init:2:2559)\n    at Module.load (node:internal/modules/cjs/loader:1295:32)\n    at Module._load (node:internal/modules/cjs/loader:1111:12)\n    at c._load (node:electron/js2c/node_init:2:16955)\n    at Module.require (node:internal/modules/cjs/loader:1318:19)\n    at require (node:internal/modules/helpers:179:18)\n    at bindings (D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\bindings\\bindings.js:112:48)\n    at new Database (D:\\novis-backup-20260526\\Novis\\.synova-wt-1455-r3-chain\\node_modules\\better-sqlite3\\lib\\database.js:48:64)","code":"ERR_DLOPEN_FAILED"},"msg":"SynovaAgent 启动失败"}
-[backend-spawn] 后端自启降级 — 重启 1 次未恢复: 后端探活在 60000ms 内未转健康（mode=dev）
-[electron] 后端自启 degraded — 后端探活在 60000ms 内未转健康（mode=dev）
-[electron] 后端自启降级 — 后端探活在 60000ms 内未转健康（mode=dev）
-[preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790
+{"level":30,"time":1795396693194,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/workspace-service","msg":"WorkspaceService 已初始化"}
+{"level":30,"time":1795396693205,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795396693205,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795396693205,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795396693206,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795396693206,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795396693206,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795396693207,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795396693207,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795396693222,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"name":"graph-nodes-props","msg":"执行迁移 2: graph-nodes-props"}
+{"level":30,"time":1795396693223,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":2,"msg":"迁移 2 完成"}
+{"level":30,"time":1795396693223,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":3,"name":"metric-readings","msg":"执行迁移 3: metric-readings"}
+{"level":30,"time":1795396693223,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":3,"msg":"迁移 3 完成"}
+{"level":30,"time":1795396693223,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":4,"name":"orgs","msg":"执行迁移 4: orgs"}
+{"level":30,"time":1795396693224,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":4,"msg":"迁移 4 完成"}
+{"level":30,"time":1795396693224,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":5,"name":"graph-triples-rebuild","msg":"执行迁移 5: graph-triples-rebuild"}
+{"level":30,"time":1795396693225,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":5,"msg":"迁移 5 完成"}
+{"level":30,"time":1795396693225,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":6,"name":"enterprise-scan","msg":"执行迁移 6: enterprise-scan"}
+{"level":30,"time":1795396693226,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":6,"msg":"迁移 6 完成"}
+{"level":30,"time":1795396693227,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":7,"name":"metric-observations","msg":"执行迁移 7: metric-observations"}
+{"level":30,"time":1795396693227,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"store/schema-migration","version":7,"msg":"迁移 7 完成"}
+{"level":30,"time":1795396693227,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/engine-context","path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db","msg":"SQLite 数据库已打开"}
+{"level":30,"time":1795396693227,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/engine-context","msg":"EngineContext 注入完成 (SQLite 持久化存储模式)"}
+{"level":30,"time":1795396693228,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795396693228,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795396693229,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795396693229,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795396693231,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795396693231,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795396693231,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795396693232,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795396693232,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","port":18790,"devMode":true,"msg":"配置已加载"}
+{"level":30,"time":1795396693232,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"数据库已初始化 (SQLite WAL)"}
+{"level":30,"time":1795396693233,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/audit-service","msg":"审计服务已初始化"}
+{"level":30,"time":1795396693233,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"审计服务已初始化"}
+{"level":30,"time":1795396693236,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"编排层已初始化 (EventBus + PhaseStateMachine + SessionManager)"}
+{"level":30,"time":1795396693236,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","phase":"infrastructure","durationMs":5,"msg":"Phase 0 完成"}
+{"level":40,"time":1795396693238,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/rollback","path":"C:\\Users\\Administrator\\AppData\\Local\\Synova\\data\\_snapshots\\pre-schema-migration","msg":"快照已存在，跳过创建"}
+{"level":30,"time":1795396693260,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"GraphStore + OntologyEventBus 已初始化"}
+{"level":30,"time":1795396693263,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/agent-memory-store","msg":"agent_memory.status 列已添加（D240）"}
+{"level":30,"time":1795396693265,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/agent-memory-store","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1795396693265,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"AgentMemoryStore 已初始化"}
+{"level":30,"time":1795396693265,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","phase":"storage","durationMs":29,"msg":"Phase 1 完成"}
+{"level":30,"time":1795396693266,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 2d: CausalChainLoader — 预留接口，未实现 (D83 范围)"}
+{"level":30,"time":1795396693270,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","count":46,"errors":0,"msg":"哨兵加载完成"}
+{"level":30,"time":1795396693274,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-deployment-maturity","name":"T7 Agent部署成熟度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693275,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-opportunity-window","name":"AI 化机会窗口（报正向）","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693277,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-ecosystem-fit","name":"T6 AI软件生态匹配度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693281,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-investment-return","name":"T8 AI投入产出比","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693284,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-api-coverage","name":"API可达性与协议覆盖","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693286,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-business-model-coherence","name":"商业模式一致性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693294,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-capital-health","name":"资本健康","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693308,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/ontology-loader","nodes":32,"edges":59,"msg":"本体类型加载完成"}
+{"level":40,"time":1795396693308,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"cash-runway","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1795396693308,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-runway","name":"现金流哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693310,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-channel-capacity","name":"O6","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693311,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-moat","name":"竞争护城河","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693312,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-position","name":"竞争定位","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693315,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-customer-demand-shift","name":"客户需求迁移","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693318,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-data-health","name":"数据健康度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693320,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-environment-rent-dependency","name":"环境红利依赖性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693321,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-explore-exploit-balance","name":"O1","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693323,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-financing-constraint","name":"融资约束指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693326,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-growth-quality","name":"增长质量指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693329,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-human-agent-boundary","name":"T9 人Agent混合边界效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693331,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-incentive-alignment","name":"O3","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693333,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-info-distortion","name":"O7","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693335,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-internal-transaction-cost","name":"内部交易成本增长率","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1795396693337,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"key-person-risk","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1795396693340,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-key-person-risk","name":"关键人风险哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693343,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-knowledge-accessibility","name":"O4","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693346,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-make-or-buy","name":"自制外购决策健康度","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1795396693354,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"margin-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1795396693354,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-margin-health","name":"利润健康","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693356,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-moat-dependency","name":"护城河依赖度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693358,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-network-power","name":"网络权力指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693361,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-breadth","name":"生态位宽度与深度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693363,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-squeeze","name":"生态位挤压指数","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693365,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-opportunity-window","name":"结构性机会窗口","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693367,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-org-repairability","name":"O8","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693368,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-path-dependency","name":"路径依赖 (Path Dependency)","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693369,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-power-rigidity","name":"O9","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693371,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-process-ai-readiness","name":"T5 流程AI化就绪度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693373,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-resource-misallocation","name":"S3","category":"growth","msg":"哨兵已注册"}
+{"level":40,"time":1795396693375,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"revenue-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":30,"time":1795396693375,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-revenue-health","name":"收入健康哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693377,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-diffusion","name":"O5","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693378,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-mutation","name":"O2","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693380,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-forecast-accuracy","name":"预测精度哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693381,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-pricing-strategy","name":"定价策略哨兵","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693384,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-software-health","name":"软件资产健康度","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693386,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-strategy-capability-fit","name":"S1","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693387,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-talent-density","name":"O10","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693389,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-time-penetration","name":"时间穿透力","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693393,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-unit-economics","name":"单位经济可持续性","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693396,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-value-capture","name":"价值捕获效率","category":"growth","msg":"哨兵已注册"}
+{"level":30,"time":1795396693396,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","registered":46,"skipped":0,"errors":0,"msg":"文件驱动哨兵已注册"}
+{"level":30,"time":1795396693396,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","sentinels":46,"registered":46,"msg":"Phase 2a: SentinelLoader 完成"}
+{"level":30,"time":1795396693401,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"skill/loader","count":41,"errors":0,"msg":"Skill 加载完成"}
+{"level":30,"time":1795396693404,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"skill/loader","registered":41,"errors":0,"msg":"文件驱动 Skill 已注册"}
+{"level":30,"time":1795396693404,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","skills":41,"registered":41,"msg":"Phase 2b: SkillLoader 完成"}
+{"level":30,"time":1795396693414,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"playbook/loader","count":21,"errors":0,"msg":"Playbook 加载完成"}
+{"level":30,"time":1795396693417,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"playbook/loader","registered":21,"errors":0,"msg":"Playbook 已注册"}
+{"level":30,"time":1795396693417,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","playbooks":21,"registered":21,"msg":"Phase 2c: PlaybookLoader 完成"}
+{"level":40,"time":1795396693421,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE trigger_type 已存在或失败 — 跳过"}
+{"level":40,"time":1795396693421,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE event_types 已存在或失败 — 跳过"}
+{"level":40,"time":1795396693421,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","msg":"ALTER TABLE last_event_at 已存在或失败 — 跳过"}
+{"level":40,"time":1795396693421,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","degraded":true,"msg":"ALTER TABLE last_error_code 已存在或失败 — 跳过"}
+{"level":40,"time":1795396693421,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","degraded":true,"msg":"ALTER TABLE attempts 已存在或失败 — 跳过"}
+{"level":40,"time":1795396693421,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","degraded":true,"msg":"ALTER TABLE disabled 已存在或失败 — 跳过"}
+{"level":30,"time":1795396693424,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-4-self-check 已注册 (0 0 * * *)"}
+{"level":30,"time":1795396693426,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-5-knowledge 已注册 (0 0 * * 0)"}
+{"level":30,"time":1795396693438,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-1-diagnosis 已注册 (0 9 1 */3 *)"}
+{"level":30,"time":1795396693440,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-2-navigation 已注册 (0 9 * * 1)"}
+{"level":30,"time":1795396693441,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D237] loop-3-ga-evolution 已注册 (0 9 * * *)"}
+{"level":30,"time":1795396693443,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D238] loop-6-overflow 已注册 (0 9 1 * *)"}
+{"level":30,"time":1795396693444,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396693461,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-1","loopName":"Enterprise Diagnosis","msg":"循环已注册"}
+{"level":30,"time":1795396693461,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396693466,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-2","loopName":"Department Navigation","msg":"循环已注册"}
+{"level":30,"time":1795396693466,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396693491,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-3","loopName":"GA Evolution","msg":"循环已注册"}
+{"level":30,"time":1795396693492,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396693494,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-4","loopName":"System Self-Check","msg":"循环已注册"}
+{"level":30,"time":1795396693494,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396693508,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-5","loopName":"Knowledge Accumulation","msg":"循环已注册"}
+{"level":30,"time":1795396693508,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396693527,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-6","loopName":"Overflow Monitor","msg":"循环已注册"}
+{"level":30,"time":1795396693527,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","count":6,"total":6,"msg":"默认循环已注册"}
+{"level":30,"time":1795396693527,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","loops":6,"msg":"Phase 2e: 循环调度器注册完成"}
+{"level":30,"time":1795396693528,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-1","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693528,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-2","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693528,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-3","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693528,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-4","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693528,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-5","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693528,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-6","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693529,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","loops":6,"msg":"Phase 2f: MainAgent 注册完成"}
+{"level":30,"time":1795396693529,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","subPhases":[{"name":"causal-chain-loader","status":"success","durationMs":0},{"name":"sentinel-loader","status":"success","durationMs":131},{"name":"skill-loader","status":"success","durationMs":8},{"name":"playbook-loader","status":"success","durationMs":13},{"name":"loop-scheduler","status":"success","durationMs":110},{"name":"main-agent","status":"success","durationMs":2}],"msg":"Phase 2 子 Phase 完成"}
+{"level":30,"time":1795396693529,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","phase":"core-engine","durationMs":264,"msg":"Phase 2 完成"}
+{"level":30,"time":1795396693533,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 3a: Connector 工具绑定完成"}
+{"level":30,"time":1795396693535,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/file-driven-loaders","total":22,"reachable":21,"retired":0,"pendingCto":1,"msg":"内容面注册表已加载（20 项状态分布）"}
+{"level":40,"time":1795396693535,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-deployment-maturity","skipped":1,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693535,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-agent-opportunity-window","skipped":2,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-ecosystem-fit","skipped":3,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-ai-investment-return","skipped":4,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-api-coverage","skipped":5,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-business-model-coherence","skipped":6,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-capital-health","skipped":7,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"cash-runway","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-runway","skipped":8,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-channel-capacity","skipped":9,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-moat","skipped":10,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-competitive-position","skipped":11,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-customer-demand-shift","skipped":12,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693536,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-data-health","skipped":13,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-environment-rent-dependency","skipped":14,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-explore-exploit-balance","skipped":15,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-financing-constraint","skipped":16,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-growth-quality","skipped":17,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-human-agent-boundary","skipped":18,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-incentive-alignment","skipped":19,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-info-distortion","skipped":20,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-internal-transaction-cost","skipped":21,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"key-person-risk","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-key-person-risk","skipped":22,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-knowledge-accessibility","skipped":23,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693537,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-make-or-buy","skipped":24,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"margin-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-margin-health","skipped":25,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-moat-dependency","skipped":26,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-network-power","skipped":27,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-breadth","skipped":28,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-niche-squeeze","skipped":29,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-opportunity-window","skipped":30,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-org-repairability","skipped":31,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-path-dependency","skipped":32,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-power-rigidity","skipped":33,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-process-ai-readiness","skipped":34,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-resource-misallocation","skipped":35,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","sentinel":"revenue-health","nodeType":"Financial","msg":"哨兵依赖的节点类型在本体中不存在 — degraded"}
+{"level":40,"time":1795396693538,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-revenue-health","skipped":36,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-diffusion","skipped":37,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-routine-mutation","skipped":38,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-forecast-accuracy","skipped":39,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-sentinel-pricing-strategy","skipped":40,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-software-health","skipped":41,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-strategy-capability-fit","skipped":42,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-talent-density","skipped":43,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-time-penetration","skipped":44,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-unit-economics","skipped":45,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":40,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-value-capture","skipped":46,"msg":"哨兵重复注册 — 跳过 (幂等)"}
+{"level":30,"time":1795396693539,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/loader","registered":46,"skipped":46,"errors":0,"msg":"文件驱动哨兵已注册"}
+{"level":30,"time":1795396693540,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"sentinel","verified":3,"msg":"内容项已装配"}
+{"level":30,"time":1795396693540,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"ontology","verified":3,"msg":"内容项已装配"}
+{"level":30,"time":1795396693548,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/framework-loader","count":85,"categories":["psychology","economics","math-engineering","medicine","biology-physics","law-governance"],"msg":"认知框架加载完成"}
+{"level":30,"time":1795396693548,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"framework","verified":3,"msg":"内容项已装配"}
+{"level":30,"time":1795396693550,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"report-template","verified":2,"msg":"内容项已装配"}
+{"level":30,"time":1795396693552,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/rule-loader","diagnostic":6,"strategies":4,"msg":"规则加载完成"}
+{"level":30,"time":1795396693552,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"rule","verified":2,"msg":"内容项已装配"}
+{"level":30,"time":1795396693554,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"locale/loader","lang":"zh-CN","cacheSize":1,"msg":"locale 加载完成"}
+{"level":30,"time":1795396693554,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"locale","verified":2,"msg":"内容项已装配"}
+{"level":30,"time":1795396693556,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"email","msg":"通知适配器已注册"}
+{"level":30,"time":1795396693556,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"feishu-approval","msg":"通知适配器已注册"}
+{"level":30,"time":1795396693557,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"jira","msg":"通知适配器已注册"}
+{"level":30,"time":1795396693558,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"linear","msg":"通知适配器已注册"}
+{"level":30,"time":1795396693558,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/loader","registered":4,"msg":"通知适配器已从文件加载"}
+{"level":30,"time":1795396693558,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"notification","verified":3,"msg":"内容项已装配"}
+{"level":30,"time":1795396693560,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/adapter-loader","count":2,"msg":"适配器加载完成"}
+{"level":30,"time":1795396693560,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"adapter","verified":1,"msg":"内容项已装配"}
+{"level":30,"time":1795396693563,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/business-model-loader","count":6,"msg":"商业模式加载完成"}
+{"level":30,"time":1795396693563,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"business-model","verified":1,"msg":"内容项已装配"}
+{"level":30,"time":1795396693565,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"finance","scopes":3,"deny":1,"msg":"角色包 knowledge-scope.yaml 内容已解析并校验"}
+{"level":30,"time":1795396693571,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"finance","refsChecked":7,"msg":"角色包 v3 结构与 refs 对账通过"}
+{"level":30,"time":1795396693571,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-file","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","msg":"配置文件加载成功"}
+{"level":30,"time":1795396693571,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"source":"synova.json","msg":"使用文件配置"}
+{"level":30,"time":1795396693571,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\synova.json","size":693,"msg":"配置校验通过"}
+{"level":30,"time":1795396693571,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"config","port":18790,"devMode":true,"dbPath":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db","model":"deepseek-chat","llmConfigured":false,"msg":"配置加载完成"}
+{"level":30,"time":1795396693572,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/role-pack-approval","roleId":"finance","approvalId":"factory:finance:v1","scope":"content+permissions","permissionsPending":false,"msg":"出厂岗位包锚命中 — 批准（scope 来自代码锚，不来自记录）"}
+{"level":30,"time":1795396693572,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"finance","approvalId":"factory:finance:v1","scope":"content+permissions","permissionsPending":false,"msg":"角色包审批通过 — 可进 usable[]"}
+{"level":30,"time":1795396693573,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"hr","scopes":3,"deny":1,"msg":"角色包 knowledge-scope.yaml 内容已解析并校验"}
+{"level":30,"time":1795396693574,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"hr","refsChecked":8,"msg":"角色包 v3 结构与 refs 对账通过"}
+{"level":30,"time":1795396693574,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/role-pack-approval","roleId":"hr","approvalId":"factory:hr:v1","scope":"content+permissions","permissionsPending":false,"msg":"出厂岗位包锚命中 — 批准（scope 来自代码锚，不来自记录）"}
+{"level":30,"time":1795396693574,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"hr","approvalId":"factory:hr:v1","scope":"content+permissions","permissionsPending":false,"msg":"角色包审批通过 — 可进 usable[]"}
+{"level":30,"time":1795396693575,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"sales","scopes":3,"deny":1,"msg":"角色包 knowledge-scope.yaml 内容已解析并校验"}
+{"level":30,"time":1795396693577,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"sales","refsChecked":8,"msg":"角色包 v3 结构与 refs 对账通过"}
+{"level":30,"time":1795396693577,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/role-pack-approval","roleId":"sales","approvalId":"factory:sales:v1","scope":"content+permissions","permissionsPending":false,"msg":"出厂岗位包锚命中 — 批准（scope 来自代码锚，不来自记录）"}
+{"level":30,"time":1795396693578,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"sales","approvalId":"factory:sales:v1","scope":"content+permissions","permissionsPending":false,"msg":"角色包审批通过 — 可进 usable[]"}
+{"level":30,"time":1795396693578,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","root":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\extensions\\presets","roles":3,"usable":3,"degraded":false,"msg":"角色预设包已装配"}
+{"level":30,"time":1795396693579,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"finance","scopes":3,"deny":1,"msg":"角色包 knowledge-scope.yaml 内容已解析并校验"}
+{"level":30,"time":1795396693580,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"finance","refsChecked":7,"msg":"角色包 v3 结构与 refs 对账通过"}
+{"level":30,"time":1795396693581,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/role-pack-approval","roleId":"finance","approvalId":"factory:finance:v1","scope":"content+permissions","permissionsPending":false,"msg":"出厂岗位包锚命中 — 批准（scope 来自代码锚，不来自记录）"}
+{"level":30,"time":1795396693581,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"finance","approvalId":"factory:finance:v1","scope":"content+permissions","permissionsPending":false,"msg":"角色包审批通过 — 可进 usable[]"}
+{"level":30,"time":1795396693581,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"hr","scopes":3,"deny":1,"msg":"角色包 knowledge-scope.yaml 内容已解析并校验"}
+{"level":30,"time":1795396693582,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"hr","refsChecked":8,"msg":"角色包 v3 结构与 refs 对账通过"}
+{"level":30,"time":1795396693582,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/role-pack-approval","roleId":"hr","approvalId":"factory:hr:v1","scope":"content+permissions","permissionsPending":false,"msg":"出厂岗位包锚命中 — 批准（scope 来自代码锚，不来自记录）"}
+{"level":30,"time":1795396693582,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"hr","approvalId":"factory:hr:v1","scope":"content+permissions","permissionsPending":false,"msg":"角色包审批通过 — 可进 usable[]"}
+{"level":30,"time":1795396693583,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"sales","scopes":3,"deny":1,"msg":"角色包 knowledge-scope.yaml 内容已解析并校验"}
+{"level":30,"time":1795396693584,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"sales","refsChecked":8,"msg":"角色包 v3 结构与 refs 对账通过"}
+{"level":30,"time":1795396693584,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/role-pack-approval","roleId":"sales","approvalId":"factory:sales:v1","scope":"content+permissions","permissionsPending":false,"msg":"出厂岗位包锚命中 — 批准（scope 来自代码锚，不来自记录）"}
+{"level":30,"time":1795396693584,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","roleId":"sales","approvalId":"factory:sales:v1","scope":"content+permissions","permissionsPending":false,"msg":"角色包审批通过 — 可进 usable[]"}
+{"level":30,"time":1795396693584,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/preset-loader","root":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\extensions\\presets","roles":3,"usable":3,"degraded":false,"msg":"角色预设包已装配"}
+{"level":30,"time":1795396693584,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"presets","verified":2,"msg":"内容项已装配"}
+{"level":30,"time":1795396693587,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"content-layer","verified":1,"msg":"内容项已装配"}
+{"level":30,"time":1795396693588,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"department","verified":1,"msg":"内容项已装配"}
+{"level":30,"time":1795396693590,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"extensions/layer-resolver","root":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\extensions\\professions","count":1,"errors":0,"msg":"专业包发现完成"}
+{"level":30,"time":1795396693591,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"extensions/layer-resolver","root":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\customer-config","msg":"客户层目录不存在 — 无碎片化可检（非降级）"}
+{"level":30,"time":1795396693591,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"extensions/layer-resolver","layers":"builtin < industry < profession < custom","packages":1,"fragmentation":0,"unwired":0,"msg":"L1.5 专业包层已初始化"}
+{"level":30,"time":1795396693591,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/content-registry","type":"profession","verified":1,"msg":"内容项已装配"}
+{"level":30,"time":1795396693591,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/file-driven-loaders","attempted":13,"loaded":13,"msg":"内容面 loader 已初始化（content-registry 驱动）"}
+{"level":40,"time":1795396693592,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/adapter-scanner","file":"csv-money.json","msg":"适配器缺少必要字段 — 跳过"}
+{"level":30,"time":1795396693592,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/adapter-scanner","count":8,"errors":1,"msg":"field-mappings 扫描完成"}
+{"level":30,"time":1795396693593,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/adapter-registry","registered":8,"errors":0,"msg":"批量适配器注册完成"}
+{"level":30,"time":1795396693593,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"init/file-driven-loaders","registered":8,"total":8,"msg":"field-mappings 适配器已自动发现并注册"}
+{"level":30,"time":1795396693593,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 3b: 文件驱动加载器初始化完成"}
+{"level":30,"time":1795396693597,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","count":22,"msg":"Phase 3c: ExtensionRegistry discover 完成"}
+{"level":30,"time":1795396693598,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"adapters/federal","msg":"FederalReporter 已初始化 (联邦进化已启用)"}
+{"level":30,"time":1795396693598,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 3d: 联邦进化上报已启用"}
+{"level":30,"time":1795396693598,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","phase":"ontology-compute","durationMs":69,"msg":"Phase 3 完成"}
+{"level":30,"time":1795396693634,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4a: CredentialVault 已初始化 (AES-256-GCM)"}
+{"level":30,"time":1795396693634,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4b: CredentialPool 已初始化 (多凭据轮换)"}
+{"level":30,"time":1795396693635,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4c: PIIScrubber 已初始化 (S1-S4 敏感度脱敏)"}
+{"level":40,"time":1795396693635,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/config-recovery","path":"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\1456-desktop-vGFLC5\\synova.db.config.json","msg":"配置文件不存在"}
+{"level":30,"time":1795396693636,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4e: Knowledge 服务已初始化"}
+{"level":30,"time":1795396693636,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4f: BehaviorMonitor 已加载 — 4 rules active"}
+{"level":30,"time":1795396693637,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-config-loader","expertCount":6,"path":"D:\\novis-backup-20260526\\Novis\\synova-agent\\.synova-wt-1456\\expert\\expert-registry.yaml","msg":"专家配置已从 yaml 加载"}
+{"level":30,"time":1795396693637,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","experts":6,"msg":"Phase 4g: 专家配置已加载"}
+{"level":30,"time":1795396693637,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4h: PolicyEngine 已验证"}
+{"level":30,"time":1795396693643,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/file-scanner","msg":"measurers/ 目录不存在 — 跳过测量器配置扫描"}
+{"level":30,"time":1795396693644,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/file-scanner","experts":6,"measurers":0,"knowledge":2,"totalFiles":40,"errors":0,"msg":"文件扫描完成"}
+{"level":30,"time":1795396693646,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"competitive-strategy","msg":"专家类型已注册"}
+{"level":30,"time":1795396693646,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"competitive-strategy","sources":["expert\\competitive-strategy\\IDENTITY.md","expert\\competitive-strategy\\IDENTITY.md (analytical_lens)","expert\\competitive-strategy\\THEORY.md","expert\\competitive-strategy\\RULES.md","expert\\competitive-strategy\\TOOLS.md","expert\\competitive-strategy\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693646,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"customer-growth","msg":"专家类型已注册"}
+{"level":30,"time":1795396693646,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"customer-growth","sources":["expert\\customer-growth\\IDENTITY.md","expert\\customer-growth\\IDENTITY.md (analytical_lens)","expert\\customer-growth\\THEORY.md","expert\\customer-growth\\RULES.md","expert\\customer-growth\\TOOLS.md","expert\\customer-growth\\KNOWLEDGE.md","expert\\customer-growth\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693646,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"fundamental-efficiency","msg":"专家类型已注册"}
+{"level":30,"time":1795396693646,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"fundamental-efficiency","sources":["expert\\fundamental-efficiency\\IDENTITY.md","expert\\fundamental-efficiency\\IDENTITY.md (analytical_lens)","expert\\fundamental-efficiency\\THEORY.md","expert\\fundamental-efficiency\\RULES.md","expert\\fundamental-efficiency\\TOOLS.md","expert\\fundamental-efficiency\\KNOWLEDGE.md","expert\\fundamental-efficiency\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"host","msg":"专家类型已注册"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"host","sources":["expert\\host\\IDENTITY.md","expert\\host\\IDENTITY.md (analytical_lens)","expert\\host\\THEORY.md","expert\\host\\RULES.md","expert\\host\\TOOLS.md","expert\\host\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"organizational-capability","msg":"专家类型已注册"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"organizational-capability","sources":["expert\\organizational-capability\\IDENTITY.md","expert\\organizational-capability\\IDENTITY.md (analytical_lens)","expert\\organizational-capability\\THEORY.md","expert\\organizational-capability\\RULES.md","expert\\organizational-capability\\TOOLS.md","expert\\organizational-capability\\KNOWLEDGE.md","expert\\organizational-capability\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"technology-foundation","msg":"专家类型已注册"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"technology-foundation","sources":["expert\\technology-foundation\\IDENTITY.md","expert\\technology-foundation\\IDENTITY.md (analytical_lens)","expert\\technology-foundation\\THEORY.md","expert\\technology-foundation\\RULES.md","expert\\technology-foundation\\TOOLS.md","expert\\technology-foundation\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","fromFiles":6,"fromDefaults":0,"totalLoaded":6,"errors":0,"msg":"专家文件加载完成"}
+{"level":30,"time":1795396693647,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","fromFiles":6,"total":6,"msg":"Phase 4i: 专家文件加载完成"}
+{"level":30,"time":1795396693648,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 4j: Workspace 服务已就绪"}
+{"level":30,"time":1795396693648,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","phase":"expert-security","durationMs":50,"msg":"Phase 4 完成"}
+{"level":30,"time":1795396693650,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/context-budget","msg":"ContextBudgetTracker 已初始化"}
+{"level":30,"time":1795396693650,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5a: 上下文预算追踪器已初始化"}
+{"level":30,"time":1795396693650,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5b: BossMailbox 已就绪"}
+{"level":30,"time":1795396693650,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5c: Cron 调度器已启动"}
+{"level":30,"time":1795396693650,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Connector 同步调度已启动 (cron: */30 * * * *)"}
+{"level":30,"time":1795396693651,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"企业事实冲突扫描调度已启动 (cron: 0 4 * * *)"}
+{"level":30,"time":1795396693651,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"每日简报调度已启动 (cron: 0 19 * * *)"}
+{"level":30,"time":1795396693652,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"数据库备份调度已启动 (cron: 0 3 * * *, 保留 7 天)"}
+{"level":30,"time":1795396693654,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/evidence-retention","tier":"permanent","source":"default:permanent","msg":"证据保留分级=永久 — 跳过过期清理（证据是蒸馏前资产，D660）"}
+{"level":30,"time":1795396693655,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","tier":"permanent","windowMs":null,"source":"default:permanent","cron":"30 3 * * *","msg":"证据保留分级维护已启动（启动清理 + 每日 cron）"}
+{"level":30,"time":1795396693659,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1795396693660,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/knowledge-agent","extracted":0,"errors":0,"msg":"齿轮6 知识提取完成"}
+{"level":30,"time":1795396693660,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/gear6-scheduler","intervalMs":21600000,"msg":"齿轮6 调度器已启动 (每6h)"}
+{"level":30,"time":1795396693660,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5d: 齿轮6 知识提取调度已启动 (每6h)"}
+{"level":30,"time":1795396693663,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/gear6-scheduler","extracted":0,"errors":0,"msg":"齿轮6 首次运行完成"}
+{"level":30,"time":1795396693664,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l4/knowledge-store","msg":"KnowledgeStore schema initialized"}
+{"level":30,"time":1795396693744,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/pkb-seed","inserted":178,"total":178,"msg":"PKB 种子知识写入完成"}
+{"level":30,"time":1795396693744,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","inserted":178,"msg":"PKB 种子知识已初始化"}
+{"level":30,"time":1795396693744,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5e: KnowledgeAgent 已注册 — 第7个专家就绪"}
+{"level":30,"time":1795396693744,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5f: 文件安全守卫已启动"}
+{"level":30,"time":1795396693748,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l5/alert-rules","count":0,"msg":"冷却期已从 SQLite 恢复"}
+{"level":30,"time":1795396693748,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5f: 告警规则引擎已初始化"}
+{"level":30,"time":1795396693750,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","msg":"Phase 5f: IM 通道 — 未配置飞书 Webhook"}
+{"level":30,"time":1795396693753,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"mcp/bridge","server":"brave-search","msg":"启动 MCP Server"}
+{"level":30,"time":1795396693767,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"mcp/bridge","server":"github","msg":"启动 MCP Server"}
+{"level":30,"time":1795396693777,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"deploy/bootstrap","phase":"interaction","durationMs":129,"msg":"Phase 5 完成"}
+{"level":30,"time":1795396693777,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","msg":"Bootstrap 服务已就绪，开始 Express 设置"}
+{"level":30,"time":1795396693778,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"electron","msg":"通知适配器已注册"}
+{"level":30,"time":1795396693778,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","msg":"Electron 通知适配器已注册"}
+{"level":30,"time":1795396693781,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"orchestrator/phase-gate-check","phaseGates":["1→2: dataCompleteness","2→3: hypothesisConfidence","4→5: reportCompleteness"],"thresholds":{"minEvidenceCount":3,"minHypothesisConfidence":0.5,"minExpertsPassed":4},"msg":"Phase Gate Check 已注册"}
+{"level":30,"time":1795396693783,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l2/proposal-manager","msg":"proposals 表已升级：新增 run_id 列（1A 幂等键）"}
+{"level":30,"time":1795396693787,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"routes/conversations","msg":"K12-08 决策台账装配口已注入（onDecision 回调可用）"}
+{"level":30,"time":1795396693792,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/file-scanner","msg":"measurers/ 目录不存在 — 跳过测量器配置扫描"}
+{"level":30,"time":1795396693793,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/file-scanner","experts":6,"measurers":0,"knowledge":2,"totalFiles":40,"errors":0,"msg":"文件扫描完成"}
+{"level":30,"time":1795396693793,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"competitive-strategy","msg":"专家类型已注册"}
+{"level":30,"time":1795396693793,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"competitive-strategy","sources":["expert\\competitive-strategy\\IDENTITY.md","expert\\competitive-strategy\\IDENTITY.md (analytical_lens)","expert\\competitive-strategy\\THEORY.md","expert\\competitive-strategy\\RULES.md","expert\\competitive-strategy\\TOOLS.md","expert\\competitive-strategy\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693794,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"customer-growth","msg":"专家类型已注册"}
+{"level":30,"time":1795396693794,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"customer-growth","sources":["expert\\customer-growth\\IDENTITY.md","expert\\customer-growth\\IDENTITY.md (analytical_lens)","expert\\customer-growth\\THEORY.md","expert\\customer-growth\\RULES.md","expert\\customer-growth\\TOOLS.md","expert\\customer-growth\\KNOWLEDGE.md","expert\\customer-growth\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693794,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"fundamental-efficiency","msg":"专家类型已注册"}
+{"level":30,"time":1795396693794,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"fundamental-efficiency","sources":["expert\\fundamental-efficiency\\IDENTITY.md","expert\\fundamental-efficiency\\IDENTITY.md (analytical_lens)","expert\\fundamental-efficiency\\THEORY.md","expert\\fundamental-efficiency\\RULES.md","expert\\fundamental-efficiency\\TOOLS.md","expert\\fundamental-efficiency\\KNOWLEDGE.md","expert\\fundamental-efficiency\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693795,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"host","msg":"专家类型已注册"}
+{"level":30,"time":1795396693795,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"host","sources":["expert\\host\\IDENTITY.md","expert\\host\\IDENTITY.md (analytical_lens)","expert\\host\\THEORY.md","expert\\host\\RULES.md","expert\\host\\TOOLS.md","expert\\host\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693796,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"organizational-capability","msg":"专家类型已注册"}
+{"level":30,"time":1795396693796,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"organizational-capability","sources":["expert\\organizational-capability\\IDENTITY.md","expert\\organizational-capability\\IDENTITY.md (analytical_lens)","expert\\organizational-capability\\THEORY.md","expert\\organizational-capability\\RULES.md","expert\\organizational-capability\\TOOLS.md","expert\\organizational-capability\\KNOWLEDGE.md","expert\\organizational-capability\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693796,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"l3/expert-registry","type":"technology-foundation","msg":"专家类型已注册"}
+{"level":30,"time":1795396693796,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","expert":"technology-foundation","sources":["expert\\technology-foundation\\IDENTITY.md","expert\\technology-foundation\\IDENTITY.md (analytical_lens)","expert\\technology-foundation\\THEORY.md","expert\\technology-foundation\\RULES.md","expert\\technology-foundation\\TOOLS.md","expert\\technology-foundation\\CROSS_EXPERT.md"],"missing":["SOUL","STAGE_LOGIC","KNOWLEDGE"],"msg":"专家已从文件加载"}
+{"level":30,"time":1795396693796,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/expert-file-loader","fromFiles":6,"fromDefaults":0,"totalLoaded":6,"errors":0,"msg":"专家文件加载完成"}
+{"level":30,"time":1795396693797,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","fromFiles":6,"total":6,"msg":"Phase 0 专家文件加载完成"}
+{"level":30,"time":1795396693818,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-1","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693818,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-2","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693818,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-3","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693818,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-4","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693818,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-5","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693818,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/main-agent","loopId":"loop-6","scales":3,"msg":"循环已注册到 MainAgent"}
+{"level":30,"time":1795396693819,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","loops":6,"msg":"[wiring] MainAgent 已注入 loops 路由 + 循环点火绑定"}
+{"level":30,"time":1795396693819,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"routes/overflow","msg":"Overflow GraphStore 已注入"}
+{"level":30,"time":1795396693821,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/memory-monitor","rss":159510528,"heapUsed":62723648,"msg":"[MEMORY] 基线"}
+{"level":30,"time":1795396693821,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","msg":"全局错误处理器已注册 (uncaughtException + unhandledRejection)"}
+(node:4320) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+{"level":30,"time":1795396693822,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","port":18790,"msg":"Synova-Agent → http://localhost:18790"}
+{"level":30,"time":1795396693825,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"growth/feedback-collector","msg":"feedback_log 表就绪"}
+{"level":30,"time":1795396693825,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/baseline-store","baselineMinRuns":3,"findingCountRatioWarning":2,"findingCountRatioCritical":3,"perSentinel":{},"msg":"[baseline] 阈值配置已更新"}
+{"level":30,"time":1795396693825,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","baselineMinRuns":3,"msg":"[baseline] 哨兵阈值配置已加载"}
+{"level":30,"time":1795396693831,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cash-flow","name":"现金流","category":"risk","msg":"哨兵已注册"}
+{"level":40,"time":1795396693831,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/builtins","filename":"cash-flow-sentinel.ts","exportKey":"cashFlowSentinel","preferredKey":"cashFlow","sentinelId":"sentinel-cash-flow","msg":"[builtins] cash-flow-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cashFlowSentinel)"}
+{"level":30,"time":1795396693833,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-cpc","name":"协作协议完备性 (CPC)","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1795396693833,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/builtins","filename":"cpc-sentinel.ts","exportKey":"cpcSentinel","preferredKey":"cpc","sentinelId":"sentinel-cpc","msg":"[builtins] cpc-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (cpcSentinel)"}
+{"level":30,"time":1795396693836,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-goal-alignment","name":"目标对齐度","category":"capability","msg":"哨兵已注册"}
+{"level":40,"time":1795396693836,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/builtins","filename":"goal-alignment-sentinel.ts","exportKey":"goalalignmentSentinel","preferredKey":"goalAlignment","sentinelId":"sentinel-goal-alignment","msg":"[builtins] goal-alignment-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (goalalignmentSentinel)"}
+{"level":30,"time":1795396693838,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/registry","sentinelId":"sentinel-integration-health","name":"集成健康度","category":"health","msg":"哨兵已注册"}
+{"level":40,"time":1795396693838,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/builtins","filename":"integration-health-sentinel.ts","exportKey":"integrationHealthSentinel","preferredKey":"integrationHealth","sentinelId":"sentinel-integration-health","msg":"[builtins] integration-health-sentinel.ts 文件名推导键未命中 — 已按哨兵结构兜底命中 (integrationHealthSentinel)"}
+{"level":30,"time":1795396693838,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/builtins","registered":4,"total":50,"cronCount":50,"scanned":4,"msg":"[builtins] 哨兵自动注册完成"}
+{"level":30,"time":1795396693839,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/restart-recovery","msg":"无可恢复的中断会话"}
+{"level":30,"time":1795396693839,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/escalation-engine","ruleCount":0,"msg":"EscalationEngine 初始化完成"}
+{"level":30,"time":1795396693845,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-agent-deployment-maturity","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693850,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-agent-opportunity-window","cron":"0 4 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693853,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-ai-ecosystem-fit","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693856,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-ai-investment-return","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693856,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-api-coverage","cron":"0 9 * * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693859,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-business-model-coherence","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693862,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-capital-health","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693863,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-cash-runway","cron":"0 9 * * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693866,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-channel-capacity","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693869,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-competitive-moat","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693873,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-competitive-position","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693875,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-customer-demand-shift","cron":"0 9 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693879,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-data-health","cron":"0 9 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693884,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-environment-rent-dependency","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693889,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-explore-exploit-balance","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693892,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-financing-constraint","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693896,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-growth-quality","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693900,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-human-agent-boundary","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693903,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-incentive-alignment","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693906,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-info-distortion","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693910,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-internal-transaction-cost","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693911,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-key-person-risk","cron":"0 3 * * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693916,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-knowledge-accessibility","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693918,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-make-or-buy","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693919,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-margin-health","cron":"0 */6 * * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693921,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-moat-dependency","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693930,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-network-power","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693934,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-niche-breadth","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693936,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-niche-squeeze","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693940,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-opportunity-window","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693943,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-org-repairability","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693946,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-path-dependency","cron":"0 9 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693950,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-power-rigidity","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693953,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-process-ai-readiness","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693956,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-resource-misallocation","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693957,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-revenue-health","cron":"0 */6 * * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693961,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-routine-diffusion","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693966,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-routine-mutation","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693969,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-sentinel-forecast-accuracy","cron":"0 0 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693972,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-sentinel-pricing-strategy","cron":"0 0 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693972,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-software-health","cron":"0 10 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693976,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-strategy-capability-fit","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693980,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-talent-density","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693985,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-time-penetration","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693988,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-unit-economics","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693991,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-value-capture","cron":"0 0 1 * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693991,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-cash-flow","cron":"0 9 * * *","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693994,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-cpc","cron":"0 9 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693997,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-goal-alignment","cron":"0 9 * * 1","msg":"[runner] 哨兵已调度"}
+{"level":30,"time":1795396693998,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","sentinelId":"sentinel-integration-health","cron":"0 9 * * *","msg":"[runner] 哨兵已调度"}
+{"level":40,"time":1795396693998,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"electron","msg":"通知适配器重复注册 — 覆盖旧适配器"}
+{"level":30,"time":1795396693998,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"notifications/registry","channel":"electron","msg":"通知适配器已注册"}
+{"level":30,"time":1795396693998,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","msg":"[runner] Electron 桌面推送适配器已注册"}
+{"level":30,"time":1795396693999,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"sentinel/runner","count":50,"msg":"[runner] 所有 cron 哨兵 + 信号聚合已启动"}
+{"level":30,"time":1795396694000,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","msg":"[wiring] UserStore 已注入 enterprise 路由"}
+{"level":30,"time":1795396694001,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"system-heartbeat-check","id":"cron_mwsku2sv_m9ju","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694002,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-4-self-check","id":"cron_mwsku2sw_rm92","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694002,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-4-self-check 已注册 (0 0 * * *)"}
+{"level":30,"time":1795396694006,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-5-knowledge","id":"cron_mwsku2sy_0pv8","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694006,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-5-knowledge 已注册 (0 0 * * 0)"}
+{"level":30,"time":1795396694027,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-1-diagnosis","id":"cron_mwsku2ta_tgje","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694027,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-1-diagnosis 已注册 (0 9 1 */3 *)"}
+{"level":30,"time":1795396694029,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-2-navigation","id":"cron_mwsku2tc_c3qt","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694030,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D9] loop-2-navigation 已注册 (0 9 * * 1)"}
+{"level":30,"time":1795396694031,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-3-ga-evolution","id":"cron_mwsku2td_r8m0","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694031,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D237] loop-3-ga-evolution 已注册 (0 9 * * *)"}
+{"level":30,"time":1795396694035,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-6-overflow","id":"cron_mwsku2tf_8z25","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694036,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","msg":"[D238] loop-6-overflow 已注册 (0 9 1 * *)"}
+{"level":30,"time":1795396694036,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396694038,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-1-fast","id":"cron_mwsku2tj_dqf3","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694041,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-1-medium","id":"cron_mwsku2tl_vm0h","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694058,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-1-slow","id":"cron_mwsku2tx_1bfd","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694058,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-1","loopName":"Enterprise Diagnosis","msg":"循环已注册"}
+{"level":30,"time":1795396694058,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396694063,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-2-medium","id":"cron_mwsku2tz_cjkw","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694069,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-2-slow","id":"cron_mwsku2u2_mhnh","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694069,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-2","loopName":"Department Navigation","msg":"循环已注册"}
+{"level":30,"time":1795396694069,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396694072,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-3-fast","id":"cron_mwsku2u5_4l15","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694085,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-3-medium","id":"cron_mwsku2ug_sgq8","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694099,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-3-slow","id":"cron_mwsku2ur_uufq","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694099,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-3","loopName":"GA Evolution","msg":"循环已注册"}
+{"level":30,"time":1795396694099,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396694099,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-4-fast","id":"cron_mwsku2us_6tu9","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694099,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-4-medium","id":"cron_mwsku2us_9enh","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694103,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-4-slow","id":"cron_mwsku2uu_ecen","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694104,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-4","loopName":"System Self-Check","msg":"循环已注册"}
+{"level":30,"time":1795396694104,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396694107,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-5-medium","id":"cron_mwsku2ux_3pm0","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694122,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-5-slow","id":"cron_mwsku2v8_s339","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694122,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-5","loopName":"Knowledge Accumulation","msg":"循环已注册"}
+{"level":30,"time":1795396694122,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/trigger-config","count":1,"msg":"循环触发矩阵验证通过"}
+{"level":30,"time":1795396694125,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-6-fast","id":"cron_mwsku2va_v3pt","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694131,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-6-medium","id":"cron_mwsku2vd_x6zw","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694145,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"cron/scheduler","name":"loop-loop-6-slow","id":"cron_mwsku2vr_d4uw","disabled":false,"attempts":0,"msg":"任务已认领既有行（保留 disabled/attempts）"}
+{"level":30,"time":1795396694146,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","loopId":"loop-6","loopName":"Overflow Monitor","msg":"循环已注册"}
+{"level":30,"time":1795396694146,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"loops/loop-scheduler","count":6,"total":6,"msg":"默认循环已注册"}
+{"level":30,"time":1795396694146,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","registered":6,"msg":"[wiring] 核心循环已注册"}
+{"level":30,"time":1795396694152,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"services/delivery-queue","msg":"无待投递消息 — 跳过排干"}
+{"level":30,"time":1795396694153,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","msg":"[cron] stuck-session-detector 已注册 (每 60 秒)"}
+{"level":30,"time":1795396694153,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","msg":"[cron] ima-sync 已注册 (每 6 小时)"}
+{"level":30,"time":1795396694153,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","port":18790,"msg":"SynovaAgent 已启动"}
+{"level":30,"time":1795396694153,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"agent/synova-agent","msg":"CommandLanes 已初始化（高风险工具隔离）"}
+{"level":30,"time":1795396694153,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","msg":"SynovaAgent 就绪"}
+{"level":40,"time":1795396694172,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
+{"level":40,"time":1795396694215,"pid":4320,"hostname":"PC-202605261327","name":"synova-agent","service":"middleware/rbac","code":"RBAC_DENIED","reason":"no_authenticated_context","msg":"安全判据: 被拒绝 — 无认证上下文（fail-closed，不回退自报凭据/不回退 admin）"}
 
-──── §7 C.1 判据（失败路径） ────
+──── §7 C.1 判据 ────
 含 [electron] boot mode=dev = true
-无 "[backend-spawn] spawn 失败" = true（true ⇒ npx/ENOENT/EINVAL 缺陷已消失）
+含 "后端自启 degraded" / "spawn 失败" = false（必须 false）
 
-──── §7 C.4 收尾（boot 失败路径清场后） ────
-netstat -ano | findstr 18790 = ""（必须空）
+──── §7 C.3 后端 PID / 进程链 / runtime / 命令行 ────
+18790 owner pid      = 4320（Name=node.exe）
+进程链（自 owner 向上）:
+4320 node.exe（父 2920）
+  └─ 2920 node.exe（父 17552）
+    └─ 17552 electron.exe（父 20656）
+      └─ 20656 node.exe（父 14908）
+        └─ 14908 powershell.exe（父 2868）
+          └─ 2868 DeepSeek Harness.exe（父 22276）
+Electron 主进程 pid  = 17552
+owner CommandLine    = "C:\Program Files\nodejs\node.exe" --require D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\node_modules\tsx\dist\preflight.cjs --import file:///D:/novis-backup-20260526/Novis/.synova-wt-1455-r3-chain/node_modules/tsx/dist/loader.mjs src/index.ts
+
+注: tsx CLI 会再 exec 一层 node ⇒ 真正的后端是 Electron 的**孙进程**（链上能看到），
+    所以判据是"链回到 Electron"，不是"直接父子"。
+
+──── 退出方式 ────
+CDP Browser.close（OK）
+webSocketDebuggerUrl=ws://127.0.0.1:9222/devtools/browser/7e7251d6-d1e5-4734-a0ea-95bbab82ff79
+
+──── Electron 主进程退出 ────
+exited=true exitCode=0 耗时=8165ms
+
+──── §7 C.4 退出后回收 ────
+后端 pid 4320 仍存活 = false（必须 false）
+netstat 18790 LISTENING pid = null（必须 null = 端口已释放）
+netstat 非 LISTENING 残留行 = ["TCP    127.0.0.1:63797        127.0.0.1:18790        TIME_WAIT       0","TCP    [::1]:59656            [::1]:18790            TIME_WAIT       0","TCP    [::1]:63798            [::1]:18790            TIME_WAIT       0"]（TIME_WAIT 属已断开连接，不是监听）
 残留 backend 进程（命令行含 src/index.ts）= ""（必须空）
 
 ======================================================================
 判据汇总:
   PASS  portFreeBefore
-  FAIL  healthz200
+  PASS  healthz200
   PASS  bootModeDevLog
-  PASS  spawnLayerOkNoSpawnFailure
+  PASS  noDegradedLog
+  PASS  backendPidExists
+  PASS  parentChainReachesElectron
+  PASS  commandLineUsesTsxRuntime
+  PASS  backendRuntimeIsNodeExe
+  PASS  notReused
+  PASS  gracefulQuitViaCdp
+  PASS  electronExited
+  PASS  backendPidGone
   PASS  portReleased
   PASS  noLeftoverBackendProcs
 
-VERDICT = RED-backend-degraded（三态退出码 1）
+VERDICT = PASS-8a（三态退出码 0）
 
