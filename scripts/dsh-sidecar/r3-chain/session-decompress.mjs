@@ -1,28 +1,30 @@
 /**
- * session-decompress.mjs — frame-aware zstd decompression of a DSH session log (Issue #1455, T4/T5).
+ * session-decompress.mjs — 帧感知 zstd 解压 DSH 会话日志的**薄壳**（Issue #1455 T4/T5 → #1458 抽出小库）。
  *
- * Why this shape (DEV DOC v3.1 erratum + rc.5 facts):
- *   - rc.5's `@deepseek-ai/dsh-session-persistence-jsonl` exports only { Config, JsonlCompressionSchema, apply, name }
- *     and its `exports` map has no deep `./lib/zstd.js`, so the package-internal frame readers
- *     (`scanZstdFrames` / `createZstdFrameDecoder` / `decompressZstdFrame`) are NOT importable.
- *   - Node's `zlib.zstdDecompressSync` decodes ONE frame and silently ignores the rest on a multi-frame file.
+ * 本文件只做三件事：读文件 → 调 `./lib/frame-decompress.mjs` → 打报告。
+ * 帧感知解压、Σ帧字节==文件字节 不变式、截断／非法头检测全部归 `lib/frame-decompress.mjs`
+ * （由 `tests/dsh-sidecar/frame-decompress.test.ts` 守着）。
  *
- * So: scan EVERY magic occurrence (28 B5 2F FD), cut frames by consecutive offsets, decode each frame with
- * zstdDecompressSync, concatenate, and then prove nothing was dropped:
+ * 本壳保留的**会话语义**判定（不是解压逻辑）：
  *   check 1  first decoded line parses as the session header (JSON object)
  *   check 2  total decoded lines == sum of per-frame decoded lines
- *   check 3  Σ (frame end - frame start) == file byte length        <-- coverage check (v3.1 §4)
  *   check 4  decoded text ends with a newline
  *   check 5  text contains `tool/call` and `tool/result`
  *   check 6  a `tool/call` named synova_context_get exists
  *   check 7  its `tool/result` carries synthetic:false and count>=1
+ *   （check 3 = Σ帧字节==文件字节 已下沉到库里，壳只把库给的 coverage 打出来）
+ *
+ * 🔴 行为与输出字段**不得变化**：既有证据件
+ *    docs/synova/product-lines/evidence/r3-chain-1455/{07-dsh-session-log,T6-run1-session,T6-run2-session}.decompress-report.json
+ *    的字段结构必须可复现（由 frame-decompress.test.ts 的 golden 用例守着）。
  *
  * usage: node session-decompress.mjs <in.zstd> <out.jsonl> <report.json>
  * @exit 0 all checks pass; 1 any check fails (report still written); 2 bad usage
+ *       失败路径（输入坏到解不出来）沿用原行为：uncaught error ⇒ 非 0 退出、不写报告。
  */
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { zstdDecompressSync } from 'node:zlib';
+import { decodeMultiFrameSessionLog } from './lib/frame-decompress.mjs';
 
 const [inputPath, outputPath, reportPath] = process.argv.slice(2);
 if (!inputPath || !outputPath || !reportPath) {
@@ -30,55 +32,23 @@ if (!inputPath || !outputPath || !reportPath) {
   process.exit(2);
 }
 
-const MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
 const file = readFileSync(inputPath);
 
-// 1) scan EVERY magic occurrence (not "decode one then look further": that misses boundaries)
-const magicOffsets = [];
-let cursor = 0;
-for (;;) {
-  const hit = file.indexOf(MAGIC, cursor);
-  if (hit === -1) break;
-  magicOffsets.push(hit);
-  cursor = hit + MAGIC.length;
+// 1) 解压 + 结构不变式（全部在库里；失败即结构化错误码，不返回不完整结果）
+const decompressed = decodeMultiFrameSessionLog(file);
+if (!decompressed.ok) {
+  throw new Error(`session-decompress: ${decompressed.error.code}: ${decompressed.error.message}`);
 }
-if (magicOffsets.length === 0 || magicOffsets[0] !== 0) {
-  throw new Error(`session-decompress: no frame magic at offset 0 (first hit=${magicOffsets[0] ?? 'none'})`);
-}
-
-// 2) cut frames by consecutive offsets, decode each independently
-const frames = [];
-const chunks = [];
-for (let index = 0; index < magicOffsets.length; index += 1) {
-  const start = magicOffsets[index];
-  const end = index + 1 < magicOffsets.length ? magicOffsets[index + 1] : file.length;
-  const slice = file.subarray(start, end);
-  let decoded;
-  try {
-    decoded = zstdDecompressSync(slice);
-  } catch (err) {
-    throw new Error(`session-decompress: frame ${index} (offset ${start}..${end}) failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  frames.push({
-    index,
-    start,
-    end,
-    bytes: end - start,
-    decodedBytes: decoded.length,
-    decodedLines: (decoded.toString('utf8').match(/\n/g) ?? []).length,
-  });
-  chunks.push(decoded);
-}
-const decodedBuffer = Buffer.concat(chunks);
+const { frames, decoded: decodedBuffer, coverage } = decompressed;
 const text = decodedBuffer.toString('utf8');
 const lines = text.split('\n');
 const nonEmptyLines = lines.filter(line => line.trim().length > 0);
 
-// 3) verdict checks
+// 2) verdict checks —— 会话语义
 const checks = {
   firstLineIsHeader: false,
   totalLinesEqualsSumOfFrames: false,
-  byteCoverage: false,
+  byteCoverage: coverage.byteCoveragePasses,
   endsWithNewline: false,
   hasToolCall: false,
   hasToolResult: false,
@@ -92,10 +62,7 @@ try {
 } catch {
   checks.firstLineIsHeader = false;
 }
-const sumFrameLines = frames.reduce((sum, frame) => sum + frame.decodedLines, 0);
-checks.totalLinesEqualsSumOfFrames = sumFrameLines === (text.match(/\n/g) ?? []).length;
-const sumFrameBytes = frames.reduce((sum, frame) => sum + frame.bytes, 0);
-checks.byteCoverage = sumFrameBytes === file.length;
+checks.totalLinesEqualsSumOfFrames = coverage.sumDecodedLines === coverage.decodedNewlines;
 checks.endsWithNewline = text.endsWith('\n');
 checks.hasToolCall = text.includes('tool/call');
 checks.hasToolResult = text.includes('tool/result');
@@ -132,9 +99,9 @@ const report = {
   output: { path: outputPath, bytes: decodedBuffer.length, sha256: createHash('sha256').update(decodedBuffer).digest('hex'), lines: lines.length, nonEmptyLines: nonEmptyLines.length },
   method: 'scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat',
   forbiddenMethodNotUsed: 'zstdDecompressSync on the whole multi-frame file (decodes only the first frame and does not throw)',
-  frameCount: frames.length,
+  frameCount: decompressed.frameCount,
   frames,
-  coverage: { fileBytes: file.length, sumFrameBytes, byteCoveragePasses: checks.byteCoverage, sumDecodedLines: sumFrameLines, decodedNewlines: (text.match(/\n/g) ?? []).length },
+  coverage,
   header,
   checks,
   toolCallEntries: synovaCalls.length,
@@ -147,9 +114,9 @@ process.stdout.write(`${JSON.stringify({
   ok: allPassed,
   inputBytes: file.length,
   outputBytes: decodedBuffer.length,
-  frameCount: frames.length,
+  frameCount: decompressed.frameCount,
   lines: lines.length,
   checks,
-  coverage: report.coverage,
+  coverage,
 }, null, 2)}\n`);
 if (!allPassed) process.exit(1);

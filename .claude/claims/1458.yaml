@@ -1,0 +1,16 @@
+# .claude/claims/1458.yaml —— #1458 把取证逻辑抽成带真实单测的小库（B 轨）
+# 依据：#1458 裁定「走 (b) 抽成带真实单测的小库」（CTO 评论 14446）；分类坑实测见 PR #1457 的 core-gates/core
+# base: 1d0520f64（= feat/1455-r3-chain head —— 被抽的目标文件 session-decompress.mjs 只存在于该分支，
+#        main/caf61fcde 上不存在；故本分支叠在 1455 之上，实际改动仅为本票 3 个文件）
+# branch: fix/1458-evidence-lib ｜ worktree: D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1458（主树零写入）
+# 接管说明: session-decompress.mjs 原由 1455.yaml 认领；本票把它退化为薄壳 ⇒ 该文件的归属转本 claim。
+writeset:
+  - .claude/claims/1458.yaml
+  - scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs
+  - scripts/dsh-sidecar/r3-chain/session-decompress.mjs
+  - tests/dsh-sidecar/frame-decompress.test.ts
+done:
+  - verify: node node_modules/vitest/vitest.mjs run tests/dsh-sidecar/frame-decompress.test.ts   # 7 passed / 0 failed
+  - verify: node scripts/dsh-sidecar/r3-chain/session-decompress.mjs <07-dsh-session-log.jsonl.zstd> <out.jsonl> <report.json>   # report 除 generatedAt/input.path/output.path 外与既有证据件逐字段一致；stdout 与 jsonl 字节一致
+  - verify: node node_modules/vitest/vitest.mjs run --changed caf61fcdeb3e00c79abe9211546690ca963549a2   # affected 命中本票新单测（core-gates/core 的 affected-no-tests 坑）
+note: "#1458 通用工程票（不登记为 DSH 借鉴）。抽出 frame-decompress.mjs：帧头解析 + 块链走查 + 三条不变式（Σ帧字节==文件字节 / 帧结构铺满切片 / 声明内容大小==解码字节数）；Node 的 zstdDecompressSync 对截断帧不抛错，截断检测由结构校验承担。薄壳行为与输出字段不变。"
