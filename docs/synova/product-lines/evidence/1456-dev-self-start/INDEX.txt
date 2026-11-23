@@ -3,7 +3,7 @@
 采集时间   2026-11-23（本机 win32 / node v24.16.0 / npm 11.13.0 / Electron 33.4.11 内置 node v20.18.3）
 worktree   D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1456（分支 fix/1456-win-backend-spawn）
 base       caf61fcdeb3e00c79abe9211546690ca963549a2（Gitea main）
-规格       docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md（v2，CTO commit 82b1b613e）
+规格       docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md（v2.2，CTO commits 82b1b613e→…；以文件头版本为准）
 node_modules = 只读夹具 junction → D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\node_modules
              （未修改夹具内容；junction 不进 git）
 
