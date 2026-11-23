@@ -1,6 +1,6 @@
 # hash-manifest.txt — sha256 of every committed evidence/script artifact (Issue #1455)
-# generated: 2026-11-22T18:58:39.179Z
-# files: 50
+# generated: 2026-11-23T12:55:01.285Z
+# files: 55
 # excluded (derived, self-referential): T5-secrets-scan.txt, hash-manifest.txt
 2c90f7bc4d5ddbbba5f143a9ebb8b238c196075c40cdc9e1059319d1a3aa1335       3116  docs/synova/product-lines/evidence/r3-chain-1455/00-env.txt
 01804748213b2af3be78f3078a5d82153a66049b5fd3c9b54880bc5d1f3da92e       3459  docs/synova/product-lines/evidence/r3-chain-1455/01-install.out.json
@@ -19,14 +19,14 @@ cfb0b19fc50c106f9863ed4419677ab00ebfe8d1bbbafb2330d2d906978927d1       8196  doc
 cecfb4b06e8d3c5ce047511680d19bac3d5e08b3785c2de47afcecbf5a4056fd       1904  docs/synova/product-lines/evidence/r3-chain-1455/12-negative-domain-empty.json
 3723383164255a7877a0b758144fdff2e1c88ebffeadb69643bf458335edb918      10956  docs/synova/product-lines/evidence/r3-chain-1455/13-session-close.json
 613fda1becd0ca4e8442622005518c75a958e48467e399e84cf8d8fd4b0cc978       1066  docs/synova/product-lines/evidence/r3-chain-1455/CREDENTIAL-CLEANUP.txt
-00a8d04d17f90862fc7f69364ccee9746be9cf2acf4cd87d20a253b34d2eda32      20790  docs/synova/product-lines/evidence/r3-chain-1455/README.md
+0d8aef2f98c684b6b55817303b9639c79715726908b9f6f428a131af137557a8      27658  docs/synova/product-lines/evidence/r3-chain-1455/README.md
 6567998308bce4a525184ba009f01d8d3f32c1b88efc7651bd90d90578d2f576      14272  docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-config-patched.txt
 1a771b8bdaebb53de7b6eec326c884a8e091bd7aa306967857f1b58d02cf727b      12721  docs/synova/product-lines/evidence/r3-chain-1455/T0-dump-default-config.txt
 5f216aa2f46a75b0c1c502cf92fed48fc564828549b9afe6ef44481b4bbd9617        514  docs/synova/product-lines/evidence/r3-chain-1455/T0-host-probe.txt
 b06451c88ce8f8bf7ac70f50df07b4d4bc90607b9404c6b0c044c685c5b0d633       2215  docs/synova/product-lines/evidence/r3-chain-1455/T0-install-attempt1-failure.txt
 bd183dee701a2e616ac09a27859985da68908d78d2fbd1ec72be4bb700537ff1       3608  docs/synova/product-lines/evidence/r3-chain-1455/T1-seed-output.log
 3c307a25a0495bf9f1794b8b7e85e3f23f9d75de186b62f54267ac8b8b78cb51       1002  docs/synova/product-lines/evidence/r3-chain-1455/T1-server-pids.txt
-08141513724339843c7b4fa4c13c78a9fb3df3368c730afc9e77c3ae69af0816       3090  docs/synova/product-lines/evidence/r3-chain-1455/T2-raw-redaction.txt
+82bfed5daad858cabd55329f61e762a791ce58fb33af02196677e1e9ad1f3553       4511  docs/synova/product-lines/evidence/r3-chain-1455/T2-raw-redaction.txt
 39b779280401d104087d3ed0f980ffee7d3f6367b9ff21d587a2465ab7b17afa        865  docs/synova/product-lines/evidence/r3-chain-1455/T2-start-2.redacted.json
 aef6ba854ab99f224751ff45db6a0e8e8fbfbc4d20455e0fb7d9c26cbc216d51        864  docs/synova/product-lines/evidence/r3-chain-1455/T2-start-raw.redacted.json
 f1be553a395bb2486629b9c7e6fbca2fb88b5ad040d4c67a7b6e8a5359999d74        840  docs/synova/product-lines/evidence/r3-chain-1455/T2-status-2.redacted.json
@@ -46,9 +46,14 @@ ce6050c774f2becd8d942ee4e625379e2a5a7fb70fbd1adb778e135cac5329a9       8858  doc
 d84cead4b14a2b5189101bf52cb1d418f45761614fe53161f4d27f7c4d4b1154       2659  docs/synova/product-lines/evidence/r3-chain-1455/T6-run2-session.decompress-report.json
 e821afaa851531eac22d8ebd14738f654749b41298c45b119693124dc1e1091a       8858  docs/synova/product-lines/evidence/r3-chain-1455/T6-run2-session.jsonl
 25f23baedd914f8b4a233ab6a1b5447869dd9f3b0761b6e56aee52866b344df3        464  docs/synova/product-lines/evidence/r3-chain-1455/T6-server-test-hygiene.txt
+0cd9c818686b623a183b69b74d2d0fcbe587947d40c3196e807d301ad78c1ec4       2504  docs/synova/product-lines/evidence/r3-chain-1455/T7-8b-process-snapshot-after.txt
+e3037048521b9070b9c19b50a8e14354baf19954e8c3de3af67aacb3a5b16456       5963  docs/synova/product-lines/evidence/r3-chain-1455/T7-8b-process-snapshot-before.txt
+598177d47f346c21389f773e91e96b6db0a2f378fe0d107ff04f477bfef5decb      17429  docs/synova/product-lines/evidence/r3-chain-1455/T7-8b-result.json
+6e4d054a508688b1e0b316af7cdeee56066d55c55f58b2b320369cd898270888      30248  scripts/dsh-sidecar/r3-chain/capture-8b-process-snapshot.ps1
 6a5c3113ef11d91600765bb87cc2c2b712610d9ddb29f608cce5198e206245cb       4544  scripts/dsh-sidecar/r3-chain/capture-run.mjs
-a33acc5a7387888383c986bf4f1b31c2b05df3f2e63e01e84d28011abfa9733f       1848  scripts/dsh-sidecar/r3-chain/install-profile.ts
-5a1f029988a74f34ed1df1e415f5812bc2abb3e1707e8ac442840ea934e6fd73       6491  scripts/dsh-sidecar/r3-chain/mcp-probe.ts
+96892a87e478a4f30d392fcf9ea6dbbd4347157dba853bdea557a7b6cc77677f       4197  scripts/dsh-sidecar/r3-chain/install-profile.ts
+b3a24fba4a15111d8ccd36aa632088bbd2294b90ca005c033e5d4e192af3b2ef      12805  scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs
+7fe862f3e9b4e23b3762962ffca157d9770690a2322550b6bcfb4942e69f5854      10624  scripts/dsh-sidecar/r3-chain/mcp-probe.ts
 bd1091f45403de968eacda340bb60401b8eac4d05d240a53d5ef0e7c393bf778      19589  scripts/dsh-sidecar/r3-chain/run-drive.mjs
-7f19a9aca87e8909d885fd6ae84a0f2dbe29ad65eec64fab77e466aac2c29ed0       4494  scripts/dsh-sidecar/r3-chain/seed-synthetic.ts
-6ca908963e1c2e3c744c7bc249105bd82cdf24e848ab8313e42c95edc11077c6       6883  scripts/dsh-sidecar/r3-chain/session-decompress.mjs
+21925a64a4b2cef65eb2ac728113e87b2648c4d1e77786dff89c203f7ab86eb4       6546  scripts/dsh-sidecar/r3-chain/seed-synthetic.ts
+a0b6966a5854f0f5708dae00137558d2028a27e7849c769603fbcfc5d364f425       6424  scripts/dsh-sidecar/r3-chain/session-decompress.mjs

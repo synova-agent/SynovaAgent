@@ -1,6 +1,6 @@
 # R3 chain — DSH 最小真实复用证明链（Gitea #1455）· 实机证据
 
-> **结论：R3 达成（Done 1–7 PASS、9/10 PASS、反例 PASS）。Done 8：**session close（真实产品路由）PASS**、**Sidecar stop（b）PASS**、**8(a) UNVERIFIED**（产品缺陷 #1456）。T6 收尾验证**未发出任何模型请求**，模型轮次仍为 **1/1**（主链那一次）。**
+> **结论：R3 达成（Done 1–7 PASS、9/10 PASS、反例 PASS）。Done 8：**session close（真实产品路由）PASS**、**Sidecar stop（b）PASS（T7 原始进程快照）**、**8(a) UNVERIFIED**（产品缺陷 #1456）。T6 收尾验证**未发出任何模型请求**，模型调用次数仍为 **2**（均属主链那一个 run）。**
 > 链在 **rc.5 实物**上真实跑通：桌面端登录 → 输入合成 prompt → 发起 → **DSH 调 `synova_context_get` 拿到真实 ② 数据** → 模型复述条目数 → 桌面收到 `run.completed`。
 > 依据：DEV DOC **v3**（评论 14384）＋ **v3.1 勘误**（评论 14395）＋ 关卡 A（评论 14394）＋ Mandate（14396）＋ **CTO 补充裁定 S1（评论 14400：T3 走"复用隔离 server"，Done 8(a) 记 UNVERIFIED）**。
 
@@ -13,7 +13,7 @@
 | rc.5 | `0.2.2-rc.5`，`INSTALL_OK`，integrity 与钉死值逐字一致 |
 | **runId** | **`run_da2adbf821994bad8de96d30d0a174be`** |
 | **sessionId** | **`6f9a803d-c6e7-41bc-aa2e-ea2cafc168c7`** |
-| 模型轮次 | **1 / 1 已用**（唯一一轮，未重试） |
+| 模型调用 | **1 run / 2 次模型调用**（同一 `turn=1` 的 step 1 与 step 2；`07-dsh-session-log.jsonl` 第 **16**、**22** 行两条 `assistant/message` **各带 `usage`**。未重试、未新增 run） |
 | 运行时刻 | 2026-11-23 02:33–02:40 (+08:00)；`run.completed` @ 18:35:53.957Z |
 
 ---
@@ -49,17 +49,56 @@
 | # | 判据 | 判定 | 证据 |
 |---|---|---|---|
 | 1 | rc.5 实物与来源 | **PASS** | `01-install.out.json`（INSTALL_OK + lock + 独立 version/integrity 复核）、`00-env.txt` |
-| 2 | initialize 成功 | **PASS** | `02-acp-initialize.json`：`ready=true, protocolVersion=1, agentName=deepseek-harness-acp`（同一 rc.5 安装/同一 profile；T3 成功隐含 run 路径 initialize 成功） |
+| 2 | initialize 成功 | **PASS** | `02-acp-initialize.json`：`ready=true, protocolVersion=1, agentName=deepseek-harness-acp`。⚠️ **口径更正**：这三个值是 **Synova 状态信封**（`sidecar.ts:679-681` 把 DSH `initialize` 返回值写进状态文件，经 `start/status` 包装输出），**不是 ACP wire 报文原文**；且该握手属于 **T2 那一次** supervisor start，**不是 R3 主链那次 run**。判 PASS 的依据＝该字段确由真实 DSH 握手产生（非自造）＋ T3 成功隐含 run 路径 initialize 成功 |
 | 3 | 非空 sessionId | **PASS** | `03-session.json`：run 快照 / `session.created` 帧 / DSH header **三方同值**，且 DSH 会话目录存在（`…/sessions/--D--novis…instance--/6f9a803d-…/session.v4.jsonl.zstd`） |
 | 4 | prompt 真实请求与完成 | **PASS** | `04-prompt.json`：prompt 187 字符、sha256 与 `egress.recorded` **逐字相同**；`06-run-snapshot.json` status=`completed` |
 | 5 | DSH 侧工具调用与返回 | **PASS** | `07-dsh-session-log.jsonl` 含 `tool/call`(name=`synova_context_get`) + `tool/result`(`synthetic:false`,`count=2`)；`11-mcp-tools-list.json` 证明 Synova 侧只广告该只读工具 |
 | 6 | DSH 产事件 | **PASS** | `05-sse-events.txt` 的 `reasoning.delta`/`tool.*`/`text.delta` 与 `07` 的 DSH 记录时间与内容一一对应（非 Synova 自造） |
 | 7 | 桌面收到 run.completed | **PASS** | `08-desktop.png` + `T3-cdp-result.json`（DOM `data-run-status=done`、运行编号=runId、事件 2 条）+ `09-desktop-console.txt` |
-| 8 | close/stop 后进程退出 | **session close（产品路由）PASS / Sidecar stop（b）PASS / 8(a) UNVERIFIED** | ① **session close**：`13-session-close.json` —— `POST /api/dsh/sessions/0e8772b5-…/close` → **HTTP 200 `{"ok":true,"closed":true}`**（T6 独立失败路径 run，**不耗模型轮次**，§6.1）；② **Sidecar stop**：`02-acp-initialize.json` —— `stop.ps1` → supervisor 22680 + ACP 11060 双 PID 消失；③ **8(a)**：Electron 自起后端 → `before-quit` → `backendHandle.stop()` 不可达（§6，产品缺陷 #1456）。主链那次 run 自身的 close 未留证据，故 Done 8 的会话关闭判定**以 T6 的同一条产品路由证据**为准 |
-| 9 | 同 CodeSha / runId / 时间窗 | **PASS** | 全产物 `codeSha=caf61fcd`；runId/sessionId 贯穿 03–10；时间窗 02:33–02:40 (+08) 内 |
+| 8 | close/stop 后进程退出 | **session close（产品路由）PASS / Sidecar stop（b）PASS / 8(a) UNVERIFIED** | ① **session close**：`13-session-close.json` —— `POST /api/dsh/sessions/0e8772b5-…/close` → **HTTP 200 `{"ok":true,"closed":true}`**（T6 独立失败路径 run，**不耗模型轮次**，§6.1）；② **Sidecar stop（8(b)）**：**T7 采集件** —— `T7-8b-result.json` + `T7-8b-process-snapshot-before.txt` / `-after.txt`：`stop.ps1` 前后各一次**原始 OS 观测**（`tasklist` / `Get-Process` / `Get-CimInstance` 三通道），supervisor `12472` + ACP `9336` 全部消失、残留扫描 0、`allGone:true`、`complete:true`；⚠️ **`02-acp-initialize.json:100-106` 的 `pidCheckAfterStop`（`supervisorAlive` / `acpAlive` / `stateFilePresent`）不可用于 8(b)** —— 那三个布尔取自 `_r3chain-20261123/ops/make-02-acp-initialize.mjs:16`（`process.argv`），两个 PID 是 mjs:70,72 写死的字面量，属**入参不是观测**。原始数据保留、不删；③ **8(a)**：Electron 自起后端 → `before-quit` → `backendHandle.stop()` 不可达（§6，产品缺陷 #1456）。主链那次 run 自身的 close 未留证据，故 Done 8 的会话关闭判定**以 T6 的同一条产品路由证据**为准 |
+| 9 | 同 CodeSha / runId / 时间窗 | **PASS** | 判据＝**产品代码零改动**（`git diff --name-only caf61fcde..HEAD -- src electron` 为空）＋ **run 侧证据同 runId/sessionId** ＋ 时间窗 02:33–02:40 (+08)。**不是**"全产物贯穿"——逐件覆盖见 §2.1 |
 | 10 | 无 Secrets / 数据边界明确 | **PASS** | `T5-secrets-scan.txt`（0 命中）、`CREDENTIAL-CLEANUP.txt`、§7 边界声明 |
 
 **反例（必跑，不耗模型轮次）**：**PASS** —— `12-negative-domain-empty.json`：不存在的 problemId ⇒ HTTP 200 + 结构化 `DOMAIN_EMPTY`（`isError:true`），不是空成功。
+
+### 2.1 逐件覆盖矩阵（更正原"全产物同 codeSha／贯穿 03–10"的笼统表述）
+
+原表述不成立：`codeSha` 只出现在部分件；`07` 只有 sessionId；`13` 属另一次 T6 run。逐件实测如下（`有`=该文件文本中确实出现该值）：
+
+| 件 | `codeSha=caf61fcd` | 主链 `runId=run_da2adb…` | 主链 `sessionId=6f9a803d…` | 说明 |
+|---|---|---|---|---|
+| `00-env.txt` | 有 | — | — | 环境件，与 run 无关 |
+| `01-install.out.json` | 有 | — | — | 安装件 |
+| `02-acp-initialize.json` | 有 | — | — | **T2** 的 supervisor start/stop，不是主链那次 run |
+| `03-session.json` | 有 | 有 | 有 | 三方同值（run 快照 / SSE `session.created` 帧 / DSH header） |
+| `04-prompt.json` | 有 | 有 | — | prompt + egress 绑定 runId |
+| `05-sse-events.txt` | — | 有 | 有 | 原始 SSE 帧，帧内不含 codeSha |
+| `06-run-snapshot.json` | — | 有 | 有 | run 快照 |
+| `07-dsh-session-log.jsonl` | — | — | **有（仅 sessionId）** | header 只有 sessionId；**无 runId** |
+| `07-dsh-session-log.decompress-report.json` | 有 | — | 有 | 解压报告 |
+| `08-desktop.png` | — | — | — | 图像件；面板**显示**运行/会话编号，非文本标注 |
+| `09-desktop-console.txt` | — | — | — | 渲染层 console 文本 |
+| `10-process-exit.txt` | — | — | — | Electron 退出记录 |
+| `11-mcp-tools-list.json` | — | — | — | 工具面探针，与 run 无关 |
+| `12-negative-domain-empty.json` | 有 | — | — | 反例，独立调用 |
+| `13-session-close.json` | 有 | —（**T6 run** `run_e048ff…`） | —（**T6 session** `0e8772b5…`） | **另一次 T6 run**，不并入主链 |
+| `T3-cdp-result.json` / `T3-sse-meta.json` | — / — | 有 / 有 | 有 / 有 | T3 桌面与帧统计 |
+| `T3-drive-trace-transcribed.json` | 有 | 有 | 有 | 桌面驱动转录件（见 D8） |
+| `T6-run1-session.*` / `T6-run2-session.*` | 报告件有 / 报告件有 | — | — / jsonl 有 T6 session | T6 失败路径 |
+| `T7-8b-*`（8(b) 采集） | —（记录分支 HEAD `1d0520f6…`） | 不适用 | 不适用 | 不涉及 run；产品代码零改动见 Done 9 |
+
+复跑本表（在仓根执行，逐件输出三列命中）：
+
+```bash
+for f in docs/synova/product-lines/evidence/r3-chain-1455/*; do
+  printf '%-48s %-8s %-8s %s\n' "$(basename "$f")" \
+    "$(grep -qa caf61fcd "$f" && echo codeSha || echo -)" \
+    "$(grep -qa run_da2adb "$f" && echo mainRun || echo -)" \
+    "$(grep -qa 6f9a803d "$f" && echo mainSess || echo -)"
+done
+```
+
+⇒ **结论不变**：Done 9 仍判 **PASS**，但依据是"产品代码零改动 ＋ run 侧证据同 runId/sessionId ＋ 时间窗内"，**不是**"全产物贯穿"。
 
 ---
 
@@ -87,7 +126,8 @@
 ## 5 T1/T2 已取得（沿用本次提交）
 
 - **T1**：`/api/healthz` 200；合成账号 register 201 + login 200（`role=admin`、`orgId=synth-org-1455`）；合成②走产品工具路径 `buildContextSnapshot` ⇒ `synthetic:false,count=2,layer=②,visibility=enterprise`（`T1-seed-output.log`——原始 stdout 含 pino 日志头 + JSON 体，**不是合法 JSON 文件**，故按 `.log` 提交）；准备用 server 停掉并记录 PID（`T1-server-pids.txt`，非产品停法）。
-- **T2**：supervisor `start/status/stop` ⇒ `ready=true, protocolVersion=1, agentName=deepseek-harness-acp`，stop 后 supervisor+ACP 双 PID 消失（`02-acp-initialize.json`，**Done 8(b)**）；MCP 探针 11/11 断言（`11-mcp-tools-list.json`）+ 反例（`12-negative-domain-empty.json`）。
+- **T2**：supervisor `start/status/stop` ⇒ `ready=true, protocolVersion=1, agentName=deepseek-harness-acp`（**Synova 状态信封**，非 wire 报文）；MCP 探针 11/11 断言（`11-mcp-tools-list.json`）+ 反例（`12-negative-domain-empty.json`）。
+  ⚠️ **`02-acp-initialize.json:100-106` 的 `pidCheckAfterStop` 不能作为 Done 8(b) 证据**（`supervisorAlive` / `acpAlive` / `stateFilePresent` 三个布尔来自 `make-02-acp-initialize.mjs:16` 的 `process.argv`；PID `22680`/`11060` 是 mjs:70,72 的字面量）。8(b) 的判定改由 **T7** 承担：见 `T7-8b-result.json` 与 `T7-8b-process-snapshot-before.txt` / `-after.txt`（stop 前后原始 OS 观测）。T2 原数据**保留不删**。
 
 ---
 
@@ -113,7 +153,7 @@
 | stats | `{textDeltas:0, reasoningDeltas:0, toolCalls:0, chars:0}`；`run.started → run.failed` 仅 **~78 ms** |
 | **close** | `POST /api/dsh/sessions/0e8772b5-5eb1-41b6-9c14-afc2a3c1f1cc/close` → **HTTP 200 `{"ok":true,"sessionId":"0e8772b5-…","closed":true}`** ⇒ **PASS** |
 | DSH 侧无模型请求证明 | 两次 T6 run 的 DSH 会话记录（`T6-run1-session.jsonl` / `T6-run2-session.jsonl`，各 6 帧、字节覆盖通过）末段为 `assistant/attempt`(chunk.finish `reason=error`) + `turn/end`(error)；**0 个 `assistant/message`、0 个 usage chunk、0 个内容块、0 次 tool/call** |
-| 结论 | **session close（真实产品路由）= PASS**；**本轮未发出任何模型请求，模型轮次仍为 1/1**（唯一一轮属于 R3 主链） |
+| 结论 | **session close（真实产品路由）= PASS**；**本轮未发出任何模型请求，模型调用次数仍为 2**（均属 R3 主链那一个 run） |
 
 补充说明（如实记录）：
 - T6 的 **run 1** 因我的执行脚本序列化 bug（`ReferenceError`）**丢了 HTTP 层证据**，但其 DSH 会话记录保留（`T6-run1-session.jsonl`，同样的无凭据错误、同样 0 输出）⇒ 两轮互证；run 1 不计入任何通过判定。
@@ -161,6 +201,8 @@ CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran af
 | D7 | T2 跑了 3 轮（定位 2 + 取证重采 1） | 首轮 stdout 被自身进程树占住管道等 | 证据统一取 cycle 2（`T2-*-2.redacted.json`），`02-acp-initialize.json` 已注明 |
 | D8 | `T3-drive-trace-transcribed.json` 是**转录件**（非机器写入） | 成功那轮 `run-drive.mjs` 的 stdout JSON 随后被 `--capture-only` 重写覆盖 | 文件内已写明出处；其余 05/06/07/08/09/03/04 全部机器写入 |
 | D9 | 驱动脚本首版事件选择器写错（`#dsh-run-events` vs `[data-testid="dsh-run-events"]`） | 面板用 `data-testid` | 已修复并用 `--capture-only` 重读真实 DOM（2 条事件）；运行本身未受影响（server 侧 toolCalls=1） |
+| D10 | **T7 采集件**把 supervisor 命令行里的 `--control-token <hex>` 替换为 `<redacted>` | 该值是回环控制口临时令牌（非模型凭据），但同样不入库（D6 同纪律） | 只替换该一处；其余逐字保留。采集器另有"写出前断言"：若最终文本仍含活 token 则再擦一遍并记 `collectionErrors` |
+| D11 | **T7 未记录** `start.ps1`/`stop.ps1` 的**进程退出码** | Windows PowerShell 5.1 `Start-Process -PassThru` 不填 `ExitCode`；改用 `-Wait` 会等整棵进程树（含 detached supervisor）而卡死 | 记为 `null` + `start/stopExitCodeNote` 明示"未取到"；8(b) 判定**不用**退出码（用原始进程观测），包装器自身 JSON 原文保留在 `*RawStdout` |
 
 ---
 
@@ -185,6 +227,10 @@ CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran af
 | `T6-run1-session.jsonl` / `T6-run2-session.jsonl`（+ `.decompress-report.json`） | 两次 T6 run 的 DSH 会话记录（帧感知解压，字节覆盖通过；末段 `turn/end`=error，0 个 assistant/usage/内容块） |
 | `T6-server-test-hygiene.txt` | T6 隔离 server 测试卫生停止记录（不计入 Done 8） |
 | `11-mcp-tools-list.json` / `12-negative-domain-empty.json` | MCP 工具面探针 + 反例 `DOMAIN_EMPTY` |
+| **`T7-8b-result.json`** | **Done 8(b) 判定件**：`stopIssued` / `pidsObservedBefore`（pid + `creationDate` + `startTime` + `cmdline`）/ `pidsObservedAfter` / `afterComparison` / `leftoversAfter` / `allGone` / `observationSource` / `complete`；`codeSha` 由采集器自行 `git rev-parse HEAD` 取得（非入参）。**零模型轮次**：该轮 sidecar 日志（任务根 `dsh-home\logs\sidecar-20261123.log`，仓外）只有 `acp out initialize` + `acp in`，**无 `session/new`、无 `prompt`、无模型调用** |
+| **`T7-8b-process-snapshot-before.txt`** | stop **前**原始 OS 观测：`start.ps1` 原文 + 状态文件 PID + `tasklist` / `Get-Process` / `Get-CimInstance` 三通道原文（supervisor 12472、ACP 9336，含启动时刻与命令行） |
+| **`T7-8b-process-snapshot-after.txt`** | stop **后**同一组原始观测：`stop.ps1` 原文 + 两 PID 在三通道下均"不存在"的原文 + 残留扫描 `count: 0` |
+| `scripts/dsh-sidecar/r3-chain/capture-8b-process-snapshot.ps1` | **T7 采集器**（可复跑）：start → 读状态 PID → before 快照 → stop → after 快照 → 机械判定；三态退出码（0 PASS／1 FAIL／2 采不到）；零模型轮次、零外网 |
 | `T1-*` / `T2-*` | 准备用 server PID 记录 + 合成②校验；supervisor start/status/stop（脱敏版）+ 脱敏对照 |
 | `T3-BREAK-*` / `T3-electron-stdout-raw.txt` / `T3-desktop-no-backend.png` | **已知差距 #1456** 的原始证据（首次尝试） |
 | `T3-drive-trace-transcribed.json` | 桌面驱动步骤转录（登录/提交/终态轮询） |
@@ -196,7 +242,7 @@ CORE-TESTS RESULT rc=1 contract_passed=92 user_visible_passed=10 affected=ran af
 
 ## 10 结论与后续
 
-- **R3 = 达成**：`initialize → session/new → prompt → synova_context_get（真实 ②）→ run.completed` 在 rc.5 实物上端到端跑通，桌面端可见，DSH 侧原始记录可核，模型轮次只用 1 次。
+- **R3 = 达成**：`initialize → session/new → prompt → synova_context_get（真实 ②）→ run.completed` 在 rc.5 实物上端到端跑通，桌面端可见，DSH 侧原始记录可核，模型调用只用 **2 次**（同一个 run 的 step 1 / step 2，`07:16`、`07:22` 各带 usage）。
 - **未达成 2 项**：① Done 8(a)（Electron 自起后端 → `before-quit` → `backendHandle.stop()`）—— 产品缺陷 **#1456**；② CI `core-gates / core` —— `reason=affected-no-tests`（§6.2），非产品代码失败，PR 不 merge。
 - **Done 8 的会话关闭部分已由 T6 补齐**（真实产品路由 `POST /api/dsh/sessions/:id/close` → `{ok:true,closed:true}`，0 模型轮次，§6.1）；主链那次的 close 未留证据，判定以 T6 同路由证据为准。
 - 后续建议：修 #1456 后补一次 Done 8(a) 的**单点**验证（可用同一合成夹具，不需要再烧模型轮次：只需确认 `backendHandle.stop()` 结束后端树）。
