@@ -1,0 +1,107 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1465,
+  "patch_fingerprint": "sha256:24f41aed5c21ffa936b742a5054e8cee52544a80476be4e171547eac009d832b",
+  "author": "coding-1463（probe@local；PR #1464 三提交 ec09d1391→6c726b534→0b9907965 的作者会话）",
+  "reviewer": "review-1464（零上下文独立复核会话，DSH fresh-session，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "① 范围与撞车（写集/认领）",
+      "cmd": "git diff --name-status 3ba60318ab8c7f38e617da352fc62f78656d8db7..0b99079655 && git show 0b99079655:.claude/claims/1463.yaml",
+      "result": "pass",
+      "evidence": "7 文件，与 claim writeset 逐条相同 ⇒ A .claude/claims/1463.yaml ｜ M docs/authority/DOCS-REGISTRY.yaml ｜ A docs/synova/coordination/提案-合并凭证与②移植-20261123.md ｜ A gate-exemptions/2026-11-23-1464-merge-cred-chain.md ｜ A memory/notes/implemented/2026-11-23-1463-merge-cred-chain.md ｜ M scripts/control-tower/check-merge-conditions.sh ｜ A tests/control-tower/check-merge-conditions-token.test.sh。零越界：scripts/audit/** 0 命中、.gitea/** 0 命中、.claude/claims/1460.yaml 无改动。三提交文件面与描述一致：ec09d1391=3 件（claim/registry/提案）、6c726b534=3 件（脚本/配对测试/Note）、0b9907965=2 件（豁免件 + claim 补 CI 未覆盖）。reflog 无 force push 迹象（本地 reset 到 3ba60318a 后重建三提交，远端 = 0b9907965）"
+    },
+    {
+      "id": "② 判据零改动（本次最关键）",
+      "cmd": "逐函数体 sha256 对比 base 与 head（sed -n '/^fn() {/,/^}/p' 后 sha256sum）＋ exit 0/1/2 计数 ＋ 机器行字符串计数 ＋ 全 diff 删除行清单",
+      "result": "pass",
+      "evidence": "19/19 函数体 SAME：cond1_ci d7ee36aaeead ｜ cond2_overlap 5bb8a9bb89ca ｜ cond3_review 8803d710db3c ｜ cond4_serial 7d67a8ddc67e ｜ review_check ea5085033fa8 ｜ api_curl c77783199289 ｜ api_get 9c9efcd1442e ｜ emit_json 9cb6edb6b98e ｜ patch_fingerprint 496f8aaaf798 ｜ die_degraded adf239b173a8 ｜ main ffd38028ff52 ｜ selfcheck 87f64cedd971（其余 scan_open_prs/ensure_ref/diff_files/resolve_tip/resolve_pr/parse_args/usage 亦 SAME）。exit 0/1/2 出现次数 base=head=3/1/6。机器行计数两版相同：MERGE-COND: can 2、no 1、degraded 2、CAN-自合并 10、NO: 13、SELFCHECK-OK 1、SELFCHECK-FAIL 3。阈值/常量同：PAGE_SIZE=50、MAX_PAGES=20、total_count=0 ×5、state==success ×2、T1 attested ×1。全 diff 仅 2 行删除，均为注释（'- ④ 基础函数… diff_files/patch_fingerprint/jget/emit_json' 与 '- resolve_token() { # token 三级：…'）⇒ 变更面只在 resolve_token 及其新增 5 个凭据小函数 ＋ 头注释。降级码集合未扩：head 中 E_NO_TOKEN 仅出现在注释（'E_NO_TOKEN 降级码待 A 类提案'），无 die_degraded 引用；grep 差集另一项 E_COND_CRED_TIMEOUT 是环境变量名 SYNO_MERGE_COND_CRED_TIMEOUT 的子串命中"
+    },
+    {
+      "id": "③ 安全：token 通路/非交互/fail-closed",
+      "cmd": "grep -nE 'set -x|TOKEN|GIT_TERMINAL_PROMPT|GCM_INTERACTIVE|timeout|Authorization' scripts/control-tower/check-merge-conditions.sh；Git Bash 在无凭据条件下真跑 --pr 1464 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "无 set -x（仅 L41 注释提及）；L249/L252 两条分支都带 GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never；墙钟上限 timeout \"$secs\" 且 secs 经 cred_fill_secs 数字校验（''|0|*[!0-9]* ⇒ 10）；凭据助手 stderr 丢弃处带 '# swallow-ok:' ＋ SC2310 说明；token 只经管道进 shell 变量（credential_token 的 printf 输出被 $(...) 捕获）与 api_curl 的 -H（L287，基线既存），无落盘、无回显。fail-closed 真机：HOME 指向空目录 ＋ credential.helper= 清空 ＋ GITEA_TOKEN/SYNO_GITEA_TOKEN 未设 ⇒ 'degraded: HTTP 403 on /pulls/1464 [code=E_API_HTTP]' ＋ NO_CRED_EXIT=2（未静默给空 token、未误判绿）"
+    },
+    {
+      "id": "④ 测试真实性（三件原文）",
+      "cmd": "bash scripts/control-tower/check-merge-conditions.sh --selfcheck ； bash tests/control-tower/check-merge-conditions.test.sh ； bash tests/control-tower/check-merge-conditions-token.test.sh",
+      "result": "pass",
+      "evidence": "WSL 默认 bash 5.3.9（/root/rev1464，与评审 worktree 三文件 sha256 逐字节相同 83ad93ab806b/1764455fde32/b88a78a7d24b）：'SELFCHECK-OK: 13/13' exit 0 ｜ '结果: 14 通过, 0 失败' exit 0（含 '[边界] --selfcheck exit=0 末行 SELFCHECK-OK: 13/13' 与 '只读证明：运行前后 git status --porcelain 无差异'）｜ '结果: 6 通过, 0 失败' exit 0（T1–T6 全 ✅，T3 实际执行非 SKIP：'2s 内 rc=1'）。token 测试另在 Git Bash（2.54.0.windows.1 同仓）复跑：'结果: 6 通过, 0 失败' GITBASH_TOKEN_EXIT=0 ⇒ 双壳一致。未出现 base 同款既有红（本次全部在 WSL 跑，Git Bash 只跑零网络的 token 测试）"
+    },
+    {
+      "id": "⑤ 改坏必红（仓库外临时副本，未污染仓库）",
+      "cmd": "在 ~/mut-1464-v1/{A,B,C} 三份仓库外副本上各改坏 1 处后跑 bash tests/control-tower/check-merge-conditions-token.test.sh",
+      "result": "pass",
+      "evidence": "A（cred_api_host 写死 '127.0.0.1:3000'）⇒ '❌ T4 请求体缺 host=gitea.example.test:9999 请求体出现写死的本机 host'，结果 5 通过, 1 失败，exit 1 ｜ B（删掉 '[ -n \"$pw\" ] || return 1' 改成恒 return 0）⇒ '❌ T2 期望 rc≠0 且输出空；实得 rc=0 len=0 sha=e3b0c44298fc'，5 通过, 1 失败，exit 1 ｜ C（整段去掉第 4 级）⇒ T1/T2/T4/T6 四条 ❌，2 通过, 4 失败，exit 1 ｜ 原副本对照：6 通过, 0 失败, exit 0，且脚本 sha256 仍为 83ad93ab806b…（未被改坏）。临时副本均在 ~/mut-1464-v1 与 /root/rev1464（仓库外）"
+    },
+    {
+      "id": "⑥ 豁免合规（机器核）",
+      "cmd": "bash scripts/control-tower/check-gate-protection.sh --changed-base 3ba60318ab8c7f38e617da352fc62f78656d8db7",
+      "result": "pass",
+      "evidence": "'结果: 12 通过, 0 失败'；'✅ 新增豁免文件带复核件: gate-exemptions/2026-11-23-1464-merge-cred-chain.md → # review: #1464'；'✅ 受保护路径变更 4 条' 且逐条有合规豁免：scripts/control-tower/check-merge-conditions.sh ｜ tests/control-tower/check-merge-conditions-token.test.sh ｜ docs/authority/DOCS-REGISTRY.yaml ｜ gate-exemptions/2026-11-23-1464-merge-cred-chain.md（自覆盖）。豁免件首行确为 '# review: #1464'（带 #，命中机器正则），四条豁免行三段式齐（路径／≥10 字理由／裁定号 #1463）"
+    },
+    {
+      "id": "⑦ 红线：claims blob ＋ 主树零写入",
+      "cmd": "git rev-parse 3ba60318ab8c7f38e617da352fc62f78656d8db7:.claude/claims/1460.yaml ； git rev-parse 0b99079655:.claude/claims/1460.yaml ； 主树 git status --porcelain",
+      "result": "pass",
+      "evidence": "两处均为 f69edb8c2003b9dd22d89dad6aab15aa7ed02983（= 3ba60318a: 同值，且 diff base..head 对该文件为空）。主树（D:/novis-backup-20260526/Novis/synova-agent）开工/收工 git status --porcelain 头部逐字节相同、无新增项；全部复核动作在仓库外 worktree D:/novis-backup-20260526/Novis/.synova-wt-1464-review（detached at 0b9907965）＋ /root/rev1464 副本 ＋ /d/tmp/mut-1464 临时脚本完成，主树零写入"
+    },
+    {
+      "id": "⑧ 指纹两法复算 ＋ 被测件自证",
+      "cmd": "python -c hashlib.sha256(subprocess git diff bytes) ； WSL: git diff --output=fp2.diff 后 sha256sum ； bash scripts/control-tower/check-merge-conditions.sh --pr 1464 --diff-fingerprint",
+      "result": "pass",
+      "evidence": "法 1（python 捕获字节，Windows worktree）：14d54ac223cfb8d1380b062be4b8a143ce900ae9ed6a613cab677ac8bb69cd8c，BYTES=42596 ｜ 法 2（git diff --output 落盘再哈希，WSL 对真仓库）：14d54ac223cfb8d1380b062be4b8a143ce900ae9ed6a613cab677ac8bb69cd8c，42596 B，cmp IDENTICAL ｜ 被测件自跑 --pr 1464 --diff-fingerprint（Git Bash，token 走第 4 来源 GCM）输出同值 ⇒ fp12=14d54ac223cf，回执路径 docs/synova/reviews/1464.14d54ac223cf.json 与脚本 review_check 的 rpath 构造一致。（以上为复核会话对 PR #1464 的实测原文；重切为 PR #1465 后 fp 已变 ⇒ 见 findings F4，本回执 patch_fingerprint 字段按重切后实测值填写，回执路径同步为 1465.24f41aed5c21.json）"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "docs/synova/coordination/提案-合并凭证与②移植-20261123.md:162（.claude/claims/1463.yaml done[] 重复同一声称）",
+      "what": "M7 声称「去掉第 4 来源 ⇒ 9 失败（已实测）」，但交付的 token 测试只有 6 判定点，实测去掉第 4 级为 2 通过/4 失败（T1/T2/T4/T6 红）。数字对不上（9 vs 4）⇒ 下一会话按 9 判回归会误判为「少红了 5 条」。属文档精度问题，不改判据，不阻塞合并；建议改为 4 失败或改为「T1/T2/T4/T6 必红」的定性表述"
+    },
+    {
+      "severity": "warn",
+      "where": "tests/control-tower/check-merge-conditions-token.test.sh（CI 侧执行面）",
+      "what": "未观测到 CI 实际执行该测试：本 PR 的判据证据全部来自本机两壳（WSL 默认 bash、Git Bash）实跑，未见 CI 侧执行记录或 annotation。禁读成「CI 已覆盖该测试」；补 CI 挂载前，回归只能靠本机双壳复跑"
+    },
+    {
+      "severity": "info",
+      "where": ".git/config（core.quotepath=false）→ scripts/control-tower/check-merge-conditions.sh:493 patch_fingerprint",
+      "what": "指纹字节依赖仓级 core.quotepath=false：同一提交在无该配置的裸克隆（WSL 下 git clone 后）/root/rev1464 算出 8e2234ae5722…/42872 B，与本仓 14d54ac223cf…/42596 B 不同（差异全在中文路径的引号转义）。属指纹定义（README §2 只钉命令、未钉 config）的既有性质，非本 PR 引入；但复核者必须在本仓内复算 fp，否则回执会被 R3 判红"
+    },
+    {
+      "severity": "info",
+      "where": "scripts/control-tower/check-merge-conditions.sh:287",
+      "what": "token 经 curl -H \"Authorization: token …\" 进入进程 argv（基线既存，本 PR 未改该行）；同机其他用户可读进程列表这一暴露面仍在。本 PR 新增的第 4 来源同样不落盘、不回显，未扩大该面"
+    },
+    {
+      "severity": "info",
+      "where": "docs/synova/reviews/1465.24f41aed5c21.json（patch_fingerprint 字段）／scripts/control-tower/check-merge-conditions.sh:491 patch_fingerprint",
+      "what": "【重切会话补记，非复核会话结论】重切后 fp 已变：14d54ac223cf…（42596 B）→ 24f41aed5c21…（44250 B）。两组原因：① 新 merge-base 6694cb50d 已含 #1462 对 docs/authority/DOCS-REGISTRY.yaml 的改动 ⇒ 该文件 `index` blob 行变 —— 未加文档修正前逐行比对旧/新 diff 仅 2 行不同、字节数同为 42596，故**内容不变的重放本身已足以改变 fp**；② 复核 F1/F2/F3 的文档修正（提案 182→185 行、Note 17→19 行、claim 1 行、豁免件首行 + 描述行）。⇒ ③ 的 R3 只认实际 fp，故本回执的 patch_fingerprint 按重切后实测值填写；旧值保留在 checks[7] 证据原文，未改写复核时结论"
+    },
+    {
+      "severity": "info",
+      "where": "重切后复跑证据（由重切会话执行，不替代本复核结论）",
+      "what": "PR #1465 重切后复跑（Git Bash 2.54.0.windows.1 同仓 / WSL bash 5.3.9）：--selfcheck 'SELFCHECK-OK: 13/13' ｜ 主配对 '结果: 14 通过, 0 失败' ｜ token 配对 '结果: 6 通过, 0 失败'（Git Bash ＋ WSL 两壳）｜ check-gate-protection --changed-base 6694cb50d '结果: 12 通过, 0 失败'（首行 '# review: #1465' 被接受）｜ --pr 1465 --diff-fingerprint 输出 24f41aed5c21…（与独立复算同值）｜ git rev-list --count HEAD..gitea/main = 0（④ S1 恢复）。脚本与测试文件与复核时逐字节相同（sha256 83ad93ab806b… / b88a78a7d24b… / 1764455fde32…）⇒ 重切未改实现"
+    }
+  ],
+  "issued_at": "2026-11-23T23:21:50+08:00",
+  "tool": "pr-review@v1（.dsh/skills/pr-review/SKILL.md 五步）",
+  "recut": {
+    "by": "coding-1464-recut（重切会话）",
+    "at": "2026-11-23T23:48:00+08:00",
+    "from_pr": 1464,
+    "from_head": "9419fc3d8d7941056a83a837ba3fe4a16fe282ab",
+    "from_patch_fingerprint": "sha256:14d54ac223cfb8d1380b062be4b8a143ce900ae9ed6a613cab677ac8bb69cd8c",
+    "from_base": "3ba60318ab8c7f38e617da352fc62f78656d8db7",
+    "new_base": "6694cb50d02ffcf136090d9bb9d51e0c3c049ab4",
+    "replay_map": "ec09d1391→e7cd9b006 / 6c726b534→65c1ddab8 / 0b9907965→78ae0c493（cherry-pick，脚本与测试文件逐字节相同）",
+    "doc_fix_commit": "979c4ed36（复核 F1/F2/F3 落文档）",
+    "exempt_pointer_commit": "e39ab1cfb（gate-exemptions 首行改 '# review: #1465'）",
+    "receipt": "本条（末提交，仅 docs/synova/reviews/** ⇒ 不改 fp）",
+    "note": "旧分支 fix/merge-cred-chain 与其 PR #1464 原样保留：未 force push、未推 main、未删除旧分支/旧 PR。"
+  }
+}
