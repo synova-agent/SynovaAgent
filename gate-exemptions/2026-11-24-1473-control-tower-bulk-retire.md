@@ -9,6 +9,7 @@
 #
 # 逐文件豁免（三段式：路径 — 理由（≥10 字） — 裁定号）：
 - scripts/control-tower/** — #1473 控制塔孤儿实现与失效基线/入口成批退役 — #1473
+- scripts/check-fde-terms.sh — #1473 去除已退役 check-dataflow-alignment 的失效 path 引用 — #1473
 - scripts/workflow/** — #1473 失效 workflow 门禁脚本成批退役 — #1473
 - scripts/hooks/** — #1473 失效钩子成批退役 — #1473
 - tests/control-tower/** — #1473 上述实现对应的专属测试同批退役及混测去引用 — #1473
