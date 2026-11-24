@@ -4,7 +4,7 @@
  * 卡面（Done 真源）: CTO 2026-10-11 裁定「以权威文档15 §3.5.1 数值区间为权威值域」
  *   （裁定全文入仓: `docs/synova/coordination/K4-审计定稿与卡面全套.md` §三bis）
  *
- * 探针（判据载体）: `scripts/control-tower/probe-ontology-values.ts`
+ * 探针（判据载体）: `tests/support/ontology-values.ts`
  *   · 本件 import 探针的**纯函数 + 判定函数**，沙箱由 `loadEdgeFiles(dir)` 的 `dir` 入参给定
  *     ⇒ 探针**无模块级路径常量**、**无进程内缓存**，故沙箱**不需要子进程**（与 #1134 件不同，
  *     那是因为 `src/l4/ontology-loader.ts` 有模块级 `ONTOLOGY_DIR` + `cache`；本探针无此问题）。
@@ -71,7 +71,7 @@ import {
   isInLagDomain,
   loadEdgeFiles,
   parseInterval,
-} from '../../scripts/control-tower/probe-ontology-values';
+} from '../support/ontology-values';
 
 const REPO_ROOT = process.cwd();
 const REAL_EDGE_DIR = join(REPO_ROOT, EDGE_DIR_REL);

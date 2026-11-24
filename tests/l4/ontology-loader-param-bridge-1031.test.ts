@@ -111,7 +111,7 @@ import {
   PENDING_REGISTERED_ADDITIONS,
   TFR_E_TO_FILE,
   TFR_REGISTERED_OTHER,
-} from '../../scripts/control-tower/probe-ontology-values';
+} from '../support/ontology-values';
 
 /** 真仓**在场**的预告件（`SPEC` 之外、已登记却尚未提升为正式成员者）。
  *  🔴 必须按**磁盘在场性**筛选，不能无条件计入 —— 否则本笔在"尚未合入 `l3-65`"的树上会**自红**
@@ -125,7 +125,7 @@ const BASELINE_EDGE_TYPES = ACTUAL_EDGE_FILES.length;
 const DERIVED_EDGE_TYPES = SPEC_EDGE_TYPES.length + PRESENT_PENDING_EDGES.length;
 
 // ═══ #477：`transfer_function` 标定期望 **逐件推导**（禁字面基数）═══════════════════
-// 真源 = 判据源 `probe-ontology-values.ts` 的两个**逐件登记面**（**只读**，本卡不改它）：
+// 真源 = 测试 oracle `tests/support/ontology-values.ts` 的两个**逐件登记面**（**只读**，本卡不改它）：
 //   · `TFR_E_TO_FILE`（13 件）      = 权威01 第二章公式的逐件落点（E 号 → 文件）
 //   · `TFR_REGISTERED_OTHER`（4 件） = 3 件本卡前既有真公式（`prose_formula`）+ 1 件结构性 N/A（`structural_na`）
 // 其余 `SPEC ∪ 在场预告件` = `unknown`（#235 显式置 unknown；预告件 `expected = non_causal_unknown`）。
