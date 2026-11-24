@@ -179,6 +179,22 @@ describe('budget — 资源上限（超限即抛 E_RESOURCE_LIMIT）', () => {
     expect(DEFAULT_LIMITS.maxDepth).toBe(8);
     expect(DEFAULT_LIMITS.maxDurationMs).toBe(10 * 60 * 1000);
   });
+
+  it('默认上限的**行为面**（不是常量镜像）：第 5001 个文件抛、51MB 判 oversized、深度 9 抛', () => {
+    const files = createBudget({});
+    for (let index = 1; index <= 5000; index += 1) admitFile(files, { size: 1, path: `f${index}` }, 0);
+    expect(files.files).toBe(5000);
+    expect(() => admitFile(files, { size: 1, path: 'f5001' }, 0)).toThrow(/maxFiles/);
+
+    const sizing = createBudget({});
+    const big = admitFile(sizing, { size: 51 * MB, path: 'big.docx' }, 0);
+    expect(big.accepted).toBe(false);
+    expect(big.reason).toBe('oversized');
+
+    const depths = createBudget({});
+    checkDepth(depths, 8, 'a/b/c/d/e/f/g/h');
+    expect(() => checkDepth(depths, 9, 'a/b/c/d/e/f/g/h/i')).toThrow(/maxDepth/);
+  });
 });
 
 // ═══ report ═════════════════════════════════════════════════════════════════
