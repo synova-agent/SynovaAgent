@@ -1,4 +1,4 @@
-# DSH UI 借鉴清单 v1.0（可执行级）
+# DSH UI 借鉴清单 v1.1（可执行级）
 > 任务: #1485 ｜ UI 重做模块（客户界面语言与导航）
 
 > 归属：UI 重做模块 ｜ 任务 **#1485** ｜ 2026-11-24
@@ -107,6 +107,8 @@ function SidebarRoot({ collapsed, width, drawer, startSession, toggleSidebar, ..
 ## 3 侧边栏：列表的每一像素都是契约
 
 ### 3.1 会话行：32px 高 + 16px 前导格 + 相对时间 + 行菜单
+
+> 🔴 **工具事件行的完整几何（24px 单行、16 前导、2×2 分隔点、展开态范式）已移到 §17**——那里是源码原文＋运行态实测，比本节更细。
 
 **DSH 契约**（`dsh-client-ui-workspace/lib/types/client/rows/Rows.d.ts:81-89`）
 
@@ -612,6 +614,9 @@ background: linear-gradient(180deg,
 | DSH 的导航结构 / 会话当第一公民 / 内部术语 | **禁止照搬**（宪章 §6.3 壳属我们） |
 | `dsh-client-ui-trajectory` / `dsh-experimental-client-ui-stats` 参与 composer meta | **否**：前者是视图页签，后者是独立的 Statistics 页 |
 | 空态组件可借实现 | **没有** `dsh-client-ui-empty` 包 ⇒ 空态 Expression 我方自定（只借"分四态"的分法） |
+| 工具事件行的 DOM/几何 | ✅ **已取到**（v1.1）：`app.asar` 内打包的是**源码**（`ToolCallTree.tsx`/`ToolRow.tsx`/`.module.css`），行几何与展开范式见 **§17**；运行态尺寸见 §17.2 |
+| 折叠态 rail **56px** 的运行态 | ⚠️ **未在运行态复现**（量测台未做折叠交互）⇒ 仍为源码常量 `SIDEBAR_COLLAPSED=56`，见 §17.3 |
+| DSH **界面**逐像素截图 | ⚠️ **未做**（起第二实例会共用 user-data、有打断当前会话风险）⇒ 用"DSH 原始 CSS 在独立 Chromium 里量"替代，差异已在 §17.3 列明 |
 
 ---
 
@@ -620,3 +625,75 @@ background: linear-gradient(180deg,
 - 本文所有数值以**锁版实物**为准；DSH 换版后须重新取证，**不得沿用旧数字**。
 - 标 ⚠️／❌ 的项是我方设计决定，**不得在对外材料中表述为"DSH 的做法"**。
 - 本文升版必须同步 DEV DOC §6.2 批次表与《词典》§7.1 指针。
+---
+
+## 17 工具事件行：像素配方（源码实证）＋ 运行态量测（v1.1 新增）
+
+> 本节把 v1.0 里"借 `ToolCallTree` 递归折叠"这句抽象话，补成**可直接实现的行几何**与**在真 Chromium 里量到的数**。
+> 来源：`app.asar` 内打包的**源码**（`ToolCallTree.tsx`／`ToolRow.tsx`／对应 `.module.css`）＋ Edge headless 对 DSH 原始 CSS 的**计算样式实测**。
+
+### 17.1 事件行几何（源码原文，不是推断）
+
+`ToolRow.module.css:1-7` 的头注释就是规格：
+
+```
+/* Tool summary row (figma 122:9479): 24px single line at the default size —
+   [16 leading] gap6 [title 13/24] gap8 [2x2 dot] gap8 [summary FILL truncate]. */
+```
+
+| 元素 | 契约 | 出处 |
+|---|---|---|
+| **行高** | **24px 单行**（默认字号下） | 同上 |
+| 前导（leading） | **16px**，`flex-shrink: 0` | `.leading` |
+| 间距 | leading→title **6px**；title→dot **8px**；dot→summary **8px** | 头注释 |
+| title | **13px / 24px**，默认 `font-weight:400`；`data-tool^='cordis_'`（内部工具）→ **500** | `.title`；`.root[data-tool^='cordis_'] .title` |
+| 分隔点 | **2×2px 方块**，`border-radius:1px`，`margin:0 8px`，色 `--dsw-alias-label-caption` | `.sep` |
+| summary | `flex:1 1 auto`、`min-width:0`、**单行省略号**（`text-overflow:ellipsis; white-space:nowrap`）、13px/24px | `.summary` |
+| 行根 | `div.root[data-variant][data-tool=<wire name>][data-state=<state>]` | `ToolRow.tsx:460` |
+| **工具名只作 data 属性** | 可见 title 是**人话**；wire name 只在 `data-tool` 上 | `ToolRow.tsx:460` |
+| 展开态 | 用共享 `DisclosureRow`，状态靠 **`aria-expanded`**；`open = expanded && expandable` | `ToolRow.tsx:196,218,462-477` |
+| 展开内容 | **原始入参 JSON（仅展开时格式化）** ＋ 扁平化结果文本（Output 段） | `ToolRow.tsx:49-51,332` |
+| pending 态 | `TextShimmer`（微光扫过），**不是 spinner** | `ToolRow.tsx:322,325` |
+| 每一调用的锚 | `div.callRow[data-chat-anchor-key="call:<id>"][data-chat-call-id=<id>]` | `ToolCallTree.tsx` |
+| **子调用树** | `div.subCalls[data-subcalls]`；`display:flex; column; gap:4px; margin:4px 0 2px 22px; padding-left:8px; border-left:0.5px solid --dsw-alias-border-l2` | `ToolCallTree.module.css` |
+
+🎯 **可执行契约（我方事件行照此做）**：
+- 客户看到的行 = **24px 单行**：16px 前导字形 + 人话标题（13/24）+ 2×2 点 + **可截断的摘要**。
+- **协议名（工具全名／枚举）只进 `data-*` 与展开层**，绝不进可见文本——这正是我们《词典》§1 禁用词要求的**现成实现范式**。
+- **展开态由 `aria-expanded` 驱动**（可访问性天然正确），展开后才是原始入参与结果。
+- **子调用用 22px 缩进 + 0.5px 左竖线 + 4px 间距**表达层级——一套很轻的树，不画连接线。
+- **pending 用微光不用转圈**。
+
+### 17.2 运行态量测（Edge headless 152 / 真 Chromium，量 DSH 原始 CSS）
+
+**方法（可复跑、零风险）**：从 `app.asar` 抽出 DSH 原始 CSS（`design_system_tokens.css`、`ConversationRoot.module.css`、`InputBar.module.css`、`PermissionSelect.module.css`），装配一个只含目标选择器的页面，在真 Chromium 里读 `getComputedStyle` 与 `getBoundingClientRect`。**未启动 DSH 界面、未触碰其 user-data。**
+
+| 量测项 | 期望（源码声明） | **运行态实测** | 结论 |
+|---|---|---|---|
+| 草稿滚动口 `--dsh-composer-text-max-height` 落到 `.scroll` | 336px | **`max-height: 336px`，内容 2000px 时实高 = 336px** | ✅ 上限真的生效（否则会是 2000px） |
+| 变量是否能跨作用域解析（`.composerSeat` → `.scroll`） | 定义在 seat、用在 scroll | `seat` 上读到 **336px** | ✅ 变量链成立 |
+| 停靠态输入最小高 `.input` | 36px | **`min-height:36px`，实高 36px** | ✅ |
+| 空会话 hero 输入最小高 `.hero .input` | 52px | **`min-height:52px`，实高 52px** | ✅ |
+| dock 最小高 `.root:not(.hero) > .dock` | 22px | **`min-height:22px`，实高 26px（22 + 内部）** | ✅ 预留高度成立 |
+| 权限 chip 高／最大宽／字号 | 28px / 220px / 13px | **28px / 220px / 13px** | ✅ |
+| **容器查询 460px 是否真翻转** | `@container (max-width:460px)` 隐藏 chip 文字 | 容器宽 **616px → 文字 `display:block`**；容器宽 **456px → 文字 `display:none`** | ✅ **阈值真的翻转** |
+| 容器类型 | `.row { container-type: inline-size }` | `containerType = inline-size` | ✅ |
+| 内容宽度轴 `--dsh-chat-content-width` | `clamp(680px, 列宽×64%, 920px)` | 解析为 `clamp(680px, calc(0px * 0.64), 920px)` | ⚠️ **只证实公式结构**：`--dsh-conversation-column-width` 由运行期发布，我的量测台没有该值（=0）⇒ 实际像素**未证实**，不作断言 |
+| 令牌变量 `--dsw-alias-bg-base` | 由 token CSS 定义 | **空**（`css_loaded:false`） | ⚠️ 量测台里 token 未解析 ⇒ **凡依赖令牌的值我只认"声明值"，不认"运行态色值"** |
+
+**结论**：v1.0 里的 4 个关键数字（336 / 56 / 460 / 22）中，**3 个已在真 Chromium 运行态证实**（336、460、22；另加 36/52/28/220），**1 个（56px 轨道）依赖折叠态未在量测台复现**，仍为源码常量 `SIDEBAR_COLLAPSED = 56`；内容宽度轴与颜色令牌**只到结构与声明层**，明确不冒充运行态。
+
+### 17.3 本节未做到的部分（不冒充）
+
+| 项 | 状态 |
+|---|---|
+| DSH **真实界面**逐像素截图（含折叠态 rail 56px） | **未做**。原因：起第二个 DSH 实例会共用同一 user-data（会话/锁），有打断当前工作会话的风险；不为此冒险。替代＝用 DSH 原始 CSS 在独立 Chromium 里量（上表），并明确标出差异 |
+| 颜色令牌的真实取值 | **未证实**（量测台 token 未解析）。色值仍以 token CSS 声明为准 |
+| `ToolRow` 展开后的完整 DOM 层级 | **未取**（只取到行几何与展开入口）。若要取，方法同上：asar 抽 `DisclosureRow` 等组件 |
+| 运行态字体（中文回退字体度量） | **未证实**（量测台用默认字体） |
+### 版本记录
+
+| 版本 | 日期 | 变更 |
+|---|---|---|
+| v1.0 | 2026-11-24 | 首版：§0–§16，14 组可执行契约 + 非换皮机判 N1–N5 |
+| **v1.1** | 2026-11-24 | ① 相对时间六档**从"我方自定"改为实测实现**（`app.asar` → `index-Ciz7DZxv.js` 的 `uB`，含 `Math.floor`／30 天月／365 天年／未来夹 0）；② 新增 **§17 工具事件行像素配方 + 运行态量测**（源码 `ToolRow.tsx`/`ToolCallTree.tsx` 行几何 + Edge/Chromium 对 DSH 原始 CSS 的计算值：336／36／52／22／28／220／13／460 断点翻转）；③ §15 补三行"已取到/仍未做"，把"DSH 界面逐像素截图""折叠态 rail 56px 运行态""颜色令牌实测"明确列为未做。 |
