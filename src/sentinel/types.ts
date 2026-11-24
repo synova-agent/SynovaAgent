@@ -220,6 +220,26 @@ export interface SentinelContext {
   /** V4.3.0: 团队 ID (上下文透传) */
   teamId?: string;
   /**
+   * ④a 业务周期（`YYYY-MM`）—— **由调用方显式透传**（#1486 裁定 c：只补透传，不派生）。
+   * 禁 `now()` 派生、禁用写入时间顶替：期间是业务事实（编一个＝造数据）。
+   * 缺省 = 该轮未接 ④a（**既有哨兵行为不变**；轮次写入侧的 `S2_DEGRADED_NO_PERIOD` 语义保持不变）。
+   */
+  period?: string;
+  /**
+   * ④a **读路径**（#1486 裁定 c：复用现成 reader `metric-observations-reader.ts` 的注入形态）。
+   *
+   * 由 `registry.runAll` 在「调用方给了 period + 引擎库句柄 + teamId」时绑定：
+   * `orgId`＝`context.teamId`、`period`＝本轮 period 在注入处**闭包锁定** ⇒ 哨兵只能读本企业本期的行，
+   * 无法用入参跨租户/跨周期读。
+   *
+   * @invariant 缺省 = 该轮不可读 ④a（哨兵必须显式降级，不得静默当作"没有观测"）
+   * @not-here 不写 ④a（写侧 = `metric-observations-writer.ts`）、不做聚合/趋势
+   */
+  metricObservations?: {
+    /** @output 命中 ⇒ 真实行；未命中 ⇒ null；四键非法/读失败 ⇒ `MetricObservationError`（不静默空） */
+    get(objectId: string, metricId: string): import('./metric-observations-reader').MetricObservationRow | null;
+  };
+  /**
    * D577: 哨兵阈值表（注入契约）。
    * 来源 = manifest.thresholds 全量（基线）+ AgentMemoryStore 覆写（orgKey = check 时 teamId || 'default'，
    * 覆写应用于 manifest.thresholds 首个 key 即主指标——与 runner.getThreshold L1043 语义一致）。

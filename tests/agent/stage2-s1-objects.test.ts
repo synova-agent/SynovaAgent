@@ -4,7 +4,8 @@
  * 判据身份（DEV DOC v1 §5，Issue #1431 评论 14226）：
  *   [正常]   两节点 + 一条边：id 形态 / getObjectById 逐字段相等 / 边原始行两端类型 = 输入 type（非 'unknown'）
  *   [跨 org] 同一 nodeId 从另一 org 查 ⇒ null；跨 org 建边 ⇒ EDGE_ENDPOINT_MISSING
- *   [缺参]   缺 orgId/type/props/period/defVersion ⇒ VALIDATION，零写入（行数 +0、createNode 0 调用、getDatabase 0 调用）
+ *   [缺参]   缺 orgId/type/props/period、period 形态非法 ⇒ VALIDATION，零写入（行数 +0、createNode 0 调用、getDatabase 0 调用）
+ *   [#1486 a] `defVersion` 缺省 ⇒ 不报错、落库属性系统赋 `ingest-v0`（只放宽"缺省"，"乱填"仍 VALIDATION）
  *   [边缺参] 边指向不存在节点 ⇒ EDGE_ENDPOINT_MISSING，零边写入
  *   [DB 异常] 库不可用 ⇒ 抛错（不吞、不返回假 id）
  *   [反例]   调用方自报 graph（第 4 实参）不改变分区 —— 物理行 graph 列 = orgId
@@ -22,6 +23,7 @@ import {
   createRelation,
   getObjectById,
   GraphWriteError,
+  INGEST_DEF_VERSION,
 } from '../../src/agent/graph-store-service';
 import { SqliteGraphStore } from '../../src/adapters/sqlite-graph-store';
 import { getDatabase } from '../../src/init/engine-context';
@@ -151,7 +153,7 @@ describe('createObject / createRelation — ② 对象与关系真实落库（#1
     expect(countEdges()).toBe(beforeEdges);
   });
 
-  it('[缺参零写入] 缺 orgId/type/props/period/defVersion ⇒ VALIDATION，零写入且未触达数据库', () => {
+  it('[缺参零写入] 缺 orgId/type/props/period/period 伪造 ⇒ VALIDATION，零写入且未触达数据库', () => {
     // 基线：先落一个合法对象，证明"零写入"是对比出来的
     createObject(ORG, TYPE_TEAM, PROPS_TEAM);
     const beforeNodes = countNodes();
@@ -167,8 +169,12 @@ describe('createObject / createRelation — ② 对象与关系真实落库（#1
         () => createObject(ORG, TYPE_TEAM, { name: '缺 period', defVersion: DEF_VERSION }),
         () => createObject(ORG, TYPE_TEAM, { name: '非法 period', period: '2026-13', defVersion: DEF_VERSION }),
         () => createObject(ORG, TYPE_TEAM, { name: '非串 period', period: 202611, defVersion: DEF_VERSION }),
-        () => createObject(ORG, TYPE_TEAM, { name: '缺 defVersion', period: PERIOD }),
+        // #1486 a 反例：period 伪造（日期形态 / 非补零月份）必须被抓 —— 只有"缺省"被放宽，期间不得编造
+        () => createObject(ORG, TYPE_TEAM, { name: '伪造 period(日)', period: '2026-10-01', defVersion: DEF_VERSION }),
+        () => createObject(ORG, TYPE_TEAM, { name: '伪造 period(非补零)', period: '2026-1', defVersion: DEF_VERSION }),
+        // #1486 a：只放宽"缺省"，"乱填 defVersion"仍必须被拒（不放宽成静默纠正）
         () => createObject(ORG, TYPE_TEAM, { name: '空 defVersion', period: PERIOD, defVersion: '' }),
+        () => Reflect.apply(createObject, undefined, [ORG, TYPE_TEAM, { name: '非串 defVersion', period: PERIOD, defVersion: 7 }]),
       ];
 
       for (const call of invalidCalls) {
@@ -184,6 +190,22 @@ describe('createObject / createRelation — ② 对象与关系真实落库（#1
     } finally {
       createNodeSpy.mockRestore();
     }
+  });
+
+  it('[#1486 a] defVersion 缺省 ⇒ 可写，落库属性系统赋 ingest-v0；period 仍来自入参', () => {
+    const id = createObject(ORG, TYPE_TEAM, { name: '缺 defVersion', period: PERIOD });
+    const row = db.prepare('SELECT props, graph FROM graph_nodes WHERE id = ?').get(id) as { props: string; graph: string };
+    const props = JSON.parse(row.props) as Record<string, unknown>;
+
+    expect(row.graph).toBe(ORG);
+    expect(props.defVersion).toBe(INGEST_DEF_VERSION);
+    expect(props.defVersion).toBe('ingest-v0');
+    expect(props.period).toBe(PERIOD);
+    expect(props.name).toBe('缺 defVersion');
+    // 入参显式给出 defVersion 时不被默认值覆盖
+    const explicit = createObject(ORG, TYPE_TEAM, { name: '带 defVersion', period: PERIOD, defVersion: DEF_VERSION });
+    const explicitRow = db.prepare('SELECT props FROM graph_nodes WHERE id = ?').get(explicit) as { props: string };
+    expect((JSON.parse(explicitRow.props) as Record<string, unknown>).defVersion).toBe(DEF_VERSION);
   });
 
   it('[边/缺参] 端点不存在或入参缺失 ⇒ 抛错，零边/零节点写入', () => {

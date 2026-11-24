@@ -275,11 +275,14 @@ export async function createServer(): Promise<Server> {
         //    teamId 用实例 org（无租户维度时 writer fail-closed 不写，不串租户）
         // 铁律 39：sink 经 L2 出口（agent/sentinel-service），不直触 L3 sentinel/metric-readings-writer
         const { createSentinelMetricSink } = await import('./agent/sentinel-service');
+        // #1486 裁定 c：period 来自 ② 资料（禁 now() 派生）；资料无期间 ⇒ 不传 options（既有降级码语义不变）
+        const { resolveLatestMaterialPeriod } = await import('./agent/graph-store-service');
+        const materialPeriod = resolveLatestMaterialPeriod(config.orgId, db);
         const findings = await getSentinelRegistry().runAll({
           db, now: new Date(), registry: getSentinelRegistry(),
           metricSink: createSentinelMetricSink(db),
           teamId: config.orgId,
-        });
+        }, materialPeriod === undefined ? undefined : { period: materialPeriod, db });
         if (findings.length > 0) {
           const checkResults: import('./sentinel/types').SentinelCheckResult[] = [{
             sentinelId: 'boss-mailbox',
