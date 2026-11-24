@@ -1,4 +1,6 @@
-#!/usr/bin/env npx tsx
+// Frozen test oracle extracted from scripts/control-tower/probe-ontology-values.ts (#1478).
+// Test-only data/helper source; MUST NOT import control-tower runtime scripts.
+// The authoritative values are from 权威文档15 §3.4/§3.5.1; see the original file history for provenance.
 /**
  * scripts/control-tower/probe-ontology-values.ts — #234 K4-01「值域迁移」判据探针
  *
@@ -810,98 +812,3 @@ export function resolveEdgeDir(): string {
 // ═══════════════════════════════════════════════════════════════════
 // CLI
 // ═══════════════════════════════════════════════════════════════════
-
-function main(): number {
-  let dir: string;
-  try {
-    dir = resolveEdgeDir();
-  } catch (e) {
-    console.error(`[FAIL] ${(e as Error).message}`);
-    return 2;
-  }
-
-  let samples: EdgeFileSample[];
-  try {
-    samples = loadEdgeFiles(dir);
-  } catch (e) {
-    console.error(`[FAIL] ${(e as Error).message}`);
-    return 2;
-  }
-
-  const a = auditLagValues(samples);
-
-  console.log(`── 探针: scripts/control-tower/probe-ontology-values.ts（#234 K4-01 值域迁移）`);
-  console.log(`── 扫描目录: ${dir}`);
-  console.log(`── 权威源: 权威文档15 §3.5.1（一手原文，仓内）+ §3.4 换算表 + 权威01 第二章 E 号名`);
-  console.log('');
-  console.log(`── G1 值域（因果边）: 区间=${a.intervalCount} unknown=${a.unknownCount}（合计因果边 ${a.causal} / 全部 ${a.files}）`);
-  console.log(`── G3 §3.5.1 八条: 同标签命中·取值 ${S351_TABLE.filter(x => x.expectation === 'align_value').length} 条 + 缺口登记 ${S351_TABLE.filter(x => x.expectation === 'register_gap').length} 条（无同标签边 ${S351_TABLE.filter(x => x.gapKind === 'no_same_label').length} ＋ 有同标签·依裁定(a)不落值 ${S351_TABLE.filter(x => x.gapKind === 'exact_label_not_migrated').length}）`);
-  console.log(`── G4 §3.5.1 未覆盖项登记: ${S351_UNCOVERED.length} 条（规则 ${S351_UNCOVERED.filter(x => x.kind === 'rule').length} + 推导 ${S351_UNCOVERED.filter(x => x.kind === 'derivation').length}）`);
-  console.log(`── G5 非因果域外登记: ${NON_CAUSAL_REGISTRY.length} 条`);
-  console.log('');
-  for (const l of a.reportLines) console.log(l);
-  if (a.reportLines.length > 0) console.log('');
-  for (const v of a.violations) console.log(`❌ ${v}`);
-  if (a.violations.length > 0) console.log('');
-
-  // ── #235（K4-02）transfer_function 面：运行时**真读盘**权威01 第二章，逐字比对
-  let t: TfrAudit;
-  try {
-    const docAbs = join(process.cwd(), TFR_DOC_REL);
-    if (!existsSync(docAbs)) {
-      console.error(`[FAIL] 权威公式源不存在: ${docAbs}（fail-closed）`);
-      return 2;
-    }
-    t = auditTransferFunctions(samples, extractAuthoritativeFormulas(readFileSync(docAbs, 'utf-8')));
-  } catch (e) {
-    console.error(`[FAIL] transfer_function 判定面异常: ${(e as Error).message}`);
-    return 2;
-  }
-  console.log(`── H1–H4 transfer_function 面: 权威公式=${t.formula} unknown=${t.unknown} 登记非权威=${t.registeredOther}（合计 ${t.formula + t.unknown + t.registeredOther} / ${t.total}）`);
-  console.log(`── H2 禁 TBD 残留: TBD=${t.tbd}`);
-  for (const l of t.reportLines) console.log(l);
-  for (const v of t.violations) console.log(`❌ ${v}`);
-  console.log('');
-
-  const setAudit = auditEdgeTypeSet(samples);
-  for (const l of setAudit.reportLines) console.log(l);
-  for (const v of setAudit.violations) console.log(`❌ ${v}`);
-  console.log('');
-
-  console.log('── LIMITS（本探针**证不了**什么，防「接线了 ≠ 被执行」误读）');
-  console.log('   · [L1 真读盘] 只证明盘上值域已迁移且与 §3.5.1 对齐；**不**证明生产代码消费了该字段');
-  console.log('     （实测 src/ + packages/ 对该字段零消费方 ⇒ 读取侧接线不在本卡写集，属遗留项）');
-  console.log('   · 非因果结构性边（' + NON_CAUSAL_REGISTRY.join(', ') + '）的值**不做**值域判定——');
-  console.log('     它在本探针口径下是「域外登记」，在 #1134 判据口径下仍是「唯一的具名规范违规」（见交付件）；');
-  console.log('     两口径并存、都可见，**不是**静默放宽');
-  console.log('   · transfer_function 面**真读**权威01 第二章并**逐字**比对（归一化口径 = 按行 trim/丢空/` ; ` 连接）；');
-  console.log('     13 条之外一律 `unknown`（禁自填）；公式正确性 = 与权威文档逐字一致，**不等于**生产可执行');
-  console.log('');
-
-  const last =
-    `RESULT=files=${a.files} causal=${a.causal} noncausal=${a.nonCausal.length} ` +
-    `interval=${a.intervalCount} unknown=${a.unknownCount} registered=${a.registeredCount} ` +
-    `violations=${a.violations.length} formula=${t.formula} tfr_unknown=${t.unknown} ` +
-    `tfr_registered=${t.registeredOther} TBD=${t.tbd}`;
-  console.log(last);
-
-  const totalViolations = a.violations.length + t.violations.length + setAudit.violations.length;
-  if (totalViolations > 0) {
-    console.error(`[FAIL] 违规 ${totalViolations} 条（逐条见上）`);
-    return 1;
-  }
-  console.log('[OK] 值域迁移判定全绿');
-  return 0;
-}
-
-/**
- * 直跑判定：`process.argv[1]` 与 `import.meta.url` 同一文件。
- * 测试侧 import 本模块时**不**触发 `main()`（判定项由测试自己调 `auditLagValues`）。
- */
-const argv1 = process.argv[1];
-const invokedDirectly = argv1 !== undefined && resolve(argv1) === fileURLToPath(import.meta.url);
-if (invokedDirectly || process.env.SYNO_PROBE_FORCE_MAIN === '1') {
-  process.exit(main());
-}
-
-export { main as probeMain };
