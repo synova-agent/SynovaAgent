@@ -41,3 +41,18 @@
 ?? docs/synova/product-lines/evidence/1459-contract-sampling/
 ?? docs/synova/product-lines/evidence/1459-t5-realjwt/
 ```
+
+## 7 收尾后复核（final，`commit` 之后）
+
+- 复核时间 = 2026-11-24T20:58:09.4069072+08:00
+- port 18790: closed
+- port 5173: closed
+- port 9222: closed
+- 本次 worktree 相关 node/electron 进程 = 0
+- 主树 HEAD（复核）= 77eb430658a693f5e8a6adbe7001abc5f1ff8852
+- 一次性临时目录 <wt>\.tmp-m1m2\：**已整目录删除**（删除前扫描 sk-*/JWT/64hex 模式 0 命中）；可复跑脚本已入库到两个 unner/ 子目录
+- worktree 工作区最终状态：
+```
+?? .codex/heartbeat.json
+```
+- 本批提交：137525566（证据包）＋ a28e56be（README 指向 runner/）；分支 1459-closeout-m1m2 已推送 gitea（未改 main）
