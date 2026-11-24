@@ -2109,3 +2109,34 @@ documents:
     status: draft
     owner: CTO
     note: "#1463 合并凭证链路乙类 A 类送审件（只提案、未改脚本）：② POSIX 路径经文件喂 native python 的移植修复（页文件→argv／API 路径→env／合并步 rc 检查）＋ E_NO_TOKEN 降级码；含改动面/风险/三平台回归/改坏必红。甲类（token 第 4 来源 git credential fill）在同 PR 实现，与本提案分 PR。"
+  # ---- #1485 UI 重做（客户界面语言与导航）2026-11-24｜基线 8f9683c11｜合入目标 gitea/main@b84f8dd71｜status=draft 待合入后转 active ----
+  - id: DOC-1485-01
+    type: devdoc
+    path: docs/synova/ui-redo/UI重做-DEV-DOC-20261124.md
+    status: draft
+    owner: CTO
+    note: "UI 重做模块 DEV DOC v1.3（P1 现状审计＋P2 目标 IA/文案/三态/失败态＋P3 分批计划）；基线 8f9683c11（合入目标 gitea/main@b84f8dd71，已含基线且 renderer/src 零差异）；含对交接文档事实更正（白盒非白字）与阻断批无提交导致的次序依赖；关卡 A 已四轮（R1-R3 退回、R4 可交付 coding），阻塞全处理见附二/三/四；本批只派零重叠 T1。"
+  - id: DOC-1485-02
+    type: knowledge
+    path: docs/synova/ui-redo/客户语言词典-v1.0.md
+    status: draft
+    owner: CTO
+    note: "客户语言词典 v1.0：禁用词机器可判清单（§1）＋术语映射表（§2）＋ID/引用规则（§3）＋三态规范（§4）＋失败态规范（§5）＋按宪章 v8.5 ⑤ 目标驱动导航的目标 IA（§6）＋DSH 壳/内容分线四条判据（§7）；后续客户通用语言契约，P3 唯一文案判据。含关卡 A R1 补强 §1.1 可判性分级/§1.2 精确串。"
+  - id: DOC-1485-03
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T1-20261124.md
+    status: draft
+    owner: CTO
+    note: "UI 重做 T1 单任务卡（客户语言基线 ratchet）：八字段＋写集闭合（tests/user-visible/** 三件 + 登记行）＋四条硬断言＋T1-A…T1-F 可复跑验收＋五个停点＋六字段回执；不改 electron-renderer/**，零写集重叠于现场阻断修复批。"
+  - id: DOC-1485-04
+    type: knowledge
+    path: docs/synova/ui-redo/DSH-UI借鉴清单-v1.1.md
+    status: draft
+    owner: CTO
+    note: "#1485 DSH UI 借鉴清单 v1.1（数值级）：以锁版 0.2.2-rc.5 实物为准，17 节/14 组可执行契约——窗口五座位、侧栏三态与 6 断点、会话行 32px 网格、输入框 336px=14×24 上限与三职圆钮、权限 chip 28px/460px、模型两级菜单与推理档位、meta 精度（缓存命中不得舍成 100%）、相对时间六档（阈值已实测）、分块长列表、窄化四级、内容宽度轴、sticky+portal、字号令牌、非换皮机判 N1-N5、§17 工具事件行像素配方＋运行态量测；另列「明确不可借/未找到」防冒充。⚠️/❌ 项为我方自定，不得表述为 DSH 做法。"
+  - id: DOC-1485-05
+    type: knowledge
+    path: docs/synova/ui-redo/DSH-UI借鉴清单-v1.0.md
+    status: superseded
+    owner: CTO
+    note: "#1485 借鉴清单旧版 v1.0（已被 DOC-1485-04 的 v1.1 取代：补入相对时间阈值实测、工具事件行源码实证与运行态量测）。文件已改名为 -v1.1.md，保留本条以追溯；旧路径不再存在，故 status=superseded 不参与存活检查。"
