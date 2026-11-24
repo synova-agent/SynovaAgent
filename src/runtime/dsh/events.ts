@@ -24,7 +24,11 @@ export type AgentEventType =
   | 'egress.recorded'
   | 'run.completed'
   | 'run.failed'
-  | 'run.cancelled';
+  | 'run.cancelled'
+  /** #1459 T-C：服务端把模型文本校验成结构化瓶颈假设后发出（合格）。 */
+  | 'hypothesis.structured'
+  /** #1459 T-C：假设不合格（不可解析/缺字段/类型错），带机器可读原因。 */
+  | 'hypothesis.invalid';
 
 /** 终态事件：SSE 收到任意一个即结束本次流。 */
 const TERMINAL_EVENT_TYPES: readonly AgentEventType[] = ['run.completed', 'run.failed', 'run.cancelled'];

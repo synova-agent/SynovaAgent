@@ -151,7 +151,7 @@ const baseRequest = {
 };
 
 describe('T2 RunManager 事件与失败路径（fake ACP）', () => {
-  it('正常路径：run.started → session.created → egress.recorded → text.delta → run.completed', async () => {
+  it('正常路径：run.started → session.created → egress.recorded → text.delta → hypothesis.invalid → run.completed', async () => {
     const fake = new FakeAcp('ok');
     const manager = makeManager(fake);
     const record = await manager.run({ ...baseRequest, runId: 'run_ok_0001' });
@@ -159,12 +159,15 @@ describe('T2 RunManager 事件与失败路径（fake ACP）', () => {
     expect(terminal.type).toBe('run.completed');
     expect(terminal.data.stopReason).toBe('end_turn');
     expect(terminal.data.empty).toBe(false);
+    // #1459 T-C：新增假设事件 ⇒ 序列「扩展」而非放宽——fake 返回的 'answer' 不是 JSON，
+    // 因此必须落在 hypothesis.invalid（而非静默不发）。
     expect(typesOf(record)).toEqual([
       'run.started',
       'session.created',
       'egress.recorded',
       'reasoning.delta',
       'text.delta',
+      'hypothesis.invalid',
       'run.completed',
     ]);
     expect(record.stats.textDeltas).toBe(1);
