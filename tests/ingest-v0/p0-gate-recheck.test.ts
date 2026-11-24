@@ -427,11 +427,13 @@ describe('c) metric_observations 带 period ⇒ 无 S2_DEGRADED_NO_PERIOD 且 re
 
 // ═══ d) problemId：显式入参位（不进 prompt）══════════════════════════════════
 
-/** fake ACP：记录 prompt 原文，不 spawn 真实 dsh（零外发）。 */
+/** fake ACP：记录 prompt 原文，不 spawn 真实 dsh（零外发）。`replyText` = 本轮模型文本。 */
 class FakeAcp implements AcpClientLike {
   readonly promptTexts: string[] = [];
   private handler: ((update: AcpSessionUpdate) => void) | null = null;
   private counter = 0;
+
+  constructor(private readonly replyText: string = 'answer') {}
 
   async initialize() {
     return { protocolVersion: 1, agentInfo: { name: 'deepseek-harness-acp', version: '0.0.1' } };
@@ -446,7 +448,7 @@ class FakeAcp implements AcpClientLike {
   async closeSession() { /* fake：无底层连接 */ }
   async prompt(params: { sessionId: string; text: string }) {
     this.promptTexts.push(params.text);
-    this.handler?.({ sessionId: params.sessionId, update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'answer' } } });
+    this.handler?.({ sessionId: params.sessionId, update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: this.replyText } } });
     return { stopReason: 'end_turn' };
   }
   cancel() { /* fake：无进行中的轮次 */ }
@@ -578,3 +580,49 @@ describe('e) 域上下文工具：$id 与 businessKey 双路径、快照稳定',
     emit('e1-domain-context', { byKey, byId, stable: JSON.stringify(again) === JSON.stringify(byKey) });
   });
 });
+// ═══ f) 桌面事件链未被本批破坏（服务端发射点真跑）═════════════════════════════
+
+describe('f) 桌面事件链：hypothesis.structured 仍真实发射（四要素非空）', () => {
+  it('模型文本为合格假设 JSON ⇒ 事件流出现 hypothesis.structured，四要素原样带上', async () => {
+    // 四要素载荷（来源形态取自 DEV DOC §0 探针实测：$id / predicate / source_ref）
+    const payload = {
+      hypothesis: '交付验收口径与实收不一致，卡在批次验收环节',
+      objects: ['team:delivery-a', 'delivery_batch:B-2026-10-001'],
+      relations: ['edge/team_executes_activity'],
+      evidence: ['delivery_batches.csv#L2', 'acceptance_records.csv#L7'],
+      uncertainty: ['仅覆盖 2026-10 一个期间'],
+    };
+    const fake = new FakeAcp(JSON.stringify(payload));
+    const runtime = new DshRunManager({ instanceDir: process.cwd(), createClient: () => fake, runTimeoutMs: 5_000 });
+    try {
+      const record = await runtime.run({
+        runId: 'run_1492_f',
+        enterpriseId: D_ORG,
+        userId: 'user-1492-f',
+        scope: DT_SCOPE,
+        input: '基于领域上下文给出瓶颈假设',
+      });
+      for (let i = 0; i < 100 && record.stream.terminal === null; i += 1) {
+        await new Promise<void>(resolve => setTimeout(resolve, 10));
+      }
+      expect(record.stream.terminal).not.toBeNull();
+
+      const events = record.stream.snapshot();
+      const structured = events.find(event => event.type === 'hypothesis.structured');
+      expect(structured).toBeDefined();
+      const data = structured?.data ?? {};
+      expect(data.hypothesis).toBe(payload.hypothesis);
+      expect(data.objects).toEqual(payload.objects);
+      expect(data.relations).toEqual(payload.relations);
+      expect(data.evidence).toEqual(payload.evidence);
+      expect(data.uncertainty).toEqual(payload.uncertainty);
+      // 事件顺序：假设在 run.completed 之前（桌面据此先画卡再收尾）
+      const types = events.map(event => event.type);
+      expect(types.indexOf('hypothesis.structured')).toBeLessThan(types.indexOf('run.completed'));
+      emit('f1-hypothesis-chain', { eventTypes: types, structured: structured?.data ?? null });
+    } finally {
+      await runtime.dispose();
+    }
+  });
+});
+

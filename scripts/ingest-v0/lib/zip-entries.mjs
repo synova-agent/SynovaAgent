@@ -163,7 +163,8 @@ export function parseCentralDirectory(cd, entryCount) {
  * 枚举一个 ZIP 文件的条目（**唯一 I/O 入口**；只读中央目录字节）。
  *
  * @input  filePath —— ZIP 绝对路径；options.maxCentralDirectoryBytes —— 中央目录体积上限
- * @output `{ok:true, entryCount, entries, encryptedCount, traversalCount, oversizedCount}`；
+ * @output `{ok:true, entryCount, entries, encryptedCount, traversalCount}`（条目级"超大"由 `zip-scan.mjs`
+ *         用 `entry.uncompressedSize` 自行判定并计数 —— 本函数不持有单文件上限，故不报 oversizedCount）；
  *         结构损坏 ⇒ `{ok:false, corrupt:true, corruptReason, entryCount:0, entries:[]}`
  * @degraded **无静默降级**：读失败/结构矛盾都变成 `ok:false` 的显式结果（调用方必须记 skipped）
  * @authority 条目名越界判定复用 `classify.isTraversalEntry`；本文件不另写判据
@@ -236,7 +237,6 @@ export function readZipEntries(filePath, options = {}) {
       entries,
       encryptedCount: entries.filter(entry => entry.encrypted).length,
       traversalCount: entries.filter(entry => entry.traversal).length,
-      oversizedCount: 0,
     };
   } finally {
     fs.closeSync(fd);
