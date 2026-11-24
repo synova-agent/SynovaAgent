@@ -1,0 +1,2090 @@
+{
+  "generatedAt": "2026-11-24T12:46:54.384Z",
+  "referents": {
+    "realNodeIds": [
+      "node-b7fd9615-380f-4508-a50c-33eb2df6af1d",
+      "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6",
+      "node-105362c0-6a54-45b9-075c-7f2f63947830",
+      "node-d303ccca-d3da-4817-1a08-0edf5ac7c6f4"
+    ],
+    "realPredicates": [
+      "edge/team_executes_activity"
+    ],
+    "realEvidenceRefs": [
+      "delivery_dashboard.csv#L4",
+      "operator-statement.json",
+      "delivery_batches.csv#L3",
+      "delivery_dashboard.csv#L2",
+      "delivery-policy.md#L4",
+      "delivery_batches.csv#L2-L3",
+      "delivery_batches.csv#L2",
+      "delivery_dashboard.csv#L3"
+    ],
+    "realBusinessKeys": [
+      "team:delivery-a->delivery_batch:B-2026-10-001",
+      "team:delivery-a->delivery_batch:B-2026-10-002",
+      "delivery_batch:B-2026-10-001",
+      "delivery_batch:B-2026-10-002",
+      "delivery_result:2026-10",
+      "team:delivery-a"
+    ]
+  },
+  "m1": {
+    "phase": "M1",
+    "runs": 1,
+    "withText": 1,
+    "emptyRuns": 0,
+    "structured": 1,
+    "invalid": 0,
+    "passRate": 1,
+    "passRatePct": "100%",
+    "contentQualified": 1,
+    "contentRatePct": "100%",
+    "reasons": {},
+    "totalTokens": 22191
+  },
+  "m2a": {
+    "phase": "M2a",
+    "runs": 5,
+    "withText": 5,
+    "emptyRuns": 0,
+    "structured": 0,
+    "invalid": 5,
+    "passRate": 0,
+    "passRatePct": "0%",
+    "contentQualified": 0,
+    "contentRatePct": "0%",
+    "reasons": {
+      "invalid:NOT_JSON": 5
+    },
+    "totalTokens": 750034
+  },
+  "m2b": {
+    "phase": "M2b",
+    "runs": 5,
+    "withText": 5,
+    "emptyRuns": 0,
+    "structured": 3,
+    "invalid": 2,
+    "passRate": 0.6,
+    "passRatePct": "60%",
+    "contentQualified": 0,
+    "contentRatePct": "0%",
+    "reasons": {
+      "invalid:MISSING_FIELDS": 2
+    },
+    "totalTokens": 167293
+  },
+  "runs": [
+    {
+      "id": "M1",
+      "phase": "M1",
+      "runId": "run_74c1d3453f3945b8894417f0b77c2352",
+      "sessionId": "5f3bd755-b803-476f-bbee-f7f0b5fe0166",
+      "prompt": "这是一次合成数据测试。请只调用一次工具 synova_context_get，参数 problemId = team:delivery-a。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+      "promptChars": 309,
+      "submittedAt": "2026-11-24T12:38:27.298Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": true,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "structured",
+      "sseTerminal": "run.completed",
+      "reasonCode": null,
+      "reasonDetail": null,
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.structured",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 642,
+      "reasoningDeltas": 2,
+      "toolStarted": 1,
+      "usageTotalTokens": 22191,
+      "usageInputTokens": 9703,
+      "usageOutputTokens": 712,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M1",
+        "decodeOk": true,
+        "assistantMessageCount": 2,
+        "usageMessages": 2,
+        "totals": {
+          "inputTokens": 9703,
+          "outputTokens": 712,
+          "cacheReadTokens": 11776,
+          "totalTokens": 22191
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9205,
+              "outputTokens": 103,
+              "cacheReadTokens": 1280,
+              "cacheWriteTokens": 0,
+              "totalTokens": 10588
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 498,
+              "outputTokens": 609,
+              "cacheReadTokens": 10496,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11603
+            },
+            "textChars": 642
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": {
+        "hypothesis": "交付A组承接的两项活动虽已在②本体层登记，但其中一项仅有口径待定的操作员陈述、证据处于待确认的估计状态，交付执行的真实瓶颈可能被数据可信度缺口掩盖。",
+        "objects": [
+          "node-105362c0-6a54-45b9-075c-7f2f63947830",
+          "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6"
+        ],
+        "relations": [
+          "edge/team_executes_activity",
+          "edge/team_executes_activity"
+        ],
+        "evidence": [
+          "delivery_batches.csv#L3",
+          "operator-statement.json"
+        ],
+        "uncertainty": [
+          "无法确认 team:delivery-a 对应的团队实体名称与业务含义，条目只给出节点 $id 与边类型。",
+          "第二条记录的 evidenceStatus 为 pending、instanceState 为 estimated，其陈述内容未经实测核实，不能作为确定性证据。",
+          "本切片只返回②本体结构，缺少①循环动力学、③哨兵观测与④参数值，无法判定瓶颈根因或传导路径。",
+          "period 仅覆盖 2026-10，无法判断该执行关系是否长期存在或近期变化。",
+          "relations 两条同为 edge/team_executes_activity，无法据此区分两条边的具体活动对象差异。"
+        ]
+      },
+      "contentBackref": {
+        "objectsReal": true,
+        "relationsReal": true,
+        "evidenceReal": true,
+        "contentQualified": true,
+        "detail": "objects=2/real relations=2/real evidence=2/real"
+      }
+    },
+    {
+      "id": "M2a-Q1",
+      "phase": "M2a",
+      "runId": "run_0241cf549dc445ec83e432187d6e87d2",
+      "sessionId": "6bcd08c9-11a6-47ee-81ad-fd24e273dcac",
+      "prompt": "我们今年的增长为什么慢下来了？主要卡在哪个环节？",
+      "promptChars": 24,
+      "submittedAt": "2026-11-24T12:39:22.589Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "NOT_JSON",
+      "reasonDetail": "模型输出不是可解析的 JSON（未按假设契约作答）",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 1139,
+      "reasoningDeltas": 5,
+      "toolStarted": 7,
+      "usageTotalTokens": 68496,
+      "usageInputTokens": 10008,
+      "usageOutputTokens": 5752,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2a-Q1",
+        "decodeOk": true,
+        "assistantMessageCount": 5,
+        "usageMessages": 5,
+        "totals": {
+          "inputTokens": 10008,
+          "outputTokens": 5752,
+          "cacheReadTokens": 52736,
+          "totalTokens": 68496
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9213,
+              "outputTokens": 1163,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11528
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 189,
+              "outputTokens": 190,
+              "cacheReadTokens": 11392,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11771
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 27,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 180,
+              "outputTokens": 1742,
+              "cacheReadTokens": 11648,
+              "cacheWriteTokens": 0,
+              "totalTokens": 13570
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 37,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 165,
+              "outputTokens": 1399,
+              "cacheReadTokens": 13568,
+              "cacheWriteTokens": 0,
+              "totalTokens": 15132
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 45,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 261,
+              "outputTokens": 1258,
+              "cacheReadTokens": 14976,
+              "cacheWriteTokens": 0,
+              "totalTokens": 16495
+            },
+            "textChars": 1139
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2a-Q2",
+      "phase": "M2a",
+      "runId": "run_9884a98caf314eae9246588e8b2cf4f8",
+      "sessionId": "3c538834-3788-4386-9ec5-50844fab20cc",
+      "prompt": "交付团队的产能是不是瓶颈？如果是，具体卡在哪一步？",
+      "promptChars": 25,
+      "submittedAt": "2026-11-24T12:39:59.584Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "NOT_JSON",
+      "reasonDetail": "模型输出不是可解析的 JSON（未按假设契约作答）",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 1313,
+      "reasoningDeltas": 9,
+      "toolStarted": 27,
+      "usageTotalTokens": 169758,
+      "usageInputTokens": 20332,
+      "usageOutputTokens": 5938,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2a-Q2",
+        "decodeOk": true,
+        "assistantMessageCount": 9,
+        "usageMessages": 9,
+        "totals": {
+          "inputTokens": 20332,
+          "outputTokens": 5938,
+          "cacheReadTokens": 143488,
+          "totalTokens": 169758
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9213,
+              "outputTokens": 471,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 10836
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 25,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 242,
+              "outputTokens": 262,
+              "cacheReadTokens": 10752,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11256
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 33,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 200,
+              "outputTokens": 543,
+              "cacheReadTokens": 11136,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11879
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 41,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 225,
+              "outputTokens": 688,
+              "cacheReadTokens": 11776,
+              "cacheWriteTokens": 0,
+              "totalTokens": 12689
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 59,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9400,
+              "outputTokens": 713,
+              "cacheReadTokens": 12672,
+              "cacheWriteTokens": 0,
+              "totalTokens": 22785
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 69,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 174,
+              "outputTokens": 726,
+              "cacheReadTokens": 22784,
+              "cacheWriteTokens": 0,
+              "totalTokens": 23684
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 83,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 302,
+              "outputTokens": 363,
+              "cacheReadTokens": 23680,
+              "cacheWriteTokens": 0,
+              "totalTokens": 24345
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 95,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 235,
+              "outputTokens": 778,
+              "cacheReadTokens": 24320,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25333
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 107,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 341,
+              "outputTokens": 1394,
+              "cacheReadTokens": 25216,
+              "cacheWriteTokens": 0,
+              "totalTokens": 26951
+            },
+            "textChars": 1313
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2a-Q3",
+      "phase": "M2a",
+      "runId": "run_175aa36198ff42cbb6e388bfdfabfdd0",
+      "sessionId": "b9abda5b-e6f1-41b9-a8df-299245a726bd",
+      "prompt": "如果只能改一件事来提升回款速度，你会改什么？",
+      "promptChars": 22,
+      "submittedAt": "2026-11-24T12:40:36.602Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "NOT_JSON",
+      "reasonDetail": "模型输出不是可解析的 JSON（未按假设契约作答）",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 930,
+      "reasoningDeltas": 8,
+      "toolStarted": 26,
+      "usageTotalTokens": 111968,
+      "usageInputTokens": 10992,
+      "usageOutputTokens": 6768,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2a-Q3",
+        "decodeOk": true,
+        "assistantMessageCount": 8,
+        "usageMessages": 8,
+        "totals": {
+          "inputTokens": 10992,
+          "outputTokens": 6768,
+          "cacheReadTokens": 94208,
+          "totalTokens": 111968
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9214,
+              "outputTokens": 597,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 10963
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 23,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 189,
+              "outputTokens": 490,
+              "cacheReadTokens": 10880,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11559
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 35,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 248,
+              "outputTokens": 384,
+              "cacheReadTokens": 11520,
+              "cacheWriteTokens": 0,
+              "totalTokens": 12152
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 47,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 302,
+              "outputTokens": 749,
+              "cacheReadTokens": 12032,
+              "cacheWriteTokens": 0,
+              "totalTokens": 13083
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 59,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 234,
+              "outputTokens": 931,
+              "cacheReadTokens": 13056,
+              "cacheWriteTokens": 0,
+              "totalTokens": 14221
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 71,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 225,
+              "outputTokens": 759,
+              "cacheReadTokens": 14208,
+              "cacheWriteTokens": 0,
+              "totalTokens": 15192
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 83,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 293,
+              "outputTokens": 934,
+              "cacheReadTokens": 15104,
+              "cacheWriteTokens": 0,
+              "totalTokens": 16331
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 95,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 287,
+              "outputTokens": 1924,
+              "cacheReadTokens": 16256,
+              "cacheWriteTokens": 0,
+              "totalTokens": 18467
+            },
+            "textChars": 930
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2a-Q4",
+      "phase": "M2a",
+      "runId": "run_97ab580057594b0b8c30dba0d5f35e13",
+      "sessionId": "86cb4a22-aba1-4aac-87c5-3bb4a75c7a73",
+      "prompt": "我们组织里哪个团队对结果影响最大、却最容易被忽视？",
+      "promptChars": 25,
+      "submittedAt": "2026-11-24T12:41:20.851Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "NOT_JSON",
+      "reasonDetail": "模型输出不是可解析的 JSON（未按假设契约作答）",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 1015,
+      "reasoningDeltas": 13,
+      "toolStarted": 65,
+      "usageTotalTokens": 374799,
+      "usageInputTokens": 31140,
+      "usageOutputTokens": 13675,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2a-Q4",
+        "decodeOk": true,
+        "assistantMessageCount": 13,
+        "usageMessages": 13,
+        "totals": {
+          "inputTokens": 31140,
+          "outputTokens": 13675,
+          "cacheReadTokens": 329984,
+          "totalTokens": 374799
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9215,
+              "outputTokens": 1458,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11825
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 23,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 153,
+              "outputTokens": 573,
+              "cacheReadTokens": 11776,
+              "cacheWriteTokens": 0,
+              "totalTokens": 12502
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 37,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 347,
+              "outputTokens": 682,
+              "cacheReadTokens": 12416,
+              "cacheWriteTokens": 0,
+              "totalTokens": 13445
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 51,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 280,
+              "outputTokens": 378,
+              "cacheReadTokens": 13440,
+              "cacheWriteTokens": 0,
+              "totalTokens": 14098
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 67,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9315,
+              "outputTokens": 541,
+              "cacheReadTokens": 14080,
+              "cacheWriteTokens": 0,
+              "totalTokens": 23936
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 83,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 317,
+              "outputTokens": 1096,
+              "cacheReadTokens": 23936,
+              "cacheWriteTokens": 0,
+              "totalTokens": 25349
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 99,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 317,
+              "outputTokens": 1019,
+              "cacheReadTokens": 25344,
+              "cacheWriteTokens": 0,
+              "totalTokens": 26680
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 121,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9400,
+              "outputTokens": 607,
+              "cacheReadTokens": 26624,
+              "cacheWriteTokens": 0,
+              "totalTokens": 36631
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 137,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 338,
+              "outputTokens": 1999,
+              "cacheReadTokens": 36608,
+              "cacheWriteTokens": 0,
+              "totalTokens": 38945
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 153,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 318,
+              "outputTokens": 1533,
+              "cacheReadTokens": 38912,
+              "cacheWriteTokens": 0,
+              "totalTokens": 40763
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 173,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 482,
+              "outputTokens": 814,
+              "cacheReadTokens": 40704,
+              "cacheWriteTokens": 0,
+              "totalTokens": 42000
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 189,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 334,
+              "outputTokens": 696,
+              "cacheReadTokens": 41984,
+              "cacheWriteTokens": 0,
+              "totalTokens": 43014
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 205,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 324,
+              "outputTokens": 2279,
+              "cacheReadTokens": 43008,
+              "cacheWriteTokens": 0,
+              "totalTokens": 45611
+            },
+            "textChars": 1015
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2a-Q5",
+      "phase": "M2a",
+      "runId": "run_33e836a0cac743e6ac1267c1b2f23236",
+      "sessionId": "8e7e7f64-0c14-4080-b5a4-2d1d5ad3ef8f",
+      "prompt": "就现在能看到的数据，有哪些地方你其实没法确认、需要我们去核？",
+      "promptChars": 30,
+      "submittedAt": "2026-11-24T12:42:36.220Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "NOT_JSON",
+      "reasonDetail": "模型输出不是可解析的 JSON（未按假设契约作答）",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 1427,
+      "reasoningDeltas": 2,
+      "toolStarted": 1,
+      "usageTotalTokens": 25013,
+      "usageInputTokens": 9459,
+      "usageOutputTokens": 2882,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2a-Q5",
+        "decodeOk": true,
+        "assistantMessageCount": 2,
+        "usageMessages": 2,
+        "totals": {
+          "inputTokens": 9459,
+          "outputTokens": 2882,
+          "cacheReadTokens": 12672,
+          "totalTokens": 25013
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9216,
+              "outputTokens": 1339,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11707
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 243,
+              "outputTokens": 1543,
+              "cacheReadTokens": 11520,
+              "cacheWriteTokens": 0,
+              "totalTokens": 13306
+            },
+            "textChars": 1427
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2b-Q1",
+      "phase": "M2b",
+      "runId": "run_e3f724d7bba1447aaa08547820957e35",
+      "sessionId": "daf2c2bd-d8d1-4232-950f-b6f9617ae7ea",
+      "prompt": "我们今年的增长为什么慢下来了？主要卡在哪个环节？\n\n请只调用一次工具 synova_context_get。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+      "promptChars": 293,
+      "submittedAt": "2026-11-24T12:43:02.178Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "MISSING_FIELDS",
+      "reasonDetail": "假设缺少必要内容（空值或空数组）：objects、relations、evidence",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 497,
+      "reasoningDeltas": 2,
+      "toolStarted": 1,
+      "usageTotalTokens": 22722,
+      "usageInputTokens": 9565,
+      "usageOutputTokens": 1381,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2b-Q1",
+        "decodeOk": true,
+        "assistantMessageCount": 2,
+        "usageMessages": 2,
+        "totals": {
+          "inputTokens": 9565,
+          "outputTokens": 1381,
+          "cacheReadTokens": 11776,
+          "totalTokens": 22722
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9330,
+              "outputTokens": 320,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 10802
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 235,
+              "outputTokens": 1061,
+              "cacheReadTokens": 10624,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11920
+            },
+            "textChars": 497
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2b-Q2",
+      "phase": "M2b",
+      "runId": "run_4571e32b44a6404facfb5012c4232b2f",
+      "sessionId": "8bffc36b-ff1b-4225-ac2e-9017fe064412",
+      "prompt": "交付团队的产能是不是瓶颈？如果是，具体卡在哪一步？\n\n请只调用一次工具 synova_context_get。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+      "promptChars": 294,
+      "submittedAt": "2026-11-24T12:43:12.928Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": true,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "structured",
+      "sseTerminal": "run.completed",
+      "reasonCode": null,
+      "reasonDetail": null,
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.structured",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 519,
+      "reasoningDeltas": 2,
+      "toolStarted": 1,
+      "usageTotalTokens": 22367,
+      "usageInputTokens": 9542,
+      "usageOutputTokens": 921,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2b-Q2",
+        "decodeOk": true,
+        "assistantMessageCount": 2,
+        "usageMessages": 2,
+        "totals": {
+          "inputTokens": 9542,
+          "outputTokens": 921,
+          "cacheReadTokens": 11904,
+          "totalTokens": 22367
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9330,
+              "outputTokens": 424,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 10906
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 212,
+              "outputTokens": 497,
+              "cacheReadTokens": 10752,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11461
+            },
+            "textChars": 519
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": {
+        "hypothesis": "交付团队产能是否为瓶颈目前无法判定：本地 ContextSnapshot 未能解析该问题的 ② 对象（DOMAIN_EMPTY），因此不能确认瓶颈是否存在及其卡在哪一步。",
+        "objects": [
+          "未获取：problemId 无法解析，条目 $id 不可得（DOMAIN_EMPTY）"
+        ],
+        "relations": [
+          "未获取：无条目返回，relation.type 不可得（DOMAIN_EMPTY）"
+        ],
+        "evidence": [
+          "未获取：无条目返回，evidence.sources[0].ref 不可得（DOMAIN_EMPTY）"
+        ],
+        "uncertainty": [
+          "工具 synova_context_get 单次调用返回 DOMAIN_EMPTY：本企业 ② 对象中不存在 problemId=交付团队产能瓶颈，无法确认该问题对应哪个 ② 对象",
+          "未能取得任何 $id、relation.type、evidence.ref，故『产能是否瓶颈』与『卡在哪一步』均无真实数据支撑，不做推断",
+          "若瓶颈真实存在，具体卡点（排期／评审／环境／人手／验收）需以该对象的真实结构与时序观测为准，本次未取得"
+        ]
+      },
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "objects=1/not-real relations=1/not-real evidence=1/not-real"
+      }
+    },
+    {
+      "id": "M2b-Q3",
+      "phase": "M2b",
+      "runId": "run_2c704703878f441791a35d8d325ef410",
+      "sessionId": "f5f3bbaa-4cdf-4b66-acd5-54c24cc9d721",
+      "prompt": "如果只能改一件事来提升回款速度，你会改什么？\n\n请只调用一次工具 synova_context_get。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+      "promptChars": 291,
+      "submittedAt": "2026-11-24T12:43:20.628Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": true,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "structured",
+      "sseTerminal": "run.completed",
+      "reasonCode": null,
+      "reasonDetail": null,
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.structured",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 485,
+      "reasoningDeltas": 2,
+      "toolStarted": 1,
+      "usageTotalTokens": 22229,
+      "usageInputTokens": 9585,
+      "usageOutputTokens": 868,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2b-Q3",
+        "decodeOk": true,
+        "assistantMessageCount": 2,
+        "usageMessages": 2,
+        "totals": {
+          "inputTokens": 9585,
+          "outputTokens": 868,
+          "cacheReadTokens": 11776,
+          "totalTokens": 22229
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9331,
+              "outputTokens": 338,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 10821
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 254,
+              "outputTokens": 530,
+              "cacheReadTokens": 10624,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11408
+            },
+            "textChars": 485
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": {
+        "hypothesis": "本次无法获取该企业的本体上下文快照（problemId「回款速度」在 ② 对象中解析不到，接口返回 DOMAIN_EMPTY），因此无法确认回款速度的真实瓶颈，任何具体改法都只能是未经验证的猜测。",
+        "objects": [
+          "未取到（DOMAIN_EMPTY，未返回任何 $id）"
+        ],
+        "relations": [
+          "未取到（快照为空，未返回任何 relation.type）"
+        ],
+        "evidence": [
+          "未取到（未返回任何 evidence.sources[0].ref）"
+        ],
+        "uncertainty": [
+          "未取得有效的 problemId（既非已知 businessKey 也非 $id），② 本体对象、因果关系与证据源均无法读取",
+          "无法确认该企业“回款速度”在当前本体中对应哪些对象、关系与期间口径",
+          "无法确认瓶颈位于合同条款、开票、验收确认还是催收环节中的哪一环",
+          "本次仅被允许调用一次上下文接口，无法用其它 problemId 重试或交叉验证",
+          "在缺少真实快照的情况下，任何“只改一件事”的建议都属臆测，故不作具体主张"
+        ]
+      },
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "objects=1/not-real relations=1/not-real evidence=1/not-real"
+      }
+    },
+    {
+      "id": "M2b-Q4",
+      "phase": "M2b",
+      "runId": "run_865db56537ee4dcaa1d3a9107e303455",
+      "sessionId": "6a6d23f0-f7b9-4f17-addb-de5950d374ac",
+      "prompt": "我们组织里哪个团队对结果影响最大、却最容易被忽视？\n\n请只调用一次工具 synova_context_get。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+      "promptChars": 294,
+      "submittedAt": "2026-11-24T12:43:28.341Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": false,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "invalid",
+      "sseTerminal": "run.completed",
+      "reasonCode": "MISSING_FIELDS",
+      "reasonDetail": "假设缺少必要内容（空值或空数组）：objects、relations、evidence",
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.invalid",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 486,
+      "reasoningDeltas": 5,
+      "toolStarted": 4,
+      "usageTotalTokens": 75468,
+      "usageInputTokens": 10160,
+      "usageOutputTokens": 7708,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2b-Q4",
+        "decodeOk": true,
+        "assistantMessageCount": 5,
+        "usageMessages": 5,
+        "totals": {
+          "inputTokens": 10160,
+          "outputTokens": 7708,
+          "cacheReadTokens": 57600,
+          "totalTokens": 75468
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9332,
+              "outputTokens": 1171,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11655
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 191,
+              "outputTokens": 1517,
+              "cacheReadTokens": 11520,
+              "cacheWriteTokens": 0,
+              "totalTokens": 13228
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 27,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 241,
+              "outputTokens": 2220,
+              "cacheReadTokens": 13056,
+              "cacheWriteTokens": 0,
+              "totalTokens": 15517
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 33,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 213,
+              "outputTokens": 1066,
+              "cacheReadTokens": 15360,
+              "cacheWriteTokens": 0,
+              "totalTokens": 16639
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 39,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 183,
+              "outputTokens": 1734,
+              "cacheReadTokens": 16512,
+              "cacheWriteTokens": 0,
+              "totalTokens": 18429
+            },
+            "textChars": 486
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": null,
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "no structured payload"
+      }
+    },
+    {
+      "id": "M2b-Q5",
+      "phase": "M2b",
+      "runId": "run_2ae4ee0b281a4bfd9c54d659ed953c2b",
+      "sessionId": "9a7707e9-141f-4531-83a8-fdc4143f7d80",
+      "prompt": "就现在能看到的数据，有哪些地方你其实没法确认、需要我们去核？\n\n请只调用一次工具 synova_context_get。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+      "promptChars": 299,
+      "submittedAt": "2026-11-24T12:44:17.325Z",
+      "domStatus": "done",
+      "domAuth": "authenticated",
+      "domStructured": true,
+      "domHypothesisFields": null,
+      "domClaim": null,
+      "sseHypothesis": "structured",
+      "sseTerminal": "run.completed",
+      "reasonCode": null,
+      "reasonDetail": null,
+      "eventOrder": [
+        "run.started",
+        "session.created",
+        "egress.recorded",
+        "reasoning.delta",
+        "tool.started",
+        "tool.finished",
+        "reasoning.delta",
+        "text.delta",
+        "hypothesis.structured",
+        "run.completed"
+      ],
+      "textDeltas": 1,
+      "textChars": 526,
+      "reasoningDeltas": 2,
+      "toolStarted": 1,
+      "usageTotalTokens": 24507,
+      "usageInputTokens": 9495,
+      "usageOutputTokens": 2084,
+      "sessionLogAvailable": true,
+      "session": {
+        "id": "M2b-Q5",
+        "decodeOk": true,
+        "assistantMessageCount": 2,
+        "usageMessages": 2,
+        "totals": {
+          "inputTokens": 9495,
+          "outputTokens": 2084,
+          "cacheReadTokens": 12928,
+          "totalTokens": 24507
+        },
+        "realModelRound": true,
+        "messages": [
+          {
+            "seq": 15,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "tool-call"
+            ],
+            "usage": {
+              "inputTokens": 9333,
+              "outputTokens": 1396,
+              "cacheReadTokens": 1152,
+              "cacheWriteTokens": 0,
+              "totalTokens": 11881
+            },
+            "textChars": 0
+          },
+          {
+            "seq": 21,
+            "model": "deepseek-v4-flash",
+            "provider": "deepseek-official",
+            "contentTypes": [
+              "reasoning",
+              "text"
+            ],
+            "usage": {
+              "inputTokens": 162,
+              "outputTokens": 688,
+              "cacheReadTokens": 11776,
+              "cacheWriteTokens": 0,
+              "totalTokens": 12626
+            },
+            "textChars": 526
+          }
+        ]
+      },
+      "hasText": true,
+      "hypothesisPayload": {
+        "hypothesis": "当前无法提出可验证的瓶颈假设：本企业 ② 本体层为空，解析不到任何一个问题对象，任何瓶颈判断都没有数据支撑。",
+        "objects": [
+          "（无：DOMAIN_EMPTY，本次查询未返回任何 ② 条目，故无 $id 可取）"
+        ],
+        "relations": [
+          "（无：没有条目就没有 relation.type，不臆造）"
+        ],
+        "evidence": [
+          "（无：没有条目就没有 evidence.sources[0].ref，不臆造）"
+        ],
+        "uncertainty": [
+          "本企业 ② 对象里既然找不到 problemId=PROB-001，那么它究竟存不存在、真实 businessKey 是什么、是否尚未建档，都无法确认。",
+          "② 本体是否已从模板装载到运行实例、期间（period）与定义版本（definition version）各是什么状态，均无法确认。",
+          "支撑问题所需的证据源（evidence.sources[].ref）是否已接入、能否取到，无法确认，因此本批任何结论都不该被当作已核实。",
+          "若后续仍返回空集，那么缺口是「本体对象未登记」还是「登记了但 problemId 口径不一致」，无法区分，需要人工核对。"
+        ]
+      },
+      "contentBackref": {
+        "objectsReal": false,
+        "relationsReal": false,
+        "evidenceReal": false,
+        "contentQualified": false,
+        "detail": "objects=1/not-real relations=1/not-real evidence=1/not-real"
+      }
+    }
+  ]
+}

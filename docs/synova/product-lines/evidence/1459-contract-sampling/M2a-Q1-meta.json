@@ -1,0 +1,91 @@
+{
+  "id": "M2a-Q1",
+  "phase": "M2a",
+  "prompt": "我们今年的增长为什么慢下来了？主要卡在哪个环节？",
+  "promptChars": 24,
+  "submittedAt": "2026-11-24T12:39:22.589Z",
+  "terminal": true,
+  "runId": "run_0241cf549dc445ec83e432187d6e87d2",
+  "sessionId": "6bcd08c9-11a6-47ee-81ad-fd24e273dcac",
+  "domStatus": "done",
+  "auth": "authenticated",
+  "hypothesisStructuredDom": "false",
+  "hypothesisEvents": 1,
+  "eventCount": 9,
+  "eventKinds": [
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "text",
+    "hypothesis"
+  ],
+  "sse": {
+    "httpStatus": 200,
+    "frameCount": 25,
+    "events": [
+      "run.started",
+      "session.created",
+      "egress.recorded",
+      "reasoning.delta",
+      "tool.started",
+      "tool.finished",
+      "reasoning.delta",
+      "tool.started",
+      "tool.finished",
+      "reasoning.delta",
+      "tool.started",
+      "tool.finished",
+      "tool.started",
+      "tool.finished",
+      "tool.started",
+      "tool.finished",
+      "reasoning.delta",
+      "tool.started",
+      "tool.finished",
+      "tool.started",
+      "tool.finished",
+      "reasoning.delta",
+      "text.delta",
+      "hypothesis.invalid",
+      "run.completed"
+    ],
+    "runStarted": {
+      "runId": "run_0241cf549dc445ec83e432187d6e87d2",
+      "enterpriseId": "org-a",
+      "userId": "node-e3fa8993-4715-469c-92f2-f2397a2d4fba",
+      "scope": "admin",
+      "sessionId": null
+    },
+    "hypothesis": "invalid",
+    "invalidReason": {
+      "code": "NOT_JSON",
+      "missing": [],
+      "message": "模型输出不是可解析的 JSON（未按假设契约作答）"
+    },
+    "terminal": "run.completed"
+  },
+  "timelineTail": [
+    {
+      "at": "2026-11-24T12:39:55.872Z",
+      "status": "running",
+      "events": 7,
+      "runId": "run_0241cf549dc445ec83e432187d6e87d2"
+    },
+    {
+      "at": "2026-11-24T12:39:56.889Z",
+      "status": "running",
+      "events": 7,
+      "runId": "run_0241cf549dc445ec83e432187d6e87d2"
+    },
+    {
+      "at": "2026-11-24T12:39:57.906Z",
+      "status": "done",
+      "events": 9,
+      "runId": "run_0241cf549dc445ec83e432187d6e87d2"
+    }
+  ]
+}

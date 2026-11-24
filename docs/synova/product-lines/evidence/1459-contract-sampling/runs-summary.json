@@ -1,0 +1,78 @@
+{
+  "generatedAt": "2026-11-24T12:46:54.384Z",
+  "referents": {
+    "realNodeIds": [
+      "node-b7fd9615-380f-4508-a50c-33eb2df6af1d",
+      "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6",
+      "node-105362c0-6a54-45b9-075c-7f2f63947830",
+      "node-d303ccca-d3da-4817-1a08-0edf5ac7c6f4"
+    ],
+    "realPredicates": [
+      "edge/team_executes_activity"
+    ],
+    "realEvidenceRefs": [
+      "delivery_dashboard.csv#L4",
+      "operator-statement.json",
+      "delivery_batches.csv#L3",
+      "delivery_dashboard.csv#L2",
+      "delivery-policy.md#L4",
+      "delivery_batches.csv#L2-L3",
+      "delivery_batches.csv#L2",
+      "delivery_dashboard.csv#L3"
+    ],
+    "realBusinessKeys": [
+      "team:delivery-a->delivery_batch:B-2026-10-001",
+      "team:delivery-a->delivery_batch:B-2026-10-002",
+      "delivery_batch:B-2026-10-001",
+      "delivery_batch:B-2026-10-002",
+      "delivery_result:2026-10",
+      "team:delivery-a"
+    ]
+  },
+  "m1": {
+    "phase": "M1",
+    "runs": 1,
+    "withText": 1,
+    "emptyRuns": 0,
+    "structured": 1,
+    "invalid": 0,
+    "passRate": 1,
+    "passRatePct": "100%",
+    "contentQualified": 1,
+    "contentRatePct": "100%",
+    "reasons": {},
+    "totalTokens": 22191
+  },
+  "m2a": {
+    "phase": "M2a",
+    "runs": 5,
+    "withText": 5,
+    "emptyRuns": 0,
+    "structured": 0,
+    "invalid": 5,
+    "passRate": 0,
+    "passRatePct": "0%",
+    "contentQualified": 0,
+    "contentRatePct": "0%",
+    "reasons": {
+      "invalid:NOT_JSON": 5
+    },
+    "totalTokens": 750034
+  },
+  "m2b": {
+    "phase": "M2b",
+    "runs": 5,
+    "withText": 5,
+    "emptyRuns": 0,
+    "structured": 3,
+    "invalid": 2,
+    "passRate": 0.6,
+    "passRatePct": "60%",
+    "contentQualified": 0,
+    "contentRatePct": "0%",
+    "reasons": {
+      "invalid:MISSING_FIELDS": 2
+    },
+    "totalTokens": 167293
+  }
+}

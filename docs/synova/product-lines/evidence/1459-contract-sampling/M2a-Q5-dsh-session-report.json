@@ -1,0 +1,143 @@
+{
+  "file": "07-dsh-session-log.decompress-report.json",
+  "generatedAt": "2026-11-24T12:46:53.599Z",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "producer": {
+    "path": "scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs",
+    "sha256": "b3a24fba4a15111d8ccd36aa632088bbd2294b90ca005c033e5d4e192af3b2ef"
+  },
+  "input": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\8e7e7f64-0c14-4080-b5a4-2d1d5ad3ef8f\\session.v4.jsonl.zstd",
+    "bytes": 36034,
+    "sha256": "1f7dcff20a8ee9e3bbdd30beee8f67b8134e71759f8b124cf5eb93bd6f366dcc"
+  },
+  "output": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q5-dsh-session-log.jsonl",
+    "bytes": 94791,
+    "sha256": "e2e012f0746af999c21f4ed8aa28d6a64af0b54e083c4f842c2f7684f4b4d0df",
+    "lines": 26,
+    "nonEmptyLines": 25
+  },
+  "method": "scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat",
+  "forbiddenMethodNotUsed": "zstdDecompressSync on the whole multi-frame file (decodes only the first frame and does not throw)",
+  "frameCount": 11,
+  "frames": [
+    {
+      "index": 0,
+      "start": 0,
+      "end": 209,
+      "bytes": 209,
+      "decodedBytes": 254,
+      "decodedLines": 1
+    },
+    {
+      "index": 1,
+      "start": 209,
+      "end": 350,
+      "bytes": 141,
+      "decodedBytes": 249,
+      "decodedLines": 3
+    },
+    {
+      "index": 2,
+      "start": 350,
+      "end": 712,
+      "bytes": 362,
+      "decodedBytes": 526,
+      "decodedLines": 3
+    },
+    {
+      "index": 3,
+      "start": 712,
+      "end": 19149,
+      "bytes": 18437,
+      "decodedBytes": 36930,
+      "decodedLines": 7
+    },
+    {
+      "index": 4,
+      "start": 19149,
+      "end": 19323,
+      "bytes": 174,
+      "decodedBytes": 161,
+      "decodedLines": 1
+    },
+    {
+      "index": 5,
+      "start": 19323,
+      "end": 19486,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 6,
+      "start": 19486,
+      "end": 26264,
+      "bytes": 6778,
+      "decodedBytes": 26207,
+      "decodedLines": 2
+    },
+    {
+      "index": 7,
+      "start": 26264,
+      "end": 26677,
+      "bytes": 413,
+      "decodedBytes": 595,
+      "decodedLines": 2
+    },
+    {
+      "index": 8,
+      "start": 26677,
+      "end": 26765,
+      "bytes": 88,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 9,
+      "start": 26765,
+      "end": 26928,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 10,
+      "start": 26928,
+      "end": 36034,
+      "bytes": 9106,
+      "decodedBytes": 29428,
+      "decodedLines": 3
+    }
+  ],
+  "coverage": {
+    "fileBytes": 36034,
+    "sumFrameBytes": 36034,
+    "byteCoveragePasses": true,
+    "sumDecodedLines": 25,
+    "decodedNewlines": 25
+  },
+  "header": {
+    "type": "session",
+    "version": 4,
+    "id": "8e7e7f64-0c14-4080-b5a4-2d1d5ad3ef8f",
+    "createdAt": 1795524156236,
+    "cwd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\instance",
+    "isSeeded": false,
+    "delegationDepth": 0
+  },
+  "checks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "toolCallEntries": 1,
+  "toolResultEntries": 0,
+  "allPassed": false
+}

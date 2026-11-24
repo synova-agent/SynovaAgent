@@ -1,0 +1,53 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_865db56537ee4dcaa1d3a9107e303455",
+  "sessionIdText": "会话编号：6a6d23f0-f7b9-4f17-addb-de5950d374ac",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 6,
+  "eventKinds": [
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "text",
+    "hypothesis"
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "false",
+  "hypothesisClaim": null,
+  "hypothesisFields": {
+    "objects": null,
+    "relations": null,
+    "evidence": null,
+    "uncertainty": null
+  },
+  "hypothesisRaw": "{\"hypothesis\":\"无法确认对结果影响最大且最容易被忽视的团队：本次 ② 本体查询（synova_context_get）返回 DOMAIN_EMPTY，未获得任何团队对象、关系与证据，因此不能给出有依据的瓶颈假设。\",\"objects\":[],\"relations\":[],\"evidence\":[],\"uncertainty\":[\"problemId 未知：以 org-team-impact、题目原文、prob-001、team-influence 作为 problemId 请求均返回 DOMAIN_EMPTY（retryable=false），无法确定该企业 ② 对象中有效的问题 businessKey 或 $id，\",\"该切片可能未装载任何 ② 对象实例（仅产出结构），或身份/租户上下文未注入有效企业域，导致按 problemId 解析不到条目；\",\"在没有任何对象、关系类型与 evidence.sources[0].ref 的情况下，无法判断哪个团队影响最大、哪个被忽视，也无法给出对象 $id、relation.type 和证据引用。\"]}",
+  "hypothesisInvalidReason": "未结构化：服务端标记为未结构化",
+  "toolEvents": [
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

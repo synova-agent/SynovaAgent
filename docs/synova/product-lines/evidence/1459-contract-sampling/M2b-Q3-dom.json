@@ -1,0 +1,58 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_2c704703878f441791a35d8d325ef410",
+  "sessionIdText": "会话编号：f5f3bbaa-4cdf-4b66-acd5-54c24cc9d721",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 11,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "true",
+  "hypothesisClaim": "本次无法获取该企业的本体上下文快照（problemId「回款速度」在 ② 对象中解析不到，接口返回 DOMAIN_EMPTY），因此无法确认回款速度的真实瓶颈，任何具体改法都只能是未经验证的猜测。",
+  "hypothesisFields": {
+    "objects": [
+      "未取到（DOMAIN_EMPTY，未返回任何 $id）"
+    ],
+    "relations": [
+      "未取到（快照为空，未返回任何 relation.type）"
+    ],
+    "evidence": [
+      "未取到（未返回任何 evidence.sources[0].ref）"
+    ],
+    "uncertainty": [
+      "未取得有效的 problemId（既非已知 businessKey 也非 $id），② 本体对象、因果关系与证据源均无法读取",
+      "无法确认该企业“回款速度”在当前本体中对应哪些对象、关系与期间口径",
+      "无法确认瓶颈位于合同条款、开票、验收确认还是催收环节中的哪一环",
+      "本次仅被允许调用一次上下文接口，无法用其它 problemId 重试或交叉验证",
+      "在缺少真实快照的情况下，任何“只改一件事”的建议都属臆测，故不作具体主张"
+    ]
+  },
+  "hypothesisRaw": null,
+  "hypothesisInvalidReason": null,
+  "toolEvents": [
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

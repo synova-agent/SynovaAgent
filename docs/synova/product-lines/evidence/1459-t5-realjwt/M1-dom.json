@@ -1,0 +1,64 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_74c1d3453f3945b8894417f0b77c2352",
+  "sessionIdText": "会话编号：5f3bd755-b803-476f-bbee-f7f0b5fe0166",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 14,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "true",
+  "hypothesisClaim": "交付A组承接的两项活动虽已在②本体层登记，但其中一项仅有口径待定的操作员陈述、证据处于待确认的估计状态，交付执行的真实瓶颈可能被数据可信度缺口掩盖。",
+  "hypothesisFields": {
+    "objects": [
+      "node-105362c0-6a54-45b9-075c-7f2f63947830",
+      "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6"
+    ],
+    "relations": [
+      "edge/team_executes_activity",
+      "edge/team_executes_activity"
+    ],
+    "evidence": [
+      "delivery_batches.csv#L3",
+      "operator-statement.json"
+    ],
+    "uncertainty": [
+      "无法确认 team:delivery-a 对应的团队实体名称与业务含义，条目只给出节点 $id 与边类型。",
+      "第二条记录的 evidenceStatus 为 pending、instanceState 为 estimated，其陈述内容未经实测核实，不能作为确定性证据。",
+      "本切片只返回②本体结构，缺少①循环动力学、③哨兵观测与④参数值，无法判定瓶颈根因或传导路径。",
+      "period 仅覆盖 2026-10，无法判断该执行关系是否长期存在或近期变化。",
+      "relations 两条同为 edge/team_executes_activity，无法据此区分两条边的具体活动对象差异。"
+    ]
+  },
+  "hypothesisRaw": null,
+  "hypothesisInvalidReason": null,
+  "toolEvents": [
+    {
+      "status": "completed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 completed"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_4571e32b44a6404facfb5012c4232b2f",
+  "sessionIdText": "会话编号：8bffc36b-ff1b-4225-ac2e-9017fe064412",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 9,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "true",
+  "hypothesisClaim": "交付团队产能是否为瓶颈目前无法判定：本地 ContextSnapshot 未能解析该问题的 ② 对象（DOMAIN_EMPTY），因此不能确认瓶颈是否存在及其卡在哪一步。",
+  "hypothesisFields": {
+    "objects": [
+      "未获取：problemId 无法解析，条目 $id 不可得（DOMAIN_EMPTY）"
+    ],
+    "relations": [
+      "未获取：无条目返回，relation.type 不可得（DOMAIN_EMPTY）"
+    ],
+    "evidence": [
+      "未获取：无条目返回，evidence.sources[0].ref 不可得（DOMAIN_EMPTY）"
+    ],
+    "uncertainty": [
+      "工具 synova_context_get 单次调用返回 DOMAIN_EMPTY：本企业 ② 对象中不存在 problemId=交付团队产能瓶颈，无法确认该问题对应哪个 ② 对象",
+      "未能取得任何 $id、relation.type、evidence.ref，故『产能是否瓶颈』与『卡在哪一步』均无真实数据支撑，不做推断",
+      "若瓶颈真实存在，具体卡点（排期／评审／环境／人手／验收）需以该对象的真实结构与时序观测为准，本次未取得"
+    ]
+  },
+  "hypothesisRaw": null,
+  "hypothesisInvalidReason": null,
+  "toolEvents": [
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

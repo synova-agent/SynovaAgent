@@ -1,0 +1,38 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_33e836a0cac743e6ac1267c1b2f23236",
+  "sessionIdText": "会话编号：8e7e7f64-0c14-4080-b5a4-2d1d5ad3ef8f",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 3,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis"
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "false",
+  "hypothesisClaim": null,
+  "hypothesisFields": {
+    "objects": null,
+    "relations": null,
+    "evidence": null,
+    "uncertainty": null
+  },
+  "hypothesisRaw": "## 先说结论 我这一轮**能确认的事实只有一条**：只读通道仍然可用，而且我用本会话里唯一可见的标识 `1459` 去查时，返回了 ``` {\"ok\":false,\"code\":\"DOMAIN_EMPTY\",\"phase\":\"tool\",\"retryable\":false, \"message\":\"本企业 ② 对象中解析不到 problemId: 1459\"} ``` 也就是说：**我手里目前没有任何一条可核验的领域数据**。这不是“数据看起来有问题”，而是“我根本没有拿到快照”。 ## 我这边实际持有的读取能力 - 本会话没有给我 `problemId`，工作目录是 `.tmp-m1m2/instance`，而我这边没有文件读取通道，也拿不到代码或源表，所以能读真实领域数据的入口只有 `synova_context_get` 一个。 - 契约写明，本切片**只产出 ② 结构**（`$id`、期间、定义版本、状态）。也就是说，即便调用成功，我拿到的也只是**结构**，拿不到 ① 循环、③ 观测、④ 参数值。这本身就是第一层缺口。 ## 明确无法确认的地方 | # | 我无法确认什么 | 为什么无法确认 | |---|---|---| | 1 | **本企业 ② 域里到底有没有对象** | 这条报错无法区分“对象不存在”和“我猜的 id 不符合命名规范”这两种情况，而且这个错误码在语义上覆盖了这两种情况 | | 2 | **正确的定位方式** | 我不知道该用 `businessKey` 还是 `$id`，也不知道命名规范，`1459` 只是我从 worktree 名里取的，并不是真实业务键 | | 3 | **对象是哪一天、哪个观测窗口的** | 期间没有拿到，因此任何“最近”“当前”的说法都没有依据 | | 4 | **依据的是哪一版本体或因果边定义** | 定义版本没有拿到；版本不同，结论就无法比较，这是复核时首先要问的 | | 5 | **对象处于什么状态** | 是草稿、生效还是已过期，这个状态没有拿到 | | 6 | **结构之下的值来自哪里** | 本切片不产出④参数值与③观测值，因此即使结构是对的，我也无法判断阈值、单位、口径以及缺失值的处理 | | 7 | **“本企业”的边界** | 工具做服务端身份注入；但多企业或多租户下实际解析到哪一家，我只能从返回结果反推，无法自行验证 | | 8 | **数据新鲜度** | 没有采集时点，也没有源表版本，因此“现在能看到的数据”这句话本身我还无法验证 | ## 需要你们核对的最小清单 按优先级排列，前两项不解决，后面都无法继续： 1. **给我一个真实可解析的 `problemId`**（`businessKey` 或 `$id` 原文），并说明该企业 ② 域现在是否为空。 2. 确认这个 id 的**写法规范**（为什么 `1459` 会解析不到）。 3. 调用成功后，请同时核对 **期间、定义版本、状态** 这三个字段是否与你们认为的一致；它们是我后续判断的唯一依据。 4. 如果你们需要的不只是结构，那么 **④参数值 / ③观测** 从哪个通道提供，需要你们指定。 一句话：**现在不是数据有问题，而是我连“有没有数据、是不是这一份”都还没有证据。** 我不会用这条 `DOMAIN_EMPTY` 去推测任何业务结论。",
+  "hypothesisInvalidReason": "未结构化：服务端标记为未结构化",
+  "toolEvents": [
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

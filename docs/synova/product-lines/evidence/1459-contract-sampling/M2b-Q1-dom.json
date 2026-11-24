@@ -1,0 +1,38 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_e3f724d7bba1447aaa08547820957e35",
+  "sessionIdText": "会话编号：daf2c2bd-d8d1-4232-950f-b6f9617ae7ea",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 3,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis"
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "false",
+  "hypothesisClaim": null,
+  "hypothesisFields": {
+    "objects": null,
+    "relations": null,
+    "evidence": null,
+    "uncertainty": null
+  },
+  "hypothesisRaw": "{\"hypothesis\":\"本次单次查询未能命中本企业 ② 对象，无法确认增长放缓的瓶颈所在环节（问题 ID 解析失败：DOMAIN_EMPTY，retryable=false）。\",\"objects\":[],\"relations\":[],\"evidence\":[],\"uncertainty\":[\"synova_context_get 以 problemId=growth-slowdown 调用返回 DOMAIN_EMPTY：本企业 ② 对象中解析不到该 problemId，未获得任何 ContextSnapshot 条目\",\"因此无法确认正确的 problemId（businessKey 或 $id），也无法读取对象 $id、relation.type、evidence.sources[0].ref\",\"按指令只调用一次工具、不臆造数据，故 objects/relations/evidence 留空；增长放缓的真实瓶颈环节、涉及的对象与关系、证据来源均未核实\",\"该项失败 retryable=false，需以正确的 problemId 重新取数后才能给出可证伪的瓶颈结论\"]}",
+  "hypothesisInvalidReason": "未结构化：服务端标记为未结构化",
+  "toolEvents": [
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

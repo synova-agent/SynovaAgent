@@ -1,0 +1,263 @@
+{
+  "file": "07-dsh-session-log.decompress-report.json",
+  "generatedAt": "2026-11-24T12:46:52.967Z",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "producer": {
+    "path": "scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs",
+    "sha256": "b3a24fba4a15111d8ccd36aa632088bbd2294b90ca005c033e5d4e192af3b2ef"
+  },
+  "input": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\6bcd08c9-11a6-47ee-81ad-fd24e273dcac\\session.v4.jsonl.zstd",
+    "bytes": 56116,
+    "sha256": "784f0220bd05b467c5b419d6cf01c1902cbf7e07e8fadc9c7ceb23054efb94dc"
+  },
+  "output": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q1-dsh-session-log.jsonl",
+    "bytes": 157807,
+    "sha256": "375c2a47e07ff32a05a63a38d386985869016f538f6c9eb1dd4f9580b84dac71",
+    "lines": 50,
+    "nonEmptyLines": 49
+  },
+  "method": "scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat",
+  "forbiddenMethodNotUsed": "zstdDecompressSync on the whole multi-frame file (decodes only the first frame and does not throw)",
+  "frameCount": 26,
+  "frames": [
+    {
+      "index": 0,
+      "start": 0,
+      "end": 210,
+      "bytes": 210,
+      "decodedBytes": 254,
+      "decodedLines": 1
+    },
+    {
+      "index": 1,
+      "start": 210,
+      "end": 354,
+      "bytes": 144,
+      "decodedBytes": 249,
+      "decodedLines": 3
+    },
+    {
+      "index": 2,
+      "start": 354,
+      "end": 699,
+      "bytes": 345,
+      "decodedBytes": 508,
+      "decodedLines": 3
+    },
+    {
+      "index": 3,
+      "start": 699,
+      "end": 19131,
+      "bytes": 18432,
+      "decodedBytes": 36912,
+      "decodedLines": 7
+    },
+    {
+      "index": 4,
+      "start": 19131,
+      "end": 19305,
+      "bytes": 174,
+      "decodedBytes": 161,
+      "decodedLines": 1
+    },
+    {
+      "index": 5,
+      "start": 19305,
+      "end": 19468,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 6,
+      "start": 19468,
+      "end": 25699,
+      "bytes": 6231,
+      "decodedBytes": 23572,
+      "decodedLines": 2
+    },
+    {
+      "index": 7,
+      "start": 25699,
+      "end": 26053,
+      "bytes": 354,
+      "decodedBytes": 549,
+      "decodedLines": 2
+    },
+    {
+      "index": 8,
+      "start": 26053,
+      "end": 26140,
+      "bytes": 87,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 9,
+      "start": 26140,
+      "end": 26304,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 10,
+      "start": 26304,
+      "end": 27925,
+      "bytes": 1621,
+      "decodedBytes": 4891,
+      "decodedLines": 2
+    },
+    {
+      "index": 11,
+      "start": 27925,
+      "end": 28352,
+      "bytes": 427,
+      "decodedBytes": 606,
+      "decodedLines": 2
+    },
+    {
+      "index": 12,
+      "start": 28352,
+      "end": 28440,
+      "bytes": 88,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 13,
+      "start": 28440,
+      "end": 28603,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 14,
+      "start": 28603,
+      "end": 37442,
+      "bytes": 8839,
+      "decodedBytes": 33742,
+      "decodedLines": 2
+    },
+    {
+      "index": 15,
+      "start": 37442,
+      "end": 37942,
+      "bytes": 500,
+      "decodedBytes": 733,
+      "decodedLines": 2
+    },
+    {
+      "index": 16,
+      "start": 37942,
+      "end": 38493,
+      "bytes": 551,
+      "decodedBytes": 774,
+      "decodedLines": 2
+    },
+    {
+      "index": 17,
+      "start": 38493,
+      "end": 38956,
+      "bytes": 463,
+      "decodedBytes": 633,
+      "decodedLines": 2
+    },
+    {
+      "index": 18,
+      "start": 38956,
+      "end": 39042,
+      "bytes": 86,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 19,
+      "start": 39042,
+      "end": 39205,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 20,
+      "start": 39205,
+      "end": 46834,
+      "bytes": 7629,
+      "decodedBytes": 27556,
+      "decodedLines": 2
+    },
+    {
+      "index": 21,
+      "start": 46834,
+      "end": 47337,
+      "bytes": 503,
+      "decodedBytes": 733,
+      "decodedLines": 2
+    },
+    {
+      "index": 22,
+      "start": 47337,
+      "end": 47759,
+      "bytes": 422,
+      "decodedBytes": 597,
+      "decodedLines": 2
+    },
+    {
+      "index": 23,
+      "start": 47759,
+      "end": 47845,
+      "bytes": 86,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 24,
+      "start": 47845,
+      "end": 48008,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 25,
+      "start": 48008,
+      "end": 56116,
+      "bytes": 8108,
+      "decodedBytes": 24116,
+      "decodedLines": 3
+    }
+  ],
+  "coverage": {
+    "fileBytes": 56116,
+    "sumFrameBytes": 56116,
+    "byteCoveragePasses": true,
+    "sumDecodedLines": 49,
+    "decodedNewlines": 49
+  },
+  "header": {
+    "type": "session",
+    "version": 4,
+    "id": "6bcd08c9-11a6-47ee-81ad-fd24e273dcac",
+    "createdAt": 1795523962618,
+    "cwd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\instance",
+    "isSeeded": false,
+    "delegationDepth": 0
+  },
+  "checks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "toolCallEntries": 6,
+  "toolResultEntries": 0,
+  "allPassed": false
+}

@@ -1,0 +1,72 @@
+{
+  "id": "M2b-Q2",
+  "phase": "M2b",
+  "prompt": "交付团队的产能是不是瓶颈？如果是，具体卡在哪一步？\n\n请只调用一次工具 synova_context_get。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。",
+  "promptChars": 294,
+  "submittedAt": "2026-11-24T12:43:12.928Z",
+  "terminal": true,
+  "runId": "run_4571e32b44a6404facfb5012c4232b2f",
+  "sessionId": "8bffc36b-ff1b-4225-ac2e-9017fe064412",
+  "domStatus": "done",
+  "auth": "authenticated",
+  "hypothesisStructuredDom": "true",
+  "hypothesisEvents": 1,
+  "eventCount": 9,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "sse": {
+    "httpStatus": 200,
+    "frameCount": 10,
+    "events": [
+      "run.started",
+      "session.created",
+      "egress.recorded",
+      "reasoning.delta",
+      "tool.started",
+      "tool.finished",
+      "reasoning.delta",
+      "text.delta",
+      "hypothesis.structured",
+      "run.completed"
+    ],
+    "runStarted": {
+      "runId": "run_4571e32b44a6404facfb5012c4232b2f",
+      "enterpriseId": "org-a",
+      "userId": "node-e3fa8993-4715-469c-92f2-f2397a2d4fba",
+      "scope": "admin",
+      "sessionId": null
+    },
+    "hypothesis": "structured",
+    "invalidReason": null,
+    "terminal": "run.completed"
+  },
+  "timelineTail": [
+    {
+      "at": "2026-11-24T12:43:16.975Z",
+      "status": "running",
+      "events": 1,
+      "runId": "run_4571e32b44a6404facfb5012c4232b2f"
+    },
+    {
+      "at": "2026-11-24T12:43:17.983Z",
+      "status": "running",
+      "events": 1,
+      "runId": "run_4571e32b44a6404facfb5012c4232b2f"
+    },
+    {
+      "at": "2026-11-24T12:43:18.991Z",
+      "status": "done",
+      "events": 9,
+      "runId": "run_4571e32b44a6404facfb5012c4232b2f"
+    }
+  ]
+}
