@@ -2158,3 +2158,9 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 只读审计 B（T1 债单 392 条分档核对）：从 ui-redo-t1 分支用 git show 只读取 allowlist（禁复制成第二真源），按渲染面五类分档，产出 T4 精确 checklist；与 DEV DOC §2.1 C1-C8 对账；映射表缺项须报 CTO 不许自创。"
+  - id: DOC-1485-10
+    type: research
+    path: docs/synova/ui-redo/T1债单-分档核对-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 只读审计 B 产出（T1 债单 392 条分档核对）：逐条按渲染面五类分档（客户面 179/值域 69/比较 67/夹具 0/数据驱动 77），聚合成 97 个渲染位作为 T4 执行清单；与 DEV DOC §2.1 C1-C8 对账发现 13 个漏点；证明 T1 的 why 分档误判 9 条、漏判 10 条；指出 392 清零不可达（221 条结构性不可销账）。"
