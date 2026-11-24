@@ -2146,3 +2146,39 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 T2 单任务卡 v2（纯样式批：白盒根因修复 B1）：经关卡 A 退回后重写，16 阻塞全处置。九项齐（含模块锚）＋冻结基线 84 标签/34 类/13 无规则/25 裸控件＋四臂验收（字面类名/裸控件/表达式/基样式属性）＋A3 阻断范围裁定＋A4 color-scheme 与 * 收窄＋§2 环境前置＋§13 派单前十项（⑩载体已于 142306c90 出库，替代锚=#1481 正文+DEV DOC §6.2，CTO 裁定不伪造 hash）。窗口最小尺寸拆为 T2b。"
+  - id: DOC-1485-07
+    type: devdoc
+    path: docs/synova/coordination/只读审计-UI重做-A-主进程客户面-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 只读审计 A（主进程客户面）：托盘菜单/系统通知/离线页/第二登录实现（U-2、U-3）。只读、零代码，产出 docs/synova/ui-redo/主进程客户面审计-*.md；每条客户可见字符串带 path:line 并按《词典》§1/§2 判定；H 级不许自行升 M。"
+  - id: DOC-1485-08
+    type: devdoc
+    path: docs/synova/coordination/只读审计-UI重做-B-T1债单分档-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 只读审计 B（T1 债单 392 条分档核对）：从 ui-redo-t1 分支用 git show 只读取 allowlist（禁复制成第二真源），按渲染面五类分档，产出 T4 精确 checklist；与 DEV DOC §2.1 C1-C8 对账；映射表缺项须报 CTO 不许自创。"
+  - id: DOC-1485-09
+    type: research
+    path: docs/synova/ui-redo/主进程客户面审计-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 只读审计 A 产出（主进程客户面）：托盘/通知/离线页/第二登录实现逐条 path:line＋《词典》§1/§2 判定。CTO 验收通过（委托 10/10 覆盖、7 条高危抽样全一致、21 文件 184 处引用零越界）。最重发现：app/login.html 与 /api/auth/login 契约失配＋密码框 disabled ⇒ 从未可用（裁定退役）；P0 双通知＋5 分钟重复（归 T6）。可达 M=2。"
+  - id: DOC-1485-10
+    type: research
+    path: docs/synova/ui-redo/T1债单-分档核对-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 只读审计 B 产出（T1 债单 392 条分档核对）：逐条按渲染面五类分档（客户面 179/值域 69/比较 67/夹具 0/数据驱动 77），聚合成 97 个渲染位作为 T4 执行清单；与 DEV DOC §2.1 C1-C8 对账发现 13 个漏点；证明 T1 的 why 分档误判 9 条、漏判 10 条；指出 392 清零不可达（221 条结构性不可销账）。"
+  - id: DOC-1485-11
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T1.1-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 T1.1 单任务卡：扫描根扩到 electron/** 与 app/**；R2-18/R2-07 大小写不敏感；R2-05 收 email/phone/wechatId；P0 单列 R2-20；按审计 B 的 179 条重分 why 并重冻结基线。写集仅 tests/user-visible/** 三文件；四条硬断言保留并加第 5 条（app/login.html 的 GA 与 main.cjs 的 critical 必须在册、删掉必红）。"
+  - id: DOC-1485-12
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-login退役-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 独立小批：app/login.html 退役（审计 A 证实与 /api/auth/login 契约失配且密码框 disabled ⇒ 从未可用）。含文件删除：§4 要求逐个文件核消费者、禁止目录级通配删除；写集逐个明列（login.html/auth.js/server.ts/setup-guide-retired.test.ts/main.cjs 回落/部署文档）；验收含 404 机器判、无残留引用（排除历史文档）、主登录用户可见回归、构建未受影响。"
