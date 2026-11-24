@@ -2158,3 +2158,9 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 只读审计 B（T1 债单 392 条分档核对）：从 ui-redo-t1 分支用 git show 只读取 allowlist（禁复制成第二真源），按渲染面五类分档，产出 T4 精确 checklist；与 DEV DOC §2.1 C1-C8 对账；映射表缺项须报 CTO 不许自创。"
+  - id: DOC-1485-09
+    type: research
+    path: docs/synova/ui-redo/主进程客户面审计-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 只读审计 A 产出（主进程客户面）：托盘/通知/离线页/第二登录实现逐条 path:line＋《词典》§1/§2 判定。CTO 验收通过（委托 10/10 覆盖、7 条高危抽样全一致、21 文件 184 处引用零越界）。最重发现：app/login.html 与 /api/auth/login 契约失配＋密码框 disabled ⇒ 从未可用（裁定退役）；P0 双通知＋5 分钟重复（归 T6）。可达 M=2。"
