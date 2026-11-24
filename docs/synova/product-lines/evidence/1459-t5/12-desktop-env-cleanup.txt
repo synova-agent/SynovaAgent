@@ -1,0 +1,4 @@
+﻿junction_removed = D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1459-tc\electron-renderer\node_modules (link only; target untouched: True)
+removed = D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1459-tc\.codex\heartbeat.json (untracked runtime heartbeat created by this run's API at 14:30; verified gone=True)
+exec_worktree_status_after_cleanup = 0 entries
+renderer_junction_removed = True

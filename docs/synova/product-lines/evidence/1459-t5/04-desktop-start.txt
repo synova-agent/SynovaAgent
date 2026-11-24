@@ -1,0 +1,7 @@
+﻿electron_pid = 12648
+vite_url = http://localhost:5173/ (vite listens on [::1]:5173)
+cdp_url = http://127.0.0.1:9222
+renderer_node_modules = junction -> D:\novis-backup-20260526\Novis\.synova-wt-1455-r3-chain\electron-renderer\node_modules
+page_target_url = http://localhost:5173/
+page_target_title = SynovaAgent
+cdp_ok = true

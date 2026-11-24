@@ -1,0 +1,8 @@
+﻿main_tree_HEAD_before = 77eb430658a693f5e8a6adbe7001abc5f1ff8852
+main_tree_HEAD_after  = 77eb430658a693f5e8a6adbe7001abc5f1ff8852
+main_tree_HEAD_equal = True
+exec_code_HEAD_before = 4300bb20422a3093d0c0e54b6c3e3f93be88ed40
+exec_code_HEAD_after  = 4300bb20422a3093d0c0e54b6c3e3f93be88ed40
+exec_code_HEAD_equal = True
+exec_worktree_dirty_entries = 1 (0 = run did not write tracked/untracked files there)
+main_tree_dirty_entries = 215 (pre-existing; HEAD unchanged is the claim)

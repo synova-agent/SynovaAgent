@@ -27,6 +27,44 @@ writeset:
   - tests/runtime/dsh/session-events.test.ts
   # ---- 本 claim ----
   - .claude/claims/1459.yaml
+  - docs/synova/product-lines/evidence/1459-t5/00-codewt-head.txt
+  - docs/synova/product-lines/evidence/1459-t5/00-dshhome-before.txt
+  - docs/synova/product-lines/evidence/1459-t5/00-mainhead-before.txt
+  - docs/synova/product-lines/evidence/1459-t5/00-p0.txt
+  - docs/synova/product-lines/evidence/1459-t5/00-port-before.txt
+  - docs/synova/product-lines/evidence/1459-t5/00-procs-before.txt
+  - docs/synova/product-lines/evidence/1459-t5/01-credential-finding.md
+  - docs/synova/product-lines/evidence/1459-t5/01-credential-placement.txt
+  - docs/synova/product-lines/evidence/1459-t5/01-key-input.txt
+  - docs/synova/product-lines/evidence/1459-t5/02-sidecar-start.json
+  - docs/synova/product-lines/evidence/1459-t5/03-api-console.err.txt
+  - docs/synova/product-lines/evidence/1459-t5/03-api-console.txt
+  - docs/synova/product-lines/evidence/1459-t5/03-api-start.txt
+  - docs/synova/product-lines/evidence/1459-t5/04-desktop-start.txt
+  - docs/synova/product-lines/evidence/1459-t5/04-electron-console.err.txt
+  - docs/synova/product-lines/evidence/1459-t5/04-electron-console.txt
+  - docs/synova/product-lines/evidence/1459-t5/04-vite-console.err.txt
+  - docs/synova/product-lines/evidence/1459-t5/04-vite-console.txt
+  - docs/synova/product-lines/evidence/1459-t5/05-sse-events.txt
+  - docs/synova/product-lines/evidence/1459-t5/06-run-snapshot.json
+  - docs/synova/product-lines/evidence/1459-t5/07-dsh-session-log.decompress-report.json
+  - docs/synova/product-lines/evidence/1459-t5/07-dsh-session-log.jsonl
+  - docs/synova/product-lines/evidence/1459-t5/07-pids-after.txt
+  - docs/synova/product-lines/evidence/1459-t5/07-sse-meta.json
+  - docs/synova/product-lines/evidence/1459-t5/07-stop.txt
+  - docs/synova/product-lines/evidence/1459-t5/08-desktop-dom.json
+  - docs/synova/product-lines/evidence/1459-t5/08-desktop.png
+  - docs/synova/product-lines/evidence/1459-t5/08-drive-result.json
+  - docs/synova/product-lines/evidence/1459-t5/08-dshhome-after.txt
+  - docs/synova/product-lines/evidence/1459-t5/09-desktop-console.txt
+  - docs/synova/product-lines/evidence/1459-t5/10-evidence-summary.json
+  - docs/synova/product-lines/evidence/1459-t5/11-residue-scan.txt
+  - docs/synova/product-lines/evidence/1459-t5/11-secret-scan.txt
+  - docs/synova/product-lines/evidence/1459-t5/12-desktop-env-cleanup.txt
+  - docs/synova/product-lines/evidence/1459-t5/13-mainhead-after.txt
+  - docs/synova/product-lines/evidence/1459-t5/CREDENTIAL-CLEANUP.txt
+  - docs/synova/product-lines/evidence/1459-t5/README.md
+  - docs/synova/product-lines/evidence/1459-t5/hash-manifest.txt
 done:
   - verify: 根 team:delivery-a ⇒ count=2 且 relation.type + sources[0].ref + period/defVersion 同时非空（真 EnterpriseScanService 造库）
   - verify: 根 delivery_batch:B-2026-10-001 ⇒ insufficient.code=INSUFFICIENT_CONTEXT（不抛错）

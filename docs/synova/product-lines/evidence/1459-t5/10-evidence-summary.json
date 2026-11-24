@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-11-24T08:22:31.651Z",
+  "evidence_1_sse": {
+    "eventOrder": [
+      "run.started",
+      "session.created",
+      "egress.recorded",
+      "reasoning.delta",
+      "tool.started",
+      "tool.finished",
+      "reasoning.delta",
+      "text.delta",
+      "hypothesis.structured",
+      "run.completed"
+    ],
+    "frameCount": 10,
+    "terminal": "run.completed",
+    "hypothesis_structure": "hypothesis.structured",
+    "fourElementsNonEmpty": {
+      "hypothesis": true,
+      "objects": true,
+      "relations": true,
+      "evidence": true,
+      "uncertainty": true
+    },
+    "runId": "run_fd0f6f9e9cd840fea03704b567d8d10b",
+    "status": "completed",
+    "stats": {
+      "textDeltas": 1,
+      "reasoningDeltas": 2,
+      "toolCalls": 1,
+      "chars": 556
+    }
+  },
+  "evidence_2_dshSession": {
+    "assistantMessageCount": 2,
+    "assistantMessagesWithUsage": 2,
+    "messages": [
+      {
+        "seq": 14,
+        "provider": "deepseek-official",
+        "model": "deepseek-v4-flash",
+        "usage": {
+          "inputTokens": 414,
+          "outputTokens": 60,
+          "cacheReadTokens": 1152,
+          "cacheWriteTokens": 0,
+          "totalTokens": 1626
+        },
+        "contentTypes": [
+          "reasoning",
+          "tool-call"
+        ],
+        "toolCalls": [
+          {
+            "id": "call_00_KbWvYC93kn4sNMdsFZ2k1308",
+            "name": "mcp__synova-sidecar__synova_context_get",
+            "arguments": "{\"problemId\": \"team:delivery-a\"}"
+          }
+        ]
+      },
+      {
+        "seq": 20,
+        "provider": "deepseek-official",
+        "model": "deepseek-v4-flash",
+        "usage": {
+          "inputTokens": 496,
+          "outputTokens": 396,
+          "cacheReadTokens": 1536,
+          "cacheWriteTokens": 0,
+          "totalTokens": 2428
+        },
+        "contentTypes": [
+          "reasoning",
+          "text"
+        ],
+        "toolCalls": []
+      }
+    ],
+    "toolCallCount": 1,
+    "toolResultCount": 1,
+    "lineCount": 24
+  },
+  "evidence_3_desktop": {
+    "runStatus": "done",
+    "auth": "devmode",
+    "runIdText": "运行编号：run_fd0f6f9e9cd840fea03704b567d8d10b",
+    "sessionIdText": "会话编号：736f32d3-1534-4059-b6aa-4d4ed16b81f5",
+    "hypothesisStructured": true,
+    "hypothesisFields": {
+      "text": "瓶颈假设\n交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\n对象\nnode-105362c0-6a54-45b9-075c-7f2f63947830\nnode-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\n关系\nedge/team_executes_activity\nedge/team_executes_activity\n依据（可回来源）\ndelivery_batches.csv#L3\noperator-statement.json\n不确定性\n第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\n两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\n返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\n样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动",
+      "claim": "交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。",
+      "objects": [
+        "node-105362c0-6a54-45b9-075c-7f2f63947830",
+        "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6"
+      ],
+      "relations": [
+        "edge/team_executes_activity",
+        "edge/team_executes_activity"
+      ],
+      "evidence": [
+        "delivery_batches.csv#L3",
+        "operator-statement.json"
+      ],
+      "uncertainty": [
+        "第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验",
+        "两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化",
+        "返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节",
+        "样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动"
+      ]
+    }
+  }
+}

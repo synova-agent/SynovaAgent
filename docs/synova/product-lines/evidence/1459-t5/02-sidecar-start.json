@@ -1,0 +1,17 @@
+﻿{
+    "ready":  true,
+    "protocolVersion":  1,
+    "agentName":  "deepseek-harness-acp",
+    "supervisorPid":  10620,
+    "acpPid":  14860,
+    "controlPort":  53357,
+    "controlToken":  "\u003credacted\u003e",
+    "profile":  "synova-sidecar",
+    "dshHome":  "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home",
+    "instanceDir":  "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\instance",
+    "installDir":  "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\install\\0.2.2-rc.5",
+    "startedAt":  "2026-11-24T06:08:54.648Z",
+    "logPath":  "D:\\novis-backup-20260526\\Novis\\_r3chain-20261123\\dsh-home\\logs\\sidecar-20261124.log",
+    "failure":  null,
+    "source":  "state file \u003cdsh-home\u003e/run/synova-sidecar.json (starter stdout contains the control token; not saved)"
+}
