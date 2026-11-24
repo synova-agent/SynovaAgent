@@ -1,0 +1,31 @@
+# .claude/claims/1486.yaml — 【适配】ingest 最小产品适配（4 条 CTO 裁定 a/b/c/d）
+# 票面：Gitea #1486（唯一权威；写集 = 8 个实现文件 + 各条测试）
+# base: gitea/main b84f8dd71 ｜ 分支: feat/1486-ingest-min-adapt
+# 说明：本票不做 ingest 抽取逻辑（V1–V4），只做最小产品适配。
+writeset:
+  - .claude/claims/1486.yaml
+  # a) 只放宽 props.defVersion 可缺省（系统赋 ingest-v0）；period 仍强制
+  - src/agent/graph-store-service.ts
+  # b) 通用 persistFacts() 导出（复用既有 writer 与 006 触发器）
+  - src/l4/enterprise-scan-store.ts
+  # c) 哨兵 period 透传 + 现成 reader 读 metric_observations
+  - src/sentinel/types.ts
+  - src/sentinel/registry.ts
+  - src/l3/synova-diagnosis-engine-impl.ts
+  - src/server.ts
+  # d) problemId 显式入参位（route → RunRequest → tool ctx，禁拼 prompt）
+  - src/routes/dsh.ts
+  - src/runtime/dsh/session.ts
+  - src/runtime/dsh/tools.ts
+  # 测试：四条裁定各自的正常/失败/边界 + 反例
+  - tests/agent/ingest-defversion-period.test.ts
+  - tests/agent/stage2-s1-objects.test.ts
+  - tests/l4/ingest-persist-facts.test.ts
+  - tests/sentinel/ingest-period-passthrough.test.ts
+  - tests/routes/dsh-problemid.test.ts
+done:
+  - "verify: node node_modules/vitest/vitest.mjs run tests/agent/ingest-defversion-period.test.ts tests/l4/ingest-persist-facts.test.ts tests/sentinel/ingest-period-passthrough.test.ts tests/routes/dsh-problemid.test.ts => 20 passed (4 files)"
+  - "verify: 回归 tests/agent/stage2-s1-objects.test.ts + tests/sentinel/stage2-s2-producer.test.ts + tests/sentinel/registry.test.ts + tests/sentinel/metric-observations-reader.test.ts + tests/runtime/dsh/{tools,security-cases,readonly-tool,domain-context-scan,session,session-events}.test.ts + tests/routes/dsh.test.ts + tests/enterprise-scan/file-race.test.ts => 81 passed"
+  - "verify: node node_modules/typescript/bin/tsc --noEmit => exit 0"
+  - "verify: bash scripts/check-architecture.sh => 全部通过 (exit 0)"
+note: "#1486 ingest v0 最小产品适配。a) createObject 只放宽 props.defVersion（缺省系统赋 ingest-v0），period 缺/伪造仍 VALIDATION 零写入；b) EnterpriseScanStore.persistFacts() 通用事实入口，经 ② writer + 006 触发器（直写 scan_* 必红）；c) SentinelContext.period + metricObservations reader 注入（org/period 闭包锁定），impl/server 调用点的 period 只来自 ② 资料（resolveLatestMaterialPeriod，禁 now() 派生），无资料则不传（既有 S2_DEGRADED_NO_PERIOD 语义不变）；d) POST /api/dsh/runs body 可选 problemId → RunRequest → ToolCallContext，工具侧优先使用，prompt 文本逐字 = input（不含 problemId）。残留：MCP 工具 schema 的 required:['problemId'] 属 src/mcp/tool-definitions.ts，不在本票写集，未改。"

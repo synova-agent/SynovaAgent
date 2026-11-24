@@ -162,6 +162,20 @@ export class SynovaDiagnosisEngineImpl implements SynovaDiagnosisEngine {
 
   // ═══ 主入口 ═══
 
+  /**
+   * runConsultation — 六阶段诊断主入口（#1486 裁定 c 只改 Phase 2 哨兵调用点的 period 来源）。
+   *
+   * 契约（铁律 47）:
+   *   @input  teamId —— 目标组织（同时是 ④a 的 org 分区）；initiator —— 发起人档案；scope? —— 诊断范围；
+   *           onEvent? —— 事件回调
+   *   @output 诊断结果（ConsultationResult；单阶段失败记 degradedModules，不中断整体）
+   *   @degraded 既有降级集合不变：各阶段 catch ⇒ `log.warn` + `degradedModules.push`；
+   *             Phase 2 的 ④a period 不可解析 ⇒ `log.warn(degraded)` + 按无 period 调哨兵（不编造期间）
+   *   @authority period 只来自 ② 资料（`resolveLatestMaterialPeriod`），禁 `now()` 派生；
+   *              哨兵上下文的企业分区由 teamId 决定
+   *   @not-here 不改哨兵阈值判据、不改既有降级码、不写 ④a（写侧在 registry）
+   *   @error  不向调用方抛：阶段失败进 degradedModules；最终结果照常返回（既有语义）
+   */
   async runConsultation(
     teamId: string,
     initiator: InitiatorProfile,
@@ -258,7 +272,17 @@ export class SynovaDiagnosisEngineImpl implements SynovaDiagnosisEngine {
           try {
             const { runSentinelForTeam, formatFindingsForLLM } = await import('../sentinel/sentinel-runner');
             const store = this.graphStore as { queryNodes(type: string, filters?: Record<string, unknown>, graph?: string): Array<{ id: string; type: string; props: Record<string, unknown> }> };
-            const findings = await runSentinelForTeam(teamId, store);
+            // #1486 裁定 c：period **只能来自资料**（② 节点 props.period），禁 `now()` 派生；
+            // 资料里没有期间 ⇒ 不传 options（既有 `S2_DEGRADED_NO_PERIOD` 语义按原样暴露 ⇒ 行为与改动前一致）。
+            let observation: { period: string } | undefined;
+            try {
+              const { resolveLatestMaterialPeriod } = await import('../agent/graph-store-service');
+              const period = resolveLatestMaterialPeriod(teamId);
+              if (period !== undefined) observation = { period };
+            } catch (periodErr: unknown) {
+              log.warn({ err: periodErr, teamId, degraded: true }, '④a 周期不可解析 ⇒ 本轮按无 period 运行（不编造期间）');
+            }
+            const findings = await runSentinelForTeam(teamId, store, observation);
             if (findings.length > 0) {
               for (const f of findings) {
                 // 若 SessionLearner 有该假设的权重记录, 调整置信度

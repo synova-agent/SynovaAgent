@@ -71,6 +71,15 @@ export interface RunRequest {
   input: string;
   /** 已存在的 ACP 会话（恢复路径）；缺省时新建。 */
   sessionId?: string;
+  /**
+   * #1486 裁定 e：**显式问题根**（本企业 ② 对象的 `businessKey` 或 `$id`），由调用方给定，
+   * 经 `ToolCallContext` 直达 `synova_context_get`（工具侧优先使用它）。
+   *
+   * @invariant 只作**结构化入参**流动：不得拼进 `input`/发给模型的 prompt 文本
+   *            （#1459 M2 实证：让模型猜 problemId ⇒ 10 条全空 + 750k tokens）
+   * @not-here 本层不解析/不校验该对象是否存在（解析在 `domain-context.ts`，不存在 ⇒ `DOMAIN_EMPTY`）
+   */
+  problemId?: string;
 }
 
 /** 运行状态。 */
@@ -146,7 +155,17 @@ export class DshRunManager {
 
   /**
    * 发起一轮运行（幂等：同 runId 已存在 ⇒ 返回原记录，不重复 prompt）。
-   * @output 运行记录（status=running；终态由事件流推进）
+   *
+   * #1486 裁定 e：`request.problemId` **只**进 `run.started` 事件（可证）与 MCP token 上下文，
+   * **不拼进** `client.prompt` 的文本（模型文本 = `request.input` 逐字）。
+   *
+   * 契约（铁律 47）:
+   *   @input  request —— RunRequest（身份/输入由路由校验；`problemId` 可选、结构化）
+   *   @output 运行记录（status=running；终态由事件流推进；同 runId 幂等返回既有记录）
+   *   @degraded 无：执行失败落 `run.failed`/`run.cancelled` 事件（带 code/phase/retryable），不空成功
+   *   @authority 身份字段由服务端注入（模型/工具参数不得携带）；problemId 不改变 prompt 文本
+   *   @not-here 不解析 problemId 指向的对象、不校验企业归属（工具侧 `domain-context` 负责）
+   *   @error  不抛：运行期错误转事件（`run.failed`）
    */
   async run(request: RunRequest): Promise<RunRecord> {
     const existing = this.runs.get(request.runId);
@@ -171,6 +190,8 @@ export class DshRunManager {
       userId: request.userId,
       scope: request.scope,
       sessionId: record.sessionId,
+      // #1486 e：显式问题根的**可证入口**（事件可观察；prompt 文本不含它）
+      problemId: request.problemId ?? null,
     });
     void this.execute(record, request);
     return record;
