@@ -1,0 +1,21 @@
+﻿generated: 2026-11-24T16:23:05.6547208+08:00
+--- listening ports that belonged to this run ---
+port=18790 listening=False
+port=5173 listening=False
+port=9222 listening=False
+--- pids started by this run (all must be dead) ---
+pid=10620 alive=False
+pid=14860 alive=False
+pid=16780 alive=False
+pid=13220 alive=False
+pid=10040 alive=False
+pid=14044 alive=False
+pid=9888 alive=False
+pid=12648 alive=False
+pid=1340 alive=False
+pid=17356 alive=False
+pid=13264 alive=False
+sidecar_state_file_gone = True
+--- node/electron processes still present (pre-existing, not started by this run) ---
+node.exe pid=17448 parent=15460 cmd="C:\Program Files\nodejs\node.exe" --import tsx/esm apps/cli/src/bin.ts web
+node.exe pid=1512 parent=21348 cmd=C:\Users\Administrator\.workbuddy\binaries\node\versions\22.22.2-6\node.exe --disable-warning=ExperimentalWarning --disable-warning=ExperimentalWarning D:\WorkB

@@ -1,0 +1,11 @@
+﻿generated_at = 2026-11-24T14:05:10.3081497+08:00
+main_tree_HEAD = 77eb430658a693f5e8a6adbe7001abc5f1ff8852  (local main; must stay unchanged)
+exec_code_worktree = D:\novis-backup-20260526\Novis\synova-agent\.synova-wt-1459-tc
+exec_code_HEAD = 4300bb20422a3093d0c0e54b6c3e3f93be88ed40
+gitea_main_HEAD = 082b74093cfd5ca394b48a6e3725c769b0fb0381
+tree_equal_exec_vs_gitea_main = True
+T-C events.ts on gitea main (hypothesis.structured count) = refs/heads/main:src/runtime/dsh/events.ts:1
+rc.5 bin present = True
+T0 scan db = C:\Users\Administrator\AppData\Local\Temp\1459-scan\synova.db present = True
+port 18790 listeners = 0
+node/electron processes = 2

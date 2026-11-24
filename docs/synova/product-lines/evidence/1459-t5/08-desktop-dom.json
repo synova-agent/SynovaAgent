@@ -1,0 +1,126 @@
+{
+  "runStatus": "done",
+  "auth": "devmode",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_fd0f6f9e9cd840fea03704b567d8d10b",
+  "sessionIdText": "会话编号：736f32d3-1534-4059-b6aa-4d4ed16b81f5",
+  "hypothesisFields": {
+    "structured": {
+      "text": "瓶颈假设\n交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\n对象\nnode-105362c0-6a54-45b9-075c-7f2f63947830\nnode-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\n关系\nedge/team_executes_activity\nedge/team_executes_activity\n依据（可回来源）\ndelivery_batches.csv#L3\noperator-statement.json\n不确定性\n第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\n两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\n返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\n样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动",
+      "claim": "交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。",
+      "objects": [
+        "node-105362c0-6a54-45b9-075c-7f2f63947830",
+        "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6"
+      ],
+      "relations": [
+        "edge/team_executes_activity",
+        "edge/team_executes_activity"
+      ],
+      "evidence": [
+        "delivery_batches.csv#L3",
+        "operator-statement.json"
+      ],
+      "uncertainty": [
+        "第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验",
+        "两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化",
+        "返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节",
+        "样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动"
+      ]
+    }
+  },
+  "events": [
+    {
+      "seq": "5",
+      "kind": "tool",
+      "toolCallId": "call_00_KbWvYC93kn4sNMdsFZ2k1308",
+      "toolStatus": "completed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 completed"
+    },
+    {
+      "seq": "8",
+      "kind": "text",
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "{\"hypothesis\":\"交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\",\"objects\":[\"node-105362c0-6a54-45b9-075c-7f2f63947830\",\"node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\"],\"relations\":[\"edge/team_executes_activity\",\"edge/team_executes_activity\"],\"evidence\":[\"delivery_batches.csv#L3\",\"operator-statement.json\"],\"uncertainty\":[\"第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\",\"两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\",\"返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\",\"样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动\"]}"
+    },
+    {
+      "seq": "9",
+      "kind": "hypothesis",
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "瓶颈假设\n交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\n对象\nnode-105362c0-6a54-45b9-075c-7f2f63947830\nnode-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\n关系\nedge/team_executes_activity\nedge/team_executes_activity\n依据（可回来源）\ndelivery_batches.csv#L3\noperator-statement.json\n不确定性\n第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\n两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\n返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\n样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "node-105362c0-6a54-45b9-075c-7f2f63947830"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "edge/team_executes_activity"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "edge/team_executes_activity"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "delivery_batches.csv#L3"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "operator-statement.json"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节"
+    },
+    {
+      "seq": null,
+      "kind": null,
+      "toolCallId": null,
+      "toolStatus": null,
+      "text": "样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动"
+    }
+  ],
+  "panelText": "DSH 会话\n\n用真实账号发起一轮会话，观察会话事件与工具轨迹；失败、断流与取消都可在此看见。\n\n开发模式（DevMode）：服务端按开发模式自动身份处理，不发真实登录令牌\n会话输入\n发起会话关闭会话\n运行完成\n运行编号：run_fd0f6f9e9cd840fea03704b567d8d10b\n会话编号：736f32d3-1534-4059-b6aa-4d4ed16b81f5\nmcp__synova-sidecar__synova_context_get类型 other状态 completed\n{\"hypothesis\":\"交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\",\"objects\":[\"node-105362c0-6a54-45b9-075c-7f2f63947830\",\"node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\"],\"relations\":[\"edge/team_executes_activity\",\"edge/team_executes_activity\"],\"evidence\":[\"delivery_batches.csv#L3\",\"operator-statement.json\"],\"uncertainty\":[\"第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\",\"两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\",\"返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\",\"样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动\"]}\n瓶颈假设\n交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\n对象\nnode-105362c0-6a54-45b9-075c-7f2f63947830\nnode-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\n关系\nedge/team_executes_activity\nedge/team_executes_activity\n依据（可回来源）\ndelivery_batches.csv#L3\noperator-statement.json\n不确定性\n第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\n两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\n返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\n样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动",
+  "panelOuterHTML": "<section class=\"dsh-run-panel\" data-testid=\"dsh-run-panel\" data-run-status=\"done\" data-auth=\"devmode\" style=\"padding: 24px; overflow: auto;\"><header><h2>DSH 会话</h2><p>用真实账号发起一轮会话，观察会话事件与工具轨迹；失败、断流与取消都可在此看见。</p></header><div class=\"dsh-auth\" data-auth=\"devmode\">开发模式（DevMode）：服务端按开发模式自动身份处理，不发真实登录令牌</div><label class=\"dsh-input-label\" for=\"dsh-run-input\">会话输入</label><textarea id=\"dsh-run-input\" data-testid=\"dsh-run-input\" class=\"dsh-input\" rows=\"4\" placeholder=\"输入要交给 DSH 会话的任务…\">这是一次合成数据测试。请只调用一次工具 synova_context_get，参数 problemId = team:delivery-a。拿到返回 JSON 后，只输出一个 JSON 对象（不要输出任何解释文字，也不要使用代码围栏）。该 JSON 必须包含以下五个字段且都非空：hypothesis（一句中文瓶颈假设）；objects（数组，元素为条目里的 $id）；relations（数组，元素为条目里的 relation.type）；evidence（数组，元素为条目里的 evidence.sources[0].ref）；uncertainty（数组，写清你无法确认的地方）。不要调用其它工具，不要臆造数据。</textarea><div class=\"dsh-actions\"><button id=\"dsh-run-submit\" type=\"button\" class=\"dsh-btn\">发起会话</button><button id=\"dsh-run-close\" type=\"button\" class=\"dsh-btn\">关闭会话</button></div><div class=\"dsh-run-meta\"><div class=\"dsh-status\" data-run-status=\"done\">运行完成</div><div class=\"dsh-run-id\">运行编号：run_fd0f6f9e9cd840fea03704b567d8d10b</div><div class=\"dsh-session-id\">会话编号：736f32d3-1534-4059-b6aa-4d4ed16b81f5</div></div><ol class=\"dsh-events\" data-testid=\"dsh-run-events\"><li class=\"dsh-event dsh-event-tool\" data-event-seq=\"5\" data-event-kind=\"tool\" data-tool-call-id=\"call_00_KbWvYC93kn4sNMdsFZ2k1308\" data-tool-status=\"completed\"><span class=\"dsh-tool-title\">mcp__synova-sidecar__synova_context_get</span><span class=\"dsh-tool-kind\">类型 other</span><span class=\"dsh-tool-status\">状态 completed</span></li><li class=\"dsh-event dsh-event-text\" data-event-seq=\"8\" data-event-kind=\"text\"><span>{\"hypothesis\":\"交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\",\"objects\":[\"node-105362c0-6a54-45b9-075c-7f2f63947830\",\"node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\"],\"relations\":[\"edge/team_executes_activity\",\"edge/team_executes_activity\"],\"evidence\":[\"delivery_batches.csv#L3\",\"operator-statement.json\"],\"uncertainty\":[\"第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\",\"两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\",\"返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\",\"样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动\"]}</span></li><li class=\"dsh-event dsh-event-hypothesis\" data-event-seq=\"9\" data-event-kind=\"hypothesis\" data-hypothesis-structured=\"true\"><strong>瓶颈假设</strong><div class=\"dsh-hypothesis-claim\">交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。</div><div class=\"dsh-hypothesis-field\" data-hypothesis-field=\"objects\"><span class=\"dsh-hypothesis-label\">对象</span><ul class=\"dsh-hypothesis-values\"><li>node-105362c0-6a54-45b9-075c-7f2f63947830</li><li>node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6</li></ul></div><div class=\"dsh-hypothesis-field\" data-hypothesis-field=\"relations\"><span class=\"dsh-hypothesis-label\">关系</span><ul class=\"dsh-hypothesis-values\"><li>edge/team_executes_activity</li><li>edge/team_executes_activity</li></ul></div><div class=\"dsh-hypothesis-field\" data-hypothesis-field=\"evidence\"><span class=\"dsh-hypothesis-label\">依据（可回来源）</span><ul class=\"dsh-hypothesis-values\"><li>delivery_batches.csv#L3</li><li>operator-statement.json</li></ul></div><div class=\"dsh-hypothesis-field\" data-hypothesis-field=\"uncertainty\"><span class=\"dsh-hypothesis-label\">不确定性</span><ul class=\"dsh-hypothesis-values\"><li>第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验</li><li>两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化</li><li>返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节</li><li>样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动</li></ul></div></li></ol></section>"
+}

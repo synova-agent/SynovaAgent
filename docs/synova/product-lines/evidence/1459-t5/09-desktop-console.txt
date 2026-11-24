@@ -1,0 +1,6 @@
+﻿[console.debug] [vite] connecting...
+[console.info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[console.log] [Synova] v33.4.11
+[console.log] [Synova] v33.4.11
+[log.error] Refused to connect to 'ws://localhost:5173/?token=<redacted-local-dev-token>' because it violates the following Content Security Policy directive: "connect-src http://localhost:* http://127.0.0.1:*".
+

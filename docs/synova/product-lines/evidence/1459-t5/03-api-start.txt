@@ -1,0 +1,6 @@
+﻿api_pid = 13220
+healthz = {"status":"degraded", ... "llm_connectivity":{"status":"degraded","detail":"未配置 LLM API key (诊断功能受限)"} ...}  (Synova-owned LLM config absent; unrelated to the DSH model credential)
+startup_db_log_line (03-api-console.err.txt) = {"level":30,"time":1795501699911,"pid":13220,"hostname":"PC-202605261327","name":"synova-agent","service":"init/engine-context","path":"C:\\Users\\Administrator\\AppData\\Local\\Temp\\1459-scan\\synova.db","msg":"SQLite 数据库已打开"}
+dbPath_pinned = True  (JSON-parsed .path equals C:\Users\Administrator\AppData\Local\Temp\1459-scan\synova.db)
+note = pino writes to stderr; stdout (03-api-console.txt) is 0 bytes, which is why the first probe (stdout-only) reported 0 occurrences
+env: DEV_MODE=true PORT=18790 SYNOVA_DB_PATH=C:\Users\Administrator\AppData\Local\Temp\1459-scan\synova.db SYNOVA_ORG_ID=org-a SYNOVA_DSH_HOME=D:\novis-backup-20260526\Novis\_r3chain-20261123\dsh-home (JWT_SECRET unset => devmode admin)

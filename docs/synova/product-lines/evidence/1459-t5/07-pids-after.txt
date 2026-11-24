@@ -1,0 +1,18 @@
+﻿--- pids after teardown (electron 12648 tree / vite 9888 / api 13220 / api-acp 16780 / mcp 10040 14044 / sidecar 10620 14860) ---
+pid=10620 alive=False name=-
+pid=14860 alive=False name=-
+pid=16780 alive=False name=-
+pid=13220 alive=False name=-
+pid=10040 alive=False name=-
+pid=14044 alive=False name=-
+pid=9888 alive=False name=-
+pid=12648 alive=False name=-
+pid=1340 alive=False name=-
+pid=17356 alive=False name=-
+pid=13264 alive=False name=-
+--- listening ports 18790/5173/9222 ---
+port=18790 listening=False raw=
+port=5173 listening=False raw=
+port=9222 listening=False raw=
+sidecar_state_file_gone = True
+session_log_present_for_run = True

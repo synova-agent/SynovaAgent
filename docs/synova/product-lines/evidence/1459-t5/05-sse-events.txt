@@ -1,0 +1,40 @@
+id: 1
+event: run.started
+data: {"seq":1,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"run.started","at":"2026-11-24T08:16:25.437Z","data":{"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","enterpriseId":"org-a","userId":"dev-admin","scope":"admin","sessionId":null}}
+
+id: 2
+event: session.created
+data: {"seq":2,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"session.created","at":"2026-11-24T08:16:31.544Z","data":{"sessionId":"736f32d3-1534-4059-b6aa-4d4ed16b81f5"}}
+
+id: 3
+event: egress.recorded
+data: {"seq":3,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"egress.recorded","at":"2026-11-24T08:16:31.544Z","data":{"purpose":"run.prompt","destination":"dsh-acp","sha256":"a7e27e22f64eefdc20b69c3b6e1e8664216bb2a7f3819fb2100890fdef15fac4","chars":309}}
+
+id: 4
+event: reasoning.delta
+data: {"seq":4,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"reasoning.delta","at":"2026-11-24T08:16:32.517Z","data":{"text":"Let me call the tool once."}}
+
+id: 5
+event: tool.started
+data: {"seq":5,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"tool.started","at":"2026-11-24T08:16:32.517Z","data":{"toolCallId":"call_00_KbWvYC93kn4sNMdsFZ2k1308","title":"mcp__synova-sidecar__synova_context_get","kind":"other","status":"in_progress"}}
+
+id: 6
+event: tool.finished
+data: {"seq":6,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"tool.finished","at":"2026-11-24T08:16:32.538Z","data":{"toolCallId":"call_00_KbWvYC93kn4sNMdsFZ2k1308","status":"completed","isError":false}}
+
+id: 7
+event: reasoning.delta
+data: {"seq":7,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"reasoning.delta","at":"2026-11-24T08:16:35.041Z","data":{"text":"Output only JSON object, no explanation, no code fences. Fields: hypothesis (Chinese one sentence), objects (array of $id), relations (array of relation.type), evidence (array of evidence.sources[0].ref), uncertainty array.\n\nTwo items. Both objects; relations both \"edge/team_executes_activity\"; evidence refs \"delivery_batches.csv#L3\" and \"operator-statement.json\".\n\nUncertainty: second item pending/estimated, operator statement unverified; cycleVersion null; whether bottleneck holds across period; no activity details.\n\nHypothesis in Chinese one sentence about bottleneck. Something like \"交付 A 团队的瓶颈在于其执行的活动链路中存在证据不足、状态未确认的执行环节，导致交付批次产出受限。\" Careful not to fabricate. Fine as hypothesis.\n\nOutput raw JSON."}}
+
+id: 8
+event: text.delta
+data: {"seq":8,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"text.delta","at":"2026-11-24T08:16:35.042Z","data":{"text":"{\"hypothesis\":\"交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。\",\"objects\":[\"node-105362c0-6a54-45b9-075c-7f2f63947830\",\"node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6\"],\"relations\":[\"edge/team_executes_activity\",\"edge/team_executes_activity\"],\"evidence\":[\"delivery_batches.csv#L3\",\"operator-statement.json\"],\"uncertainty\":[\"第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验\",\"两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化\",\"返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节\",\"样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动\"]}"}}
+
+id: 9
+event: hypothesis.structured
+data: {"seq":9,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"hypothesis.structured","at":"2026-11-24T08:16:35.043Z","data":{"hypothesis":"交付 A 团队的执行活动链路中存在状态未确认、证据待核验的环节，这可能是当前交付产出受限的瓶颈。","objects":["node-105362c0-6a54-45b9-075c-7f2f63947830","node-8720cf4c-fa1e-43d0-5c25-d5a30d5b19c6"],"relations":["edge/team_executes_activity","edge/team_executes_activity"],"evidence":["delivery_batches.csv#L3","operator-statement.json"],"uncertainty":["第二个条目的 evidenceStatus 为 pending、instanceState 为 estimated，即来自 operator-statement.json 的信息尚未核验","两个条目的 cycleVersion 与 sentinelRun 均为 null，无法确认跨周期的状态变化","返回中不含活动或节点本身的名称与度量值，无法确认瓶颈具体所在环节","样本仅 2 条且 truncated 为 false，无法判断是否覆盖了该团队的全部执行活动"]}}
+
+id: 10
+event: run.completed
+data: {"seq":10,"runId":"run_fd0f6f9e9cd840fea03704b567d8d10b","type":"run.completed","at":"2026-11-24T08:16:35.043Z","data":{"stopReason":"end_turn","stats":{"textDeltas":1,"reasoningDeltas":2,"toolCalls":1,"chars":556},"empty":false}}
+

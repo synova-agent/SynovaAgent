@@ -1,0 +1,3 @@
+
+[electron] boot mode=dev server=http://localhost:18790
+[preload-check] OK: electronAPI 已暴露, serverUrl=http://localhost:18790
