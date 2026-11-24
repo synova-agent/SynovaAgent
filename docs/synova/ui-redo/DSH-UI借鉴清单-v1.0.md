@@ -1,4 +1,5 @@
 # DSH UI 借鉴清单 v1.0（可执行级）
+> 任务: #1485 ｜ UI 重做模块（客户界面语言与导航）
 
 > 归属：UI 重做模块 ｜ 任务 **#1485** ｜ 2026-11-24
 > **唯一真源（锁版）**：`D:\novis-backup-20260526\Novis\_r3chain-20261123\install\0.2.2-rc.5\node_modules\@deepseek-ai\`（下文 `path:line` 均相对此根）
@@ -451,10 +452,36 @@ percent: Math.min(100, Math.round(usedTokens / pressure.contextWindow * 100))
 - **两套写法**：侧栏行内用**紧凑式**（`12分钟`/`1小时`/`7天`/`2个月`）；hover card 用 **`{t}前`**（`12分钟前`），且 `now` 档**不带"前"**。
 - **刷新节奏**：`now = Date.now()` 在**渲染时取一次**并下传，**没有定时器**；静止 1 小时不会自己从"12分钟"跳到"1小时"（原文 `WorkspaceBrowser.tsx:414,723`；`Rows.tsx` 全文件无 `setInterval`）。
 
-⚠️ **未找到（不许猜）**：`relativeTime()` 的**分档阈值与取整规则**实现在 `@deepseek-ai/dsh-client-ui-primitives`，而**该包的目录在锁版安装树中不存在**（`Get-ChildItem -Directory -Filter dsh-client-ui-primitives*` 对 `_r3chain-20261123` = **0 命中**）；调用点确实是外部引用而非内联实现（`.../rows/Rows.tsx:20` 的 import、`dsh-client-ui-workspace/lib/client.js` 的 `require("@deepseek-ai/dsh-client-ui-primitives")`）。
-⚠️ **措辞更正（R5 指出）**：字符串 `dsh-client-ui-primitives` **是**有命中的（多个 `package.json` 的依赖声明、`dsh-client-shortcuts/src/client/dom.ts:2` 等）——所以准确说法是"**被声明为依赖但未随安装树落地**"，**不是**"全树零命中"。阈值因此读不到，结论不变。
-✅ 可确证的只有：输出必须落在那 6 个 `unit` 内（`Rows.tsx:151-160`），否则 `t(\`time.${unit}\`)` 查不到键。
-⇒ **我方自定阈值**（属我们的设计决定，不冒充 DSH）：`<60s → 刚刚`；`<60m → n分钟`；`<24h → n小时`；`<30d → n天`；`<12mo → n个月`；其余 `n年`；均**向下取整**。写进《词典》后由 T3 实现。
+🎯 **分档阈值已取到（v1.0 初版误记为"未找到"，已更正）**：实现不在 rc.5 安装树的 `dsh-client-ui-primitives` 包目录里（该目录确实缺失），但**在已安装 GUI 的打包产物里**——`app.asar` → `index-Ciz7DZxv.js`（1,093,870 B，前端 bundle，minified 函数 `uB`，文件内 char 920956）：
+
+```js
+function uB(e, t) {                       // e = updatedAt(ms), t = now(ms)
+  const o = Math.max(0, t - e);           // 未来时间夹到 0 ⇒ 落到 "刚刚"
+  return o < 6e4          ? { unit: "now",     n: 0 }
+       : o < 36e5         ? { unit: "minutes", n: Math.floor(o / 6e4) }
+       : o < 864e5        ? { unit: "hours",   n: Math.floor(o / 36e5) }
+       : o < 30 * 864e5   ? { unit: "days",    n: Math.floor(o / 864e5) }
+       : o < 365 * 864e5  ? { unit: "months",  n: Math.floor(o / (30 * 864e5)) }
+       :                    { unit: "years",   n: Math.floor(o / (365 * 864e5)) };
+}
+```
+
+⇒ **可执行契约（照此实现，不再是我方自定）**：
+
+| 距今天数（ms） | unit | n |
+|---|---|---|
+| `< 60_000`（60s） | `now` | 固定 `0`（不显示数字） |
+| `< 3_600_000`（1h） | `minutes` | `floor(ms / 60_000)` |
+| `< 86_400_000`（1d） | `hours` | `floor(ms / 3_600_000)` |
+| `< 30 × 86_400_000`（30d） | `days` | `floor(ms / 86_400_000)` |
+| `< 365 × 86_400_000`（365d） | `months` | `floor(ms / (30 × 86_400_000))` |
+| `≥ 365d` | `years` | `floor(ms / (365 × 86_400_000))` |
+
+- **全部向下取整**（`Math.floor`，不是四舍五入）；**月按 30 天、年按 365 天**（不回退到日历月）。
+- **未来时间**（`updatedAt > now`）先被 `Math.max(0, …)` 夹成 0 ⇒ 显示「刚刚」。
+- 再套 §8 顶部那两套文案：行内紧凑式（`time.${unit}`）、hover 加「前」（`time.ago`），`now` 档两者都不带数字。
+
+✅ 另可确证：输出必落在那 6 个 `unit` 内（`Rows.tsx:151-160`），否则 `t(\`time.${unit}\`)` 查不到键。
 
 **我方现状**：`updatedAt` 取了不渲染（`LeftPanel.tsx:90` vs `:255-256`）。
 
@@ -579,7 +606,7 @@ background: linear-gradient(180deg,
 
 | 项 | 结论 |
 |---|---|
-| 相对时间分档阈值 | **未找到**：`dsh-client-ui-primitives` **包目录**不在锁版安装树（被多处 `package.json` 声明为依赖但未落地）⇒ 实现由宿主运行时提供、阈值不可读。⇒ 我方自定，见 §8 |
+| 相对时间分档阈值 | ✅ **已取到**（v1.0 初版误记"未找到"，已更正）：`dsh-client-ui-primitives` **包目录**不在 rc.5 安装树，但实现对**在已安装 GUI 的 `app.asar` → `index-Ciz7DZxv.js`** 里（minified `uB`）⇒ 六档阈值与 `Math.floor` 全部可照抄，见 §8 |
 | 输入框 `rows/minRows/maxRows/autoResize` | **DSH 无此 API** ⇒ 我方改为 CSS 上限 + min-height，不写 JS 算高 |
 | 「Max = 更贵/成本档」 | **未找到**；`Max` 只是推理档位文案 `Reserve for the hardest quality-first tasks.` |
 | DSH 的导航结构 / 会话当第一公民 / 内部术语 | **禁止照搬**（宪章 §6.3 壳属我们） |
