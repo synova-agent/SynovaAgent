@@ -1,0 +1,349 @@
+{
+  "id": "M2a-Q2",
+  "sessionZstd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\3c538834-3788-4386-9ec5-50844fab20cc\\session.v4.jsonl.zstd",
+  "sessionZstdBytes": 85697,
+  "decodeOk": true,
+  "decoderExitNonZero": true,
+  "decoderChecks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "decodeReport": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q2-dsh-session-report.json",
+  "lineCount": 111,
+  "entryTypes": {
+    "session": 1,
+    "permission/preset": 1,
+    "sandbox/mode": 1,
+    "approval/policy": 1,
+    "agent/inbox/spliced": 4,
+    "turn/start": 1,
+    "step/start": 9,
+    "system/message": 1,
+    "user/message": 6,
+    "request/header": 1,
+    "request/context": 1,
+    "session/title": 1,
+    "session-log-deepseek/delivery-accepted": 9,
+    "assistant/message": 9,
+    "tool/call": 27,
+    "tool/result": 27,
+    "step/end": 9,
+    "working-directory/change": 1,
+    "turn/end": 1
+  },
+  "assistantMessageCount": 9,
+  "assistantMessagesWithUsage": 9,
+  "messages": [
+    {
+      "seq": 15,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"delivery-capacity\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"交付团队产能\"}"
+        },
+        {
+          "name": "working_directory",
+          "args": "{}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 9213,
+        "outputTokens": 471,
+        "cacheReadTokens": 1152,
+        "cacheWriteTokens": 0,
+        "totalTokens": 10836
+      }
+    },
+    {
+      "seq": 25,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"*\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 242,
+        "outputTokens": 262,
+        "cacheReadTokens": 10752,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11256
+      }
+    },
+    {
+      "seq": 33,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "working_directory",
+          "args": "{\"cd\": \"D:\\\\novis-backup-20260526\\\\Novis\\\\synova-agent\\\\.agents\\\\worktrees\\\\1459-closeout-m1m2\\\\.tmp-m1m2\\\\instance\\\\data\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"P-001\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 200,
+        "outputTokens": 543,
+        "cacheReadTokens": 11136,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11879
+      }
+    },
+    {
+      "seq": 41,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"PROB-001\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"problem-1\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"问题1\"}"
+        },
+        {
+          "name": "working_directory",
+          "args": "{\"cd\": \"D:\\\\novis-backup-20260526\\\\Novis\\\\synova-agent\\\\.agents\\\\worktrees\\\\1459-closeout-m1m2\\\\.tmp-m1m2\\\\instance\\\\..\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 225,
+        "outputTokens": 688,
+        "cacheReadTokens": 11776,
+        "cacheWriteTokens": 0,
+        "totalTokens": 12689
+      }
+    },
+    {
+      "seq": 59,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "working_directory",
+          "args": "{\"cd\": \"D:\\\\novis-backup-20260526\\\\Novis\\\\synova-agent\\\\.agents\\\\worktrees\\\\1459-closeout-m1m2\\\\.tmp-m1m2\\\\instance\\\\problems\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"Q1\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"growth-1\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 9400,
+        "outputTokens": 713,
+        "cacheReadTokens": 12672,
+        "cacheWriteTokens": 0,
+        "totalTokens": 22785
+      }
+    },
+    {
+      "seq": 69,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"交付产能瓶颈\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"delivery-team-capacity\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"synova-problem-001\"}"
+        },
+        {
+          "name": "working_directory",
+          "args": "{\"cd\": \"D:\\\\novis-backup-20260526\\\\Novis\\\\synova-agent\\\\.agents\\\\worktrees\\\\1459-closeout-m1m2\\\\.tmp-m1m2\\\\instance\\\\customer-config\"}"
+        },
+        {
+          "name": "working_directory",
+          "args": "{\"cd\": \"D:\\\\novis-backup-20260526\\\\Novis\\\\synova-agent\\\\.agents\\\\worktrees\\\\1459-closeout-m1m2\\\\.tmp-m1m2\\\\instance\\\\seed\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 174,
+        "outputTokens": 726,
+        "cacheReadTokens": 22784,
+        "cacheWriteTokens": 0,
+        "totalTokens": 23684
+      }
+    },
+    {
+      "seq": 83,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"1\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"P001\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"PRB-1\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"001\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 302,
+        "outputTokens": 363,
+        "cacheReadTokens": 23680,
+        "cacheWriteTokens": 0,
+        "totalTokens": 24345
+      }
+    },
+    {
+      "seq": 95,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"novis\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"delivery\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"delivery-bottleneck\"}"
+        },
+        {
+          "name": "working_directory",
+          "args": "{\"cd\": \"D:\\\\novis-backup-20260526\\\\Novis\\\\synova-agent\\\\.agents\\\\worktrees\\\\1459-closeout-m1m2\\\\.tmp-m1m2\\\\instance\\\\repo\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 235,
+        "outputTokens": 778,
+        "cacheReadTokens": 24320,
+        "cacheWriteTokens": 0,
+        "totalTokens": 25333
+      }
+    },
+    {
+      "seq": 107,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "text"
+      ],
+      "toolCalls": [],
+      "textChars": 1313,
+      "usage": {
+        "inputTokens": 341,
+        "outputTokens": 1394,
+        "cacheReadTokens": 25216,
+        "cacheWriteTokens": 0,
+        "totalTokens": 26951
+      }
+    }
+  ],
+  "toolCallEntries": 54,
+  "totals": {
+    "inputTokens": 20332,
+    "outputTokens": 5938,
+    "cacheReadTokens": 143488,
+    "totalTokens": 169758
+  },
+  "realModelRound": true
+}

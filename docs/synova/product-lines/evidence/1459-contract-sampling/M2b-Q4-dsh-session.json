@@ -1,0 +1,161 @@
+{
+  "id": "M2b-Q4",
+  "sessionZstd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\6a6d23f0-f7b9-4f17-addb-de5950d374ac\\session.v4.jsonl.zstd",
+  "sessionZstdBytes": 63838,
+  "decodeOk": true,
+  "decoderExitNonZero": true,
+  "decoderChecks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "decodeReport": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2b-Q4-dsh-session-report.json",
+  "lineCount": 43,
+  "entryTypes": {
+    "session": 1,
+    "permission/preset": 1,
+    "sandbox/mode": 1,
+    "approval/policy": 1,
+    "agent/inbox/spliced": 2,
+    "turn/start": 1,
+    "step/start": 5,
+    "system/message": 1,
+    "user/message": 3,
+    "request/header": 1,
+    "request/context": 1,
+    "session/title": 1,
+    "session-log-deepseek/delivery-accepted": 5,
+    "assistant/message": 5,
+    "tool/call": 4,
+    "tool/result": 4,
+    "step/end": 5,
+    "turn/end": 1
+  },
+  "assistantMessageCount": 5,
+  "assistantMessagesWithUsage": 5,
+  "messages": [
+    {
+      "seq": 15,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"org-team-impact\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 9332,
+        "outputTokens": 1171,
+        "cacheReadTokens": 1152,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11655
+      }
+    },
+    {
+      "seq": 21,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"我们组织里哪个团队对结果影响最大、却最容易被忽视？\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 191,
+        "outputTokens": 1517,
+        "cacheReadTokens": 11520,
+        "cacheWriteTokens": 0,
+        "totalTokens": 13228
+      }
+    },
+    {
+      "seq": 27,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"prob-001\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 241,
+        "outputTokens": 2220,
+        "cacheReadTokens": 13056,
+        "cacheWriteTokens": 0,
+        "totalTokens": 15517
+      }
+    },
+    {
+      "seq": 33,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"team-influence\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 213,
+        "outputTokens": 1066,
+        "cacheReadTokens": 15360,
+        "cacheWriteTokens": 0,
+        "totalTokens": 16639
+      }
+    },
+    {
+      "seq": 39,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "text"
+      ],
+      "toolCalls": [],
+      "textChars": 486,
+      "usage": {
+        "inputTokens": 183,
+        "outputTokens": 1734,
+        "cacheReadTokens": 16512,
+        "cacheWriteTokens": 0,
+        "totalTokens": 18429
+      }
+    }
+  ],
+  "toolCallEntries": 8,
+  "totals": {
+    "inputTokens": 10160,
+    "outputTokens": 7708,
+    "cacheReadTokens": 57600,
+    "totalTokens": 75468
+  },
+  "realModelRound": true
+}

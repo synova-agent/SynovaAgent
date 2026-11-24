@@ -1,0 +1,176 @@
+{
+  "id": "M2a-Q1",
+  "sessionZstd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\6bcd08c9-11a6-47ee-81ad-fd24e273dcac\\session.v4.jsonl.zstd",
+  "sessionZstdBytes": 56116,
+  "decodeOk": true,
+  "decoderExitNonZero": true,
+  "decoderChecks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "decodeReport": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q1-dsh-session-report.json",
+  "lineCount": 49,
+  "entryTypes": {
+    "session": 1,
+    "permission/preset": 1,
+    "sandbox/mode": 1,
+    "approval/policy": 1,
+    "agent/inbox/spliced": 2,
+    "turn/start": 1,
+    "step/start": 5,
+    "system/message": 1,
+    "user/message": 3,
+    "request/header": 1,
+    "request/context": 1,
+    "session/title": 1,
+    "session-log-deepseek/delivery-accepted": 5,
+    "assistant/message": 5,
+    "tool/call": 7,
+    "tool/result": 7,
+    "step/end": 5,
+    "turn/end": 1
+  },
+  "assistantMessageCount": 5,
+  "assistantMessagesWithUsage": 5,
+  "messages": [
+    {
+      "seq": 15,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "working_directory",
+          "args": "{}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 9213,
+        "outputTokens": 1163,
+        "cacheReadTokens": 1152,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11528
+      }
+    },
+    {
+      "seq": 21,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"growth-slowdown\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 189,
+        "outputTokens": 190,
+        "cacheReadTokens": 11392,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11771
+      }
+    },
+    {
+      "seq": 27,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"*\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"growth-2026\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"我们今年的增长为什么慢下来了\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 180,
+        "outputTokens": 1742,
+        "cacheReadTokens": 11648,
+        "cacheWriteTokens": 0,
+        "totalTokens": 13570
+      }
+    },
+    {
+      "seq": 37,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"growth\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"增长\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 165,
+        "outputTokens": 1399,
+        "cacheReadTokens": 13568,
+        "cacheWriteTokens": 0,
+        "totalTokens": 15132
+      }
+    },
+    {
+      "seq": 45,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "text"
+      ],
+      "toolCalls": [],
+      "textChars": 1139,
+      "usage": {
+        "inputTokens": 261,
+        "outputTokens": 1258,
+        "cacheReadTokens": 14976,
+        "cacheWriteTokens": 0,
+        "totalTokens": 16495
+      }
+    }
+  ],
+  "toolCallEntries": 14,
+  "totals": {
+    "inputTokens": 10008,
+    "outputTokens": 5752,
+    "cacheReadTokens": 52736,
+    "totalTokens": 68496
+  },
+  "realModelRound": true
+}

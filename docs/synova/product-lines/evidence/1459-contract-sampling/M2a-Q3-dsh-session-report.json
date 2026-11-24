@@ -1,0 +1,487 @@
+{
+  "file": "07-dsh-session-log.decompress-report.json",
+  "generatedAt": "2026-11-24T12:46:53.287Z",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "producer": {
+    "path": "scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs",
+    "sha256": "b3a24fba4a15111d8ccd36aa632088bbd2294b90ca005c033e5d4e192af3b2ef"
+  },
+  "input": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\b9abda5b-e6f1-41b9-a8df-299245a726bd\\session.v4.jsonl.zstd",
+    "bytes": 72772,
+    "sha256": "c80676fb827331a8dbbeddca2cd7636c2d26818bf5e69d712d24dabbef6076de"
+  },
+  "output": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q3-dsh-session-log.jsonl",
+    "bytes": 196877,
+    "sha256": "d62dc1ae247faa8e936e06224fd027cfe75f46764710921eeef961d13fc2bf97",
+    "lines": 100,
+    "nonEmptyLines": 99
+  },
+  "method": "scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat",
+  "forbiddenMethodNotUsed": "zstdDecompressSync on the whole multi-frame file (decodes only the first frame and does not throw)",
+  "frameCount": 54,
+  "frames": [
+    {
+      "index": 0,
+      "start": 0,
+      "end": 209,
+      "bytes": 209,
+      "decodedBytes": 254,
+      "decodedLines": 1
+    },
+    {
+      "index": 1,
+      "start": 209,
+      "end": 354,
+      "bytes": 145,
+      "decodedBytes": 249,
+      "decodedLines": 3
+    },
+    {
+      "index": 2,
+      "start": 354,
+      "end": 694,
+      "bytes": 340,
+      "decodedBytes": 502,
+      "decodedLines": 3
+    },
+    {
+      "index": 3,
+      "start": 694,
+      "end": 19122,
+      "bytes": 18428,
+      "decodedBytes": 36906,
+      "decodedLines": 7
+    },
+    {
+      "index": 4,
+      "start": 19122,
+      "end": 19296,
+      "bytes": 174,
+      "decodedBytes": 161,
+      "decodedLines": 1
+    },
+    {
+      "index": 5,
+      "start": 19296,
+      "end": 19458,
+      "bytes": 162,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 6,
+      "start": 19458,
+      "end": 22953,
+      "bytes": 3495,
+      "decodedBytes": 13021,
+      "decodedLines": 2
+    },
+    {
+      "index": 7,
+      "start": 22953,
+      "end": 23412,
+      "bytes": 459,
+      "decodedBytes": 691,
+      "decodedLines": 2
+    },
+    {
+      "index": 8,
+      "start": 23412,
+      "end": 23839,
+      "bytes": 427,
+      "decodedBytes": 603,
+      "decodedLines": 2
+    },
+    {
+      "index": 9,
+      "start": 23839,
+      "end": 23931,
+      "bytes": 92,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 10,
+      "start": 23931,
+      "end": 24094,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 11,
+      "start": 24094,
+      "end": 26935,
+      "bytes": 2841,
+      "decodedBytes": 11030,
+      "decodedLines": 2
+    },
+    {
+      "index": 12,
+      "start": 26935,
+      "end": 27436,
+      "bytes": 501,
+      "decodedBytes": 737,
+      "decodedLines": 2
+    },
+    {
+      "index": 13,
+      "start": 27436,
+      "end": 27929,
+      "bytes": 493,
+      "decodedBytes": 744,
+      "decodedLines": 2
+    },
+    {
+      "index": 14,
+      "start": 27929,
+      "end": 28434,
+      "bytes": 505,
+      "decodedBytes": 743,
+      "decodedLines": 2
+    },
+    {
+      "index": 15,
+      "start": 28434,
+      "end": 28851,
+      "bytes": 417,
+      "decodedBytes": 600,
+      "decodedLines": 2
+    },
+    {
+      "index": 16,
+      "start": 28851,
+      "end": 28943,
+      "bytes": 92,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 17,
+      "start": 28943,
+      "end": 29106,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 18,
+      "start": 29106,
+      "end": 31379,
+      "bytes": 2273,
+      "decodedBytes": 8845,
+      "decodedLines": 2
+    },
+    {
+      "index": 19,
+      "start": 31379,
+      "end": 31866,
+      "bytes": 487,
+      "decodedBytes": 722,
+      "decodedLines": 2
+    },
+    {
+      "index": 20,
+      "start": 31866,
+      "end": 32288,
+      "bytes": 422,
+      "decodedBytes": 637,
+      "decodedLines": 2
+    },
+    {
+      "index": 21,
+      "start": 32288,
+      "end": 32780,
+      "bytes": 492,
+      "decodedBytes": 733,
+      "decodedLines": 2
+    },
+    {
+      "index": 22,
+      "start": 32780,
+      "end": 33194,
+      "bytes": 414,
+      "decodedBytes": 596,
+      "decodedLines": 2
+    },
+    {
+      "index": 23,
+      "start": 33194,
+      "end": 33280,
+      "bytes": 86,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 24,
+      "start": 33280,
+      "end": 33443,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 25,
+      "start": 33443,
+      "end": 37618,
+      "bytes": 4175,
+      "decodedBytes": 15639,
+      "decodedLines": 2
+    },
+    {
+      "index": 26,
+      "start": 37618,
+      "end": 38119,
+      "bytes": 501,
+      "decodedBytes": 730,
+      "decodedLines": 2
+    },
+    {
+      "index": 27,
+      "start": 38119,
+      "end": 38622,
+      "bytes": 503,
+      "decodedBytes": 738,
+      "decodedLines": 2
+    },
+    {
+      "index": 28,
+      "start": 38622,
+      "end": 39119,
+      "bytes": 497,
+      "decodedBytes": 734,
+      "decodedLines": 2
+    },
+    {
+      "index": 29,
+      "start": 39119,
+      "end": 39529,
+      "bytes": 410,
+      "decodedBytes": 593,
+      "decodedLines": 2
+    },
+    {
+      "index": 30,
+      "start": 39529,
+      "end": 39617,
+      "bytes": 88,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 31,
+      "start": 39617,
+      "end": 39780,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 32,
+      "start": 39780,
+      "end": 45040,
+      "bytes": 5260,
+      "decodedBytes": 19236,
+      "decodedLines": 2
+    },
+    {
+      "index": 33,
+      "start": 45040,
+      "end": 45541,
+      "bytes": 501,
+      "decodedBytes": 756,
+      "decodedLines": 2
+    },
+    {
+      "index": 34,
+      "start": 45541,
+      "end": 46066,
+      "bytes": 525,
+      "decodedBytes": 758,
+      "decodedLines": 2
+    },
+    {
+      "index": 35,
+      "start": 46066,
+      "end": 46582,
+      "bytes": 516,
+      "decodedBytes": 747,
+      "decodedLines": 2
+    },
+    {
+      "index": 36,
+      "start": 46582,
+      "end": 46995,
+      "bytes": 413,
+      "decodedBytes": 599,
+      "decodedLines": 2
+    },
+    {
+      "index": 37,
+      "start": 46995,
+      "end": 47087,
+      "bytes": 92,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 38,
+      "start": 47087,
+      "end": 47249,
+      "bytes": 162,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 39,
+      "start": 47249,
+      "end": 51668,
+      "bytes": 4419,
+      "decodedBytes": 15704,
+      "decodedLines": 2
+    },
+    {
+      "index": 40,
+      "start": 51668,
+      "end": 52164,
+      "bytes": 496,
+      "decodedBytes": 733,
+      "decodedLines": 2
+    },
+    {
+      "index": 41,
+      "start": 52164,
+      "end": 52657,
+      "bytes": 493,
+      "decodedBytes": 730,
+      "decodedLines": 2
+    },
+    {
+      "index": 42,
+      "start": 52657,
+      "end": 53155,
+      "bytes": 498,
+      "decodedBytes": 729,
+      "decodedLines": 2
+    },
+    {
+      "index": 43,
+      "start": 53155,
+      "end": 53572,
+      "bytes": 417,
+      "decodedBytes": 594,
+      "decodedLines": 2
+    },
+    {
+      "index": 44,
+      "start": 53572,
+      "end": 53658,
+      "bytes": 86,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 45,
+      "start": 53658,
+      "end": 53821,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 46,
+      "start": 53821,
+      "end": 59312,
+      "bytes": 5491,
+      "decodedBytes": 18999,
+      "decodedLines": 2
+    },
+    {
+      "index": 47,
+      "start": 59312,
+      "end": 59815,
+      "bytes": 503,
+      "decodedBytes": 740,
+      "decodedLines": 2
+    },
+    {
+      "index": 48,
+      "start": 59815,
+      "end": 60323,
+      "bytes": 508,
+      "decodedBytes": 739,
+      "decodedLines": 2
+    },
+    {
+      "index": 49,
+      "start": 60323,
+      "end": 60842,
+      "bytes": 519,
+      "decodedBytes": 742,
+      "decodedLines": 2
+    },
+    {
+      "index": 50,
+      "start": 60842,
+      "end": 61267,
+      "bytes": 425,
+      "decodedBytes": 600,
+      "decodedLines": 2
+    },
+    {
+      "index": 51,
+      "start": 61267,
+      "end": 61359,
+      "bytes": 92,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 52,
+      "start": 61359,
+      "end": 61519,
+      "bytes": 160,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 53,
+      "start": 61519,
+      "end": 72772,
+      "bytes": 11253,
+      "decodedBytes": 36262,
+      "decodedLines": 3
+    }
+  ],
+  "coverage": {
+    "fileBytes": 72772,
+    "sumFrameBytes": 72772,
+    "byteCoveragePasses": true,
+    "sumDecodedLines": 99,
+    "decodedNewlines": 99
+  },
+  "header": {
+    "type": "session",
+    "version": 4,
+    "id": "b9abda5b-e6f1-41b9-a8df-299245a726bd",
+    "createdAt": 1795524036620,
+    "cwd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\instance",
+    "isSeeded": false,
+    "delegationDepth": 0
+  },
+  "checks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "toolCallEntries": 25,
+  "toolResultEntries": 0,
+  "allPassed": false
+}

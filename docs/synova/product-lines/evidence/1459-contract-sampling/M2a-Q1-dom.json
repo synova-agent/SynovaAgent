@@ -1,0 +1,68 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_0241cf549dc445ec83e432187d6e87d2",
+  "sessionIdText": "会话编号：6bcd08c9-11a6-47ee-81ad-fd24e273dcac",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 9,
+  "eventKinds": [
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "tool",
+    "text",
+    "hypothesis"
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "false",
+  "hypothesisClaim": null,
+  "hypothesisFields": {
+    "objects": null,
+    "relations": null,
+    "evidence": null,
+    "uncertainty": null
+  },
+  "hypothesisRaw": "## 先说结论：现在还不能给判断；给出来的分析也没有依据 我刚试着调你们这套只读上下文快照（`synova_context_get`）来获取真实对象，但缺少**问题对象的标识**：我按 `growth-slowdown`、`growth-2026`、`growth`、`增长` 等几种常见 businessKey 试了一遍，侧车一律返回 `DOMAIN_EMPTY`（本企业 ② 对象中解析不到该 problemId）。 因此，目前的情况是： - 我现在没有你们的 ② 本体对象（期间、定义版本、状态），也没有 ③ 哨兵信号和 ④ 参数基准； - 这种情况下，我如果直接说“卡在转化率”或“卡在渠道”，那只是在猜，而不是诊断。 **我需要你提供一项信息：** 你们 ② 本体里那条“增长放缓”问题的 **businessKey 或 $id**（就是对象登记时用的那个键）。给我这个，我就能拉出结构快照，按“对象 → 期间 → 状态 → 关联信号”逐层说明卡点。 如果这条问题对象**还没有在 ② 里立**，那本身就是第一个发现：问题没被结构化成对象，后面的观测和归因就没有载体。 --- ## 拿到 key 之前能先对齐的框架（不是结论） 增长慢下来，只有四类数学上可能的原因，先分清是哪一类，再往环节里看： | 口径 | 分解式 | 对应的“环节” | |---|---|---| | 收入 | 新客数 × 客单价 + 老客复购 × 客单价 | 获客 / 定价 / 留存 | | 漏斗 | 线索 × 各段转化率 | 线索量 / 销售转化 / 交付履约 | | 产能 | 需求 × 可交付产能 | 交付瓶颈、排产、人力 | | 结构 | 渠道/产品/客户结构变化 | 增长由高毛利段转向低毛利段 | 判定时要注意一个容易搞反的点：**“慢”是相对基准而言的**。所以必须先确定你们 ④ 参数层里的目标值和去年同期值，否则“慢”就无法定义；而这类偏离检测属于 ③ 哨兵的职责，不能靠会议纪要里的感受。 --- ## 我需要你补充的信息（按重要性排序） 1. **问题对象的 businessKey/$id**（最优先，有这个我就能直接查询）； 2. 口径：看**收入**还是**单量/客户数**？同比还是对标年度目标？ 3. 时间窗：今年哪几个季度开始掉？是**断崖**还是**缓降**（这两种原因的排查路径完全不同）； 4. 手里的数据：近 8 个季度分渠道的新客数、转化率、客单价、复购/流失，以及交付周期或产能数据。 给我第 1 项，我先把 ② 结构调出来；把 2–4 项给我，我就能给出**带证据链的卡点定位**，而不是一份笼统的增长建议清单。",
+  "hypothesisInvalidReason": "未结构化：服务端标记为未结构化",
+  "toolEvents": [
+    {
+      "status": "completed",
+      "text": "working_directory类型 other状态 completed"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    },
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

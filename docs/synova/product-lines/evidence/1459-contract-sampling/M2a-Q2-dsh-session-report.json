@@ -1,0 +1,519 @@
+{
+  "file": "07-dsh-session-log.decompress-report.json",
+  "generatedAt": "2026-11-24T12:46:53.136Z",
+  "codeSha": "caf61fcdeb3e00c79abe9211546690ca963549a2",
+  "producer": {
+    "path": "scripts/dsh-sidecar/r3-chain/lib/frame-decompress.mjs",
+    "sha256": "b3a24fba4a15111d8ccd36aa632088bbd2294b90ca005c033e5d4e192af3b2ef"
+  },
+  "input": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\3c538834-3788-4386-9ec5-50844fab20cc\\session.v4.jsonl.zstd",
+    "bytes": 85697,
+    "sha256": "647d0a74e7e6225a21f054562376ba0a12640eedc9f983219b3c3985687a6de6"
+  },
+  "output": {
+    "path": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q2-dsh-session-log.jsonl",
+    "bytes": 217173,
+    "sha256": "39c062d433b6007a0195f166c1d0d48d04a61a80d1d3928f978b3709c8ac5fbb",
+    "lines": 112,
+    "nonEmptyLines": 111
+  },
+  "method": "scan every magic 28 B5 2F FD offset -> cut frames by consecutive offsets -> zstdDecompressSync per frame -> concat",
+  "forbiddenMethodNotUsed": "zstdDecompressSync on the whole multi-frame file (decodes only the first frame and does not throw)",
+  "frameCount": 58,
+  "frames": [
+    {
+      "index": 0,
+      "start": 0,
+      "end": 208,
+      "bytes": 208,
+      "decodedBytes": 254,
+      "decodedLines": 1
+    },
+    {
+      "index": 1,
+      "start": 208,
+      "end": 352,
+      "bytes": 144,
+      "decodedBytes": 249,
+      "decodedLines": 3
+    },
+    {
+      "index": 2,
+      "start": 352,
+      "end": 701,
+      "bytes": 349,
+      "decodedBytes": 511,
+      "decodedLines": 3
+    },
+    {
+      "index": 3,
+      "start": 701,
+      "end": 19129,
+      "bytes": 18428,
+      "decodedBytes": 36915,
+      "decodedLines": 7
+    },
+    {
+      "index": 4,
+      "start": 19129,
+      "end": 19303,
+      "bytes": 174,
+      "decodedBytes": 161,
+      "decodedLines": 1
+    },
+    {
+      "index": 5,
+      "start": 19303,
+      "end": 19467,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 6,
+      "start": 19467,
+      "end": 22445,
+      "bytes": 2978,
+      "decodedBytes": 11017,
+      "decodedLines": 2
+    },
+    {
+      "index": 7,
+      "start": 22445,
+      "end": 22966,
+      "bytes": 521,
+      "decodedBytes": 756,
+      "decodedLines": 2
+    },
+    {
+      "index": 8,
+      "start": 22966,
+      "end": 23453,
+      "bytes": 487,
+      "decodedBytes": 698,
+      "decodedLines": 2
+    },
+    {
+      "index": 9,
+      "start": 23453,
+      "end": 23802,
+      "bytes": 349,
+      "decodedBytes": 549,
+      "decodedLines": 2
+    },
+    {
+      "index": 10,
+      "start": 23802,
+      "end": 23890,
+      "bytes": 88,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 11,
+      "start": 23890,
+      "end": 24053,
+      "bytes": 163,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 12,
+      "start": 24053,
+      "end": 25835,
+      "bytes": 1782,
+      "decodedBytes": 6465,
+      "decodedLines": 2
+    },
+    {
+      "index": 13,
+      "start": 25835,
+      "end": 26257,
+      "bytes": 422,
+      "decodedBytes": 631,
+      "decodedLines": 2
+    },
+    {
+      "index": 14,
+      "start": 26257,
+      "end": 26672,
+      "bytes": 415,
+      "decodedBytes": 592,
+      "decodedLines": 2
+    },
+    {
+      "index": 15,
+      "start": 26672,
+      "end": 26758,
+      "bytes": 86,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 16,
+      "start": 26758,
+      "end": 26922,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 17,
+      "start": 26922,
+      "end": 30388,
+      "bytes": 3466,
+      "decodedBytes": 11714,
+      "decodedLines": 2
+    },
+    {
+      "index": 18,
+      "start": 30388,
+      "end": 30916,
+      "bytes": 528,
+      "decodedBytes": 841,
+      "decodedLines": 2
+    },
+    {
+      "index": 19,
+      "start": 30916,
+      "end": 31334,
+      "bytes": 418,
+      "decodedBytes": 596,
+      "decodedLines": 2
+    },
+    {
+      "index": 20,
+      "start": 31334,
+      "end": 31422,
+      "bytes": 88,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 21,
+      "start": 31422,
+      "end": 31586,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 22,
+      "start": 31586,
+      "end": 35484,
+      "bytes": 3898,
+      "decodedBytes": 14403,
+      "decodedLines": 2
+    },
+    {
+      "index": 23,
+      "start": 35484,
+      "end": 35984,
+      "bytes": 500,
+      "decodedBytes": 738,
+      "decodedLines": 2
+    },
+    {
+      "index": 24,
+      "start": 35984,
+      "end": 36484,
+      "bytes": 500,
+      "decodedBytes": 737,
+      "decodedLines": 2
+    },
+    {
+      "index": 25,
+      "start": 36484,
+      "end": 37052,
+      "bytes": 568,
+      "decodedBytes": 828,
+      "decodedLines": 2
+    },
+    {
+      "index": 26,
+      "start": 37052,
+      "end": 37620,
+      "bytes": 568,
+      "decodedBytes": 1384,
+      "decodedLines": 5
+    },
+    {
+      "index": 27,
+      "start": 37620,
+      "end": 53975,
+      "bytes": 16355,
+      "decodedBytes": 32323,
+      "decodedLines": 4
+    },
+    {
+      "index": 28,
+      "start": 53975,
+      "end": 54139,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 29,
+      "start": 54139,
+      "end": 58080,
+      "bytes": 3941,
+      "decodedBytes": 14745,
+      "decodedLines": 2
+    },
+    {
+      "index": 30,
+      "start": 58080,
+      "end": 58607,
+      "bytes": 527,
+      "decodedBytes": 842,
+      "decodedLines": 2
+    },
+    {
+      "index": 31,
+      "start": 58607,
+      "end": 59103,
+      "bytes": 496,
+      "decodedBytes": 731,
+      "decodedLines": 2
+    },
+    {
+      "index": 32,
+      "start": 59103,
+      "end": 59522,
+      "bytes": 419,
+      "decodedBytes": 599,
+      "decodedLines": 2
+    },
+    {
+      "index": 33,
+      "start": 59522,
+      "end": 59614,
+      "bytes": 92,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 34,
+      "start": 59614,
+      "end": 59778,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 35,
+      "start": 59778,
+      "end": 63790,
+      "bytes": 4012,
+      "decodedBytes": 15478,
+      "decodedLines": 2
+    },
+    {
+      "index": 36,
+      "start": 63790,
+      "end": 64318,
+      "bytes": 528,
+      "decodedBytes": 761,
+      "decodedLines": 2
+    },
+    {
+      "index": 37,
+      "start": 64318,
+      "end": 64829,
+      "bytes": 511,
+      "decodedBytes": 761,
+      "decodedLines": 2
+    },
+    {
+      "index": 38,
+      "start": 64829,
+      "end": 65404,
+      "bytes": 575,
+      "decodedBytes": 852,
+      "decodedLines": 2
+    },
+    {
+      "index": 39,
+      "start": 65404,
+      "end": 65920,
+      "bytes": 516,
+      "decodedBytes": 949,
+      "decodedLines": 2
+    },
+    {
+      "index": 40,
+      "start": 65920,
+      "end": 66367,
+      "bytes": 447,
+      "decodedBytes": 706,
+      "decodedLines": 2
+    },
+    {
+      "index": 41,
+      "start": 66367,
+      "end": 66455,
+      "bytes": 88,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 42,
+      "start": 66455,
+      "end": 66619,
+      "bytes": 164,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 43,
+      "start": 66619,
+      "end": 68729,
+      "bytes": 2110,
+      "decodedBytes": 8512,
+      "decodedLines": 2
+    },
+    {
+      "index": 44,
+      "start": 68729,
+      "end": 69222,
+      "bytes": 493,
+      "decodedBytes": 726,
+      "decodedLines": 2
+    },
+    {
+      "index": 45,
+      "start": 69222,
+      "end": 69720,
+      "bytes": 498,
+      "decodedBytes": 730,
+      "decodedLines": 2
+    },
+    {
+      "index": 46,
+      "start": 69720,
+      "end": 70220,
+      "bytes": 500,
+      "decodedBytes": 729,
+      "decodedLines": 2
+    },
+    {
+      "index": 47,
+      "start": 70220,
+      "end": 70636,
+      "bytes": 416,
+      "decodedBytes": 594,
+      "decodedLines": 2
+    },
+    {
+      "index": 48,
+      "start": 70636,
+      "end": 70728,
+      "bytes": 92,
+      "decodedBytes": 79,
+      "decodedLines": 1
+    },
+    {
+      "index": 49,
+      "start": 70728,
+      "end": 70889,
+      "bytes": 161,
+      "decodedBytes": 181,
+      "decodedLines": 1
+    },
+    {
+      "index": 50,
+      "start": 70889,
+      "end": 75349,
+      "bytes": 4460,
+      "decodedBytes": 16025,
+      "decodedLines": 2
+    },
+    {
+      "index": 51,
+      "start": 75349,
+      "end": 75846,
+      "bytes": 497,
+      "decodedBytes": 734,
+      "decodedLines": 2
+    },
+    {
+      "index": 52,
+      "start": 75846,
+      "end": 76349,
+      "bytes": 503,
+      "decodedBytes": 749,
+      "decodedLines": 2
+    },
+    {
+      "index": 53,
+      "start": 76349,
+      "end": 76922,
+      "bytes": 573,
+      "decodedBytes": 845,
+      "decodedLines": 2
+    },
+    {
+      "index": 54,
+      "start": 76922,
+      "end": 77375,
+      "bytes": 453,
+      "decodedBytes": 709,
+      "decodedLines": 2
+    },
+    {
+      "index": 55,
+      "start": 77375,
+      "end": 77464,
+      "bytes": 89,
+      "decodedBytes": 80,
+      "decodedLines": 1
+    },
+    {
+      "index": 56,
+      "start": 77464,
+      "end": 77626,
+      "bytes": 162,
+      "decodedBytes": 183,
+      "decodedLines": 1
+    },
+    {
+      "index": 57,
+      "start": 77626,
+      "end": 85697,
+      "bytes": 8071,
+      "decodedBytes": 25849,
+      "decodedLines": 3
+    }
+  ],
+  "coverage": {
+    "fileBytes": 85697,
+    "sumFrameBytes": 85697,
+    "byteCoveragePasses": true,
+    "sumDecodedLines": 111,
+    "decodedNewlines": 111
+  },
+  "header": {
+    "type": "session",
+    "version": 4,
+    "id": "3c538834-3788-4386-9ec5-50844fab20cc",
+    "createdAt": 1795523999604,
+    "cwd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\instance",
+    "isSeeded": false,
+    "delegationDepth": 0
+  },
+  "checks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "toolCallEntries": 20,
+  "toolResultEntries": 0,
+  "allPassed": false
+}

@@ -1,0 +1,92 @@
+{
+  "id": "M2b-Q5",
+  "sessionZstd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\9a7707e9-141f-4531-83a8-fdc4143f7d80\\session.v4.jsonl.zstd",
+  "sessionZstdBytes": 32775,
+  "decodeOk": true,
+  "decoderExitNonZero": true,
+  "decoderChecks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "decodeReport": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2b-Q5-dsh-session-report.json",
+  "lineCount": 25,
+  "entryTypes": {
+    "session": 1,
+    "permission/preset": 1,
+    "sandbox/mode": 1,
+    "approval/policy": 1,
+    "agent/inbox/spliced": 2,
+    "turn/start": 1,
+    "step/start": 2,
+    "system/message": 1,
+    "user/message": 3,
+    "request/header": 1,
+    "request/context": 1,
+    "session/title": 1,
+    "session-log-deepseek/delivery-accepted": 2,
+    "assistant/message": 2,
+    "tool/call": 1,
+    "tool/result": 1,
+    "step/end": 2,
+    "turn/end": 1
+  },
+  "assistantMessageCount": 2,
+  "assistantMessagesWithUsage": 2,
+  "messages": [
+    {
+      "seq": 15,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"PROB-001\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 9333,
+        "outputTokens": 1396,
+        "cacheReadTokens": 1152,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11881
+      }
+    },
+    {
+      "seq": 21,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "text"
+      ],
+      "toolCalls": [],
+      "textChars": 526,
+      "usage": {
+        "inputTokens": 162,
+        "outputTokens": 688,
+        "cacheReadTokens": 11776,
+        "cacheWriteTokens": 0,
+        "totalTokens": 12626
+      }
+    }
+  ],
+  "toolCallEntries": 2,
+  "totals": {
+    "inputTokens": 9495,
+    "outputTokens": 2084,
+    "cacheReadTokens": 12928,
+    "totalTokens": 24507
+  },
+  "realModelRound": true
+}

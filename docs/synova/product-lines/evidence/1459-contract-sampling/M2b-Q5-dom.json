@@ -1,0 +1,56 @@
+{
+  "href": "http://localhost:5173/",
+  "hasRunPanel": true,
+  "hasLoginPanel": false,
+  "hasLoginEntry": false,
+  "auth": "authenticated",
+  "runStatus": "done",
+  "statusText": "运行完成",
+  "runIdText": "运行编号：run_2ae4ee0b281a4bfd9c54d659ed953c2b",
+  "sessionIdText": "会话编号：9a7707e9-141f-4531-83a8-fdc4143f7d80",
+  "errorCode": null,
+  "errorText": null,
+  "loginErrorCode": null,
+  "loginErrorText": null,
+  "eventCount": 10,
+  "eventKinds": [
+    "tool",
+    "text",
+    "hypothesis",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "hypothesisCount": 1,
+  "hypothesisStructured": "true",
+  "hypothesisClaim": "当前无法提出可验证的瓶颈假设：本企业 ② 本体层为空，解析不到任何一个问题对象，任何瓶颈判断都没有数据支撑。",
+  "hypothesisFields": {
+    "objects": [
+      "（无：DOMAIN_EMPTY，本次查询未返回任何 ② 条目，故无 $id 可取）"
+    ],
+    "relations": [
+      "（无：没有条目就没有 relation.type，不臆造）"
+    ],
+    "evidence": [
+      "（无：没有条目就没有 evidence.sources[0].ref，不臆造）"
+    ],
+    "uncertainty": [
+      "本企业 ② 对象里既然找不到 problemId=PROB-001，那么它究竟存不存在、真实 businessKey 是什么、是否尚未建档，都无法确认。",
+      "② 本体是否已从模板装载到运行实例、期间（period）与定义版本（definition version）各是什么状态，均无法确认。",
+      "支撑问题所需的证据源（evidence.sources[].ref）是否已接入、能否取到，无法确认，因此本批任何结论都不该被当作已核实。",
+      "若后续仍返回空集，那么缺口是「本体对象未登记」还是「登记了但 problemId 口径不一致」，无法区分，需要人工核对。"
+    ]
+  },
+  "hypothesisRaw": null,
+  "hypothesisInvalidReason": null,
+  "toolEvents": [
+    {
+      "status": "failed",
+      "text": "mcp__synova-sidecar__synova_context_get类型 other状态 failed失败"
+    }
+  ]
+}

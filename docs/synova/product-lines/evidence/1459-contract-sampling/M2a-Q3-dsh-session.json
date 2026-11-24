@@ -1,0 +1,325 @@
+{
+  "id": "M2a-Q3",
+  "sessionZstd": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\.tmp-m1m2\\dsh-home\\sessions\\--D-novis-backup-20260526-Novis-synova-agent-.agents-worktrees-1459-closeout-m1m2-.tmp-m1m2-instance--\\b9abda5b-e6f1-41b9-a8df-299245a726bd\\session.v4.jsonl.zstd",
+  "sessionZstdBytes": 72772,
+  "decodeOk": true,
+  "decoderExitNonZero": true,
+  "decoderChecks": {
+    "firstLineIsHeader": true,
+    "totalLinesEqualsSumOfFrames": true,
+    "byteCoverage": true,
+    "endsWithNewline": true,
+    "hasToolCall": true,
+    "hasToolResult": true,
+    "hasSynovaContextGetCall": true,
+    "synovaToolResultIsReal": false
+  },
+  "decodeReport": "D:\\novis-backup-20260526\\Novis\\synova-agent\\.agents\\worktrees\\1459-closeout-m1m2\\docs\\synova\\product-lines\\evidence\\1459-contract-sampling\\M2a-Q3-dsh-session-report.json",
+  "lineCount": 99,
+  "entryTypes": {
+    "session": 1,
+    "permission/preset": 1,
+    "sandbox/mode": 1,
+    "approval/policy": 1,
+    "agent/inbox/spliced": 2,
+    "turn/start": 1,
+    "step/start": 8,
+    "system/message": 1,
+    "user/message": 3,
+    "request/header": 1,
+    "request/context": 1,
+    "session/title": 1,
+    "session-log-deepseek/delivery-accepted": 8,
+    "assistant/message": 8,
+    "tool/call": 26,
+    "tool/result": 26,
+    "step/end": 8,
+    "turn/end": 1
+  },
+  "assistantMessageCount": 8,
+  "assistantMessagesWithUsage": 8,
+  "messages": [
+    {
+      "seq": 15,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "working_directory",
+          "args": "{}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"回款速度\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 9214,
+        "outputTokens": 597,
+        "cacheReadTokens": 1152,
+        "cacheWriteTokens": 0,
+        "totalTokens": 10963
+      }
+    },
+    {
+      "seq": 23,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"回款\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"collection\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"ar-collection\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"cash-flow\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 189,
+        "outputTokens": 490,
+        "cacheReadTokens": 10880,
+        "cacheWriteTokens": 0,
+        "totalTokens": 11559
+      }
+    },
+    {
+      "seq": 35,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"*\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"default\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"P-001\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 248,
+        "outputTokens": 384,
+        "cacheReadTokens": 11520,
+        "cacheWriteTokens": 0,
+        "totalTokens": 12152
+      }
+    },
+    {
+      "seq": 47,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"DSO\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"应收\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"receivables\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"ar\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 302,
+        "outputTokens": 749,
+        "cacheReadTokens": 12032,
+        "cacheWriteTokens": 0,
+        "totalTokens": 13083
+      }
+    },
+    {
+      "seq": 59,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"collection-speed\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"ar-collection-speed\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"回款速度提升\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"instance\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 234,
+        "outputTokens": 931,
+        "cacheReadTokens": 13056,
+        "cacheWriteTokens": 0,
+        "totalTokens": 14221
+      }
+    },
+    {
+      "seq": 71,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"problems\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"list\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"$list\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"ALL\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 225,
+        "outputTokens": 759,
+        "cacheReadTokens": 14208,
+        "cacheWriteTokens": 0,
+        "totalTokens": 15192
+      }
+    },
+    {
+      "seq": 83,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "tool-call",
+        "tool-call",
+        "tool-call",
+        "tool-call"
+      ],
+      "toolCalls": [
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"ar_collection\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"AR-001\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"回款周期\"}"
+        },
+        {
+          "name": "mcp__synova-sidecar__synova_context_get",
+          "args": "{\"problemId\": \"现金流\"}"
+        }
+      ],
+      "textChars": 0,
+      "usage": {
+        "inputTokens": 293,
+        "outputTokens": 934,
+        "cacheReadTokens": 15104,
+        "cacheWriteTokens": 0,
+        "totalTokens": 16331
+      }
+    },
+    {
+      "seq": 95,
+      "provider": "deepseek-official",
+      "model": "deepseek-v4-flash",
+      "contentTypes": [
+        "reasoning",
+        "text"
+      ],
+      "toolCalls": [],
+      "textChars": 930,
+      "usage": {
+        "inputTokens": 287,
+        "outputTokens": 1924,
+        "cacheReadTokens": 16256,
+        "cacheWriteTokens": 0,
+        "totalTokens": 18467
+      }
+    }
+  ],
+  "toolCallEntries": 52,
+  "totals": {
+    "inputTokens": 10992,
+    "outputTokens": 6768,
+    "cacheReadTokens": 94208,
+    "totalTokens": 111968
+  },
+  "realModelRound": true
+}
