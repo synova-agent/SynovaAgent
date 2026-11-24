@@ -1,0 +1,80 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1475,
+  "patch_fingerprint": "sha256:23d8d7a68ac66f4e4a8b406c17ab96e8945d1cd8eaaac0b6549005af7d4af251",
+  "author": "synova",
+  "reviewer": "code-review-master@independent-r1-1459",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "issued_at": "2026-11-24T13:27:48+08:00",
+  "tool": "synova-independent-review（只读独立复核）＋ check-merge-conditions.sh 机器判据",
+  "base": "a3e087be0f90b6ef0b982a30c13e314cea41b079",
+  "head": "c71ae1ed8dcefbdefb615cec63ba99a30dd13082",
+  "checks": [
+    {
+      "id": "C1-写集恰六文件",
+      "cmd": "git -C <WT> diff --name-only $(git -C <WT> merge-base HEAD gitea/main) HEAD",
+      "result": "pass",
+      "evidence": "merge-base=a3e087be0f90b6ef0b982a30c13e314cea41b079，head=c71ae1ed8dcefbdefb615cec63ba99a30dd13082（本地=远端 gitea/feat/1459-tc-adapter 同值）。diff --stat 恰 6 件 359+/-2：.claude/claims/1459.yaml、src/runtime/dsh/events.ts、src/runtime/dsh/session.ts、src/runtime/dsh/hypothesis-adapter.ts、tests/runtime/dsh/hypothesis-adapter.test.ts、tests/runtime/dsh/session-events.test.ts。对 src/mcp/**、src/routes/**、electron-renderer/**、scripts/**、.gitea/** 的 diff 命中均为 0 ⇒ 无 P1 越界。"
+    },
+    {
+      "id": "C2-判据零改动",
+      "cmd": "git -C <WT> show HEAD:src/runtime/dsh/events.ts; git -C <WT> diff <mb> HEAD -- src/mcp/http.ts src/mcp/tool-definitions.ts",
+      "result": "pass",
+      "evidence": "events.ts 仅在 AgentEventType 联合类型末尾 +2 事件（hypothesis.structured / hypothesis.invalid，含两行注释），TERMINAL_EVENT_TYPES 原样=['run.completed','run.failed','run.cancelled'] 未动。git diff -- src/mcp/http.ts 输出为空：SIDECAR_MODE: McpMode = 'read-only' 仍在 :43 原值；SIDECAR_TOOLS 定义在 tool-definitions.ts:201、filterToolsByMode 在 http.ts:120 均未改；新增 MCP 工具 0。"
+    },
+    {
+      "id": "C3-桌面契约逐键对齐",
+      "cmd": "git -C <WT> show HEAD:electron-renderer/src/stores/dsh-run-store.ts | sed -n '141,191p;326,340p'; git -C <WT> show HEAD:src/runtime/dsh/hypothesis-adapter.ts",
+      "result": "pass",
+      "evidence": "structured 载荷 payload={hypothesis:string,objects:string[],relations:string[],evidence:string[],uncertainty:string[],schemaVersion?:number}（adapter :54-61 / :170-180），与 readHypothesis 逐键 readString(data.hypothesis)、readStringArrayExact(data.objects/relations/evidence/uncertainty)、readString(data.schemaVersion) 对齐，键名零差异。invalid 载荷 session.ts:333-337 data={reason:{code,missing,message},text,truncated}，与桌面 case 'hypothesis.invalid' 读 event.data.reason + data.text 键名对齐；桌面 readStringArrayExact 对空数组/空串元素返回 null ⇒ structured=false，不会把非法载荷当结构化。reason 值类型差异见 findings（非阻断）。"
+    },
+    {
+      "id": "C4-严格性四要素",
+      "cmd": "npx vitest run tests/runtime/dsh/hypothesis-adapter.test.ts --reporter=verbose",
+      "result": "pass",
+      "evidence": "13 passed / 0 failed。覆盖：合格路径逐字段等于输入；markdown 围栏剥离；schemaVersion 数字透传/非数字不写；空文本与自然语句⇒NOT_JSON；顶层数组⇒WRONG_TYPE；缺 uncertainty/空数组⇒MISSING_FIELDS 且点名字段；空串元素/objects 类型错⇒WRONG_TYPE；hypothesis 空串⇒MISSING_FIELDS；截断上限 truncated。实现不补默认值、不静默丢弃非法元素（二次窄化失败亦返 WRONG_TYPE 而非放行）。"
+    },
+    {
+      "id": "C5-时序与空文本",
+      "cmd": "git -C <WT> show HEAD:src/runtime/dsh/session.ts | sed -n '308,356p'; git -C <WT> diff <mb> HEAD -- tests/runtime/dsh/session-events.test.ts",
+      "result": "pass",
+      "evidence": "finishFromStopReason 中 L352 this.emitHypothesis(record) 位于 L354 record.stream.append('run.completed') 之前 ⇒ 假设事件先于终态。文本取 record.stream.snapshot().filter(type==='text.delta').map(data.text).join('')，run≡一轮（每次 run 只 prompt 一次，L279-281），聚合无损。空文本（turnText.trim()===''）不发事件但调 onDiagnostic({code:'HYPOTHESIS_SKIPPED_EMPTY_TURN'})，不静默丢。session-events.test.ts 仅改 it 标题并在期望序列插入 'hypothesis.invalid'（原 7 项→8 项），未删/放宽任何断言；PR 正文以「序列扩展（fake 返回 answer 非 JSON ⇒ 落 hypothesis.invalid，非静默不发）」明示。"
+    },
+    {
+      "id": "C6-改坏必红反例",
+      "cmd": "仓库外副本 git archive HEAD | tar -x 到 .tmp-review-1459-mutate + symlink 夹具 node_modules；变异①缺失当[]、变异②invalid 不发事件，各跑 vitest 后还原",
+      "result": "pass",
+      "evidence": "副本基线 25 passed。变异①（undefined/null 与空数组不 push missing）→ hypothesis-adapter.test.ts 2 红：『缺 uncertainty』expected 'WRONG_TYPE' to be 'MISSING_FIELDS'；『四要素出现空数组』expected true to be false，Test Files 1 failed/Tests 2 failed|11 passed。变异②（invalid 分支不 append）→ session-events.test.ts 1 红：AssertionError expected [ 'run.started', …(5) ] to deeply equal [ 'run.started', …(6) ]，- \"hypothesis.invalid\"，Tests 1 failed|11 passed。两变异均还原后 25 passed / 2 files 全绿。实验全程在仓库外副本，工作树源码未改。"
+    },
+    {
+      "id": "C7-tsc 与 vitest 全量",
+      "cmd": "npx tsc --noEmit; npx vitest run tests/runtime/dsh（PATH 前置系统 Node24 v24.16.0 / ABI 137）",
+      "result": "pass",
+      "evidence": "tsc：TSC_EXIT=0，无诊断输出。vitest：Test Files 23 passed (23)；Tests 170 passed (170)；VITEST_EXIT=0。注：默认 workbuddy Node v22.22.2（ABI 127）会因夹具 node_modules 内 better-sqlite3 原生模块按 137 编译而红 8 文件（7 failed/41 skipped）；改用系统 Node24（ABI 137）后全绿——属 Node ABI 环境匹配，非本 PR 缺陷（见 findings）。"
+    },
+    {
+      "id": "C8-红线与必答两问",
+      "cmd": "git -C <WT> diff --name-only <mb> HEAD -- 'scripts/**'; git -C <WT> diff <mb> HEAD | grep -iE 'api[_-]?key|secret|password|Bearer |sk-'; git -C <主树> rev-parse HEAD; git -C <WT> grep -n 'hypothesis.structured\\|hypothesis.invalid' HEAD -- src",
+      "result": "pass",
+      "evidence": "五红线：新增 scripts/**/*.ts=无；改判据/门禁/.gitea/scripts/audit=无；碰真实客户数据或生产库=无；主树 HEAD 仍为开工值 77eb430658a693f5e8a6adbe7001abc5f1ff8852（未写主树）；代码/测试/证据 Secrets=无。A) 诚实：src/** 中 hypothesis.structured/invalid 仅出现在 events.ts(:29/:31)、session.ts(:312/:329/:333/:352)、hypothesis-adapter.ts(:12) —— 全在本 PR 写集内；桌面消费分支在 electron-renderer（T-B，非本写集）。PR 正文与 claim 明确写『只做生产者』『桌面卡片在生产路径不可达（仅测试夹具）』『本 PR 合入 ≠ 桌面已能显示假设』『未主张：桌面端到端仍不可达』，无夸大。B) 空文本策略判断与最小建议见 findings。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warn",
+      "where": "src/runtime/dsh/session.ts:333-337（data.reason 为对象） vs electron-renderer/src/stores/dsh-run-store.ts:330（readString(event.data.reason)）",
+      "what": "服务端 hypothesis.invalid 按契约发对象 reason={code,missing,message}，但桌面 case 'hypothesis.invalid' 用 readString(data.reason) 读字符串，对象 ⇒ null ⇒ 退化成通用文案『服务端标记为未结构化』。结构化判定不受影响（invalid 本就应 structured=false，code/message 未进 UI 只是原因展示变粗），本 PR 产出符合任务指定契约，故非阻断。最小方向：桌面侧读 reason.code/message 拼展示串（属 T-B/electron-renderer，不在本 PR 写集）。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/runtime/dsh/proposals.test.ts:59（better-sqlite3 原生模块）与运行 Node ABI",
+      "what": "夹具 node_modules junction 指向 .synova-wt-1455-r3-chain，其中 better-sqlite3.node 按 ABI 137 编译；默认 workbuddy Node v22.22.2/ABI 127 下全量 vitest 红 8 文件，切系统 Node v24.16.0/ABI 137 后 23 files/170 tests 全绿。环境匹配事项，非本 PR 回归。"
+    },
+    {
+      "severity": "info",
+      "where": "src/runtime/dsh/session.ts:318-325（空文本 onDiagnostic 策略）",
+      "what": "必答 B：空文本不发事件 + onDiagnostic 确有被误读风险——桌面仅在收到 hypothesis.structured/invalid 时渲染假设卡片，空文本时事件流无任何 hypothesis 事件，用户难以区分『本轮模型未产出』与『该能力未启用/不存在』；onDiagnostic 是服务端可观测通道，不进桌面事件流。判断：当前策略对『不静默丢』达标，但对用户可见性不足。最小改进建议（不要求本 PR 改代码）：在 run.completed 的 data 附带 hypothesisStatus ∈ {skipped_empty, structured, invalid}，让桌面在终态处显示一行可见状态即可区分。"
+    }
+  ]
+}
