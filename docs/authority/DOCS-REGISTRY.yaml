@@ -2140,3 +2140,9 @@ documents:
     status: superseded
     owner: CTO
     note: "#1485 借鉴清单旧版 v1.0（已被 DOC-1485-04 的 v1.1 取代：补入相对时间阈值实测、工具事件行源码实证与运行态量测）。文件已改名为 -v1.1.md，保留本条以追溯；旧路径不再存在，故 status=superseded 不参与存活检查。"
+  - id: DOC-1485-06
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T2-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 T2 单任务卡 v2（纯样式批：白盒根因修复 B1）：经关卡 A 退回后重写，16 阻塞全处置。九项齐（含模块锚）＋冻结基线 84 标签/34 类/13 无规则/25 裸控件＋四臂验收（字面类名/裸控件/表达式/基样式属性）＋A3 阻断范围裁定＋A4 color-scheme 与 * 收窄＋§2 环境前置＋§13 派单前十项（⑩载体已于 142306c90 出库，替代锚=#1481 正文+DEV DOC §6.2，CTO 裁定不伪造 hash）。窗口最小尺寸拆为 T2b。"

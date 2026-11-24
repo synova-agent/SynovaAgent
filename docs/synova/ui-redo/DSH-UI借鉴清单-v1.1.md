@@ -38,7 +38,7 @@ export type AppFrameProps = PropsRuntime<'root'> & PropsRenderSlots<
 
 **我方现状**：`App.tsx:126-152` 是 `TitleBar + app-body(left/center/right) + StatusBar`，**没有壳座位概念**，也没有窗口姿态：全 renderer `innerWidth|resize|matchMedia|ResizeObserver` 命中 **0**（只有 `ResizeHandle.tsx` 的拖拽手柄）。`electron/main.cjs:84` 只有 `width:1280,height:800`，**无 `minWidth/minHeight`**。
 
-**落批**：T5（框架重构）＋ T2（窗口最小尺寸）
+**落批**：T5（框架重构）＋ T2b（窗口最小尺寸；原写 T2，v2.1 拆出）
 
 ---
 
@@ -100,7 +100,7 @@ function SidebarRoot({ collapsed, width, drawer, startSession, toggleSidebar, ..
 - **零断点**：视口变窄时侧栏不变、中栏被压；**无抽屉态**。
 - 无 `minWidth`（`main.cjs:84`）⇒ 窗口可缩到不可用。
 
-**落批**：T5（三态＋夹取）＋ T2（`minWidth/minHeight`）
+**落批**：T5（三态＋夹取）＋ T2b（`minWidth/minHeight`；原写 T2，v2.1 拆出）
 
 ---
 
@@ -175,7 +175,7 @@ function SidebarRoot({ collapsed, width, drawer, startSession, toggleSidebar, ..
 | 滚动接力 | 无（单一滚动容器） | 缺 |
 | 键盘可达性 | 顶部 4 图标只切高亮（`:174-180`） | 与 DSH 契约方向相反 |
 
-**落批**：T3（空态四态 + 相对时间）｜T5（行网格、行菜单、键盘、组头 hover、渐进披露）｜T2（滚动接力样式）
+**落批**：T3（空态四态 + 相对时间）｜T5（行网格、行菜单、键盘、组头 hover、渐进披露）｜**滚动接力样式暂不分配**（原写 T2，v2.1 裁定 T2 不借 DSH）
 
 ---
 
