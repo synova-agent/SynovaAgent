@@ -1,0 +1,11 @@
+# .claude/claims/1485.yaml — UI 重做：客户语言与目标导航（并行 CTO 线）
+writeset:
+  - .claude/claims/1485.yaml
+  - docs/synova/ui-redo/UI重做-DEV-DOC-20261124.md
+  - docs/synova/ui-redo/客户语言词典-v1.0.md
+  - docs/synova/coordination/编码指令-UI重做-T1-20261124.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: git diff --stat 8f9683c11 -- docs/synova/ui-redo docs/synova/coordination/编码指令-UI重做-T1-20261124.md
+  - verify: git status --porcelain -- electron-renderer/
+note: "#1485 UI 重做模块（客户界面语言与导航）：模块锚＋P1 现状审计＋P2 目标 IA/客户语言词典/三态/失败态＋P3 分批计划；基线 8f9683c11，合入目标 gitea/main@b84f8dd71。关卡 A 四轮（R1-R3 退回、R4 可交付 coding）。本批只派零重叠 T1（tests/user-visible/**），不改 electron-renderer/**。"

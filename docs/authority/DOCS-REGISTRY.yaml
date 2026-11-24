@@ -2109,3 +2109,22 @@ documents:
     status: draft
     owner: CTO
     note: "#1463 合并凭证链路乙类 A 类送审件（只提案、未改脚本）：② POSIX 路径经文件喂 native python 的移植修复（页文件→argv／API 路径→env／合并步 rc 检查）＋ E_NO_TOKEN 降级码；含改动面/风险/三平台回归/改坏必红。甲类（token 第 4 来源 git credential fill）在同 PR 实现，与本提案分 PR。"
+  # ---- #1485 UI 重做（客户界面语言与导航）2026-11-24｜基线 8f9683c11｜合入目标 gitea/main@b84f8dd71｜status=draft 待合入后转 active ----
+  - id: DOC-1485-01
+    type: devdoc
+    path: docs/synova/ui-redo/UI重做-DEV-DOC-20261124.md
+    status: draft
+    owner: CTO
+    note: "UI 重做模块 DEV DOC v1.3（P1 现状审计＋P2 目标 IA/文案/三态/失败态＋P3 分批计划）；基线 8f9683c11（合入目标 gitea/main@b84f8dd71，已含基线且 renderer/src 零差异）；含对交接文档事实更正（白盒非白字）与阻断批无提交导致的次序依赖；关卡 A 已四轮（R1-R3 退回、R4 可交付 coding），阻塞全处理见附二/三/四；本批只派零重叠 T1。"
+  - id: DOC-1485-02
+    type: knowledge
+    path: docs/synova/ui-redo/客户语言词典-v1.0.md
+    status: draft
+    owner: CTO
+    note: "客户语言词典 v1.0：禁用词机器可判清单（§1）＋术语映射表（§2）＋ID/引用规则（§3）＋三态规范（§4）＋失败态规范（§5）＋按宪章 v8.5 ⑤ 目标驱动导航的目标 IA（§6）＋DSH 壳/内容分线四条判据（§7）；后续客户通用语言契约，P3 唯一文案判据。含关卡 A R1 补强 §1.1 可判性分级/§1.2 精确串。"
+  - id: DOC-1485-03
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T1-20261124.md
+    status: draft
+    owner: CTO
+    note: "UI 重做 T1 单任务卡（客户语言基线 ratchet）：八字段＋写集闭合（tests/user-visible/** 三件 + 登记行）＋四条硬断言＋T1-A…T1-F 可复跑验收＋五个停点＋六字段回执；不改 electron-renderer/**，零写集重叠于现场阻断修复批。"
