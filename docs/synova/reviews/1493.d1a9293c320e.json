@@ -1,0 +1,128 @@
+{
+ "schema": "syno-review-receipt/v1",
+ "pr": 1493,
+ "author": "lead（coding session；#1492 V1 发现层 + A 段 P0 复检实施者）",
+ "reviewer": "independent-reviewer（零上下文子会话；作者≠复核者）",
+ "independence": "fresh-session",
+ "issued_at": "2026-11-25T03:02:54+08:00",
+ "verdict": "PASS",
+ "head_reviewed": "780143ede",
+ "base_reviewed": "0963cec37",
+ "tool": "independent-reviewer 零上下文复核（22 项检查，三轮：R1 首判 BLOCK → 复检 BLOCK → 终判 PASS）＋ vitest 4.1.8 ＋ git 事实核验",
+ "patch_fingerprint": "sha256:d1a9293c320ec787de25ee3f2567a94700b1ae6b5676f027e488464f556a1e01",
+ "fingerprint_recipe": "git diff --no-color -M --full-index --binary <mb> <head> -- . ':(exclude)docs/synova/reviews/**' 的 sha256（check-merge-conditions.sh patch_fingerprint 同算法；mb=merge-base(gitea/main, head)=0963cec37）",
+ "fingerprint_recompute": {
+  "cmd": "cmd /c \"git diff --no-color -M --full-index --binary 0963cec37afcee3c524a9e81e8f29865ddae6d96 780143ede74aa48b222d02cde11afb00e51247f2 -- . \\\":(exclude)docs/synova/reviews/**\\\" > %TEMP%\\fp-1493-cmd.diff\" 然后 sha256sum/python3 hashlib",
+  "evidence": "size=131185 B；sha256=d1a9293c320ec787de25ee3f2567a94700b1ae6b5676f027e488464f556a1e01；两次重定向重跑逐位相同；python3 独立复算同值；fp12=d1a9293c320e"
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "title": "写集严格（只 3 类路径；scripts 下零新增 .ts）",
+   "result": "pass",
+   "cmd": "git diff --name-only gitea/main..HEAD; git diff --name-only --diff-filter=A gitea/main..HEAD -- 'scripts/**/*.ts'",
+   "evidence": "13 个文件全部落在 scripts/ingest-v0/**（8 个 .mjs）、tests/ingest-v0/**（4）、.claude/claims/1492.yaml；scripts 下新增 .ts = 0"
+  },
+  {
+   "id": "C2",
+   "title": "测试真实跑（无空壳、无 skip/only/todo）",
+   "result": "pass",
+   "cmd": "npx vitest run tests/ingest-v0/",
+   "evidence": "Test Files 3 passed (3) / Tests 44 passed (44)，exit 0；p0=10 unit=20 cli=14；Select-String '\\.(skip|only|todo)\\(' 零命中；抽查断言均为真实行为（越界八形态、第 5001 文件抛 maxFiles、junction 不跟随、全不支持 exit 1、落库后回读物理行）"
+  },
+  {
+   "id": "C3",
+   "title": "A 段 a)–f) 条条有用例，d/f 经真实入口 POST /api/dsh/runs",
+   "result": "pass",
+   "cmd": "npx vitest run tests/ingest-v0/p0-gate-recheck.test.ts --reporter=verbose",
+   "evidence": "Tests 10 passed (10)；describe 顺序 a)3 b)3 c)1 d)1 e)1 f)1；f 的 stdout `{\"entry\":\"POST /api/dsh/runs\",\"eventTypes\":[\"run.started\",\"session.created\",\"egress.recorded\",\"text.delta\",\"hypothesis.structured\",\"run.completed\"],...}`；夹具 postRun 真 fetch http://127.0.0.1:<port>/api/dsh/runs 并断言 202"
+  },
+  {
+   "id": "C4",
+   "title": "隔离库可复核，未碰生产库",
+   "result": "pass",
+   "cmd": "npx vitest run tests/ingest-v0/p0-gate-recheck.test.ts; Get-Item $env:LOCALAPPDATA\\Synova\\data\\synova.db",
+   "evidence": "stdout `[p0-recheck] 隔离库 = C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\ingest-v0\\synova.db`；默认库 mtime 仍 2026/11/18 2:11:21（本轮跑于 11/25 02:24~02:47）；本 worktree 无 data/ 目录"
+  },
+  {
+   "id": "C5",
+   "title": "真实目录（真实入口）行为与落盘证明",
+   "result": "pass",
+   "cmd": "node scripts/ingest-v0/discover.mjs --source \"C:\\Users\\Administrator\\Desktop\\哇呢宝贝数据看板\"; Get-Item <out>/report.json",
+   "evidence": "INGEST-DISCOVER status=ok files=17 supported=17 unsupported=0 skipped=0 bytes=2289613，exit 0；report.json 在盘 Length 3102 / LastWriteTime 2026/11/25 2:15:47（或复核时 2:24:48 的另一次运行）；totals 逐字段与 stdout 一致"
+  },
+  {
+   "id": "C6",
+   "title": "真实 ZIP 只枚举不解压",
+   "result": "pass",
+   "cmd": "node --input-type=module -e \"import { readZipEntries } from './scripts/ingest-v0/lib/zip-entries.mjs'; const r=readZipEntries('D:/哇呢宝贝资料留底.zip'); console.log(JSON.stringify({ok:r.ok,entryCount:r.entryCount,traversalCount:r.traversalCount,encryptedCount:r.encryptedCount}))\"",
+   "evidence": "{\"ok\":true,\"entryCount\":126,\"traversalCount\":0,\"encryptedCount\":0}；文件 116042197 B；仅读尾部窗口 + 中央目录"
+  },
+  {
+   "id": "C7",
+   "title": "改坏①：去掉 path_traversal 判定必红（复核者亲手复现并还原）",
+   "result": "pass",
+   "cmd": "改 classify.isTraversalEntry 恒 false → npx vitest run tests/ingest-v0/ → git checkout -- scripts/ingest-v0/lib/classify.mjs",
+   "evidence": "Test Files 2 failed | 1 passed (3)；Tests 4 failed | 40 passed (44)；失败点含 `四种越界形态全部命中 AssertionError: expected false to be true`、`扫描夹具树… to deeply equal`、`全类型夹具… expected +0 to be 3`；还原后 SHA256 与改前逐位相同、git status 空、Tests 44 passed (44)"
+  },
+  {
+   "id": "C8",
+   "title": "改坏②：资源上限放大 10 倍必红（含行为面用例）",
+   "result": "pass",
+   "cmd": "改 DEFAULT_LIMITS 全项 ×10 → npx vitest run tests/ingest-v0/ → git checkout -- scripts/ingest-v0/lib/budget.mjs",
+   "evidence": "Test Files 1 failed | 2 passed (3)；Tests 2 failed | 42 passed (44)；失败点 `默认上限 = 任务书原值…expected 50000 to be 5000` 与 `默认上限的**行为面**…expected [Function] to throw an error`；还原后 Tests 44 passed (44)"
+  },
+  {
+   "id": "C9",
+   "title": "claim 的每个数字与 HEAD 实测逐字一致",
+   "result": "pass",
+   "cmd": "npx vitest run tests/ingest-v0/; node scripts/ingest-v0/discover.mjs --source tests/ingest-v0; 真实目录/真实 ZIP/两处改坏各自的命令",
+   "evidence": "claim 6 条 verify 逐行比对全部一致：44 passed（p0 10 + unit 20 + cli 14）｜no_supported_input files=4 supported=0 unsupported=4 skipped=0 bytes=65707 exit 1｜status=ok files=17 … bytes=2289613 exit 0｜entryCount=126 traversalCount=0 encryptedCount=0（116042197 B）｜改坏① 4 failed|40 passed (44)｜改坏② 2 failed|42 passed (44)"
+  },
+  {
+   "id": "C10",
+   "title": "安全边界：不联网 / 不解压 / 不清理既有目录 / 不读文件内容",
+   "result": "pass",
+   "cmd": "Select-String -Path scripts/ingest-v0/*.mjs,scripts/ingest-v0/lib/*.mjs -Pattern 'http|https|fetch\\(|node:net|rmSync|rmdir|unlink|execSync|spawn|zlib|inflate|createWriteStream|export \\* from'",
+   "evidence": "命中 0；唯一写文件是 discover.mjs 的 writeFileSync(report.json)，输出目录为 %TEMP%/ingest-v0/<stamp>/；无桥接代理文件；发现层连文件内容都不读（只 lstat + ZIP 中央目录）"
+  },
+  {
+   "id": "C11",
+   "title": "28 个导出函数/类六段契约头齐；铁律 38 零命中",
+   "result": "pass",
+   "cmd": "逐文件统计 @input/@output/@degraded/@authority/@not-here/@error；Select-String -Pattern 'as\\s+any|as\\s+never|as\\s+unknown\\s+as'",
+   "evidence": "scripts 26 + tests/support/build-zip.ts 2 = 28 导出，六段 28/28 齐、缺 0；as any/never/unknown-as 仅命中 p0 测试头部注释行（非代码）"
+  },
+  {
+   "id": "C12",
+   "title": "分支级 diff 干净（无行尾噪声）",
+   "result": "pass",
+   "cmd": "git diff --stat gitea/main..HEAD; git diff --stat --ignore-cr-at-eol gitea/main..HEAD; git ls-files --eol tests/ingest-v0 scripts/ingest-v0 .claude/claims/1492.yaml",
+   "evidence": "两组 stat 逐字相同（13 files changed, 2659 insertions(+), 0 deletions）；13 个文件全部 i/lf w/lf（上一轮 CRLF 阻塞项已由 780143ede 归一）"
+  }
+ ],
+ "findings": [
+  {
+   "severity": "suggestion",
+   "where": "scripts/ingest-v0/discover.mjs、tests/ingest-v0/p0-gate-recheck.test.ts",
+   "detail": "git diff --check 提示两处「new blank line at EOF」（文件末尾多一个空行，非 CRLF）。本轮按要求未改（改则 head 变更、本回执失效）。"
+  },
+  {
+   "severity": "suggestion",
+   "where": "tests/ingest-v0/p0-gate-recheck.test.ts:654",
+   "detail": "f) 的 \"entry\":\"POST /api/dsh/runs\" 是 emit 里的手写字符串（真实证据是夹具真 fetch 该入口 + 断言 202）。建议后续把 baseUrl/status 一起 emit，使 stdout 自证。"
+  },
+  {
+   "severity": "info",
+   "where": "scripts/ingest-v0/lib/zip-scan.mjs:25 与 zip-entries.mjs 的 @output",
+   "detail": "两处各写各的 oversizedCount 口径（语义正确、当前无消费者误读），建议互相指认。"
+  }
+ ],
+ "reviewer_note": "本回执由实施会话（author）依据独立复核者 independent-reviewer 的终判 PASS 原文转录，非 author 自行判定；三轮复核的阻塞项均已修复并被复核者复跑确认（①A 段 f) 无用例 ②claim 测试数失真 ③中间提交整文件 CRLF）。R9 身份未分离属本机 git 身份限制（同机执行），只告警不阻断。",
+ "evidence_pointers": {
+  "pr_comment_receipt": "http://127.0.0.1:3000/synova-agent/SynovaAgent/pulls/1493#issuecomment-14683",
+  "issue_evidence": "http://127.0.0.1:3000/synova-agent/SynovaAgent/issues/1492#issuecomment-14685"
+ },
+ "reaffirmed_at": "2026-11-25T03:02:54+08:00",
+ "reaffirm_note": "回执作为本分支最后一个提交入库（R7 时序）；指纹按 patch_fingerprint(mb,head) 在本仓重算，因排除 docs/synova/reviews/** 故入库后指纹不变。"
+}
