@@ -14,8 +14,9 @@ writeset:
   - tests/ingest-v0/support/build-zip.ts
 done:
   - "verify: npx vitest run tests/ingest-v0/ ⇒ 3 files / 44 tests, 44 passed, 0 failed（p0 10 + unit 20 + cli 14）"
-  - "verify: node scripts/ingest-v0/discover.mjs --source <客户目录> ⇒ status=ok files=17 supported=17 unsupported=0 skipped=0 bytes=2289613，exit 0；report.json 落 %TEMP%/ingest-v0/run-<stamp>/report.json（客户目录绝对路径与报告原文见 PR 评论，不入库）"
-  - "verify: readZipEntries('<客户 zip>') ⇒ ok:true entryCount=126 traversalCount=0 encryptedCount=0（116042197 B，只读中央目录，不解压；绝对路径见 PR 评论）"
+  - "verify: node scripts/ingest-v0/discover.mjs --source tests/ingest-v0 ⇒ INGEST-DISCOVER status=no_supported_input files=4 supported=0 unsupported=4 skipped=0 bytes=65707，exit 1（**非客户路径，可逐字复跑**；证明『全部 unsupported 不报成功』）"
+  - "verify: node scripts/ingest-v0/discover.mjs --source <客户目录> ⇒ status=ok files=17 supported=17 unsupported=0 skipped=0 bytes=2289613，exit 0；report.json 落 %TEMP%/ingest-v0/run-<stamp>/report.json（客户目录绝对路径与报告原文见 Issue #1492 评论，不入库）"
+  - "verify: readZipEntries('<客户 zip>') ⇒ ok:true entryCount=126 traversalCount=0 encryptedCount=0（116042197 B，只读中央目录，不解压；绝对路径见 Issue #1492 评论）"
   - "verify: 改坏① classify.isTraversalEntry 恒 false ⇒ 2 files failed / 1 passed；Tests 4 failed | 40 passed (44)（红）；git checkout 还原后 Tests 44 passed (44)"
   - "verify: 改坏② budget.DEFAULT_LIMITS 全项 ×10 ⇒ 1 file failed / 2 passed；Tests 2 failed | 42 passed (44)（红，含『默认上限行为面』用例）；还原后 Tests 44 passed (44)"
-note: "#1492 V1 发现层（只发现、不抽取）：--source 自行遍历；supported/unsupported(reason)/skipped(reason) 三分；类型覆盖 docx/pptx/pdf/html/json/md/txt/zip；资源上限 5000/500MB/50MB/8/10min（可参数覆盖；累计型超限即停 E_RESOURCE_LIMIT，单文件超大按 DEV DOC §6 记 skipped）；ZIP 只枚举中央目录（..／绝对路径／盘符／UNC ⇒ skipped path_traversal）；符号链接与 junction 不跟随；不联网、不读文件内容、不执行宏/脚本/外链；report.json 落 %TEMP%/ingest-v0/<stamp>/；全部 unsupported ⇒ status=no_supported_input 且退出码 1。A 段 P0 六条接口组合态复检同件入库（隔离库 %TEMP%/ingest-v0/synova.db；a–f 逐条有用例，f 为事件流真实发射断言）。不改 DSH／门禁／extensions/ontology；PR 停 review。"
+note: "#1492 V1 发现层（只发现、不抽取）：--source 自行遍历；supported/unsupported(reason)/skipped(reason) 三分；类型覆盖 docx/pptx/pdf/html/json/md/txt/zip；资源上限 5000/500MB/50MB/8/10min（可参数覆盖；累计型超限即停 E_RESOURCE_LIMIT，单文件超大按 DEV DOC §6 记 skipped）；ZIP 只枚举中央目录（..／绝对路径／盘符／UNC ⇒ skipped path_traversal）；符号链接与 junction 不跟随；不联网、不读文件内容、不执行宏/脚本/外链；report.json 落 %TEMP%/ingest-v0/<stamp>/；全部 unsupported ⇒ status=no_supported_input 且退出码 1。A 段 P0 六条接口组合态复检同件入库（隔离库 %TEMP%/ingest-v0/synova.db；a–f 逐条有用例，d 与 f 均经真实入口 POST /api/dsh/runs）。不改 DSH／门禁／extensions/ontology；PR 停 review。"

@@ -468,14 +468,80 @@ class CapturingTokenStore extends ToolTokenStore {
   }
 }
 
+interface RunServerHarness {
+  baseUrl: string;
+  runtime: DshRunManager;
+  fake: FakeAcp;
+  tokenStore: CapturingTokenStore;
+  postRun: (body: Record<string, unknown>) => Promise<{ status: number; payload: Record<string, unknown> }>;
+  close: () => Promise<void>;
+}
+
+/**
+ * 起一个**真实 express 服务**（真实 `POST /api/dsh/runs` 入口）；只把模型侧 ACP 换成 fake（零外发）。
+ *
+ * @input org 企业身份（测试构造）／replyText 本轮"模型文本"／jti 身份票据标识
+ * @output 夹具：baseUrl、run 管理器、fake、token 捕获器、postRun、close
+ * @degraded 无（起不来即 throw，测试直接红）
+ * @authority 身份由中间件从 header 注入（与生产同路径）；不 spawn 真 dsh、不监听外部端口
+ * @not-here 不做断言（断言在各用例）
+ * @error 端口绑定失败等 ⇒ throw
+ */
+async function startRunServer(org: string, replyText: string, jti: string): Promise<RunServerHarness> {
+  const fake = new FakeAcp(replyText);
+  const runtime = new DshRunManager({ instanceDir: process.cwd(), createClient: () => fake, runTimeoutMs: 5_000 });
+  const tokenStore = new CapturingTokenStore();
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    const user = req.header('x-test-user');
+    const headerOrg = req.header('x-test-org');
+    if (typeof user === 'string' && typeof headerOrg === 'string') {
+      (req as Request & { auth?: JwtPayload }).auth = { sub: user, orgId: headerOrg, role: 'admin', jti };
+    }
+    next();
+  });
+  app.use(createDshRouter({
+    runtime,
+    heartbeatMs: 200,
+    mcpStarter: async () => ({ url: 'http://127.0.0.1:1/mcp', tokens: tokenStore, close: async () => { /* fake */ } }),
+  }));
+  const server: Server = createServer(app);
+  await new Promise<void>(resolveListen => server.listen(0, '127.0.0.1', () => resolveListen()));
+  const address = server.address() as AddressInfo;
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    runtime,
+    fake,
+    tokenStore,
+    postRun: async (body) => {
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/dsh/runs`, {
+        method: 'POST',
+        headers: { 'x-test-user': `user-${jti}`, 'x-test-org': org, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const payload = (await response.json()) as Record<string, unknown>;
+      return { status: response.status, payload };
+    },
+    close: async () => {
+      await runtime.dispose();
+      await new Promise<void>(resolveClose => server.close(() => resolveClose()));
+    },
+  };
+}
+
+/** 等 run 进终态（事件流 terminal 就位）；超时即 throw（不静默） */
+async function waitTerminal(record: RunRecord): Promise<void> {
+  for (let i = 0; i < 100 && record.stream.terminal === null; i += 1) {
+    await new Promise<void>(resolve => setTimeout(resolve, 10));
+  }
+  if (record.stream.terminal === null) throw new Error(`run 未在预期时间内进入终态: ${record.runId}`);
+}
+
 describe('d) POST /api/dsh/runs 带 problemId ⇒ ctx 收到；prompt 文本不含它', () => {
   const PROBLEM = 'team-1492-p0-d';
   const INPUT_TEXT = '请基于领域上下文给出瓶颈假设';
-  let server: Server;
-  let baseUrl = '';
-  let runtime: DshRunManager;
-  let fake: FakeAcp;
-  let tokenStore: CapturingTokenStore;
+  let harness: RunServerHarness;
 
   beforeAll(async () => {
     const store = new SqliteGraphStore(db);
@@ -490,60 +556,30 @@ describe('d) POST /api/dsh/runs 带 problemId ⇒ ctx 收到；prompt 文本不�
       D_ORG,
     );
     store.createEdge(REL_TYPE, root, neighbor, 1, {}, D_ORG);
-
-    fake = new FakeAcp();
-    runtime = new DshRunManager({ instanceDir: process.cwd(), createClient: () => fake, runTimeoutMs: 5_000 });
-    tokenStore = new CapturingTokenStore();
-    const app = express();
-    app.use(express.json());
-    app.use((req, _res, next) => {
-      const user = req.header('x-test-user');
-      const org = req.header('x-test-org');
-      if (typeof user === 'string' && typeof org === 'string') {
-        (req as Request & { auth?: JwtPayload }).auth = { sub: user, orgId: org, role: 'admin', jti: '1492-d' };
-      }
-      next();
-    });
-    app.use(createDshRouter({
-      runtime,
-      heartbeatMs: 200,
-      mcpStarter: async () => ({ url: 'http://127.0.0.1:1/mcp', tokens: tokenStore, close: async () => { /* fake */ } }),
-    }));
-    server = createServer(app);
-    await new Promise<void>(resolveListen => server.listen(0, '127.0.0.1', () => resolveListen()));
-    const address = server.address() as AddressInfo;
-    baseUrl = `http://127.0.0.1:${address.port}`;
+    harness = await startRunServer(D_ORG, 'answer', '1492-d');
   });
 
   afterAll(async () => {
-    await runtime.dispose();
-    await new Promise<void>(resolveClose => server.close(() => resolveClose()));
+    await harness.close();
   });
 
   it('[正常] 带 problemId ⇒ token 上下文/run.started 收到该值，prompt 不含它', async () => {
-    const response = await fetch(`${baseUrl}/api/dsh/runs`, {
-      method: 'POST',
-      headers: { 'x-test-user': 'user-1492-d', 'x-test-org': D_ORG, 'content-type': 'application/json' },
-      body: JSON.stringify({ input: INPUT_TEXT, problemId: PROBLEM, runId: 'run_1492_d_ok' }),
-    });
-    expect(response.status).toBe(202);
+    const { status } = await harness.postRun({ input: INPUT_TEXT, problemId: PROBLEM, runId: 'run_1492_d_ok' });
+    expect(status).toBe(202);
 
-    const record = runtime.getRun('run_1492_d_ok');
+    const record = harness.runtime.getRun('run_1492_d_ok');
     expect(record).toBeDefined();
     if (record === undefined) throw new Error('run 记录缺失');
-    for (let i = 0; i < 100 && record.stream.terminal === null; i += 1) {
-      await new Promise<void>(resolve => setTimeout(resolve, 10));
-    }
-    expect(record.stream.terminal).not.toBeNull();
+    await waitTerminal(record);
 
-    const ctx = tokenStore.issued[tokenStore.issued.length - 1];
+    const ctx = harness.tokenStore.issued[harness.tokenStore.issued.length - 1];
     expect(ctx.problemId).toBe(PROBLEM);
     expect(record.stream.snapshot()[0].data.problemId).toBe(PROBLEM);
 
     // 反例断言：prompt 文本 = input 逐字，**不含** problemId
-    expect(fake.promptTexts).toHaveLength(1);
-    expect(fake.promptTexts[0]).toBe(INPUT_TEXT);
-    expect(fake.promptTexts[0].includes(PROBLEM)).toBe(false);
+    expect(harness.fake.promptTexts).toHaveLength(1);
+    expect(harness.fake.promptTexts[0]).toBe(INPUT_TEXT);
+    expect(harness.fake.promptTexts[0].includes(PROBLEM)).toBe(false);
 
     // 工具侧确实收到同一个 problemId（端到端同一值）
     const snapshot = JSON.parse(handleDomainToolCall('synova_context_get', {}, ctx)) as ContextSnapshot;
@@ -552,8 +588,8 @@ describe('d) POST /api/dsh/runs 带 problemId ⇒ ctx 收到；prompt 文本不�
     emit('d1-problemId', {
       tokenCtx: ctx,
       runStarted: record.stream.snapshot()[0],
-      promptTexts: fake.promptTexts,
-      promptIncludesProblemId: fake.promptTexts.map(text => text.includes(PROBLEM)),
+      promptTexts: harness.fake.promptTexts,
+      promptIncludesProblemId: harness.fake.promptTexts.map(text => text.includes(PROBLEM)),
       snapshot,
     });
   });
@@ -580,10 +616,10 @@ describe('e) 域上下文工具：$id 与 businessKey 双路径、快照稳定',
     emit('e1-domain-context', { byKey, byId, stable: JSON.stringify(again) === JSON.stringify(byKey) });
   });
 });
-// ═══ f) 桌面事件链未被本批破坏（服务端发射点真跑）═════════════════════════════
+// ═══ f) 桌面事件链未被本批破坏（经真实入口 POST /api/dsh/runs 真跑）═════════════
 
-describe('f) 桌面事件链：hypothesis.structured 仍真实发射（四要素非空）', () => {
-  it('模型文本为合格假设 JSON ⇒ 事件流出现 hypothesis.structured，四要素原样带上', async () => {
+describe('f) 桌面事件链：经真实入口发起 run ⇒ 事件流出现 hypothesis.structured（四要素非空）', () => {
+  it('模型文本为合格假设 JSON ⇒ hypothesis.structured 带四要素，且顺序在 run.completed 之前', async () => {
     // 四要素载荷（来源形态取自 DEV DOC §0 探针实测：$id / predicate / source_ref）
     const payload = {
       hypothesis: '交付验收口径与实收不一致，卡在批次验收环节',
@@ -592,20 +628,16 @@ describe('f) 桌面事件链：hypothesis.structured 仍真实发射（四要素
       evidence: ['delivery_batches.csv#L2', 'acceptance_records.csv#L7'],
       uncertainty: ['仅覆盖 2026-10 一个期间'],
     };
-    const fake = new FakeAcp(JSON.stringify(payload));
-    const runtime = new DshRunManager({ instanceDir: process.cwd(), createClient: () => fake, runTimeoutMs: 5_000 });
+    const harness = await startRunServer(D_ORG, JSON.stringify(payload), '1492-f');
     try {
-      const record = await runtime.run({
-        runId: 'run_1492_f',
-        enterpriseId: D_ORG,
-        userId: 'user-1492-f',
-        scope: DT_SCOPE,
-        input: '基于领域上下文给出瓶颈假设',
-      });
-      for (let i = 0; i < 100 && record.stream.terminal === null; i += 1) {
-        await new Promise<void>(resolve => setTimeout(resolve, 10));
-      }
-      expect(record.stream.terminal).not.toBeNull();
+      // 真实用户入口：HTTP → 路由 → run 管理器 → 事件流
+      const { status } = await harness.postRun({ input: '基于领域上下文给出瓶颈假设', runId: 'run_1492_f' });
+      expect(status).toBe(202);
+
+      const record = harness.runtime.getRun('run_1492_f');
+      expect(record).toBeDefined();
+      if (record === undefined) throw new Error('run 记录缺失');
+      await waitTerminal(record);
 
       const events = record.stream.snapshot();
       const structured = events.find(event => event.type === 'hypothesis.structured');
@@ -619,9 +651,9 @@ describe('f) 桌面事件链：hypothesis.structured 仍真实发射（四要素
       // 事件顺序：假设在 run.completed 之前（桌面据此先画卡再收尾）
       const types = events.map(event => event.type);
       expect(types.indexOf('hypothesis.structured')).toBeLessThan(types.indexOf('run.completed'));
-      emit('f1-hypothesis-chain', { eventTypes: types, structured: structured?.data ?? null });
+      emit('f1-hypothesis-chain', { entry: 'POST /api/dsh/runs', eventTypes: types, structured: structured?.data ?? null });
     } finally {
-      await runtime.dispose();
+      await harness.close();
     }
   });
 });
