@@ -2128,3 +2128,9 @@ documents:
     status: draft
     owner: CTO
     note: "UI 重做 T1 单任务卡（客户语言基线 ratchet）：八字段＋写集闭合（tests/user-visible/** 三件 + 登记行）＋四条硬断言＋T1-A…T1-F 可复跑验收＋五个停点＋六字段回执；不改 electron-renderer/**，零写集重叠于现场阻断修复批。"
+  - id: DOC-1485-04
+    type: knowledge
+    path: docs/synova/ui-redo/DSH-UI借鉴清单-v1.0.md
+    status: draft
+    owner: CTO
+    note: "#1485 DSH UI 借鉴清单 v1.0（数值级）：以锁版 0.2.2-rc.5 实物为准，16 节/14 组可执行契约——窗口五座位、侧栏三态与 6 断点、会话行 32px 网格、输入框 336px=14×24 上限与三职圆钮、权限 chip 28px/460px、模型两级菜单与推理档位、meta 精度（缓存命中不得舍成 100%）、相对时间六档、分块长列表、窄化四级、内容宽度轴、sticky+portal、字号令牌、非换皮机判 N1-N5；另列「明确不可借/未找到」防冒充。⚠️/❌ 项为我方自定，不得表述为 DSH 做法。"
