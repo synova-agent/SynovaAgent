@@ -2170,3 +2170,15 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 只读审计 B 产出（T1 债单 392 条分档核对）：逐条按渲染面五类分档（客户面 179/值域 69/比较 67/夹具 0/数据驱动 77），聚合成 97 个渲染位作为 T4 执行清单；与 DEV DOC §2.1 C1-C8 对账发现 13 个漏点；证明 T1 的 why 分档误判 9 条、漏判 10 条；指出 392 清零不可达（221 条结构性不可销账）。"
+  - id: DOC-1485-11
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T1.1-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 T1.1 单任务卡：扫描根扩到 electron/** 与 app/**；R2-18/R2-07 大小写不敏感；R2-05 收 email/phone/wechatId；P0 单列 R2-20；按审计 B 的 179 条重分 why 并重冻结基线。写集仅 tests/user-visible/** 三文件；四条硬断言保留并加第 5 条（app/login.html 的 GA 与 main.cjs 的 critical 必须在册、删掉必红）。"
+  - id: DOC-1485-12
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-login退役-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 独立小批：app/login.html 退役（审计 A 证实与 /api/auth/login 契约失配且密码框 disabled ⇒ 从未可用）。含文件删除：§4 要求逐个文件核消费者、禁止目录级通配删除；写集逐个明列（login.html/auth.js/server.ts/setup-guide-retired.test.ts/main.cjs 回落/部署文档）；验收含 404 机器判、无残留引用（排除历史文档）、主登录用户可见回归、构建未受影响。"
