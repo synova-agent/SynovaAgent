@@ -33,4 +33,4 @@ done:
   - "verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root ."
   - "verify: bash scripts/control-tower/sealed-tests.sh --slack"
   - "verify: CI core-gates / core (pull_request_target) success"
-note: "A 删除 probe-criterion-precheck（670 行）＋专属测试/登记；B 迁移 ontology-values（4 个标准测试改 import tests/support，probe 删除）、content-exile、m6-determinism（新 tests/sentinel 标准测试＋夹具，旧 probe/旧测试删除）；bundle-content 触发硬停止（客户 bundle 形态在 head 起不来/0 注册，需改 src/**）⇒ 保留旧 probe 并留证据。C 看板/现役入口全部保留。不改产品代码/公开契约；new tests 真实跑 116 passed。"
+note: "A 删除 probe-criterion-precheck（830 行）＋专属测试/登记；B 迁移 ontology-values（4 个标准测试改 import tests/support，probe 删除）、content-exile、m6-determinism（新 tests/sentinel 标准测试＋夹具，旧 probe/旧测试删除）；bundle-content 触发硬停止（客户 bundle 形态在 head 起不来/0 注册，需改 src/**）⇒ 保留旧 probe 并留证据。C 看板/现役入口全部保留。不改产品代码/公开契约；new tests 真实跑 116 passed。"
