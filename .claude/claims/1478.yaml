@@ -1,0 +1,8 @@
+# .claude/claims/1478.yaml — 控制塔第二批：元流程检查删除＋四项判据迁移（Issue #1478）
+# 本文件先作为 PR 引导提交；最终提交前用 claim_store.py --scaffold 1478 --force 重建全量 writeset。
+writeset:
+  - .claude/claims/1478.yaml
+  - memory/notes/implemented/2026-11-24-1478-control-tower-probe-migration.md
+done:
+  - "verify: bootstrap placeholder — 最终提交前重建全量 writeset 与实跑 verify"
+note: "PR 引导提交占位；A 删除 probe-criterion-precheck，B 迁移 bundle-content／content-exile／m6-determinism／ontology-values 判据后删旧 probe；C 现役入口全部保留。"
