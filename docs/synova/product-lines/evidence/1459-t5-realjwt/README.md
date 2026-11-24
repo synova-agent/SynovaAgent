@@ -36,7 +36,7 @@
 
 ## 4 环境侧必须说清的三件事（不是产品改动，是运行前提）
 
-1. **必须给 API 配 `JWT_SECRET`**：`src/middleware/auth.ts` 的 DevMode 分支是 `!secret && DEV_MODE==='true'` ⇒ 无 `JWT_SECRET` 时**先命中自动 admin**，Bearer 被无视。配了 `JWT_SECRET`（随机 64 hex，只存 `.tmp-m1m2/.jwt-secret`，收尾删除）后 `/api/dsh/runs` 才走验签身份，DEV DOC §5 判据才成立。`DEV_MODE=true` 保持不变（`config.devMode` 为真）。
+1. **必须给 API 配 `JWT_SECRET`**：`src/middleware/auth.ts` 的 DevMode 分支是 `!secret && DEV_MODE==='true'` ⇒ 无 `JWT_SECRET` 时**先命中自动 admin**，Bearer 被无视。配了 `JWT_SECRET`（随机 64 hex，只存在本次一次性临时目录的密钥文件里，收尾删除）后 `/api/dsh/runs` 才走验签身份，DEV DOC §5 判据才成立。`DEV_MODE=true` 保持不变（`config.devMode` 为真）。
 2. **Electron 需要 `--no-sandbox` ＋ 独立 `--user-data-dir`**：本机（Administrator 会话）下 `electron.exe` 起 Chromium 沙箱时以 `STATUS_BREAKPOINT` 退出（实测 `electron.exe --version` 非 0，加 `--no-sandbox` 才打印 `v33.4.11`）；默认 `%APPDATA%\Electron` 的 ProcessSingleton 锁创建失败（`Access is denied`）导致「已有实例运行」自退 ⇒ 用工作区内 `--user-data-dir` 规避。仅运行期参数，未改任何产品代码。
 3. **未起独立 supervisor**：`createDefaultDshRunManager`（`src/runtime/dsh/session.ts:435`）在首次 run 时自己 spawn rc.5 的 `bin.js`（`buildDshInvocation`），`dsh-home/run/synova-sidecar.json` 不参与本次链路。所以本包的"sidecar"= rc.5 实物子进程，而非 `scripts/dsh-sidecar/start.ps1` 的 supervisor。
 
@@ -44,15 +44,15 @@
 
 ```powershell
 # 1) 隔离库 + 账号（密码随机会写两处，收尾删）
-node .tmp-m1m2/register-user.cjs --base http://127.0.0.1:18790 --email t5-admin@synth-1459.invalid `
+node docs/synova/product-lines/evidence/1459-t5-realjwt/runner/register-user.cjs --base http://127.0.0.1:18790 --email t5-admin@synth-1459.invalid `
      --role admin --org org-a --password-file <ops>/t5-admin-password.txt --password-file <tmp>/out/password.working.txt
 # 2) API / 桌面 / 驱动
-powershell -File .tmp-m1m2/start-api.ps1 -Worktree <wt>        # DEV_MODE=true + JWT_SECRET(随机) + 隔离库 + rc.5
-powershell -File .tmp-m1m2/start-desktop.ps1 -Worktree <wt>    # vite 5173 + electron（--no-sandbox + 独立 user-data-dir）
-node .tmp-m1m2/m1m2-drive.mjs --cdp-port 9222 --base http://127.0.0.1:18790 `
+powershell -File docs/synova/product-lines/evidence/1459-t5-realjwt/runner/start-api.ps1 -Worktree <wt>        # DEV_MODE=true + JWT_SECRET(随机) + 隔离库 + rc.5
+powershell -File docs/synova/product-lines/evidence/1459-t5-realjwt/runner/start-desktop.ps1 -Worktree <wt>    # vite 5173 + electron（--no-sandbox + 独立 user-data-dir）
+node docs/synova/product-lines/evidence/1459-contract-sampling/runner/m1m2-drive.mjs --cdp-port 9222 --base http://127.0.0.1:18790 `
      --email t5-admin@synth-1459.invalid --password-file <tmp>/out/password.working.txt --evidence <ev> --phase M1
 # 3) 会话日志 usage
-node .tmp-m1m2/session-usage.mjs --session-zstd <sessions>/<sessionId>/session.v4.jsonl.zstd --evidence <ev> --id M1 `
+node docs/synova/product-lines/evidence/1459-contract-sampling/runner/session-usage.mjs --session-zstd <sessions>/<sessionId>/session.v4.jsonl.zstd --evidence <ev> --id M1 `
      --decoder scripts/dsh-sidecar/r3-chain/session-decompress.mjs
 ```
 

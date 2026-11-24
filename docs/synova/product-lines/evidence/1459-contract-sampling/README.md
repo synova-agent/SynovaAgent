@@ -52,12 +52,12 @@
 ## 6 可复跑
 
 ```powershell
-node .tmp-m1m2/m1m2-drive.mjs --cdp-port 9222 --base http://127.0.0.1:18790 `
+node docs/synova/product-lines/evidence/1459-contract-sampling/runner/m1m2-drive.mjs --cdp-port 9222 --base http://127.0.0.1:18790 `
      --email t5-admin@synth-1459.invalid --password-file <tmp>/out/password.working.txt `
      --evidence <ev> --phase M2a --skip-login true     # M2b 同理，--phase M2b
-node .tmp-m1m2/consolidate.mjs --m1-evidence <M1 ev> --m2-evidence <this dir> `
+node docs/synova/product-lines/evidence/1459-contract-sampling/runner/consolidate.mjs --m1-evidence <M1 ev> --m2-evidence <this dir> `
      --dsh-home <dsh-home> --decoder scripts/dsh-sidecar/r3-chain/session-decompress.mjs `
-     --session-usage .tmp-m1m2/session-usage.mjs --db %TEMP%\1459-scan\synova.db
+     --session-usage docs/synova/product-lines/evidence/1459-contract-sampling/runner/session-usage.mjs --db %TEMP%\1459-scan\synova.db
 ```
 
 ## 7 边界
