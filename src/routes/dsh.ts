@@ -14,9 +14,11 @@
  *   · SSE 只回该企业自己的 run 事件。
  *
  * 契约（铁律 47）:
- *   @input   HTTP ＋ req.auth（JwtPayload）；body {input, runId?, sessionId?}
+ *   @input   HTTP ＋ req.auth（JwtPayload）；body {input, runId?, sessionId?, problemId?}
  *   @output  JSON（{ok, runId, status, ...}）｜ text/event-stream
  *   @degraded 无：任何失败都返回稳定 code/phase/retryable（不吞成空 200）
+ *   @authority 身份只来自 req.auth；`problemId` 只作为**结构化入参**流向 run/MCP token 上下文，不拼进 prompt
+ *   @not-here 不解析 problemId 指向的对象、不判定企业归属（工具侧 `domain-context` 负责）
  *   @error   UNAUTHORIZED / VALIDATION_ERROR / FORGED_IDENTITY / RUN_NOT_FOUND /
  *            SESSION_NOT_FOUND / RUN_FAILED（运行期失败走 SSE run.failed 事件）
  */
@@ -133,13 +135,26 @@ export function createDshRouter(deps: DshRouterDeps): Router {
     });
   };
 
+  /**
+   * POST /api/dsh/runs — 发起一轮运行（#1486 裁定 e：body 增可选 `problemId`）。
+   *
+   * 契约（铁律 47）:
+   *   @input  body.input（非空字符串，≤100k）｜body.runId?/sessionId?（ID 形态）｜
+   *           body.problemId?（非空字符串；本企业 ② 对象 `businessKey` 或 `$id`；长度上限由工具侧
+   *           `domain-context` 的 256 统一执法，本层不复制该常量）
+   *   @output 202（新 run）/200（同 runId 重放）＋ `{ok, runId, sessionId, status, eventCount, replayed, mcp}`
+   *   @degraded 无：失败一律稳定 code/phase/retryable（不吞成空 200）
+   *   @authority 身份只来自 `req.auth`；`problemId` 只经 `RunRequest.problemId` 与 MCP token 上下文流向工具
+   *   @not-here 不把 problemId 拼进 `input`/prompt；不解析其领域存在性；不跨企业复用 runId
+   *   @error  UNAUTHORIZED / VALIDATION_ERROR / FORGED_IDENTITY / RUN_FAILED / TOOL_ERROR
+   */
   router.post('/api/dsh/runs', async (req: Request, res: Response) => {
     const identity = identityOf(req);
     if (identity === null) {
       respondError(res, new DshError('UNAUTHORIZED', 'auth', '缺少验签身份（req.auth）', { retryable: false }));
       return;
     }
-    const body = (req.body ?? {}) as { input?: unknown; runId?: unknown; sessionId?: unknown };
+    const body = (req.body ?? {}) as { input?: unknown; runId?: unknown; sessionId?: unknown; problemId?: unknown };
     if (typeof body.input !== 'string' || body.input.trim().length === 0) {
       respondError(res, new DshError('VALIDATION_ERROR', 'request', 'input 必须是非空字符串', { retryable: false }));
       return;
@@ -147,6 +162,14 @@ export function createDshRouter(deps: DshRouterDeps): Router {
     if (body.input.length > MAX_INPUT_CHARS) {
       respondError(res, new DshError('VALIDATION_ERROR', 'request', `input 超过 ${MAX_INPUT_CHARS} 字符上限`, { retryable: false }));
       return;
+    }
+    let problemId: string | undefined;
+    if (body.problemId !== undefined) {
+      if (typeof body.problemId !== 'string' || body.problemId.length === 0) {
+        respondError(res, new DshError('VALIDATION_ERROR', 'request', 'problemId 必须是非空字符串', { retryable: false }));
+        return;
+      }
+      problemId = body.problemId;
     }
     let runId: string;
     let sessionId: string | undefined;
@@ -173,6 +196,8 @@ export function createDshRouter(deps: DshRouterDeps): Router {
           userId: identity.userId,
           scope: identity.scope,
           runId,
+          // #1486 e：显式问题根进 token 上下文（工具侧优先使用）；缺省不写该键（既有形态不变）
+          ...(problemId === undefined ? {} : { problemId }),
         });
         runTokens.set(runId, token);
       } catch (err: unknown) {
@@ -189,6 +214,8 @@ export function createDshRouter(deps: DshRouterDeps): Router {
         scope: identity.scope,
         input: body.input,
         sessionId,
+        // #1486 e：结构化入参（**不拼进 input**）⇒ run.started 事件可证、token 上下文可读
+        problemId,
       });
       // 一次性 token：run 终态即撤销（含「run 已结束才订阅」的快照路径）。
       // T4：`run.completed` 时把本轮产出落成 Proposal **草案**（runId 幂等；不写经营决定）。

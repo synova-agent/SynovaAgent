@@ -11,7 +11,7 @@ describe('emitSignal — 信号发射', () => {
   afterEach(() => {
     // 清理测试文件
     try { fs.rmSync(path.join(SIGNALS_DIR, 'test-write-lock.json'), { force: true }); } catch {}
-    try { fs.rmSync(path.join(SIGNALS_DIR, 'test-dev-doc-gatekeeper.json'), { force: true }); } catch {}
+    try { fs.rmSync(path.join(SIGNALS_DIR, 'test-signal-emitter.json'), { force: true }); } catch {}
   });
 
   it('发射绿色信号 → 文件存在且格式正确', async () => {
@@ -31,9 +31,9 @@ describe('emitSignal — 信号发射', () => {
 
   it('发射红色信号含计数', async () => {
     const { emitSignal } = await import('../../src/control-tower/signal-emitter');
-    emitSignal('test-dev-doc-gatekeeper', 'red', 'validation_failed', { p0: 2, p1: 3 });
+    emitSignal('test-signal-emitter', 'red', 'validation_failed', { p0: 2, p1: 3 });
 
-    const filePath = path.join(SIGNALS_DIR, 'test-dev-doc-gatekeeper.json');
+    const filePath = path.join(SIGNALS_DIR, 'test-signal-emitter.json');
     const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     expect(content.status).toBe('red');
     expect(content.p0_count).toBe(2);

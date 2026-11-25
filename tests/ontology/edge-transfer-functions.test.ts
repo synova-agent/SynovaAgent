@@ -4,7 +4,7 @@
  * 卡面（Done 真源）: 52 条 `transfer_function` **逐条给公式 或 显式 `unknown`**（**禁 `TBD` 残留**）；
  *   探针末行含 **`TBD=0`**；反例 = 任一条改回 `TBD` ⇒ 探针必 exit 1。
  *
- * 探针（判据载体）: `scripts/control-tower/probe-ontology-values.ts`（#234/#235 共写）
+ * 探针（判据载体）: `tests/support/ontology-values.ts`（#234/#235 共写）
  *   · 本件 import 其**纯函数 + 判定函数**，沙箱由 `loadEdgeFiles(dir)` 的 `dir` 入参给定（探针无模块级路径常量）。
  *
  * ═══ 口径（**必须带口径名**，两个口径不同源、不可互推）═══════════════════════════
@@ -50,7 +50,7 @@ import {
   extractAuthoritativeFormulas,
   loadEdgeFiles,
   normalizeFormula,
-} from '../../scripts/control-tower/probe-ontology-values';
+} from '../support/ontology-values';
 
 const REPO_ROOT = process.cwd();
 const REAL_EDGE_DIR = join(REPO_ROOT, EDGE_DIR_REL);

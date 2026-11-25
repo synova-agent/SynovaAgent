@@ -1,0 +1,30 @@
+{
+  "name": "determinism-demo",
+  "version": "1.0.0",
+  "type": "sentinel",
+  "displayName": "确定性契约夹具（tests/sentinel/sentinel-determinism）",
+  "description": "最小确定性哨兵：同一份内容两次走真实 loader/check 管线必须给出同一稳定投影；改 computes/score.ts 的语义常量则投影必变。仅作契约测试夹具，不是业务哨兵。",
+  "schedule": "0 9 * * *",
+  "expert": "fundamental-efficiency",
+  "priority": "P1",
+  "computes": [
+    "determinism-score"
+  ],
+  "thresholds": {},
+  "aggregation": "worst_first",
+  "context": {
+    "requiredDataSources": [
+      "sog_graph"
+    ],
+    "dataAccess": {
+      "allowedDimensions": [
+        "finance"
+      ],
+      "sensitiveAccess": "none"
+    }
+  },
+  "entryPoint": "./aggregate.ts",
+  "exportKey": "determinismDemoSentinel",
+  "layer": "technology",
+  "computeKind": "deterministic"
+}

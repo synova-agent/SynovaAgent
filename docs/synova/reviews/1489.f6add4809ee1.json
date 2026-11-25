@@ -1,0 +1,150 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1489,
+  "patch_fingerprint": "sha256:f6add4809ee18a0234bff7a033ee4e81b42fa37b77451f2dd5baacd265acb07d",
+  "author": "synova-coding@1486",
+  "reviewer": "independent-review@1489",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "recut-fidelity-15files",
+      "cmd": "git diff --stat ac92cb8d539e3559a4d82b0dd7cca5c73dbfe9a4 152bb5daf6ccc1148795d10966d27aff619d0f0c -- src tests .claude; git diff --stat 152bb5daf6ccc1148795d10966d27aff619d0f0c 25aea3638e032948b4ab757291c07d1b99556afb -- .claude/claims/1486.yaml src/agent/graph-store-service.ts src/l3/synova-diagnosis-engine-impl.ts src/l4/enterprise-scan-store.ts src/routes/dsh.ts src/runtime/dsh/session.ts src/runtime/dsh/tools.ts src/sentinel/registry.ts src/sentinel/types.ts src/server.ts tests/agent/ingest-defversion-period.test.ts tests/agent/stage2-s1-objects.test.ts tests/l4/ingest-persist-facts.test.ts tests/routes/dsh-problemid.test.ts tests/sentinel/ingest-period-passthrough.test.ts; git diff --stat ac92cb8d539e3559a4d82b0dd7cca5c73dbfe9a4 25aea3638e032948b4ab757291c07d1b99556afb -- 同上15文件",
+      "result": "pass",
+      "evidence": "三段均 EXIT=0 无输出；宽口径 ac92cb8d..25aea3638 -- src tests .claude 为 18 files/+1683/-1158，全部是 merge 带入的 main tests/** 与 .claude/claims/1478.yaml，不在本 PR 15 文件内"
+    },
+    {
+      "id": "serial-current-main",
+      "cmd": "git rev-list --count 25aea3638e032948b4ab757291c07d1b99556afb..gitea/main; git merge-base c89a82241217addc1859526b204c731f5584790e 25aea3638e032948b4ab757291c07d1b99556afb; git merge-base --is-ancestor c89a82241217addc1859526b204c731f5584790e 25aea3638e032948b4ab757291c07d1b99556afb",
+      "result": "pass",
+      "evidence": "count=0；merge-base=c89a82241217addc1859526b204c731f5584790e；is-ancestor exit=0（gitea/main=c89a82241）"
+    },
+    {
+      "id": "fingerprint",
+      "cmd": "python -c \"import subprocess,hashlib; c=['git','diff','--no-color','-M','--full-index','--binary','c89a82241217addc1859526b204c731f5584790e','25aea3638e032948b4ab757291c07d1b99556afb','--','.',':(exclude)docs/synova/reviews/**']; r=subprocess.run(c,capture_output=True); print(r.returncode, len(r.stdout), hashlib.sha256(r.stdout).hexdigest())\"",
+      "result": "pass",
+      "evidence": "NEW exit 0 bytes 89829 sha256 f6add4809ee18a0234bff7a033ee4e81b42fa37b77451f2dd5baacd265acb07d；OLD b84f8dd7173dea020532c3b8379f589ae2dd5169→ac92cb8d539e3559a4d82b0dd7cca5c73dbfe9a4 同命令 bytes 89829 同 sha；两段 diff 的 --name-status 均为同 15 文件，故指纹与 #1488 一致"
+    },
+    {
+      "id": "old-receipt-absence",
+      "cmd": "git cat-file -e 25aea3638e032948b4ab757291c07d1b99556afb:docs/synova/reviews/1488.f6add4809ee1.json; git ls-tree -r --name-only 25aea3638e032948b4ab757291c07d1b99556afb -- docs/synova/reviews; git diff --name-status 9eda56ce8 25aea3638e032948b4ab757291c07d1b99556afb -- docs/synova/reviews",
+      "result": "pass",
+      "evidence": "cat-file exit 128 fatal: path 'docs/synova/reviews/1488.f6add4809ee1.json' does not exist in '25aea3638...'；ls-tree 无 1488.*.json；diff 显示 D docs/synova/reviews/1488.f6add4809ee1.json"
+    },
+    {
+      "id": "scope-writeset",
+      "cmd": "git diff --name-status c89a82241217addc1859526b204c731f5584790e 25aea3638e032948b4ab757291c07d1b99556afb",
+      "result": "pass",
+      "evidence": "15 files: .claude/claims/1486.yaml + 9 src + 5 tests；无 scripts/**/*.ts、extensions/**、DSH 内核/版本、门禁判据、阈值变更"
+    },
+    {
+      "id": "iron-law-38",
+      "cmd": "git diff 25aea3638e032948b4ab757291c07d1b99556afb^1 25aea3638e032948b4ab757291c07d1b99556afb | Select-String -Pattern '^\\+.*\\bas (any|never|unknown as)\\b'",
+      "result": "pass",
+      "evidence": "0 命中；现存 src/server.ts:392-395 as never 不在本 PR 改动行（存量）"
+    },
+    {
+      "id": "contract-headers",
+      "cmd": "统计 graph-store-service/enterprise-scan-store/sentinel/types/sentinel/registry/l3-impl/server/routes-dsh/session/tools 的 @input/@output/@degraded/@authority/@not-here/@error",
+      "result": "pass",
+      "evidence": "graph-store 5/5/3/3/5/5；enterprise-scan 3/3/3/3/3/3；registry 2/2/2/2/3/2；l3 1/1/2/1/1/1；routes/dsh 2/2/2/2/2/2；session 2/2/2/1/2/4；tools 2/2/2/1/1/3；types.ts 字段级、server.ts 调用点（不适用六段）"
+    },
+    {
+      "id": "c-period-source",
+      "cmd": "git grep -n resolveLatestMaterialPeriod -- src; git diff 25aea3638^1 25aea3638 | Select-String -Pattern '^\\+.*now\\('",
+      "result": "pass",
+      "evidence": "l3-impl:279-285、server:279-285 两个生产调用点；新增行无 now() 代码；缺 period 不传 options；S2_DEGRADED_NO_PERIOD 仍在 registry:240-245；[行为不变] 测试通过"
+    },
+    {
+      "id": "d-problemid",
+      "cmd": "git grep -n problemId -- src/routes/dsh.ts src/runtime/dsh/session.ts src/runtime/dsh/tools.ts; git grep -n 'text: request.input' -- src/runtime/dsh/session.ts",
+      "result": "pass",
+      "evidence": "route:166-172 校验、:194-201 token、:210-219 run；session:194 事件、:300 client.prompt text=request.input；tools:174-176 ctx>args；promptTexts[0]===INPUT_TEXT 测试通过"
+    },
+    {
+      "id": "b-persist-facts",
+      "cmd": "git grep -n persistFacts -- src; node node_modules/vitest/vitest.mjs run tests/l4/ingest-persist-facts.test.ts",
+      "result": "pass",
+      "evidence": "定义仅 enterprise-scan-store.ts:311（无生产调用方，按裁定 b 留后续票）；Test Files 1 passed / Tests 5 passed；idempotency replayed=true/ids/counts；直写 scan_ontology_links 命中 'scan ontology node graph/type mismatch'"
+    },
+    {
+      "id": "typecheck",
+      "cmd": "node node_modules/typescript/bin/tsc --noEmit",
+      "result": "pass",
+      "evidence": "TSC_NEWHEAD_EXIT=0（无输出）"
+    },
+    {
+      "id": "new-tests",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/agent/ingest-defversion-period.test.ts tests/l4/ingest-persist-facts.test.ts tests/sentinel/ingest-period-passthrough.test.ts tests/routes/dsh-problemid.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 4 passed (4)；Tests 20 passed (20)；VITEST_NEWHEAD_NEW_EXIT=0"
+    },
+    {
+      "id": "regression",
+      "cmd": "node node_modules/vitest/vitest.mjs run tests/agent/stage2-s1-objects.test.ts tests/sentinel/stage2-s2-producer.test.ts tests/runtime/dsh/tools.test.ts tests/routes/dsh.test.ts；另跑 claim 8 文件",
+      "result": "pass",
+      "evidence": "第一组 Test Files 4 passed / Tests 32 passed；第二组 Test Files 8 passed / Tests 57 passed；合计 89 passed；VITEST_NEWHEAD_REG_EXIT=0 / VITEST_NEWHEAD_CLAIM8_EXIT=0"
+    },
+    {
+      "id": "architecture",
+      "cmd": "bash scripts/check-architecture.sh",
+      "result": "pass",
+      "evidence": "架构检查: 全部通过 ✅；ARCH_NEWHEAD_EXIT=0（仅存量基线 warn）"
+    },
+    {
+      "id": "test-non-shell",
+      "cmd": "grep -c 'expect(' 5 个测试文件; grep -cE '\\.skip|\\.only|expect\\(true\\)' 同上",
+      "result": "pass",
+      "evidence": "expect=25/35/22/29/50；skip=0、only=0、expect(true)=0；dsh-problemid 仅 1 处 toBeDefined 但同用例 29 个 expect"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "refs/remotes/gitea/main",
+      "what": "原 ④ warn 已解除：head 25aea3638 的 merge-base 与 gitea/main 均为 c89a82241217addc1859526b204c731f5584790e，git rev-list --count 25aea3638..gitea/main=0；merge 只带入当前 main 的 24 个非 PR 文件（tests/scripts/docs/claims），本 PR 15 文件未变。宽口径 git diff ac92cb8d..25aea3638 -- src tests .claude 非空（18 files / +1683/-1158），全部是 main 的 tests/** 与 .claude/claims/1478.yaml。"
+    },
+    {
+      "severity": "warn",
+      "where": "src/l4/enterprise-scan-store.ts:311",
+      "what": "persistFacts 无生产调用方（git grep -n persistFacts -- src 仅定义处命中）；按裁定 b 本票只提供入口，接线留给后续 ingest 票；合并后 G1 WIRE CHECK 会点名该新 export。"
+    },
+    {
+      "severity": "warn",
+      "where": "tests/l4/ingest-persist-facts.test.ts:135-152",
+      "what": "回滚用例在全文件顺序运行时不具判别力：baseFacts 对象已被前两条用例持久化，broken 批只重放对象后关系失败，未真正覆盖新建对象的回滚；隔离运行 vitest run tests/l4/ingest-persist-facts.test.ts -t '关系端点不在本批' => 1 passed，证明行为本身正确；建议改用唯一 businessKey 或独立内存库。"
+    },
+    {
+      "severity": "info",
+      "where": "src/agent/graph-store-service.ts:89",
+      "what": "resolveLatestMaterialPeriod 取该 org 全部 ② 节点 props.period 的最大值，不限定根/Team 类型；符合“来自资料”的裁定字面，但属全局口径而非根对象口径。"
+    },
+    {
+      "severity": "info",
+      "where": "src/mcp/tool-definitions.ts:207-208",
+      "what": "synova_context_get 的 MCP inputSchema 仍 required:['problemId']（不在本票写集，claim 已登记残留）；ctx 覆盖保证结果确定性，但“不必让模型猜 problemId”只完成一半，需后续票改 schema。"
+    },
+    {
+      "severity": "info",
+      "where": "src/server.ts:279-285 / src/l3/synova-diagnosis-engine-impl.ts:279-285",
+      "what": "裁定 c 的两个真实调用点无集成测；测试只覆盖 resolveLatestMaterialPeriod 与 runSentinelForTeam；server 路径受 cron/webhook 限制，l3 路径需完整诊断入口，均只做了 tsc + 代码核对。"
+    },
+    {
+      "severity": "info",
+      "where": ".claude/claims/1486.yaml",
+      "what": "claim 头部仍写 base b84f8dd71 / 分支 feat/1486-ingest-min-adapt（重切保真要求 .claude 与旧提交逐字一致，故未改）；done 写 81 passed，实测同集合 89 passed（差 8 = stage2-s2-producer 用例）；claim 说 8 个实现文件而实际 9（registry.ts 为票面“必要时”）。"
+    },
+    {
+      "severity": "info",
+      "where": "src/sentinel/registry.ts:181-196",
+      "what": "withObservationRead 只判 period 非空，不校验 YYYY-MM；非法 period 会透传到 ctx 并绑定 reader（写侧仍记既有 S2_DEGRADED_BAD_PERIOD）。生产来源 resolveLatestMaterialPeriod 已 regex 过滤，当前无生产哨兵消费该读路径，影响低；建议按 PERIOD_PATTERN 守卫。"
+    },
+    {
+      "severity": "info",
+      "where": "tests/agent/stage2-s1-objects.test.ts:169-210",
+      "what": "tests/agent/stage2-s1-objects.test.ts 的替换属「语义变更非放宽」——原「缺 defVersion ⇒ VALIDATION」与裁定 a 冲突，已替换为「伪造 period 仍 VALIDATION」＋新增「缺省 ⇒ ingest-v0」正例；理由见 PR #1488 交付回执。"
+    }
+  ],
+  "issued_at": "2026-11-25T01:03:23+08:00",
+  "tool": "pr-review@v1 (dsh/skills/pr-review/SKILL.md 五步)"
+}

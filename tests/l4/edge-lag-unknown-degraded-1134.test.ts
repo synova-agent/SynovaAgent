@@ -20,7 +20,7 @@
  *
  *   **换法（等价强度，非放宽）**：
  *     · 允许集：§3.4 六值桶标签 → **字符串形数值区间 `[min,max]`**（单源 = 探针
- *       `scripts/control-tower/probe-ontology-values.ts` 的 `isInLagDomain`，K3 R1 禁第二套口径）
+ *       `tests/support/ontology-values.ts` 的 `isInLagDomain`，K3 R1 禁第二套口径）
  *     · `unknown` 语义**不变**（显式降级标记，仍在允许集内但标记为 degraded）
  *     · 桶标签**从"允许集成员"变成"零残留断言对象"**（出现即规范违规 —— 这正是 CTO 裁定 ① 的执行体）
  *       ⇒ 覆盖面**未缩小**：旧口径放行桶标签，新口径把桶标签判违规
@@ -106,7 +106,7 @@ import {
   SPEC_EDGE_TYPES,
   formatInterval,
   isInLagDomain,
-} from '../../scripts/control-tower/probe-ontology-values';
+} from '../support/ontology-values';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 常量
@@ -223,7 +223,7 @@ const BASELINE_IN_DOMAIN = DERIVED_IN_DOMAIN;
 /**
  * 越**允许集**（既非数值区间、亦非 `unknown`）的规范违规件数 —— **棘轮**。
  * 迁移后仍 = 1：`goal_decomposition.json` 的散文值**未被本卡改动**
- * （它是非因果结构性边；改它属另案 —— 见 `scripts/control-tower/probe-ontology-values.ts`
+ * （它是非因果结构性边；改它属另案 —— 见 `tests/support/ontology-values.ts`
  * 的 `NON_CAUSAL_REGISTRY` 登记与说明）。
  * 🔴 **禁**把该件纳入豁免面来把这个数字改回 0（那是"静默放宽值域"）。
  */

@@ -1,0 +1,64 @@
+writeset:
+  - .claude/claims/1473.yaml
+  - app/js/control-tower.js
+  - docs/synova/coordination/TASK-ROUTING.md
+  - docs/synova/coordination/dsh-devdoc-draft/persona-block.yml
+  - docs/synova/coordination/dsh-devdoc-draft/preset.yml
+  - gate-exemptions/2026-11-24-1473-control-tower-bulk-retire.md
+  - scripts/check-fde-terms.sh
+  - scripts/checks/check-test-quality.sh
+  - scripts/control-tower/auto-merge.sh
+  - scripts/control-tower/check-board-metrics.ts
+  - scripts/control-tower/check-fixture-requires.sh
+  - scripts/control-tower/declare-write-set.sh
+  - scripts/control-tower/dev-doc-gatekeeper.sh
+  - scripts/control-tower/dev_doc_gatekeeper.py
+  - scripts/control-tower/fixture-requires-baseline.txt
+  - scripts/control-tower/fixtures/k12-05-behavioral.sh
+  - scripts/control-tower/gate-integrity-baseline.txt
+  - scripts/control-tower/gen-charter-grid.py
+  - scripts/control-tower/gen-plan-status.py
+  - scripts/control-tower/inject-commit-instruction.sh
+  - scripts/control-tower/ledger-sync.sh
+  - scripts/control-tower/merge-pr-queue.py
+  - scripts/control-tower/probe-evolution-writeback.ts
+  - scripts/control-tower/probe-exile-crosscheck.ts
+  - scripts/control-tower/weekly-recon.sh
+  - scripts/hooks/hook-enforce-loop.sh
+  - scripts/workflow/check-dataflow-alignment.sh
+  - scripts/workflow/check-golden-regression.sh
+  - scripts/workflow/check-self-diagnosis.sh
+  - scripts/workflow/check-spec.sh
+  - scripts/workflow/check-test-first.sh
+  - scripts/workflow/gen_impl_ch0_1.py
+  - scripts/workflow/hook-check-task-scope.sh
+  - scripts/workflow/install-post-commit.sh
+  - scripts/workflow/log-no-verify.sh
+  - scripts/workflow/run-auditor.sh
+  - tests/control-tower/auto-merge.test.sh
+  - tests/control-tower/auto_merge_mock_test.py
+  - tests/control-tower/check-dataflow-alignment.test.sh
+  - tests/control-tower/check-fixture-requires.test.sh
+  - tests/control-tower/check-test-first.test.sh
+  - tests/control-tower/declare-write-set.test.sh
+  - tests/control-tower/dev-doc-gatekeeper.test.sh
+  - tests/control-tower/gen-plan-status.test.sh
+  - tests/control-tower/hook-check-task-scope.test.sh
+  - tests/control-tower/install-post-commit.test.sh
+  - tests/control-tower/k12-05-behavioral.test.sh
+  - tests/control-tower/ledger-sync.test.sh
+  - tests/control-tower/merge-pr-queue.test.sh
+  - tests/control-tower/test-dev-doc-gatekeeper.py
+  - tests/control-tower/today-by-name.test.sh
+  - tests/control-tower/writeset-c6-gatekeeper.test.sh
+  - memory/notes/implemented/2026-11-24-1473-control-tower-bulk-retire.md
+  - tests/control-tower/signal-emitter.test.ts
+done:
+  - "verify: python3 scripts/control-tower/claim_store.py --check 1473 --root ."
+  - "verify: bash scripts/control-tower/check-gate-protection.sh --changed-base gitea/main --root ."
+  - "verify: bash scripts/control-tower/sealed-tests.sh --slack"
+  - "verify: bash tests/control-tower/check-gate-protection.test.sh"
+  - "verify: bash tests/control-tower/check-mirror-freshness.test.sh"
+  - "verify: bash scripts/pre-commit-check.sh"
+  - "verify: CI core-gates / core (pull_request_target) success"
+note: "全量成批退役：删除 43 件（25 个孤儿实现＋15 个专属测试＋1 个失效基线 fixture-requires-baseline＋2 个失效草稿预设），同批更新 gate-integrity-baseline（FACE-TOTAL 204→189／QUARANTINE 77→66）、移除看板卡与 TASK-ROUTING 失效入口；扣留清单见 PR 评论。不新增门禁/台账；代码历史由 git 保留。"

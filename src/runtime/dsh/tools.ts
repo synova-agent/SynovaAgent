@@ -28,6 +28,13 @@ export interface ToolCallContext {
   userId: string;
   scope: string;
   runId: string;
+  /**
+   * #1486 裁定 e：本轮的**显式问题根**（`businessKey` 或 `$id`），由路由 body 给定、经一次性 token
+   * 上下文注入。工具侧**优先使用**它 —— 模型工具入参里的 `problemId` 只在它缺省时兜底。
+   *
+   * @invariant 只来自服务端注入（run 入参），不接受模型自然语言/工具入参自报；缺省 = 退回既有入参形态
+   */
+  problemId?: string;
 }
 
 /** 工具入参允许的键（白名单；其余一律拒绝）。 */
@@ -141,8 +148,20 @@ function validateToolArguments(toolName: string, args: Record<string, unknown>):
  *   1. `validateToolArguments`（伪造身份/路径键、白名单）先 —— 2 实参直调也先抛 FORGED_*；
  *   2. ctx 检查后 —— 缺 ctx／token 未绑定 ⇒ `UNAUTHORIZED`（401，与 `src/mcp/http.ts` 事实一致，
  *      **不得**写成 FORGED_IDENTITY，身份不是工具入参的问题）。
- * @error FORGED_IDENTITY / FORGED_PATH / UNAUTHORIZED / VALIDATION_ERROR / FORBIDDEN /
- *        DOMAIN_EMPTY / PERSISTENCE_ERROR（后三者由 `buildContextSnapshot` 抛）
+ *
+ * #1486 裁定 e：问题根**优先取 ctx.problemId**（run 级显式入参，确定性），工具入参 `problemId`
+ * 只在 ctx 缺省时兜底（既有调用形态不回归）。
+ *
+ * 契约（铁律 47）:
+ *   @input  toolName —— 已登记工具名（当前仅 `synova_context_get`）
+ *           args —— 工具入参（白名单 `problemId`；出现身份/路径键即拒绝）
+ *           ctx —— 服务端注入的 `ToolCallContext`（含可选 run 级 `problemId`）
+ *   @output 真实领域快照 JSON 字符串（`ContextSnapshot`；`count===0` 时带 `insufficient` 字段）
+ *   @degraded 无：不吞错、不伪造空成功（`DOMAIN_EMPTY`/`PERSISTENCE_ERROR` 都是 typed error）
+ *   @authority problemId 的优先级由本函数钉死（ctx > args）；身份/租户只取 ctx，不接受入参
+ *   @not-here 不解析问题根的领域存在性（`domain-context.ts`）、不写审计、不触模型外发
+ *   @error   FORGED_IDENTITY / FORGED_PATH / UNAUTHORIZED / VALIDATION_ERROR / FORBIDDEN /
+ *            DOMAIN_EMPTY / PERSISTENCE_ERROR（后三者由 `buildContextSnapshot` 抛）
  */
 export function handleDomainToolCall(toolName: string, args: Record<string, unknown>, ctx: ToolCallContext): string {
   validateToolArguments(toolName, args);
@@ -150,7 +169,9 @@ export function handleDomainToolCall(toolName: string, args: Record<string, unkn
     throw new DshError('UNAUTHORIZED', 'tool', '缺少服务端注入的调用上下文（token 未绑定）：工具身份不接受入参', { retryable: false });
   }
   if (toolName === 'synova_context_get') {
-    const problemId = args.problemId;
+    // #1486 e：run 级显式 problemId 优先；缺省时才用模型入参（既有形态兜底）
+    const fromRunContext = ctx.problemId;
+    const problemId = typeof fromRunContext === 'string' && fromRunContext.length > 0 ? fromRunContext : args.problemId;
     if (typeof problemId !== 'string' || problemId.length === 0) {
       throw new DshError('VALIDATION_ERROR', 'tool', '缺少 problemId', { retryable: false });
     }

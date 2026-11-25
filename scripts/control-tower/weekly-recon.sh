@@ -68,7 +68,7 @@ export LC_ALL=C.UTF-8 2>/dev/null || true
 #     · 跨周：diffs=0 时只报基线里的 issue（不写卡）⇒ 新周节只在当周首跑**有差异**时追加；
 #       整周零差异则正文不新增周节（防空转更新）。
 #     · label：按名称「域/治理」解析 id（禁硬编码 id）；取不到 ⇒ 无 label 开卡 ＋ stderr 提示。
-#     · 不重算卡完成率（五指标不含卡口径；卡口径归 scripts/control-tower/check-board-metrics.ts）。
+#     · 不重算卡完成率（五指标不含卡口径；check-board-metrics.ts 已随 #1473 退役）。
 #     · 本脚本只产信号/证据，不判「通过」（结论归 L1 收件闸 + 独立复核）。
 #   复用（禁重复实现）:
 #     · 模块计数 = import `scripts/control-tower/asset-sync.py` 的 load_map/classify（本文件无第二份 MAP 解析）

@@ -61,6 +61,79 @@ interface RunRow {
 interface LinkRow { object_id: string }
 interface ReportRow { report_json: string; visibility_fingerprint: string }
 
+// ═══ #1486 裁定 b：通用事实持久化入口的输入/输出形状 ═══
+//
+// 为什么另立形状而不复用 `OntologyObjectDraft/OntologyRelationDraft`：
+// 扫描模型把对象钉死在 3 类对象/1 类关系（`connectors/enterprise-scan/types.ts:78,86`），
+// 而 ingest 抽到的事实类型由其本体映射决定 ⇒ 通用入口只约束**形状**，类型由调用方（资料）给出。
+// ⚠️ 形状 ≠ 放宽不变量：键（graph/type/businessKey）仍强校验，落库仍走 ② 唯一 writer + 006 触发器。
+
+/** 一条待落库的 ② 对象事实（#1486 裁定 b）。 */
+export interface ScanFactObjectDraft {
+  /** ② 对象类型（非空字符串；SOG 未覆盖类型按既有「放行 + 可见降级」处理，不阻断） */
+  type: string;
+  /** 业务键（非空；由本入口写入 `props.businessKey`，并登记 `scan_ontology_links` 幂等键） */
+  businessKey: string;
+  /** 对象属性（纯对象；`period` 等业务事实必须由调用方从资料给出 —— 本入口不派生、不补默认） */
+  props: Record<string, unknown>;
+  /** 生效起点（可选；缺省 = 注入时钟的当前 ISO 时间） */
+  validFrom?: string;
+}
+
+/** 一条待落库的 ② 关系事实（端点必须在**同一次** `persistFacts` 的对象集合内）。 */
+export interface ScanFactRelationDraft {
+  /** 关系谓词（非空字符串，如 `edge/team_executes_activity`） */
+  type: string;
+  /** 关系业务键（非空；登记 `scan_ontology_links` 幂等键） */
+  businessKey: string;
+  /** 起点对象的业务键（必须在本批 `objects` 内命中） */
+  fromBusinessKey: string;
+  /** 终点对象的业务键（同上） */
+  toBusinessKey: string;
+  /** 边属性（可选） */
+  props?: Record<string, unknown>;
+  /** 生效起点（可选；缺省 = 注入时钟的当前 ISO 时间） */
+  validFrom?: string;
+}
+
+/** `persistFacts` 入参。 */
+export interface PersistFactsInput {
+  /** 企业图分区（非空字符串；由服务端决定，不接受客户端自报） */
+  graph: string;
+  /** 本批对象事实（按数组顺序写入；同批业务键必须唯一） */
+  objects: readonly ScanFactObjectDraft[];
+  /** 本批关系事实（可选；端点按 `objects` 的业务键解析） */
+  relations?: readonly ScanFactRelationDraft[];
+}
+
+/** 单条已落库事实的回执（幂等重放时 `replayed=true` 且 `objectId` 为既有 id）。 */
+export interface PersistedFact {
+  kind: 'node' | 'edge';
+  type: string;
+  businessKey: string;
+  /** ② 节点 id（`node-<uuid>`）或边 id（`edge-<uuid>`） */
+  objectId: string;
+  /** true = 该 (graph, kind, type, businessKey) 已存在 ⇒ 复用既有 id（不新建、不改属性） */
+  replayed: boolean;
+}
+
+/** `persistFacts` 出参（逐条回执，顺序与入参一致：先 objects 后 relations）。 */
+export interface PersistedFacts {
+  facts: PersistedFact[];
+}
+
+/** 入参违约的 typed error（机器可读 code：`VALIDATION_ERROR`）。 */
+function factValidation(message: string): EnterpriseScanError {
+  return new EnterpriseScanError('VALIDATION_ERROR', 'request', message);
+}
+
+/** 诊断用：字符串带引号，其余只报类别（不遍历对象） */
+function describeFactValue(value: unknown): string {
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (value === null) return 'null';
+  return typeof value;
+}
+
 function stringArray(value: string): string[] | null {
   try {
     const parsed: unknown = JSON.parse(value);
@@ -207,6 +280,120 @@ export class EnterpriseScanStore implements EnterpriseScanStorePort {
         const report = this.writeReport(input.record, input.viewer, input.visibilityFingerprint, input.model, objectIds, relationIds);
         for (const preflight of input.preflights) recheckAuthorizedSource(preflight);
         return { record: input.record, report, replayed: false };
+      })();
+    } catch (error) {
+      throw asEnterpriseScanError(error, 'TRANSACTION_ABORTED');
+    }
+  }
+
+  /**
+   * persistFacts — **通用事实持久化入口**（#1486 裁定 b；来自 ingest 的自动抽取结果必须经此入口）。
+   *
+   * 为什么必须有它：脚本直写 `scan_*` 会绕开 ② writer 与 006 触发器（`scan_ontology_links` 的
+   * node/edge graph·type 一致性、`scan_assertions` 的目标外键），等于造第二条影子链。
+   *
+   * 契约（铁律 47）:
+   *   @input  input.graph —— 企业图分区（非空字符串；服务端决定）
+   *           input.objects —— 对象事实（type/businessKey 非空、props 纯对象；同批业务键唯一）
+   *           input.relations —— 关系事实（端点按本批 `objects` 的 businessKey 解析）
+   *   @output 逐条回执（先 objects 后 relations）：`{kind,type,businessKey,objectId,replayed}`；
+   *           幂等重放 ⇒ `replayed=true` 且 `objectId` 为既有 id（不新建、不改属性）
+   *   @degraded 无：单事务严格写入；任一步失败整体回滚（不留半批），不静默跳过、不伪造成功
+   *   @authority ② 节点/边只经既有 writer（`SqliteGraphStore.createNode/createEdge`）写入；
+   *              `scan_ontology_links` 的 graph/type 一致性由 **006 触发器**校验（本入口不绕过）；
+   *              幂等键 = `(graph, kind, type, businessKey)`（与 `findLink` 同形）；`props.businessKey` 由本入口统一写入
+   *   @not-here 不解析文件、不计算业务值、不写 `scan_runs/scan_reports/scan_assertions`；
+   *             不派生/补全 `period`、`defVersion`（业务事实由调用方从资料给出）
+   *   @error  `EnterpriseScanError(VALIDATION_ERROR, phase=request)` —— 入参违约（**校验先于写入** ⇒ 零写入）；
+   *           `EnterpriseScanError(SCHEMA_MAPPING_FAILED, phase=mapping)` —— SOG schema 硬校验失败 / 关系端点缺失；
+   *           `EnterpriseScanError(TRANSACTION_ABORTED, phase=transaction)` —— 介质/约束失败（含触发器拒绝）
+   */
+  persistFacts(input: PersistFactsInput): PersistedFacts {
+    try {
+      return this.db.transaction((): PersistedFacts => {
+        if (typeof input.graph !== 'string' || input.graph === '') {
+          throw factValidation(`input.graph 必须是非空字符串（实得 ${describeFactValue(input.graph)}）`);
+        }
+        if (!Array.isArray(input.objects)) {
+          throw factValidation('input.objects 必须是数组');
+        }
+        const facts: PersistedFact[] = [];
+        /** `linkKey(node,type,businessKey)` → 节点 id（关系端点的第一解析源） */
+        const objectIds = new Map<string, string>();
+        /** businessKey → 节点 id（同批业务键必须唯一，否则关系端点无法无歧义解析） */
+        const byBusinessKey = new Map<string, string>();
+
+        for (const object of input.objects) {
+          if (typeof object.type !== 'string' || object.type === '') {
+            throw factValidation(`对象 type 必须是非空字符串（实得 ${describeFactValue(object.type)}）`);
+          }
+          if (typeof object.businessKey !== 'string' || object.businessKey === '') {
+            throw factValidation(`对象 businessKey 必须是非空字符串（实得 ${describeFactValue(object.businessKey)}）`);
+          }
+          if (typeof object.props !== 'object' || object.props === null || Array.isArray(object.props)) {
+            throw factValidation(`对象 props 必须是普通对象（businessKey=${object.businessKey}）`);
+          }
+          const key = this.linkKey('node', object.type, object.businessKey);
+          if (objectIds.has(key) || byBusinessKey.has(object.businessKey)) {
+            throw factValidation(`同批业务键重复: ${object.businessKey}`);
+          }
+
+          // ② 唯一 writer + 既有幂等链接：命中 ⇒ 复用（不新建、不改属性）
+          let objectId = this.findLink(input.graph, 'node', object.type, object.businessKey);
+          const replayed = objectId !== null;
+          if (objectId === null) {
+            const props: Record<string, unknown> = { ...object.props, businessKey: object.businessKey };
+            if (!validateAndLog(object.type, props)) {
+              throw new EnterpriseScanError('SCHEMA_MAPPING_FAILED', 'mapping', `②Schema 校验失败: ${object.businessKey}`);
+            }
+            objectId = this.graphStore.createNode(object.type, props, input.graph);
+            this.db.prepare('UPDATE graph_nodes SET valid_from = ? WHERE id = ? AND graph = ?')
+              .run(object.validFrom ?? this.clock.nowIso(), objectId, input.graph);
+            // 006 触发器 `scan_ontology_links_node_insert` 校验 graph_nodes 行存在且 graph/type 一致
+            this.db.prepare(
+              'INSERT INTO scan_ontology_links(graph, subject_kind, type, business_key, object_id) VALUES (?, ?, ?, ?, ?)',
+            ).run(input.graph, 'node', object.type, object.businessKey, objectId);
+          }
+          objectIds.set(key, objectId);
+          byBusinessKey.set(object.businessKey, objectId);
+          facts.push({ kind: 'node', type: object.type, businessKey: object.businessKey, objectId, replayed });
+        }
+
+        for (const relation of input.relations ?? []) {
+          if (typeof relation.type !== 'string' || relation.type === '') {
+            throw factValidation(`关系 type 必须是非空字符串（实得 ${describeFactValue(relation.type)}）`);
+          }
+          if (typeof relation.businessKey !== 'string' || relation.businessKey === '') {
+            throw factValidation(`关系 businessKey 必须是非空字符串（实得 ${describeFactValue(relation.businessKey)}）`);
+          }
+          const from = byBusinessKey.get(relation.fromBusinessKey);
+          const to = byBusinessKey.get(relation.toBusinessKey);
+          if (from === undefined || to === undefined) {
+            const missing: string[] = [];
+            if (from === undefined) missing.push(`fromBusinessKey=${relation.fromBusinessKey}`);
+            if (to === undefined) missing.push(`toBusinessKey=${relation.toBusinessKey}`);
+            throw new EnterpriseScanError(
+              'SCHEMA_MAPPING_FAILED',
+              'mapping',
+              `关系端点不在本批对象内: ${missing.join('; ')}`,
+            );
+          }
+
+          let edgeId = this.findLink(input.graph, 'edge', relation.type, relation.businessKey);
+          const replayed = edgeId !== null;
+          if (edgeId === null) {
+            edgeId = this.graphStore.createEdge(relation.type, from, to, 1, relation.props ?? {}, input.graph);
+            this.db.prepare('UPDATE graph_triples SET valid_from = ? WHERE id = ? AND graph = ?')
+              .run(relation.validFrom ?? this.clock.nowIso(), edgeId, input.graph);
+            // 006 触发器 `scan_ontology_links_edge_insert` 校验 graph_triples 行存在且 graph/predicate 一致
+            this.db.prepare(
+              'INSERT INTO scan_ontology_links(graph, subject_kind, type, business_key, object_id) VALUES (?, ?, ?, ?, ?)',
+            ).run(input.graph, 'edge', relation.type, relation.businessKey, edgeId);
+          }
+          facts.push({ kind: 'edge', type: relation.type, businessKey: relation.businessKey, objectId: edgeId, replayed });
+        }
+
+        return { facts };
       })();
     } catch (error) {
       throw asEnterpriseScanError(error, 'TRANSACTION_ABORTED');

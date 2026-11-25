@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # pre-commit 硬阻断: 测试质量检查
 #
-# 不检查"有没有测试文件" (check-test-first.sh 已做),
+# 不检查"有没有测试文件"（check-test-first.sh 已随 #1473 退役；该职责不再由本脚本代查）
 # 检查"测试质量" — 新增 export 是否在测试中有实际断言。
 #
 # 挂在: pre-commit (物理阻断 — 新 export 无 assert/expect 不准提交)
@@ -46,7 +46,7 @@ while IFS= read -r impl; do
   # 找到对应的测试文件
   test_file=$(echo "$impl" | sed 's|^src/|tests/|; s|\.ts$|.test.ts|')
   if [ ! -f "$test_file" ]; then
-    # 测试文件不存在 — check-test-first.sh 会处理
+    # 测试文件不存在 — check-test-first.sh 已随 #1473 退役，不再兜底
     continue
   fi
 

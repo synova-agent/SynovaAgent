@@ -13,6 +13,7 @@ import type Database from 'better-sqlite3';
 import { randomUUID } from 'crypto';
 import { writeRoundReadings } from './metric-readings-writer';
 import { writeMetricObservation } from './metric-observations-writer';
+import { getMetricObservation } from './metric-observations-reader';
 import { resolveOrCreate } from '../agent/graph-store-service';
 const log = createLogger('sentinel/registry');
 
@@ -120,6 +121,18 @@ export class SentinelRegistryImpl implements SentinelRegistry {
    * #1431 S2：可选 `observation` 给出 period/objectKey/db 时，**追加**一轮 ④a 写入
    * （新表 `metric_observations`，`object_id` 指向 `resolveOrCreate` 得到的真实 ② 节点）；
    * 缺任一项 ⇒ 该轮**不写 ④a** + `log.warn`（降级码见 `SentinelRoundObservationOptions`）。
+   * #1486 裁定 c：给了 `period` ⇒ 把 period 透传进 `SentinelContext`，并在 db/teamId 齐备时
+   * 用现成 reader 绑定 `ctx.metricObservations`（哨兵可读本企业本期真实行）；**缺 period ⇒ 上下文与改动前逐字段相同**。
+   *
+   * 契约（铁律 47；#1486 裁定 c 只补读路径与透传，不改阈值判据/降级码）:
+   *   @input  context —— 运行上下文（`db`/`now`/`teamId`/`metricSink` 等，语义不变）
+   *           observation —— 轮次 ④a 选项（period/objectKey/db；可缺省）
+   *   @output 合并后的 findings（每哨兵独立 try/catch；单哨兵失败不中断整轮）
+   *   @degraded 既有降级码集合不变：缺 period/objectKey/org/db、period 形态非法、④a 写入失败均按原码 `log.warn`；
+   *             本函数**不新增降级码**
+   *   @authority ④a 读路径的 orgId/period 在注入处闭包锁定（不接受哨兵入参自报）；写侧仍走既有 `writeMetricObservation`
+   *   @not-here 不派生 period（禁 `now()`）、不改哨兵阈值判据、不改旧链 `metric_readings`
+   *   @error  不向调用方抛：单哨兵异常记 `log.warn` 后继续（既有语义）
    */
   async runAll(
     context: SentinelContext,
@@ -127,9 +140,10 @@ export class SentinelRegistryImpl implements SentinelRegistry {
   ): Promise<SentinelFinding[]> {
     const all: SentinelFinding[] = [];
     const observationTarget = resolveRoundObservationTarget(context, observation);
+    const effectiveContext = withObservationRead(context, observation);
     for (const s of this.sentinels.values()) {
       try {
-        const result = await s.check(context);
+        const result = await s.check(effectiveContext);
         // #1054（2-1b）轮次级写入（覆盖面 = 其余 44 哨兵；sink 未注入 ⇒ no-op）—— 旧链，零改动
         writeRoundReadings(context.metricSink, s.config.id, result, context.teamId);
         // #1431 S2：④a 轮次级写入（新表；缺 period/objectKey/db ⇒ 本轮已降级，target 为 null）
@@ -142,6 +156,43 @@ export class SentinelRegistryImpl implements SentinelRegistry {
     if (all.length > 0) log.info({ findings: all.length }, '哨兵运行完成');
     return all;
   }
+}
+
+// ═══ #1486 裁定 c：④a 周期透传 ＋ 读路径（复用现成 reader）═══
+
+/**
+ * withObservationRead — 把本轮 period 透传进上下文，并在条件齐备时用**现成 reader** 绑定 ④a 读路径。
+ *
+ * 契约（铁律 47）:
+ *   @input  context —— 调用方构造的哨兵上下文（本函数不修改原对象）
+ *           observation —— 轮次 ④a 选项（period/objectKey/db）
+ *   @output 新上下文对象：给了 period ⇒ `period` 字段就位；period + `db` + 非空 `teamId` 三者齐备
+ *           ⇒ 再绑定 `metricObservations.get(objectId, metricId)`（orgId/period 闭包锁定）；
+ *           **缺 period ⇒ 原样返回入参对象**（既有行为逐字段不变）
+ *   @degraded 无：本函数不抛、不吞；缺条件时只是"不注入"（哨兵据此自行显式降级）
+ *   @authority tenant 与 period 由注入方锁定，哨兵无法通过入参跨租户/跨周期读
+ *   @not-here 不写 ④a、不派生 period（来源 = ② 资料，见 `agent/graph-store-service.resolveLatestMaterialPeriod`）
+ *   @error 无（本函数不抛；reader 的 `MetricObservationError` 由哨兵调用点处理）
+ */
+function withObservationRead(
+  context: SentinelContext,
+  observation: SentinelRoundObservationOptions | undefined,
+): SentinelContext {
+  const period = observation?.period;
+  if (typeof period !== 'string' || period === '') return context;
+  const db = observation?.db;
+  const orgId = context.teamId;
+  if (db === undefined || typeof orgId !== 'string' || orgId === '') {
+    // 只有 period：透传周期即可（读路径缺库/租户 ⇒ 不注入，哨兵显式降级）
+    return { ...context, period };
+  }
+  return {
+    ...context,
+    period,
+    metricObservations: {
+      get: (objectId: string, metricId: string) => getMetricObservation(db, { orgId, objectId, metricId, period }),
+    },
+  };
 }
 
 // ═══ #1431 阶段 2 · S2：轮次级 ④a 写入（新表 metric_observations）═══
