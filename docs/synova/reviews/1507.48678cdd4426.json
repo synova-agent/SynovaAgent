@@ -1,0 +1,75 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1507,
+  "patch_fingerprint": "sha256:48678cdd44264ef862dba66e5a2f65f1937bf9e80bfcef9347dacb22b255714d",
+  "author": "编码会话（feat/1502-run-status-bits，#1502 运行状态位；git author probe <probe@local>）",
+  "reviewer": "r1-reviewer@subagent",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "base_reviewed": "4d2ea347a4dafd857f81237de2f77d50f6ad4dd4",
+  "head_reviewed": "0dd05e5f444e156cdf89b056b4e67e9d0a4e822c",
+  "issued_at": "2026-11-25T21:30:01+08:00",
+  "tool": "r1-reviewer（零上下文只读复核：read/git diff/grep + Node24 复跑 tsc/vitest + sha256 指纹两次复算；未参与实现、未改任何产品代码/测试）",
+  "checks": [
+    {
+      "id": "1-判定表九条与优先级",
+      "cmd": "read src/runtime/dsh/session.ts:168-221（deriveRunStatuses/deriveTransportStatus/deriveOutcomeStatus）；read tests/runtime/dsh/run-status.test.ts:27-250",
+      "result": "pass",
+      "evidence": "代码判定顺序逐条对齐票面：①failed（stopReason=refusal／run.failed 且无产物／toolFailures>0 且无产物）→②partial（toolFailures>0 且有产物／run.failed 且有产物／run.cancelled 且有产物）→③insufficient_data（contextEmpty 或 hypothesis=structured 且非 contextPositive）→④invalid_output（hypothesis=invalid 且有文本）→⑤no_output（无文本无工具产物）→⑥success（仅 hypothesis=structured && domainContextCount>0）。关键两条已核：`toolFailures>0 && hasProduct ⇒ partial`（session.ts:201）与 `domainContextCount===0 ⇒ insufficient_data`（:192,:207，先于 :217 success）。用例逐条覆盖并实跑全绿（含 failed>insufficient_data、partial>insufficient_data、insufficient_data>invalid_output、insufficient_data>success、invalid_output>success、no_output>success 六条优先级断言）。"
+    },
+    {
+      "id": "2-禁止默认 success",
+      "cmd": "grep -n 'transportStatus|outcomeStatus' src/runtime/dsh/session.ts；read session.ts:326-340（run 初始化）、:526-608（三条终态路径＋applyTerminalStatus）",
+      "result": "pass",
+      "evidence": "唯一 success 路径＝session.ts:217 `hypothesis==='structured' && contextPositive`（domainContextCount!=null && >0）；:220 兜底恒 partial，注释与实现一致「绝不判 success」。运行期记录初始 `transportStatus:'running'`、`outcomeStatus:null`（:337-338，不预填 success）；三条终态（run.completed/run.failed/run.cancelled）都经 applyTerminalStatus 一次性判定后写回记录并展开进事件载荷（:544-555,:561-567,:576-582），事件与记录同源不各自重算。上下文未观察（count=null）⇒ insufficient_data（用例 :202-206 断言 not.toBe('success')）。"
+    },
+    {
+      "id": "3-tsc",
+      "cmd": "cd .synova-wt-1502 && npx tsc --noEmit; echo $?",
+      "result": "pass",
+      "evidence": "TSC_EXIT=0，零错误输出（Node v24.16.0）。"
+    },
+    {
+      "id": "4-vitest（tests/runtime/dsh 全量）",
+      "cmd": "npx vitest run tests/runtime/dsh",
+      "result": "pass",
+      "evidence": "Test Files 26 passed (26)｜Tests 208 passed (208)｜0 skipped｜exit 0（含新增 run-status.test.ts 250 行纯函数判定表、run-status-session.test.ts 354 行真实 RunManager、run-status-route.integration.test.ts 260 行真实路由/SSE 三处一致性：SSE 终态帧 / 查询快照 / run 记录逐字相等，success 轮、工具失败无产物=failed、取消=cancelled 且非 success）。"
+    },
+    {
+      "id": "5-stopReason/stats/empty 兼容未删",
+      "cmd": "git -C <wt> diff --no-color --unified=0 4d2ea347a..0dd05e5f4 -- src/runtime/dsh/session.ts（取删除行）；read session.ts:539-584",
+      "result": "pass",
+      "evidence": "删除行仅 3 类：emitHypothesis 返回 void→枚举、run.cancelled 载荷 `{reason}`→`{reason,...bits}`、run.failed 载荷 `{...error.toPayload()}`→`{...error.toPayload(),...bits}`（均为追加，原字段保留）。run.completed 载荷仍含 `stopReason`、`stats`、`empty`（session.ts:550-555，仅追加 ...bits）；tool.finished 仍发 toolCallId/status/isError（:650-654）。RunStats 接口未改；tool.finished 的 isError 判据由 payload.status 改为先 readString 再比较，语义等价。"
+    },
+    {
+      "id": "6-写集边界与编码（无越界/无乱码）",
+      "cmd": "git -C <wt> diff --name-status 4d2ea347a..0dd05e5f4；node fs.readFileSync(f,'utf8') 统计 U+FFFD/冲突标记/CRLF",
+      "result": "pass",
+      "evidence": "恰 7 文件：.claude/claims/1502.yaml、src/routes/dsh.ts、src/runtime/dsh/events.ts、src/runtime/dsh/session.ts、tests/runtime/dsh/run-status-route.integration.test.ts、run-status-session.test.ts、run-status.test.ts；无 scripts/audit/**、无门禁脚本、无 renderer/store/adapters/迁移。7 文件全部 U+FFFD=0、conflictMarkers=0、CRLF=0（LF）。新增行 `as any`/`as never`/`as unknown as` 扫描 0 命中。"
+    },
+    {
+      "id": "7-指纹与合并态",
+      "cmd": "git -C <wt> -c core.quotepath=false diff --no-color -M --full-index --binary <mb>..<head> -- . ':(exclude)docs/synova/reviews/**' --output=<tmp>；Get-FileHash SHA256；重跑两次",
+      "result": "pass",
+      "evidence": "两次复算一致：SHA256=48678CDD44264EF862DBA66E5A2F65F1937BF9E80BFCEF9347DACB22B255714D（65531 B）⇒ fp12=48678cdd4426。合并态：git rev-list --count HEAD..gitea/main = 0；merge-base(gitea/main, HEAD)=4d2ea347a4dafd857f81237de2f77d50f6ad4dd4；工作树 clean。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "src/runtime/dsh/session.ts:712-716（isDomainContextToolTitle）",
+      "what": "domainContextCount 只从工具标题含 `synova_context_get`／`contextget` 的领域工具结果解析（且快照须 synthetic===false + 数值 count + items 数组）；标题改名/包装 ⇒ 按「未观察」处理 ⇒ insufficient_data（fail-closed，不会误判 success）。属设计选择，非阻断；若后续工具改名需同步本判据。"
+    },
+    {
+      "severity": "info",
+      "where": "src/runtime/dsh/events.ts:33-67 与 session.ts:139-145",
+      "what": "transportStatus 的 disconnected 码表固定 5 个（RUN_TIMEOUT/SIDECAR_SESSION_LOST/SIDECAR_NOT_RUNNING/SIDECAR_SPAWN_FAILED/SIDECAR_START_TIMEOUT），其余失败（如 SIDECAR_PROTOCOL_ERROR）按 stream_ended；用例已覆盖两态。新增码需另卡登记码表，非本 PR 缺陷。"
+    },
+    {
+      "severity": "info",
+      "where": "src/routes/dsh.ts:255-268,341-352",
+      "what": "POST/GET 响应追加 transportStatus/outcomeStatus 为纯增量字段；运行中 outcomeStatus=null（'暂无法判定'），终态与 SSE 载荷同源（applyTerminalStatus 一次判定），无第二套推导。"
+    }
+  ],
+  "reviewer_note": "零上下文独立只读复核：锚定 PR 1507 / base=merge-base(gitea/main, HEAD)=4d2ea347a / head=0dd05e5f4。六条必核逐条给命令与原始输出：判定表九条与优先级链、唯一 success 路径（structured + count>0）、tsc exit 0、tests/runtime/dsh 26 文件/208 用例全绿、stopReason/stats/empty 兼容保留、写集 7 文件无越界且无乱码。指纹按指定算法两次复算一致（48678cdd4426）。未改任何产品代码/测试，未 merge。verdict=PASS 仅针对本 PR 写集与上述判据，不代表对产品方向或门禁标准的裁定。"
+}
