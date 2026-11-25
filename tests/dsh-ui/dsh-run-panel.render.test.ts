@@ -57,11 +57,11 @@ function toolEvent(seq: number, overrides: Record<string, unknown> = {}): DshRun
 describe('#1429 DshRunPanel 认证态与输入（受控、无 hook）', () => {
   it('DevMode 文案可见；含输入框 id=dsh-run-input 与提交按钮 id=dsh-run-submit', () => {
     const html = render({ auth: 'devmode' });
-    expect(html).toContain('开发模式');
+    expect(html).toContain('演示模式');
     expect(html).toContain('id="dsh-run-input"');
     expect(html).toContain('<textarea');
     expect(html).toContain('id="dsh-run-submit"');
-    expect(html).toContain('发起会话');
+    expect(html).toContain('开始本次分析');
   });
 
   it('未登录：显示「未登录」，提交按钮 disabled（无 token 不可发起）', () => {
@@ -84,8 +84,8 @@ describe('#1429 DshRunPanel 认证态与输入（受控、无 hook）', () => {
   });
 });
 
-describe('#1429 DshRunPanel 事件与工具轨迹（只显示 title/kind/status）', () => {
-  it('文本增量与工具行按序渲染；工具只出现标题/类型/状态/失败标记', () => {
+describe('#1429 DshRunPanel 事件与工具轨迹（客户面只显示核对数据/状态，原始值进技术详情）', () => {
+  it('文本增量与工具行按序渲染；工具行客户面见核对数据/状态，原名与类型进技术详情', () => {
     const html = render({
       auth: 'authenticated', status: 'running', runId: 'run_abc12345', sessionId: 'sess_abc12345',
       events: [
@@ -95,6 +95,11 @@ describe('#1429 DshRunPanel 事件与工具轨迹（只显示 title/kind/status�
       ],
     });
     expect(html).toContain('已读取清单');
+    // 客户面：统一说法 + 中文状态
+    expect(html).toContain('核对数据');
+    expect(html).toContain('待处理');
+    expect(html).toContain('失败');
+    // 原始值仍不丢：工具原名/类型/状态原文进技术详情（默认收起）
     expect(html).toContain('读取清单');
     expect(html).toContain('read');
     expect(html).toContain('pending');
@@ -117,11 +122,11 @@ describe('#1429 DshRunPanel 事件与工具轨迹（只显示 title/kind/status�
     expect(buttonTag(render({ auth: 'authenticated', status: 'running', cancelPending: true }), 'dsh-run-cancel')).toContain('disabled');
   });
 
-  it('有 sessionId 时可见关闭按钮；关闭成功后显示「会话已关闭」', () => {
+  it('有 sessionId 时可见关闭按钮；关闭成功后显示「本次分析已结束」', () => {
     const open = render({ auth: 'authenticated', status: 'running', sessionId: 'sess_abc12345' });
     expect(open).toContain('id="dsh-run-close"');
     const closed = render({ auth: 'authenticated', status: 'done', sessionId: 'sess_abc12345', sessionClosed: true });
-    expect(closed).toContain('会话已关闭');
+    expect(closed).toContain('本次分析已结束');
     expect(closed).not.toContain('id="dsh-run-close"');
   });
 });
@@ -129,11 +134,11 @@ describe('#1429 DshRunPanel 事件与工具轨迹（只显示 title/kind/status�
 describe('#1429 DshRunPanel 失败可见（无空成功）', () => {
   it.each([
     { httpStatus: 401, status: 'expired' as const, expected: '请重新登录' },
-    { httpStatus: 403, status: 'failed' as const, expected: '无权访问' },
-    { httpStatus: 404, status: 'failed' as const, expected: '运行不存在' },
-    { httpStatus: 409, status: 'failed' as const, expected: '状态冲突' },
-    { httpStatus: 500, status: 'failed' as const, expected: '服务端错误' },
-    { httpStatus: null, status: 'failed' as const, expected: '网络或服务异常' },
+    { httpStatus: 403, status: 'failed' as const, expected: '当前账号无权查看这项内容' },
+    { httpStatus: 404, status: 'failed' as const, expected: '这条记录已不存在' },
+    { httpStatus: 409, status: 'failed' as const, expected: '状态已变化，请刷新后重试' },
+    { httpStatus: 500, status: 'failed' as const, expected: '服务暂时不可用' },
+    { httpStatus: null, status: 'failed' as const, expected: '服务暂时不可用' },
   ])('HTTP $httpStatus ⇒ $expected（状态 $status）', ({ httpStatus, status, expected }) => {
     const html = render({
       auth: status === 'expired' ? 'expired' : 'authenticated',

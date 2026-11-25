@@ -148,7 +148,7 @@ describe('#1459 T-B 白名单：hypothesis.structured 进 events 且四要素非
     expect(item.hypothesis.uncertainty.length).toBeGreaterThan(0);
   });
 
-  it('渲染：四要素各自成段可见，标题为「瓶颈假设」，依据标「可回来源」', async () => {
+  it('渲染：四要素各自成段可见，标题为「瓶颈假设」，依据标「依据」', async () => {
     const h = await running();
     h.emit({ seq: 1, type: 'hypothesis.structured', data: structuredData() });
 
@@ -160,8 +160,8 @@ describe('#1459 T-B 白名单：hypothesis.structured 进 events 且四要素非
     }
     expect(html).toContain('对象');
     expect(html).toContain('关系');
-    expect(html).toContain('依据（可回来源）');
-    expect(html).toContain('不确定性');
+    expect(html).toContain('依据');
+    expect(html).toContain('还不确定的部分');
     // 取值原样可见（依据可回来源 ⇒ source_ref 必须渲染出来）
     expect(html).toContain('team:delivery-a');
     expect(html).toContain('delivery_batch:B-2026-10-001');
@@ -358,7 +358,7 @@ describe('#1459 T-B 断开重连后结构化假设仍在（验收第三条）', 
     const html = renderStoreEvents(h.store);
     expect(html).toContain('瓶颈假设');
     expect(html).toContain('delivery_batches.csv#L2');
-    expect(html).toContain('不确定性');
+    expect(html).toContain('还不确定的部分');
   });
 
   it('重连后仍可判终态：run.completed ⇒ done，假设仍在', async () => {

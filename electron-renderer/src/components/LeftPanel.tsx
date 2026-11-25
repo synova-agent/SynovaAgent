@@ -85,7 +85,8 @@ const LeftPanel: React.FC = () => {
         }
         setConversations(sessions.map((s) => ({
           id: typeof s.id === 'string' ? s.id : '',
-          title: typeof s.title === 'string' && s.title.length > 0 ? s.title : `会话 ${typeof s.id === 'string' ? s.id.slice(-6) : ''}`,
+          // B3：没有名称时不印 id 尾号（词典 §2.7-K 兜底「未命名的业务对象」）
+          title: typeof s.title === 'string' && s.title.length > 0 ? s.title : '未命名的业务对象',
           preview: typeof s.phase === 'number' ? `阶段 ${s.phase}` : '',
           updatedAt: typeof s.updatedAt === 'string' ? s.updatedAt : '',
         })).filter((c) => c.id !== ''));
@@ -207,7 +208,7 @@ const LeftPanel: React.FC = () => {
                   className={`cap-item${active ? ' active' : ''}${disabled ? ' disabled' : ''}`}
                   onClick={() => handleCapClick(cap)}
                   aria-disabled={disabled}
-                  title={disabled ? '仅 GA 可用' : capabilityLabel(cap)}
+                  title={disabled ? '仅顾问可用' : capabilityLabel(cap)}
                 >
                   <span className="cap-ico"><Icon size={16} strokeWidth={2} /></span>
                   <span className="cap-label">{capabilityLabel(cap)}</span>
@@ -226,11 +227,11 @@ const LeftPanel: React.FC = () => {
             <div className="cap-section-title">导航</div>
             <button className="cap-item" data-cap="nav-scan" onClick={() => setActiveView('scan')}>
               <span className="cap-ico"><Building2 size={16} strokeWidth={2} /></span>
-              <span className="cap-label">企业扫描</span>
+              <span className="cap-label">数据核对</span>
             </button>
             <button className="cap-item" data-cap="nav-dsh" onClick={() => setActiveView('dsh')}>
               <span className="cap-ico"><Terminal size={16} strokeWidth={2} /></span>
-              <span className="cap-label">DSH 会话</span>
+              <span className="cap-label">本次分析</span>
             </button>
             <button className="cap-item" data-cap="nav-conv" onClick={() => { setActiveSection('conversations'); setActiveView('chat'); }}>
               <span className="cap-ico"><MessageSquare size={16} strokeWidth={2} /></span>

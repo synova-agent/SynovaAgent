@@ -296,15 +296,15 @@ export function buildCalibrationRequest(
 ): { ok: true; body: GaCalibrationRequestBody } | { ok: false; error: string } {
   const targetType = input.targetType;
   if (typeof targetType !== 'string' || !(GA_TARGET_TYPES as readonly string[]).includes(targetType)) {
-    return { ok: false, error: `targetType 必须是: ${GA_TARGET_TYPES.join(', ')}` };
+    return { ok: false, error: '请选择诊断对象类型（诊断结论／诊断逻辑／预警信号）' };
   }
   const targetId = input.targetId;
   if (typeof targetId !== 'string' || targetId.trim().length === 0) {
-    return { ok: false, error: 'targetId 必填（诊断结论/逻辑/信号的 ID）' };
+    return { ok: false, error: '请填写目标编号' };
   }
   const action = input.action;
   if (typeof action !== 'string' || !(GA_CALIBRATION_ACTIONS as readonly string[]).includes(action)) {
-    return { ok: false, error: `action 必须是: ${GA_CALIBRATION_ACTIONS.join(', ')}` };
+    return { ok: false, error: '请选择修正方式' };
   }
 
   const body: GaCalibrationRequestBody = {
@@ -318,11 +318,11 @@ export function buildCalibrationRequest(
   if (action === 'mark_error') {
     const errorType = input.errorType;
     if (typeof errorType !== 'string' || !(GA_ERROR_TYPES as readonly string[]).includes(errorType)) {
-      return { ok: false, error: `mark_error 必填 errorType（${GA_ERROR_TYPES.join('/')}）` };
+      return { ok: false, error: '标记错误：请选择错误类型' };
     }
     const correctedContent = str(input.correctedContent);
     if (correctedContent === null) {
-      return { ok: false, error: 'mark_error 必填 correctedContent（正确信息或补充说明）' };
+      return { ok: false, error: '标记错误：请填写正确信息或补充说明' };
     }
     body.errorType = errorType as GaErrorType;
     body.correctedContent = correctedContent;
@@ -330,7 +330,7 @@ export function buildCalibrationRequest(
   if (action === 'add_context') {
     const contextCard = str(input.contextCard);
     if (contextCard === null) {
-      return { ok: false, error: 'add_context 必填 contextCard（背景卡片）' };
+      return { ok: false, error: '补充背景：请填写背景说明' };
     }
     body.contextCard = contextCard;
   }
@@ -338,7 +338,7 @@ export function buildCalibrationRequest(
     const originalVersion = str(input.originalVersion);
     const rewrittenVersion = str(input.rewrittenVersion);
     if (originalVersion === null || rewrittenVersion === null) {
-      return { ok: false, error: 'rewrite_logic 必填 originalVersion + rewrittenVersion（并列存储）' };
+      return { ok: false, error: '修正逻辑：请填写原版本与新版本' };
     }
     body.originalVersion = originalVersion;
     body.rewrittenVersion = rewrittenVersion;
@@ -346,7 +346,7 @@ export function buildCalibrationRequest(
   if (action === 'demote_signal') {
     const sentinelId = str(input.sentinelId);
     if (sentinelId === null) {
-      return { ok: false, error: 'demote_signal 必填 sentinelId（目标哨兵）' };
+      return { ok: false, error: '调低该预警的优先级：请填写预警项' };
     }
     body.sentinelId = sentinelId;
   }

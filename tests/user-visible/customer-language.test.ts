@@ -35,11 +35,20 @@ import {
 
 /* ── 判据面常量（实测冻结；改动须在 PR 回执说明并升 DEV DOC 版本） ───────── */
 
-/** 扫描面文件数基线（`electron-renderer/src` 下 `.ts`/`.tsx` 实测 43）。 */
-const BASELINE_FILE_COUNT = 43;
+/** 扫描面文件数基线（`electron-renderer/src` 下 `.ts`/`.tsx`；B3 新增 lib/words/index.ts ＋ TechnicalDetails.tsx：43 → 45）。 */
+const BASELINE_FILE_COUNT = 45;
 
-/** 候选字符串总数基线（本实现实测见回执：命令与原始输出）。 */
-const BASELINE_CANDIDATE_COUNT = 1743;
+/**
+ * 候选字符串总数基线（B3 更新：新增字典与「技术详情」组件、客户说法替换后实测 43 文件/1743 → 45 文件/1825）。
+ * B3 T4b（#1481）再更新：1825 → 1844。原因＝**文案替换本身**（不是新增扫描面文件，文件数仍 45）：
+ *   · 新增客户说法：4 类空态原因（词典 §4.2）＋「下一步」句＋技术详情条目名（错误码/状态码/服务端原文等）
+ *   · 同批删除旧技术原文（HTTP/哨兵/循环/LLM 等 44 条 allowlist 债）
+ * ⇒ 「候选总数只随文件数变」不成立：改一条客户文案会同时增/减候选。故本条基线**允许随客户说法变更重钉**，
+ *   但必须在 PR 回执给出 旧值→新值 与逐项归因（T4 先例：1743 → 1825）。
+ * 生成命令：`npx vitest run tests/user-visible/customer-language.test.ts --pool=threads`（基线可见量用例的原始输出）。
+ * 只允许因**有序删除 / 客户说法变更 / 扫描面新增文件**而更新；不得随手调小。
+ */
+const BASELINE_CANDIDATE_COUNT = 1844;
 
 /** 允许"零候选"的文件白名单（必须给理由；新增条目须在 PR 回执说明）。 */
 const TEXT_FREE_FILES: Readonly<Record<string, string>> = {

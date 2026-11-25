@@ -8,6 +8,15 @@ import type {
   ScanReport,
 } from '../lib/enterprise-scan-api';
 import type { ScanStatus } from '../stores/scan-store';
+import { TechnicalDetails, type TechnicalDetailsItem } from './TechnicalDetails';
+import {
+  CUSTOMER_TEXT,
+  evidenceText,
+  objectTypeLabel,
+  objectValueText,
+  relationLabel,
+  statusLabel,
+} from '../lib/words';
 
 export interface ScanPanelProps {
   status: ScanStatus;
@@ -35,21 +44,30 @@ function jsonText(value: JsonValue): string {
   return JSON.stringify(value);
 }
 
+/** 主文案只给客户说法（§5.2／§2.7-D/E）；原始码/状态/服务端原文走 errorDetails ⇒ 技术详情 */
 function errorText(error: ScanErrorView): string {
-  if (error.httpStatus === 401) return `认证失败，请重新登录：${error.message}`;
-  if (error.httpStatus === 400) return `请求校验失败：${error.message}`;
+  if (error.httpStatus === 401) return CUSTOMER_TEXT.loginExpired;
+  if (error.httpStatus === 400) return '请求校验失败';
   if (error.code === 'RUN_UNAVAILABLE') return '运行不存在或不可见';
-  if (error.code === 'SCOPE_DENIED' || error.code === 'UNAUTHORIZED_PATH') return `服务端授权拒绝：${error.message}`;
+  if (error.code === 'SCOPE_DENIED' || error.code === 'UNAUTHORIZED_PATH') return CUSTOMER_TEXT.forbidden;
   if (error.code === 'IDEMPOTENCY_PAYLOAD_MISMATCH' || error.code === 'IDEMPOTENCY_KEY_UNAVAILABLE') {
-    return `幂等键冲突：${error.message}；请使用原请求编号核对，或在对账完成后重新发起`;
+    return CUSTOMER_TEXT.idempotencyReplay;
   }
-  if (error.code === 'IDEMPOTENCY_REPLAY_SCOPE_CHANGED') return `可见范围变化：${error.message}`;
+  if (error.code === 'IDEMPOTENCY_REPLAY_SCOPE_CHANGED') return '可见范围变化，请重新发起核对';
   if (error.code === 'SOURCE_CHANGED_RERUN_REQUIRED' || error.code === 'FILE_CHANGED_BEFORE_COMMIT') {
-    return `材料变化：${error.message}；请按原请求编号核对或在对账后重新发起`;
+    return CUSTOMER_TEXT.materialChanged;
   }
-  if (error.httpStatus === 415) return `材料格式问题：${error.message}`;
-  if (error.httpStatus === 422) return `材料内容／映射问题：${error.message}`;
-  return error.message;
+  if (error.httpStatus === 415) return '材料格式问题';
+  if (error.httpStatus === 422) return '材料内容／映射问题';
+  return CUSTOMER_TEXT.serviceUnavailable;
+}
+
+function errorDetails(error: ScanErrorView): TechnicalDetailsItem[] {
+  return [
+    { label: '错误码', value: error.code },
+    { label: '状态码', value: String(error.httpStatus) },
+    { label: '服务端原文', value: error.message },
+  ];
 }
 
 const CheckEntries: React.FC<{ title: string; entries: ScanCheckEntry[] }> = ({ title, entries }) => (
@@ -57,11 +75,16 @@ const CheckEntries: React.FC<{ title: string; entries: ScanCheckEntry[] }> = ({ 
     <h5>{title}</h5>
     {entries.length === 0 ? <div>无记录</div> : entries.map((entry, index) => (
       <div className="scan-check-entry" key={`${entry.businessKey ?? entry.source_id ?? 'check'}-${index}`}>
-        <span>状态：{entry.status}</span>
-        {entry.businessKey ? <span>对象：{entry.businessKey}</span> : null}
+        <span>状态：{statusLabel(entry.status)}</span>
+        {entry.businessKey ? <span>对象：{objectValueText(entry.businessKey)}</span> : null}
         {entry.field ? <span>字段：{entry.field}</span> : null}
-        {entry.source_ref ? <span>来源引用：{entry.source_ref}</span> : null}
-        {entry.values ? <span>记录值：{jsonText(entry.values)}</span> : null}
+        {entry.source_ref ? <span>来源引用：{evidenceText(entry.source_ref)}</span> : null}
+        {entry.values ? <span>记录值见技术详情</span> : null}
+        <TechnicalDetails items={[
+          { label: '对象原始标识', value: entry.businessKey ?? '' },
+          { label: '来源引用原文', value: entry.source_ref ?? '' },
+          { label: '记录值原文', value: entry.values ? jsonText(entry.values) : '' },
+        ]} />
       </div>
     ))}
   </div>
@@ -74,10 +97,13 @@ const ReportView: React.FC<{ report: ScanReport }> = ({ report }) => {
       {report.partial_visibility ? <div className="scan-partial">部分可见：仅展示当前身份可见内容</div> : null}
       <section>
         <h4>运行信息</h4>
-        <div>运行编号：{report.run.run_id}</div>
-        <div>清单：{report.run.manifest_id}</div>
-        <div>请求编号：{report.run.client_request_id}</div>
-        <div>状态：{report.run.status}</div>
+        <div>状态：{statusLabel(report.run.status)}</div>
+        <TechnicalDetails items={[
+          { label: '运行标识', value: report.run.run_id },
+          { label: '清单标识', value: report.run.manifest_id },
+          { label: '请求标识', value: report.run.client_request_id },
+          { label: '状态原文', value: report.run.status },
+        ]} />
       </section>
 
       <section>
@@ -86,10 +112,14 @@ const ReportView: React.FC<{ report: ScanReport }> = ({ report }) => {
           <div className="scan-source" key={source.source_id}>
             <strong>{source.source_id}</strong>
             <span>证据：{source.evidence_id}</span>
-            <span>证据状态：{source.evidence_status}</span>
-            <span>实例状态：{source.instance_state}</span>
+            <span>可信度：{statusLabel(source.evidence_status)}</span>
+            <span>数据来源：{statusLabel(source.instance_state)}</span>
             <span>格式：{source.format}</span>
             <span>期间：{nullable(source.period)}</span>
+            <TechnicalDetails items={[
+              { label: '可信度原文', value: source.evidence_status },
+              { label: '数据来源原文', value: source.instance_state },
+            ]} />
           </div>
         ))}
       </section>
@@ -110,7 +140,7 @@ const ReportView: React.FC<{ report: ScanReport }> = ({ report }) => {
           ))}
         </div>
         <CheckEntries title="跨来源核对" entries={report.checks.cross_source} />
-        <div>calculation_match 仅表示计算一致，不代表业务事实。</div>
+        <div>该结果仅表示计算一致，不代表业务事实。</div>
       </section>
 
       <section>
@@ -129,7 +159,7 @@ const ReportView: React.FC<{ report: ScanReport }> = ({ report }) => {
             <strong>{gap.question}</strong>
             <span>字段：{gap.field}</span>
             <span>期间：{nullable(gap.period)}</span>
-            <span>来源引用：{gap.source_ref}</span>
+            <span>来源引用：{evidenceText(gap.source_ref)}</span>
             <span>阻断：{String(gap.blocking)}</span>
           </div>
         ))}
@@ -152,22 +182,26 @@ const ReportView: React.FC<{ report: ScanReport }> = ({ report }) => {
         {report.ontology.objects.length === 0 ? <div>无对象记录</div> : report.ontology.objects.map(object => (
           <div key={object.object_id}>
             <strong>{object.name}</strong>
-            <span>{object.type}</span>
-            <span>{object.businessKey}</span>
+            <span>{objectTypeLabel(object.type)}</span>
             <span>生效：{object.validFrom}</span>
+            <TechnicalDetails items={[
+              { label: '对象类型原文', value: object.type },
+              { label: '对象标识', value: object.businessKey },
+            ]} />
           </div>
         ))}
         {report.ontology.relations.length === 0 ? <div>无关系记录</div> : report.ontology.relations.map(relation => (
           <div key={relation.object_id}>
             <strong>{relation.businessKey}</strong>
-            <span>{relation.type}</span>
+            <span>{relationLabel(relation.type)}</span>
             <span>{relation.fromBusinessKey} → {relation.toBusinessKey}</span>
+            <TechnicalDetails items={[{ label: '关系类型原文', value: relation.type }]} />
           </div>
         ))}
       </section>
 
       <section>
-        <h4>断言与最小报告</h4>
+        <h4>结论与诊断报告（简版）</h4>
         <div>statement 仅表示某人说过；fact／inference／unknown 按服务端类型原样呈现。</div>
         {report.assertions.length === 0 ? <div>无记录</div> : report.assertions.map(assertion => (
           <div className="scan-assertion" key={assertion.assertion_version_id}>
@@ -229,14 +263,15 @@ export const ScanPanel: React.FC<ScanPanelProps> = props => {
 
       {error ? (
         <div className="scan-error" role="alert">
-          <strong>扫描请求未完成</strong>
+          <strong>本次数据核对未完成</strong>
           <div>{errorText(error)}</div>
+          <TechnicalDetails items={errorDetails(error)} />
         </div>
       ) : null}
       {degraded ? (
         <div className="scan-degraded" role="alert">
-          <strong>扫描服务降级</strong>
-          <div>{degraded.reason}</div>
+          <strong>{CUSTOMER_TEXT.scanServiceUnavailable}</strong>
+          <TechnicalDetails items={[{ label: '原始原因', value: degraded.reason }]} />
         </div>
       ) : null}
       {(status === 'error' || status === 'degraded') && retryable ? <button type="button" onClick={retry}>重试</button> : null}

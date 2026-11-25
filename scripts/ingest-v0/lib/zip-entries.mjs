@@ -116,8 +116,8 @@ export function readZip64EndOfCentralDirectory(tail, eocdOffset, readAt) {
  * 解析中央目录（纯函数）。
  *
  * @input  cd —— 中央目录字节（自 `cdOffset` 起，长度 ≥ `cdSize`）；entryCount —— 期望记录数
- * @output `{ok:true, entries:[{name, flags, encrypted, method, compressedSize, uncompressedSize,
- *          traversal, directory, sizeUnknown}]}`；或 `{ok:false, corruptReason}`
+ * @output `{ok:true, entries:[{name, flags, encrypted, method, crc32, compressedSize, uncompressedSize,
+ *          localHeaderOffset, traversal, directory, sizeUnknown}]}`；或 `{ok:false, corruptReason}`
  * @degraded **无静默降级**：任何结构矛盾 ⇒ `ok:false`（调用方记 `skipped{reason:'corrupt'}`）
  * @authority 记录解析偏移以 APPNOTE 4.3.12 为准；`traversal` 只由 `classify.isTraversalEntry` 判定
  * @not-here 不解压、不校验 CRC、不读 local header
@@ -133,11 +133,13 @@ export function parseCentralDirectory(cd, entryCount) {
     }
     const flags = cd.readUInt16LE(offset + 8);
     const method = cd.readUInt16LE(offset + 10);
+    const crc32 = cd.readUInt32LE(offset + 16);
     const compressedSize = cd.readUInt32LE(offset + 20);
     const uncompressedSize = cd.readUInt32LE(offset + 24);
     const nameLength = cd.readUInt16LE(offset + 28);
     const extraLength = cd.readUInt16LE(offset + 30);
     const commentLength = cd.readUInt16LE(offset + 32);
+    const localHeaderOffset = cd.readUInt32LE(offset + 42);
     if (offset + 46 + nameLength + extraLength + commentLength > cd.length) {
       return { ok: false, corruptReason: `中央目录记录长度矛盾（第 ${String(index + 1)} 条）` };
     }
@@ -148,8 +150,10 @@ export function parseCentralDirectory(cd, entryCount) {
       flags,
       encrypted: (flags & 0x1) === 0x1,
       method,
+      crc32,
       compressedSize,
       uncompressedSize,
+      localHeaderOffset,
       sizeUnknown: compressedSize === ZIP64_SENTINEL32 || uncompressedSize === ZIP64_SENTINEL32,
       directory: normalizedName.endsWith('/'),
       traversal: isTraversalEntry(name),

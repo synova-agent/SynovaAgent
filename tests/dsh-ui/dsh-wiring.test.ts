@@ -25,7 +25,8 @@ describe('#1429 LeftPanel→App→Container→store→api WIRE CHECK', () => {
   it('LeftPanel 新增 DSH 会话入口：直接 setActiveView(dsh)，不按角色隐藏', () => {
     const source = renderer('components/LeftPanel.tsx');
     expect(source).toMatch(/data-cap="nav-dsh"[\s\S]{0,300}setActiveView\('dsh'\)/);
-    expect(source).toContain('DSH 会话');
+    // B3（T4b）：入口文案撤出技术执行台名——「DSH 会话」→「本次分析」
+    expect(source).toContain('本次分析');
     const button = source.match(/<button className="cap-item" data-cap="nav-dsh"[\s\S]*?<\/button>/)?.[0] ?? '';
     expect(button).not.toBe('');
     expect(button).not.toContain('userRole');

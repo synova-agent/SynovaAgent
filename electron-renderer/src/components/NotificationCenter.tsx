@@ -13,6 +13,8 @@
 import React, { useState } from 'react';
 import { useAppStore, type LocalNotification } from '../stores/app-store';
 import { useNotifications, ticketStatusLabel, type AppNotification } from '../hooks/useNotifications';
+// B3（#1481 T4b）：传输层原文只进「技术详情」，客户面主文案取客户说法
+import { TechnicalDetails } from './TechnicalDetails';
 
 const TYPE_ICONS: Record<string, string> = {
   critical: '🚨', warning: '⚠️', info: '🔔',
@@ -26,14 +28,15 @@ export interface TicketActionFeedback {
 
 /**
  * NotifErrorBanner — 获取失败错误条（铁律 31: 降级信号传播到 UI）
- * @input error: 错误文案
- * @output data-notif-error 标记条（"通知获取失败：{error}"）
+ * @input error: 服务端/传输层原文（只进「技术详情」；主文案固定为客户说法，不拼原文）
+ * @output data-notif-error 标记条（「暂时读不到通知」＋技术详情入口）
  */
 export function NotifErrorBanner({ error }: { error: string }): React.ReactElement {
   return (
     <div className="notif-error-banner" role="alert" data-notif-error="true">
       <span className="notif-error-icon">⚠️</span>
-      <span className="notif-error-text">通知获取失败：{error}</span>
+      <span className="notif-error-text">暂时读不到通知</span>
+      <TechnicalDetails items={[{ label: '原文', value: error }]} />
     </div>
   );
 }
@@ -170,7 +173,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose }
           {error !== null && <NotifErrorBanner error={error} />}
           {!error && degraded && (
             <div className="notif-degraded-hint" data-notif-degraded="true">
-              哨兵数据源降级（内存兜底视图）
+              预警数据暂时读不到，当前显示缓存内容
             </div>
           )}
 
