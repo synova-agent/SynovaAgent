@@ -256,14 +256,14 @@ describe('D556 buildCalibrationRequest: 四动作校验规则', () => {
     const result = buildCalibrationRequest({ targetType: 'diagnosis_conclusion', targetId: 'c-1', action: 'mark_error', errorType: '事实错误' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('correctedContent');
+    expect(result.error).toContain('正确信息');
   });
 
   it('mark_error: errorType 越界（非 4 值域）→ 校验失败', () => {
     const result = buildCalibrationRequest({ targetType: 'diagnosis_conclusion', targetId: 'c-1', action: 'mark_error', errorType: '乱写的', correctedContent: 'x' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('errorType');
+    expect(result.error).toContain('错误类型');
   });
 
   it('add_context: 缺 contextCard → 校验失败；齐全 → body.contextCard', () => {
@@ -278,14 +278,14 @@ describe('D556 buildCalibrationRequest: 四动作校验规则', () => {
     const result = buildCalibrationRequest({ targetType: 'diagnosis_logic', targetId: 'l-1', action: 'rewrite_logic', originalVersion: 'v1' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('rewrittenVersion');
+    expect(result.error).toContain('原版本与新版本');
   });
 
   it('demote_signal: 缺 sentinelId → 校验失败', () => {
     const result = buildCalibrationRequest({ targetType: 'signal_relevance', targetId: 's-1', action: 'demote_signal' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('sentinelId');
+    expect(result.error).toContain('预警项');
   });
 
   it('边界: action/targetType 越界 / targetId 空 → 校验失败（枚举值域与 D551 一致）', () => {

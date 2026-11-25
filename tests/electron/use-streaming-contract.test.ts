@@ -80,11 +80,12 @@ describe('D527 sse-contract: 降级路径', () => {
     expect(r.state.phase).toBe('error');
   });
 
-  it('degraded 事件 → 系统消息带 degraded 标记 + state.degraded=true', () => {
+  it('degraded 事件 → 系统消息带 degraded 标记 + state.degraded=true（客户面不出现模块 id）', () => {
     const r = applySSEEvent(initialState(), { type: 'degraded', moduleId: 'finance' });
     expect(r.state.degraded).toBe(true);
     expect(r.systemMessage?.type).toBe('degraded');
-    expect(r.systemMessage?.content).toContain('finance');
+    expect(r.systemMessage?.content).toContain('部分功能暂不可用');
+    expect(r.systemMessage?.content).not.toContain('finance');
   });
 
   it('complete 缺 report 字段 → 不抛 + console.warn + 不落 reportId', () => {

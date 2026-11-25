@@ -27,7 +27,9 @@
  */
 import React from 'react';
 import type { MetricTrendItem, MeasurementTrendsView, TrendDirection } from '../lib/measurement-trends';
-import { deriveTrendDirection, TREND_SEMANTICS_NOTE } from '../lib/measurement-trends';
+import { deriveTrendDirection, TREND_SEMANTICS_NOTE, TREND_SEMANTICS_VERSION } from '../lib/measurement-trends';
+import { TechnicalDetails, type TechnicalDetailsItem } from './TechnicalDetails';
+import { CUSTOMER_TEXT, metricLabel } from '../lib/words';
 
 /** 展示状态（容器按 view 派生；空是合法业务态） */
 export type MeasurementTrendState = 'loading' | 'ready' | 'empty' | 'degraded';
@@ -77,7 +79,7 @@ const TrendItem: React.FC<{ item: MetricTrendItem; index: number }> = ({ item, i
       key={`${item.metricId}::${item.entityId}::${index}`}
     >
       <div className="measurement-trend-head">
-        <span className="measurement-trend-metric">{item.metricId}</span>
+        <span className="measurement-trend-metric">{metricLabel(item.metricId)}</span>
         <span className="measurement-trend-value">
           {formatValue(item.latestValue)}
           {item.unit === null ? '' : ` ${item.unit}`}
@@ -88,6 +90,7 @@ const TrendItem: React.FC<{ item: MetricTrendItem; index: number }> = ({ item, i
         {change === null ? null : <span className="measurement-trend-change">（变化 {change}）</span>}
       </div>
       <div className="measurement-trend-at">{item.latestAt}</div>
+      <TechnicalDetails items={[{ label: '指标原文', value: item.metricId }]} />
     </div>
   );
 };
@@ -105,11 +108,16 @@ export const MeasurementTrendSection: React.FC<MeasurementTrendSectionProps> = (
   const items = view === null ? [] : view.summary;
   const errors = view?.errors ?? [];
   const showEmpty = state === 'empty' || (state === 'ready' && items.length === 0);
+  const technicalItems: TechnicalDetailsItem[] = [
+    { label: '口径版本', value: TREND_SEMANTICS_VERSION },
+    ...errors.map((message, index) => ({ label: `原始原因 ${index + 1}`, value: message })),
+  ];
 
   return (
     <section className="sb-section measurement-trend-section" data-testid="measurement-trend-section">
       <div className="sb-section-title">📈 测量值＋趋势</div>
       <div data-testid="measurement-trend-limitations">{TREND_SEMANTICS_NOTE}</div>
+      <TechnicalDetails items={technicalItems} />
 
       {state === 'loading' && (
         <div className="ga-block-note" data-testid="measurement-trend-loading">
@@ -119,14 +127,7 @@ export const MeasurementTrendSection: React.FC<MeasurementTrendSectionProps> = (
 
       {state === 'degraded' && (
         <div className="cap-degraded-banner" data-testid="measurement-trend-degraded">
-          ⚠ 测量值/趋势服务降级，暂不可用（不展示任何推测数据）
-          {errors.length > 0 && (
-            <div className="measurement-trend-errors" style={{ fontSize: 10 }}>
-              {errors.map((message, index) => (
-                <div key={`error-${index}`}>{message}</div>
-              ))}
-            </div>
-          )}
+          ⚠ {CUSTOMER_TEXT.measurementUnavailable}
         </div>
       )}
 

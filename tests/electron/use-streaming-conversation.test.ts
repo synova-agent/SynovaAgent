@@ -244,8 +244,9 @@ describe('D591-⑤ 诊断事件 flat 透传（phase_started/degraded/complete �
     const store = useConversationStore.getState();
     expect(store.phaseIndex).toBe(0);
     expect(store.phaseLabel).toBe('组织访谈');
-    const degradedMsg = store.messages.find((m) => m.type === 'system' && m.content.includes('finance'));
+    const degradedMsg = store.messages.find((m) => m.type === 'system' && m.content.includes('部分功能暂不可用'));
     expect(degradedMsg).toBeDefined();
+    expect(store.messages.some((m) => m.type === 'system' && m.content.includes('finance'))).toBe(false);
     expect(store.messages.some((m) => m.type === 'system' && m.content.includes('诊断完成'))).toBe(true);
     expect(useAppStore.getState().currentReportId).toBe('rpt_d591');
   });

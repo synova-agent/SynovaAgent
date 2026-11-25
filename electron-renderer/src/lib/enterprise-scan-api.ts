@@ -1,4 +1,5 @@
 import { getApiBase } from './api';
+import { CUSTOMER_TEXT } from './words';
 
 export interface ScanManifestItem {
   manifestId: string;
@@ -245,7 +246,7 @@ function jsonValue(value: unknown): JsonValue {
     for (const [key, item] of Object.entries(value)) output[key] = jsonValue(item);
     return output;
   }
-  throw new Error('value 不是合法 JSON 值');
+  throw new Error('数据格式不符合约定');
 }
 
 function optionalText(record: Record<string, unknown>, field: string): string | undefined {
@@ -273,7 +274,7 @@ function parseCheckEntry(value: unknown): ScanCheckEntry {
   if (validTo !== undefined) output.valid_to = validTo;
   if (Object.prototype.hasOwnProperty.call(raw, 'values')) {
     const values = required(raw, 'values');
-    if (!Array.isArray(values)) throw new Error('check.values 应为数组');
+    if (!Array.isArray(values)) throw new Error('数据格式不符合约定');
     output.values = values.map(jsonValue);
   }
   return output;
@@ -353,7 +354,7 @@ function parseSupplement(value: unknown): ScanSupplementRequest {
 }
 
 function parseReport(payload: unknown): ScanReport {
-  if (!isRecord(payload) || payload.schema_version !== 'enterprise-scan/v1') throw new Error('报告 schema_version 非法');
+  if (!isRecord(payload) || payload.schema_version !== 'enterprise-scan/v1') throw new Error(CUSTOMER_TEXT.dataVersionMismatch);
   const run = objectField(payload, 'run');
   const checks = objectField(payload, 'checks');
   const ontology = objectField(payload, 'ontology');
@@ -381,7 +382,7 @@ function parseReport(payload: unknown): ScanReport {
 }
 
 function parseManifests(payload: unknown): ScanManifestItem[] {
-  if (!isRecord(payload) || payload.schema_version !== 'enterprise-scan-manifests/v1') throw new Error('清单 schema_version 非法');
+  if (!isRecord(payload) || payload.schema_version !== 'enterprise-scan-manifests/v1') throw new Error(CUSTOMER_TEXT.dataVersionMismatch);
   const seen = new Set<string>();
   return arrayField(payload, 'manifests').map(value => {
     const raw = objectItem(value, 'manifest');
@@ -404,13 +405,13 @@ async function readJson(
   try {
     response = await fetchImpl(url, init);
   } catch (error) {
-    return degrade(`${unknownResult ? '结果状态未知，将使用原请求编号核对；' : '读取失败；'}网络异常：${messageOf(error)}`, { retryable: true });
+    return degrade(`${unknownResult ? '结果状态未知，将使用原请求编号核对；' : ''}${CUSTOMER_TEXT.serviceUnavailable}（网络异常：${messageOf(error)}）`, { retryable: true });
   }
   let payload: unknown;
   try {
     payload = await response.json();
   } catch (error) {
-    return degrade(`${unknownResult ? '结果状态未知，将使用原请求编号核对；' : '读取失败；'}响应非 JSON：${messageOf(error)}`, {
+    return degrade(`${unknownResult ? '结果状态未知，将使用原请求编号核对；' : ''}${CUSTOMER_TEXT.dataUnrecognized}（原文：${messageOf(error)}）`, {
       httpStatus: response.status,
       retryable: true,
     });
@@ -433,7 +434,7 @@ function normalizeError(payload: unknown, httpStatus: number, unknownResult: boo
     }
     return { kind: 'error', message: payload.message, ...details };
   }
-  return degrade(`${unknownResult ? '结果状态未知，将使用原请求编号核对；' : '读取失败；'}HTTP ${httpStatus} 错误形状未知`, {
+  return degrade(`${unknownResult ? '结果状态未知，将使用原请求编号核对；' : ''}${CUSTOMER_TEXT.serviceUnavailable}（状态码 ${httpStatus}）`, {
     httpStatus,
     retryable: httpStatus >= 500,
   });
@@ -469,7 +470,7 @@ export async function loadManifests(options: ScanRequestOptions = {}): Promise<M
  */
 export async function startScan(manifestId: string, clientRequestId: string, options: ScanRequestOptions = {}): Promise<ScanViewData> {
   if (manifestId.trim() === '' || clientRequestId.trim() === '') {
-    return { kind: 'error', httpStatus: 400, code: 'VALIDATION_ERROR', phase: 'request', retryable: false, message: '清单与请求编号不能为空' };
+    return { kind: 'error', httpStatus: 400, code: 'VALIDATION_ERROR', phase: 'request', retryable: false, message: CUSTOMER_TEXT.analysisStartFailed };
   }
   const read = await readJson(`${resolveBase(options.base)}/api/enterprise-scan/runs`, {
     method: 'POST',
@@ -498,7 +499,7 @@ export async function startScan(manifestId: string, clientRequestId: string, opt
  */
 export async function getScan(runId: string, options: ScanRequestOptions = {}): Promise<ScanViewData> {
   if (runId.trim() === '') {
-    return { kind: 'error', httpStatus: 400, code: 'VALIDATION_ERROR', phase: 'request', retryable: false, message: '运行编号不能为空' };
+    return { kind: 'error', httpStatus: 400, code: 'VALIDATION_ERROR', phase: 'request', retryable: false, message: CUSTOMER_TEXT.analysisStartFailed };
   }
   const read = await readJson(`${resolveBase(options.base)}/api/enterprise-scan/runs/${encodeURIComponent(runId)}`, { method: 'GET', headers: {} }, options, false);
   if (read.kind === 'degraded') return read;
