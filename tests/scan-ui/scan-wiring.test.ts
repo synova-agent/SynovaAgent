@@ -7,11 +7,11 @@ const renderer = (path: string): string => readFileSync(resolve(root, 'electron-
 const codeOnly = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 describe('#1413 真实导航与主栏分派 WIRE CHECK', () => {
-  it('LeftPanel 企业扫描入口直接 setActiveView(scan)，对话可恢复 chat，且不按角色隐藏', () => {
+  it('LeftPanel 数据核对入口直接 setActiveView(scan)，对话可恢复 chat，且不按角色隐藏', () => {
     const source = renderer('components/LeftPanel.tsx');
     expect(source).toContain("const setActiveView = useAppStore((s) => s.setActiveView);");
     expect(source).toMatch(/data-cap="nav-scan"[\s\S]{0,500}onClick=\{\(\) => setActiveView\('scan'\)\}/);
-    expect(source).toMatch(/<span className="cap-label">企业扫描<\/span>/);
+    expect(source).toMatch(/<span className="cap-label">数据核对<\/span>/);
     expect(source).toMatch(/data-cap="nav-conv"[\s\S]{0,500}setActiveView\('chat'\)/);
     const scanButton = source.match(/<button className="cap-item" data-cap="nav-scan"[\s\S]*?<\/button>/)?.[0] ?? '';
     expect(scanButton).not.toContain('userRole');
