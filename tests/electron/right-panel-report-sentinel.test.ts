@@ -270,17 +270,17 @@ describe('D593: 桌面右栏——报告 tab 恢复 + 哨兵 tab 真数据（spe
     const html = renderToStaticMarkup(
       rightPanel.SentinelDetailSections({ reports: [], tickets: [], degraded: true }),
     );
-    expect(html).toContain('哨兵数据降级');
+    expect(html).toContain('预警数据暂时读不到');
   });
 
-  it('用例 12e: SentinelDetailSections 空——Empty 文案（暂无哨兵报告/暂无工单）', async () => {
+  it('用例 12e: SentinelDetailSections 空——Empty 文案（暂无预警报告/暂无预警工单）', async () => {
     stubWindow();
     const { rightPanel } = await importTargets();
     const html = renderToStaticMarkup(
       rightPanel.SentinelDetailSections({ reports: [], tickets: [], degraded: false }),
     );
-    expect(html).toContain('暂无哨兵报告');
-    expect(html).toContain('暂无工单');
+    expect(html).toContain('暂无预警报告');
+    expect(html).toContain('暂无预警工单');
     expect(html).not.toContain('data-sentinel-report-item');
     expect(html).not.toContain('data-sentinel-ticket-item');
   });

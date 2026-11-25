@@ -61,14 +61,14 @@ const LlmSetupCard: React.FC<LlmSetupCardProps> = ({
     <div className="welcome-screen fade-in">
       <div className="llm-setup-card">
         <div className="welcome-icon">🔑</div>
-        <h1 className="welcome-title">配置你的 LLM</h1>
+        <h1 className="welcome-title">配置你的分析模型</h1>
         <p className="welcome-desc">
-          打开 Synova 的第一步——粘贴 API Key，测试连接后即可进入。Key 只保存在本机（0600 权限文件），永不明文进配置文件。
+          打开 Synova 的第一步：填入模型密钥，测试连接后即可进入。密钥只保存在本机（仅本人可读写），不会写进配置文件。
         </p>
 
         <div className="llm-setup-form">
           <label className="llm-setup-field">
-            <span>Provider</span>
+            <span>服务商</span>
             <select name="provider" value={provider} onChange={handleProvider} disabled={busy}>
               {PROVIDER_OPTIONS.map((p) => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -90,7 +90,7 @@ const LlmSetupCard: React.FC<LlmSetupCardProps> = ({
 
           {provider === 'openai' && (
             <label className="llm-setup-field">
-              <span>Base URL</span>
+              <span>服务地址</span>
               <input
                 name="baseUrl"
                 type="text"
@@ -103,7 +103,7 @@ const LlmSetupCard: React.FC<LlmSetupCardProps> = ({
           )}
 
           <label className="llm-setup-field">
-            <span>API Key</span>
+            <span>模型密钥</span>
             <input
               name="apiKey"
               type="password"
