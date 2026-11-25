@@ -1,0 +1,11 @@
+writeset:
+  - .claude/claims/1502.yaml
+  - src/runtime/dsh/session.ts
+  - src/runtime/dsh/events.ts
+  - src/routes/dsh.ts
+  - tests/runtime/dsh/**
+done:
+  - verify: npx vitest run tests/runtime/dsh/run-status.test.ts tests/runtime/dsh/run-status-session.test.ts tests/runtime/dsh/run-status-route.integration.test.ts
+  - verify: npx vitest run tests/runtime/dsh tests/routes/dsh.test.ts tests/routes/dsh-problemid.test.ts tests/dsh-ui
+  - verify: npx tsc --noEmit
+note: 运行状态位补全（#1502）：每次 run 产两个正交状态位 transportStatus/outcomeStatus（纯函数 deriveRunStatuses），终态事件载荷与 run 查询一并返回；不新增事件类型、不改 UI/哨兵/hypothesis-adapter，stopReason/stats/empty 兼容不变。

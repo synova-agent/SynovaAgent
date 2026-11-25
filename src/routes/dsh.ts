@@ -15,8 +15,11 @@
  *
  * 契约（铁律 47）:
  *   @input   HTTP ＋ req.auth（JwtPayload）；body {input, runId?, sessionId?, problemId?}
- *   @output  JSON（{ok, runId, status, ...}）｜ text/event-stream
- *   @degraded 无：任何失败都返回稳定 code/phase/retryable（不吞成空 200）
+ *   @output  JSON（{ok, runId, status, transportStatus, outcomeStatus, ...}）｜ text/event-stream
+ *            · 终态事件（run.completed/run.failed/run.cancelled）载荷含 transportStatus／outcomeStatus
+ *            · run 查询把两字段一并返回（运行中：transportStatus='running'、outcomeStatus=null）
+ *   @degraded 无：任何失败都返回稳定 code/phase/retryable（不吞成空 200）；运行中 outcomeStatus=null
+ *            （未判定，**不预填 success**），由 UI 显示「暂无法判定」
  *   @authority 身份只来自 req.auth；`problemId` 只作为**结构化入参**流向 run/MCP token 上下文，不拼进 prompt
  *   @not-here 不解析 problemId 指向的对象、不判定企业归属（工具侧 `domain-context` 负责）
  *   @error   UNAUTHORIZED / VALIDATION_ERROR / FORGED_IDENTITY / RUN_NOT_FOUND /
@@ -254,6 +257,9 @@ export function createDshRouter(deps: DshRouterDeps): Router {
         runId: record.runId,
         sessionId: record.sessionId,
         status: record.status,
+        // #1502：两个正交状态位（运行中：running／null；终态：一次性判定结果）
+        transportStatus: record.transportStatus,
+        outcomeStatus: record.outcomeStatus,
         eventCount: record.stream.size,
         replayed: existing !== undefined,
         mcp: mcpServer === null ? null : { registered: true, tool: 'synova_context_get' },
@@ -337,6 +343,9 @@ export function createDshRouter(deps: DshRouterDeps): Router {
         runId: record.runId,
         status: record.status,
         sessionId: record.sessionId,
+        // #1502：查询接口一并返回两字段（与终态事件载荷同源，不重算）
+        transportStatus: record.transportStatus,
+        outcomeStatus: record.outcomeStatus,
         eventCount: record.stream.size,
         terminal: terminal === null ? null : { type: terminal.type, seq: terminal.seq, data: terminal.data },
         stats: record.stats,
