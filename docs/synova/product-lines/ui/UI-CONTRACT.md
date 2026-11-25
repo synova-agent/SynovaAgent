@@ -111,7 +111,9 @@ outcomeStatus  : success | partial | failed | insufficient_data | invalid_output
 
 ```
 名称：现场阻断修复批（6 项客户可用性阻断）
-Issue：#1482（【现场阻断】客户界面 6 个可用性阻断）
+Issue：**#1480（正本）** —— 【现场阻断】客户界面 6 个可用性阻断
+      注（**R12**，2026-11-25，数据侧 CTO 裁定）：`#1482` 为**重复票误关**（body 与 #1480 逐字相同，同日 00:49 由 UI 侧 CTO 关为重复）。
+      **不据其状态判断完成度**；完成度一律看 #1480 与本文件 §3.1 的核对结果。
 ⚠️ **定稿核对项（必须由 UI CTO 在首个 PR 里回报）**：#1482 实测 state=**closed**。
    若为"已修复关闭" ⇒ §3.1 的"未合入前禁改 components/**"自动解除，UI 可直接接手；
    若为误关或已被合并到别的票 ⇒ CTO 重开票后本批恢复独立执行。
@@ -132,7 +134,10 @@ Issue：#1482（【现场阻断】客户界面 6 个可用性阻断）
 Done 条件：B1 对比度 ≥ WCAG AA(4.5:1) 脚本可证；B3 禁用词 grep 为空；B4 isError→非成功态；
           B5 数据不足不渲染假设卡；B2 可收起且状态保持；B6 未加载/未运行有状态位
 未合入前 UI 线可改（完全独立）：docs/**、文案词表、审计报告、图标/主题 token 设计稿、可访问性规范文档
-未合入前 UI 线禁改：electron-renderer/src/components/**（与阻断批同文件）
+未合入前禁止的**只是「UI 重做实施」**（导航结构重排、信息架构重排、换皮）动 components/**；
+**不禁止"修阻断项本身"** —— B2–B6 各批**只在自己阻断项范围内**改 components/** 属阻断批施工，合法（R9，2026-11-24）。
+机器判（每 PR 必带）：① 标题/正文标明所属 B 项（B2/B3/B4/B5/B6 之一）；② diff 触及的组件与文件能归到该 B 项，
+归不进去的**单独拆 PR**；③ 越界即驳回，不算"顺手优化"。
 ```
 
 ---
@@ -233,5 +238,8 @@ electron-renderer/src/stores/dsh-run-store.ts | contracts.ts → 技术线（数
 electron-renderer/src/stores/selectors.ts | view-model.ts | presentation/** → UI 线
 electron-renderer/src/components/**、样式/主题、文案资源 → 阻断批合入后归 UI 线
 docs/synova/product-lines/ui/** → UI 线（本契约双署名）
+electron-renderer/src/stores/app-store.ts → UI 线（只放 UI 状态：导航/折叠/主题；**不得推导业务真值**）  [R11]
+electron-renderer/src/hooks/**          → UI 线（**不得复制 store 的归约逻辑**；若实质封装事件归约，归技术线并拆分）  [R11]
+electron-renderer/src/lib/words/**      → UI 线（客户语言词典**单一真源**；技术线引用做禁用词检查，不反向修改）  [R11]
 scripts/ingest-v0/**          → 技术线（V2+）
 ```
