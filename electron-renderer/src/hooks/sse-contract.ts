@@ -23,6 +23,7 @@
  *   open            → sessionId=evt.sessionId（回声语义，result.sessionId 供调用方对账）
  *   token / agent_message / end → known-passthrough（状态机无变化；消息渲染消费归 D591 useStreaming）
  */
+import { CUSTOMER_TEXT } from '../lib/words';
 
 /** 事件类型全集 = engine 10 种 + diagnosis.ts 补发 5 种（'phase' 为兼容旧事件保留）
  *  + D590 对话帧 4 种（open/token/agent_message/end，producer 为对话 SSE 端点） */
@@ -125,9 +126,11 @@ export function applySSEEvent(prev: SSEContractState, evt: SSEEventLike): SSECon
 
     case 'degraded': {
       const moduleId = typeof evt.moduleId === 'string' ? evt.moduleId : 'unknown';
+      // 原始 moduleId 只留在开发日志（客户面不出现内部模块名；原文可追溯，见 B3）
+      console.warn(`[sse-contract] 模块降级：${moduleId}`);
       return {
         state: { ...prev, degraded: true },
-        systemMessage: { type: 'degraded', content: `⚠ 模块 ${moduleId} 降级运行（结果可能不完整）` },
+        systemMessage: { type: 'degraded', content: `⚠ ${CUSTOMER_TEXT.partialFeatureUnavailable}` },
       };
     }
 

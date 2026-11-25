@@ -42,7 +42,7 @@ const StatusBar: React.FC = () => {
         </span>
         {llmUnconfigured && (
           <span className="statusbar-item statusbar-llm-warning">
-            ⚠ LLM 未配置，诊断不可用——请在设置中配置
+            ⚠ 分析模型未配置，暂时不能分析——请在设置中配置
           </span>
         )}
       </div>

@@ -16,6 +16,7 @@
  */
 import { getApiBase } from './api';
 import { authHeader, expireSession, type AuthFetch, type AuthResponse } from './auth-session';
+import { CUSTOMER_TEXT } from './words';
 
 /** 输入长度上限（与 src/routes/dsh.ts MAX_INPUT_CHARS 一致；前端先校验） */
 export const DSH_MAX_INPUT_CHARS = 100_000;
@@ -120,7 +121,7 @@ function defaultCode(httpStatus: number): string {
 /** 非 2xx 归一：401 ⇒ error＋失效；5xx ⇒ degraded；其余 4xx ⇒ error（保留服务端 code/phase/retryable）。 */
 function normalizeFailure(payload: unknown, httpStatus: number): DshCallError {
   const body = isRecord(payload) ? payload : {};
-  const message = typeof body.message === 'string' ? body.message : `HTTP ${httpStatus}`;
+  const message = typeof body.message === 'string' ? body.message : CUSTOMER_TEXT.serviceUnavailable;
   const code = typeof body.code === 'string' ? body.code : defaultCode(httpStatus);
   const phase = typeof body.phase === 'string' ? body.phase : 'request';
   const retryable = typeof body.retryable === 'boolean' ? body.retryable : httpStatus >= 500;
@@ -134,7 +135,7 @@ function normalizeFailure(payload: unknown, httpStatus: number): DshCallError {
   if (httpStatus === 400 || httpStatus === 403 || httpStatus === 404 || httpStatus === 409 || httpStatus === 422) {
     return { kind: 'error', httpStatus, code, phase, retryable, message };
   }
-  return degrade(`HTTP ${httpStatus} 错误形状未知`, { httpStatus, retryable: httpStatus >= 500 });
+  return degrade(CUSTOMER_TEXT.serviceUnavailable, { httpStatus, retryable: httpStatus >= 500 });
 }
 
 type JsonRead = { kind: 'response'; response: DshResponse; payload: unknown } | DshDegradedView;
@@ -150,7 +151,8 @@ async function readJson(url: string, init: RequestInit, fetchImpl: DshFetch): Pr
   try {
     payload = await response.json();
   } catch (error) {
-    return degrade(`响应非 JSON：${messageOf(error)}`, { httpStatus: response.status, retryable: true });
+    console.warn(`[dsh-run-api] 响应非 JSON：${messageOf(error)}`);
+    return degrade(CUSTOMER_TEXT.dataUnrecognized, { httpStatus: response.status, retryable: true });
   }
   return { kind: 'response', response, payload };
 }
@@ -193,7 +195,7 @@ export async function startRun(input: string, options: DshCallOptions = {}): Pro
  * @error  永不抛
  */
 export async function cancelRun(runId: string, options: DshCallOptions = {}): Promise<DshCancelResult> {
-  if (runId.trim().length === 0) return validationError('运行编号不能为空');
+  if (runId.trim().length === 0) return validationError(CUSTOMER_TEXT.analysisStartFailed);
   const read = await readJson(`${resolveBase(options.base)}/api/dsh/runs/${encodeURIComponent(runId)}/cancel`, {
     method: 'POST',
     headers: { ...authHeader() },
@@ -215,7 +217,7 @@ export async function cancelRun(runId: string, options: DshCallOptions = {}): Pr
  * @error  永不抛
  */
 export async function closeSession(sessionId: string, options: DshCallOptions = {}): Promise<DshCloseResult> {
-  if (sessionId.trim().length === 0) return validationError('会话编号不能为空');
+  if (sessionId.trim().length === 0) return validationError(CUSTOMER_TEXT.analysisStartFailed);
   const read = await readJson(`${resolveBase(options.base)}/api/dsh/sessions/${encodeURIComponent(sessionId)}/close`, {
     method: 'POST',
     headers: { ...authHeader() },
