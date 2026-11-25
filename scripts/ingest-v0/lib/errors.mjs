@@ -26,6 +26,21 @@ export const INGEST_ERROR_CODES = Object.freeze({
   UNSUPPORTED: 'E_UNSUPPORTED',
   OUTPUT_WRITE: 'E_OUTPUT_WRITE',
   INTERNAL: 'E_INTERNAL',
+  // ═══ V2 抽取层（#1500）═══
+  /** 文件可读但抽不出任何可判定事实（不是成功；由 `INSUFFICIENT_INGEST` 汇总） */
+  NO_EXTRACT: 'E_NO_EXTRACT',
+  /** 事实缺来源指针（`sourceRef.file/locator`）⇒ 该条不落库（C5） */
+  SOURCE_REF_MISSING: 'E_SOURCE_REF_MISSING',
+  /** 事实抽不到资料期间 ⇒ 该条不落库并计入 missingPeriod（C2） */
+  MISSING_PERIOD: 'E_MISSING_PERIOD',
+  /** 抽不到任何可落库事实：合法交付结果，带 `missing[]`（C6；禁止编造） */
+  INSUFFICIENT_INGEST: 'E_INSUFFICIENT_INGEST',
+  /** 落库后 `synova_context_get` 仍 count=0 ⇒ 判失败（C4；`#1493` 的坑） */
+  C4_ZERO: 'E_C4_ZERO',
+  /** 产品落库原语抛错（persistFacts / metric_observations / 上下文工具） */
+  PERSIST_FAILED: 'E_PERSIST_FAILED',
+  /** 运行环境不满足（Node 版本不支持原生 TS 执行等） */
+  ENV: 'E_ENV',
 });
 
 /**
