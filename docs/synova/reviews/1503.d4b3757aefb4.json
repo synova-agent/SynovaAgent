@@ -1,0 +1,76 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1503,
+  "patch_fingerprint": "sha256:d4b3757aefb47cc2c4963c937efed749cc14155120f43b8dde78047368e668f2",
+  "author": "L2 实现会话（feat/1500-ingest-v0-v2-extract，#1500 V2 抽取层）",
+  "reviewer": "代码评审与安全审计专家（独立复核会话，零上下文，未参与实现）",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "base_reviewed": "712b1e418f9e29a1dcaf9b2197dca870da8199fa",
+  "head_reviewed": "73868305b08544542719af154813010275bd06a0",
+  "issued_at": "2026-11-25T12:58:00+08:00",
+  "tool": "synova-independent-review（只读复核：git diff/grep + Node24 复跑 vitest/tsc + 仓库外副本变异）",
+  "checks": [
+    {
+      "id": "1-写集",
+      "cmd": "git -C <WT> diff --name-status 712b1e418 73868305b",
+      "result": "pass",
+      "evidence": "25 文件，全部落在 scripts/ingest-v0/**、tests/ingest-v0/**、.claude/claims/1500.yaml；scripts 下全为 .mjs；无 src/**/electron*/extensions/**/scripts/**/*.ts；工作树 HEAD=73868305b 且与 head 一致、无未提交改动"
+    },
+    {
+      "id": "2-落库原语",
+      "cmd": "grep -rniE 'INSERT|UPDATE|DELETE|REPLACE|prepare\\(|better-sqlite3' scripts/ingest-v0 tests/ingest-v0",
+      "result": "pass",
+      "evidence": "写集内零 SQL 直写；唯一落库桥 scripts/ingest-v0/lib/persist.mjs 经产品原语 store.persistFacts + writeMetricObservation + handleDomainToolCall，不改产品代码。唯一 INSERT 命中在 base 既有 tests/ingest-v0/p0-gate-recheck.test.ts:299，是[反例]用例证明直写 scan_ontology_links 被 006 触发器 ABORT（非本 PR 写集）"
+    },
+    {
+      "id": "3-C4真成功判据",
+      "cmd": "读 lib/persist.mjs:168-190 + tests/ingest-v0/extract-c4zero.test.ts",
+      "result": "pass",
+      "evidence": "persistAndVerify 落库后调 synova_context_get；context.count=0 抛 IngestError('E_C4_ZERO','context',detail={context})，不伪造成功。Node24 实跑 extract-c4zero.test.ts：抛 E_C4_ZERO/phase=context/count=0/missing=[defVersion]，1 passed"
+    },
+    {
+      "id": "4-period与defVersion",
+      "cmd": "读 lib/extract/period.mjs + aggregate.mjs:90-103 + facts.mjs:139-151；grep 检索当前月兜底",
+      "result": "pass",
+      "evidence": "detectPeriod 不命中⇒null，禁止回退当前月；aggregate 对 period 非法者丢弃并计 missingPeriod（对象/指标），defVersion 缺失只计 missingDefVersion 不丢；facts.buildObject 逐对象注入 defVersion:'ingest-v0'。CLI 实跑无期间资料⇒insufficient/E_INSUFFICIENT_INGEST/missing含period/exitCode=1"
+    },
+    {
+      "id": "5-来源与读对",
+      "cmd": "node extract.mjs 自造 input→report.json；独立脚本按 locator(数据行序号+表头列)回原文 + 全库/报告反查编造项",
+      "result": "pass",
+      "evidence": "正向：赵复核/钱抽检/孙校验 3/3 按 locator 回原文单元格严格相等；报告 verification 5/5 present=true(checkedBy=cell)。反向：虚构人物/不存在的团队/孙不存在 在原文、报告、DB 全表 0 命中，无编造"
+    },
+    {
+      "id": "6-改坏必红",
+      "cmd": "git archive head→仓库外副本 + node_modules 只读 junction；变异①isValidPeriod 恒真；变异②删 facts.buildObject 的 defVersion 注入；各自跑用例后还原",
+      "result": "pass",
+      "evidence": "副本基线 3 files/19 tests 全绿；变异① extract-rules.test.ts 红('expected [...] to have a length of +0 but got 4')；变异② extract-cli.test.ts:129 红('expected 1 to be +0'，exitCode 因 C4 count=0 变 1)；逐文件 sha256 比对确认还原后写集与工作树全等、无 .bak 残留；还原后副本全套 9 files/81 tests 全绿；真实工作树未做任何变异"
+    },
+    {
+      "id": "7-tsc",
+      "cmd": "node24 node_modules/typescript/bin/tsc --noEmit；node --check 全部写集 .mjs",
+      "result": "pass",
+      "evidence": "tsc --noEmit（项目 tsconfig，exclude tests）exit 0 零错误；17 个写集 .mjs 全部 node --check 通过。tests 目录被 tsconfig 显式排除、vitest 用 esbuild 转译不需声明文件，严格临时 tsconfig 下 tests 的 TS7016 等为项目既有口径（base 既有 discover-*/p0-gate-recheck 同样），非本 PR 引入"
+    },
+    {
+      "id": "8-vitest",
+      "cmd": "node24 node_modules/vitest/vitest.mjs run tests/ingest-v0",
+      "result": "pass",
+      "evidence": "9 files / 81 tests 全绿，0 skipped。首轮用 WorkBuddy 默认 node v22(ABI127) 得 4 suite fail+15 skipped 系 better-sqlite3 按 ABI137(Node24) 编译的假红；改用系统 Node24(ABI137) 复跑即全绿，环境口径已隔离"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "复核环境",
+      "what": "默认 npx 走 WorkBuddy 内置 node v22(ABI127)，与本仓 better-sqlite3 原生模块 ABI137(Node24) 不匹配导致假红；须用 C:/Program Files/nodejs/node.exe (v24.16.0) 复跑才是真值。非代码问题，不构成阻断。"
+    },
+    {
+      "severity": "info",
+      "where": "lib/extract/facts.mjs:130-151",
+      "what": "关系谓词 edge/member_of_team 尚未登记进本体 edge-types（源码头部注释已登记为已知限制，不在本票写集）；本体侧后续登记项，非阻断。"
+    }
+  ],
+  "reviewer_note": "零上下文独立复核：锚定任务给定 base=712b1e418 / head=73868305b，patch_fingerprint 用 check-merge-conditions.sh --diff-fingerprint 取权威值并与 README §2 命令独立复算一致（d4b3757a…）。六条必核逐条给命令+原文，改坏必红在仓库外副本完成且真实工作树零污染。全部通过，结论 PASS。verdict=PASS 仅针对本 PR 写集与六条判据，不代表对产品方向或门禁标准的裁定。"
+}
