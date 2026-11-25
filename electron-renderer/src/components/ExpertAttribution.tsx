@@ -2,7 +2,7 @@
  * components/ExpertAttribution.tsx — 专家标识折叠组件 (Phase 1.2)
  *
  * 默认折叠，展开显示每位专家的方法论和置信度。
- * 点击"展开完整推理链" → 右栏切换到专家推理视图 (Phase 2)。
+ * T5a/B2：原「展开完整推理链」按钮无任何 handler（死项，铁律 37）⇒ 已删除，不留空壳。
  */
 import React, { useState } from 'react';
 import type { ExpertAttr } from '../types/chat';
@@ -42,9 +42,6 @@ const ExpertAttribution: React.FC<Props> = ({ experts }) => {
               )}
             </div>
           ))}
-          <button className="expert-attribution-chain-btn">
-            🔗 展开完整推理链
-          </button>
         </div>
       )}
     </div>

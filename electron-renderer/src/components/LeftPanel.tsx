@@ -33,7 +33,9 @@ const CAP_ICON: Record<CapabilityId, LucideIcon> = {
 type BadgeStats = { criticalCount: number; warningCount: number } | null;
 
 const LeftPanel: React.FC = () => {
-  const open = useAppStore((s) => s.leftPanelOpen);
+  // T5a/B2: 收起态＝store 唯一真值（leftPanelCollapsed）；本组件只消费，不另存本地开合态
+  const leftPanelCollapsed = useAppStore((s) => s.leftPanelCollapsed);
+  const open = !leftPanelCollapsed;
   const searchQuery = useAppStore((s) => s.searchQuery);
   const setSearchQuery = useAppStore((s) => s.setSearchQuery);
   const workspaces = useAppStore((s) => s.workspaces);

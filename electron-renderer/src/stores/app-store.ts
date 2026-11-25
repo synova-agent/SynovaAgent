@@ -48,7 +48,8 @@ export interface PushLocalNotificationInput {
 
 export interface AppState {
   // 面板
-  leftPanelOpen: boolean;
+  /** T5a/B2: 左栏收起态（true=收起为图标条）。**唯一**真值，不另存 `leftPanelOpen` 反相副本 */
+  leftPanelCollapsed: boolean;
   rightPanelOpen: boolean;
   leftPanelWidth: number;
   rightPanelWidth: number;
@@ -165,8 +166,52 @@ export function readLastReportId(): string | null {
   }
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  leftPanelOpen: true, rightPanelOpen: true,
+// ═══ T5a/B2: 左栏收起态持久化（只存 UI 状态；R11：不得推导业务真值） ═══
+
+/** T5a/B2: 左栏收起态 localStorage 键（'true'=收起 / 'false'=展开） */
+export const LEFT_PANEL_COLLAPSED_STORAGE_KEY = 'synova:left-panel-collapsed';
+
+/**
+ * readLeftPanelCollapsed — T5a/B2 读取上次收起态（Electron 刷新/重启后保持）
+ * @input  无（读 localStorage[LEFT_PANEL_COLLAPSED_STORAGE_KEY]）
+ * @output boolean —— true=收起 / false=展开（无键 / 值非 'true' / 浏览器外环境 → false，非异常）
+ * @degraded 无 localStorage（浏览器外/测试环境，正常路径）→ false 不警告；
+ *           读失败（隐私模式/配额/异常）→ console.warn + false（不抛；界面照常可开合，仅不保持）
+ */
+export function readLeftPanelCollapsed(): boolean {
+  const storage = safeLocalStorage();
+  if (!storage) return false;
+  try {
+    return storage.getItem(LEFT_PANEL_COLLAPSED_STORAGE_KEY) === 'true';
+  } catch (err) {
+    console.warn('[app-store] 左栏收起态读取失败（本次按展开态启动）:',
+      err instanceof Error ? err.message : String(err));
+    return false;
+  }
+}
+
+/**
+ * writeLeftPanelCollapsed — T5a/B2 落盘收起态
+ * @input  collapsed: boolean（true=收起）
+ * @output 无（写 localStorage[LEFT_PANEL_COLLAPSED_STORAGE_KEY]）
+ * @degraded storage 不可达 / 写失败 → console.warn（不抛；本次会话内开合仍生效，仅不保持）
+ */
+function writeLeftPanelCollapsed(collapsed: boolean): void {
+  const storage = safeLocalStorage();
+  if (!storage) {
+    console.warn('[app-store] localStorage 不可达，左栏收起态仅保留内存态');
+    return;
+  }
+  try {
+    storage.setItem(LEFT_PANEL_COLLAPSED_STORAGE_KEY, collapsed ? 'true' : 'false');
+  } catch (err) {
+    console.warn('[app-store] 左栏收起态写入失败（仅内存态）:',
+      err instanceof Error ? err.message : String(err));
+  }
+}
+
+export const useAppStore = create<AppState>((set, get) => ({
+  leftPanelCollapsed: readLeftPanelCollapsed(), rightPanelOpen: true,
   leftPanelWidth: 240, rightPanelWidth: 320,
   onlineStatus: 'connecting', alertCount: 0, activeView: 'chat', theme: 'dark',
 
@@ -180,7 +225,18 @@ export const useAppStore = create<AppState>((set) => ({
   llmUnconfigured: false,
   localNotifications: [],
 
-  toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
+  /**
+   * toggleLeftPanel — T5a/B2 左栏开合（TitleBar 可见控件与 Ctrl+B 共用此**唯一** action）
+   * @input  无（取当前 leftPanelCollapsed 取反）
+   * @output 无（store: leftPanelCollapsed 翻转；同步写 localStorage 保持刷新/重启后状态）
+   * @side-effect 只落 UI 状态——不推导、不缓存任何业务真值（R11）
+   * @degraded localStorage 不可达 → 内存态翻转 + console.warn，不抛
+   */
+  toggleLeftPanel: () => {
+    const leftPanelCollapsed = !get().leftPanelCollapsed;
+    set({ leftPanelCollapsed });
+    writeLeftPanelCollapsed(leftPanelCollapsed);
+  },
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
   setOnlineStatus: (onlineStatus) => set({ onlineStatus }),
   setAlertCount: (alertCount) => set({ alertCount }),
