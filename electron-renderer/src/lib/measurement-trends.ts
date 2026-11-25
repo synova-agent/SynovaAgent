@@ -30,6 +30,7 @@
  *   · renderer 侧只证明「真 fetch 命中真路由＋渲染树结构」，不证明像素/交互视觉（规格 §7.3）。
  */
 import { getApiBase } from './api';
+import { CUSTOMER_TEXT } from './words';
 
 /** 趋势方向（由 changeRatio 推导，不读服务端额外字段） */
 export type TrendDirection = 'up' | 'down' | 'flat' | 'unknown';
@@ -67,8 +68,8 @@ const TRENDS_PATH = '/api/sentinel/metrics/readings?view=trends';
 
 /** 趋势区口径版本（与上游导出口径对齐；展示层消费同一常量，禁在组件内另写一份字面量） */
 export const TREND_SEMANTICS_VERSION = 'cost0-v1';
-/** 已知限制文案（规格 §5.2 逐字；展示层在任何 state 恒显示在标题下） */
-export const TREND_SEMANTICS_NOTE = '已知限制：本区只显示已落库的真实读数（不补数、不猜数）。当前口径 cost0-v1——上游导出不含营业成本，毛利率/净利率为公式产物，与客户账本可能不一致。';
+/** 已知限制文案（客户说法取自 lib/words §2.7-H：不出现口径版本号；版本号只进技术详情） */
+export const TREND_SEMANTICS_NOTE = CUSTOMER_TEXT.costBasisNote;
 
 /**
  * 趋势方向推导。

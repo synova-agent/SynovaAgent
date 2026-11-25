@@ -93,10 +93,10 @@ describe('D556 UI 场景 1: 占位零残留', () => {
 describe('D556 UI 场景 2: 三块渲染（loaded 空数据）', () => {
   const output = render(baseProps());
 
-  it('含三块标题（诊断校准面板/手动信号注入/反馈效用仪表）', () => {
+  it('含三块标题（诊断校准面板/手动补充经营异动/反馈效果统计）', () => {
     expect(output).toContain('🧬 诊断校准面板');
-    expect(output).toContain('📥 手动信号注入');
-    expect(output).toContain('📊 反馈效用仪表');
+    expect(output).toContain('📥 手动补充经营异动');
+    expect(output).toContain('📊 反馈效果统计');
   });
 
   it('含三端点区块结构（data-ga-block × 3 + data-endpoint 与 D551 四端点三块映射一致）', () => {
@@ -116,8 +116,8 @@ describe('D556 UI 场景 2: 三块渲染（loaded 空数据）', () => {
   it('含两个表单结构（校准四动作 + 信号五要素）与提交按钮', () => {
     expect(output).toContain('data-ga-form="calibration"');
     expect(output).toContain('data-ga-form="signal"');
-    expect(output).toContain('提交校准');
-    expect(output).toContain('注入信号');
+    expect(output).toContain('提交修正');
+    expect(output).toContain('补充经营异动');
   });
 });
 
@@ -135,13 +135,13 @@ describe('D556 UI 场景 3: 计数变化（stats {5/2/3}）', () => {
     },
   }));
 
-  it('三计数渲染为元素文本（校准 5 / 注入 2 / 回流 3）', () => {
+  it('三计数渲染为元素文本（校准 5 / 补充 2 / 采纳反馈 3）', () => {
     expect(output).toContain('>5<');
     expect(output).toContain('>2<');
     expect(output).toContain('>3<');
     expect(output).toContain('校准累计');
-    expect(output).toContain('注入累计');
-    expect(output).toContain('回流计数');
+    expect(output).toContain('累计补充条数');
+    expect(output).toContain('已被采纳的反馈数');
   });
 
   it('note 字段原文透传（不加工不丢弃——采纳率不可得显性化）', () => {
@@ -163,15 +163,15 @@ describe('D556 UI 场景 4: 降级 UI（整体 degraded）', () => {
 
   it('含 cap-degraded-banner 类名 + 降级文案 + 重试按钮（spec §5.3）', () => {
     expect(output).toContain('cap-degraded-banner');
-    expect(output).toContain('⚠ GA 协同服务降级，稍后重试');
+    expect(output).toContain('⚠ 顾问协同暂时读不到，请稍后重试');
     expect(output).toContain('ga-retry-btn');
     expect(output).toContain('重试');
   });
 
-  it('零计数假数据（无校准/注入/回流计数渲染，铁律 8）', () => {
+  it('零计数假数据（无校准/补充/采纳反馈计数渲染，铁律 8）', () => {
     expect(output).not.toContain('校准累计');
-    expect(output).not.toContain('注入累计');
-    expect(output).not.toContain('回流计数');
+    expect(output).not.toContain('累计补充条数');
+    expect(output).not.toContain('已被采纳的反馈数');
   });
 });
 
@@ -182,8 +182,9 @@ describe('D556 UI 场景 4: 降级 UI（整体 degraded）', () => {
 describe('D556 UI 场景 5: role 防御空态（blocked）', () => {
   const output = render(baseProps({ phase: 'blocked', role: 'admin' }));
 
-  it('含「仅 GA 可见」空态 + 当前角色提示', () => {
-    expect(output).toContain('仅 GA 可见');
+  it('含「仅顾问可见」空态 + 当前角色提示（角色原文进技术详情）', () => {
+    expect(output).toContain('仅顾问可见');
+    expect(output).toContain('当前角色（管理员）');
     expect(output).toContain('admin');
   });
 
@@ -213,13 +214,13 @@ describe('D556 UI: 分块独立降级（§5.3）', () => {
   }));
 
   it('降级块内联降级条 + 成功块照常渲染计数', () => {
-    expect(output).toContain('⚠ 校准列表服务降级，稍后重试');
+    expect(output).toContain('⚠ 修正记录暂时读不到，请稍后重试');
     expect(output).toContain('校准累计');
     expect(output).toContain('>1<');
   });
 
   it('整面板降级条不出现（loaded 总态——分块独立，不连坐）', () => {
-    expect(output).not.toContain('⚠ GA 协同服务降级，稍后重试');
+    expect(output).not.toContain('⚠ 顾问协同暂时读不到，请稍后重试');
   });
 });
 
@@ -238,20 +239,24 @@ describe('D556 UI: 提交回显结构（spec §3.4 结果环节）', () => {
     calibrations: [SAMPLE_CALIBRATION],
   }));
 
-  it('校准回显 calibrationId + 信号回显 signalId/findingId', () => {
-    expect(output).toContain('calibrationId=mem_42');
+  it('校准回显编号 + 信号回显编号（主文案不印字段名，原值进技术详情）', () => {
+    expect(output).toContain('修正已提交（编号见技术详情）');
+    expect(output).toContain('mem_42');
     expect(output).toContain('data-calibration-id="mem_42"');
-    expect(output).toContain('signalId=mem_43');
-    expect(output).toContain('findingId=f-77');
+    expect(output).toContain('已补充经营异动（编号见技术详情）');
+    expect(output).toContain('mem_43');
+    expect(output).toContain('f-77');
     expect(output).toContain('data-finding-id="f-77"');
   });
 
-  it('会话内注入历史渲染', () => {
-    expect(output).toContain('注入历史');
+  it('会话内已补充记录渲染', () => {
+    expect(output).toContain('已补充记录（本次分析）');
     expect(output).toContain('A 轮融资');
   });
 
-  it('校准列表渲染条目（action · targetType + supersedes 链头语义）', () => {
+  it('校准列表渲染条目（客户说法 + 原始枚举进技术详情）', () => {
+    expect(output).toContain('标记错误');
+    expect(output).toContain('诊断结论');
     expect(output).toContain('mark_error');
     expect(output).toContain('diagnosis_conclusion');
   });

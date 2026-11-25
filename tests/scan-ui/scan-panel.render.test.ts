@@ -78,7 +78,7 @@ describe('#1413 ScanPanel 清单、等待与错误', () => {
 
   it('401／403／degraded 与空清单文案严格区分', () => {
     expect(render({ status: 'error', error: { kind: 'error', httpStatus: 401, code: 'UNAUTHORIZED', phase: 'request', retryable: false, message: '登录失效' } })).toContain('请重新登录');
-    expect(render({ status: 'error', error: { kind: 'error', httpStatus: 403, code: 'SCOPE_DENIED', phase: 'request', retryable: false, message: 'GA 不可见' } })).toContain('GA 不可见');
+    expect(render({ status: 'error', error: { kind: 'error', httpStatus: 403, code: 'SCOPE_DENIED', phase: 'request', retryable: false, message: 'GA 不可见' } })).toContain('当前账号无权查看这项内容');
     expect(render({ status: 'degraded', degraded: { kind: 'degraded', reason: '清单网络失败', retryable: true } })).toContain('清单网络失败');
     for (const html of [
       render({ status: 'error', error: { kind: 'error', httpStatus: 401, code: 'UNAUTHORIZED', phase: 'request', retryable: false, message: '登录失效' } }),
@@ -97,9 +97,9 @@ describe('#1413 ScanPanel 清单、等待与错误', () => {
   it('400／409／415／422／500／网络各有可诊断文案，retryable=false 不出现重试', () => {
     const cases = [
       { error: { kind: 'error', httpStatus: 400, code: 'VALIDATION_ERROR', phase: 'request', retryable: false, message: '字段错误' }, expected: '请求校验失败' },
-      { error: { kind: 'error', httpStatus: 409, code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', phase: 'request', retryable: false, message: '载荷不同' }, expected: '幂等键冲突' },
+      { error: { kind: 'error', httpStatus: 409, code: 'IDEMPOTENCY_PAYLOAD_MISMATCH', phase: 'request', retryable: false, message: '载荷不同' }, expected: '该请求已提交过' },
       { error: { kind: 'error', httpStatus: 409, code: 'IDEMPOTENCY_REPLAY_SCOPE_CHANGED', phase: 'request', retryable: false, message: '范围变化' }, expected: '可见范围变化' },
-      { error: { kind: 'error', httpStatus: 409, code: 'SOURCE_CHANGED_RERUN_REQUIRED', phase: 'report', retryable: false, message: '材料变化' }, expected: '材料变化' },
+      { error: { kind: 'error', httpStatus: 409, code: 'SOURCE_CHANGED_RERUN_REQUIRED', phase: 'report', retryable: false, message: '材料变化' }, expected: '数据已更新' },
       { error: { kind: 'error', httpStatus: 415, code: 'UNSUPPORTED_FORMAT', phase: 'preflight', retryable: false, message: '格式错误' }, expected: '材料格式' },
       { error: { kind: 'error', httpStatus: 422, code: 'EMPTY_CONTENT', phase: 'parse', retryable: false, message: '空内容' }, expected: '材料内容' },
     ] as const;
@@ -132,7 +132,7 @@ describe('#1413 ScanPanel 合成 staff 报告与最小输出', () => {
     for (const expected of [
       '来源与证据状态', 'source-public', 'confirmed', '源内／看板／跨来源核对', '计算一致：未知',
       '冲突', '缺失与证据缺口', '公开材料缺少哪一项？', '补充材料请求', '② 对象与关系',
-      '公开批次', 'team:a-&gt;batch:a', '断言与最小报告', 'statement 仅表示某人说过', '部分可见',
+      '公开批次', 'team:a-&gt;batch:a', '结论与诊断报告（简版）', 'statement 仅表示某人说过', '部分可见',
       '计算值：未知', '看板值：未知', '差异：未知',
     ]) expect(html).toContain(expected);
     expect(html).not.toContain('计算值：0');

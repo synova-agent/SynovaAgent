@@ -29,20 +29,6 @@
   },
   {
     "path": "electron-renderer/src/components/CommandPalette.tsx",
-    "rule": "R2-08",
-    "text": "ESC",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 129
-  },
-  {
-    "path": "electron-renderer/src/components/CommandPalette.tsx",
-    "rule": "R2-08",
-    "text": "ESC 关闭",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 158
-  },
-  {
-    "path": "electron-renderer/src/components/CommandPalette.tsx",
     "rule": "R2-18",
     "text": "command",
     "why": "【客户面】:150 `{item.type}` 把枚举值直接渲染成结果徽标（值域出自本文件 :18 类型联合 / :25-:28 对象字面量）：现状泄漏，T1 不改界面；T4 改渲染位后按回执口径销账",
@@ -68,13 +54,6 @@
     "text": "workspace",
     "why": "【客户面】:150 `{item.type}` 把枚举值直接渲染成结果徽标（值域出自本文件 :18 类型联合 / :67、:87 对象字面量 / :101 分派比较）：现状泄漏，T1 不改界面；T4 改渲染位后按回执口径销账",
     "lineHint": 18
-  },
-  {
-    "path": "electron-renderer/src/components/CommandPalette.tsx",
-    "rule": "R2-19",
-    "text": "item.type",
-    "why": "【客户面】JSX 渲染位直出枚举：`:150` 的 `{item.type}` 把值域原文（workspace/conversation/sentinel/command，见本文件 `:18` 类型联合）渲染成结果徽标；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 150
   },
   {
     "path": "electron-renderer/src/components/DshLoginPanel.tsx",
@@ -113,20 +92,6 @@
   },
   {
     "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-01",
-    "text": "输入要交给 DSH 会话的任务...",
-    "why": "【客户面】JSX placeholder 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 148
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-01",
-    "text": "DSH 会话",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 134
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
     "rule": "R2-04",
     "text": "STREAM_INTERRUPTED",
     "why": "【非客户面】比较运算的判别值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
@@ -134,213 +99,10 @@
   },
   {
     "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-06",
-    "text": "开发模式(DevMode):服务端按开发模式自动身份处理,不发真实登录令牌",
-    "why": "【客户面】return：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 33
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-06",
-    "text": "已登录(令牌只在内存)",
-    "why": "【客户面】return：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 36
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-07",
-    "text": "无权访问(403):",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 52
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-07",
-    "text": "运行不存在(404):",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 53
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-07",
-    "text": "状态冲突(409):",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 54
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-08",
-    "text": "输入要交给 DSH 会话的任务...",
-    "why": "【客户面】JSX placeholder 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 148
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-08",
-    "text": "DSH 会话",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 134
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
     "rule": "R2-08",
     "text": "STREAM_INTERRUPTED",
     "why": "【非客户面】比较运算的判别值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 50
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "发起会话",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 154
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "关闭会话",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 163
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "会话编号:",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 176
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "会话输入",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 140
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "会话已关闭",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 177
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "尚未发起会话",
-    "why": "【客户面】return：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 40
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "输入要交给 DSH 会话的任务...",
-    "why": "【客户面】JSX placeholder 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 148
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "运行编号:",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 175
-  },
-  {
-    "path": "electron-renderer/src/components/DshRunPanel.tsx",
-    "rule": "R2-15",
-    "text": "DSH 会话",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 134
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": ")无权访问 GA 协同面板",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 221
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "⚠ 服务端拒绝访问(仅 GA 可见)",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 81
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "⚠ GA 协同服务降级,稍后重试",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 230
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "加载 GA 协同数据...",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 238
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "仅 GA 可见 — 当前角色(",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 221
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "GA 人机协同",
-    "why": "【客户面】JSX title 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 229
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "GA 人机协同(仅 GA 可见)",
-    "why": "【客户面】JSX title 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 218
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "GA 协同面板待加载",
-    "why": "【客户面】JSX text 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 239
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R1-01",
-    "text": "GA 协同数据不可用(校准列表与效用仪表均未成功获取)",
-    "why": "【客户面】JSX text 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 231
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-05",
-    "text": ")→ findingId=",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 170
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-05",
-    "text": "✓ 校准已提交 calibrationId=",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 126
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-05",
-    "text": "✓ 信号已注入 signalId=",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 160
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-05",
-    "text": "findingId=",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 160
   },
   {
     "path": "electron-renderer/src/components/ga-detail-sections.tsx",
@@ -414,143 +176,10 @@
   },
   {
     "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "⚠ 效用统计服务降级,稍后重试",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 184
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "⚠ 校准列表服务降级,稍后重试",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 78
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "⚠ GA 协同服务降级,稍后重试",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 230
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "✓ 信号已注入 signalId=",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 160
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "📊 反馈效用仪表",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 26
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "📥 手动信号注入",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 25
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "回流计数",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 193
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "加载效用统计...",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 182
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "降级信号",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 103
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "哨兵 ID(降级信号用)",
-    "why": "【客户面】JSX placeholder 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 121
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "暂无效用统计",
-    "why": "【客户面】JSX text 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 201
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "注入累计",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 192
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "注入历史(本会话)",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 167
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "注入信号",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 163
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-14",
-    "text": "GA 协同数据不可用(校准列表与效用仪表均未成功获取)",
-    "why": "【客户面】JSX text 属性：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 231
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
     "rule": "R2-16",
     "text": "degraded",
     "why": "【非客户面】比较运算的判别值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 77
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-17",
-    "text": "暂无数据",
-    "why": "【客户面】常量初始化：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 58
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-19",
-    "text": "item.action",
-    "why": "【客户面】JSX 渲染位直出枚举：`:89` 的 `{item.action}` 把校准动作原文（mark_error/add_context/rewrite_logic/demote_signal 等，见 `stores/ga-collab.ts:24 GA_CALIBRATION_ACTIONS`）直出为「mark_error · …」；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 89
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-19",
-    "text": "item.targetType||item.targetId||'—'",
-    "why": "【客户面】JSX 渲染位直出枚举：`:89` 的 `{item.targetType || item.targetId || '—'}` 把校准目标的类型/ID 原文直出（`stores/ga-collab.ts` 的 targetType/targetId 原样透传）；整体全等抓不到，按 CTO 裁定 B 的**顶层 `||` 分支全等**命中（分支 `item.targetType`）；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 89
-  },
-  {
-    "path": "electron-renderer/src/components/ga-detail-sections.tsx",
-    "rule": "R2-19",
-    "text": "props.role",
-    "why": "【客户面】JSX 渲染位直出枚举：`:221` 的 `{props.role}` 把 UserRole 值域原文（admin/manager/ga/liaison/staff，见 `stores/app-store.ts:10`）直出成「仅 GA 可见 — 当前角色（admin）无权访问 GA 协同面板」；值来自 `RightPanel.tsx:1014 role={userRole}` 透传（属性值位置本身不上屏、不算渲染位），按 CTO 裁定 A 登记此下游渲染位；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 221
   },
   {
     "path": "electron-renderer/src/components/LeftPanel.tsx",
@@ -726,13 +355,6 @@
     "text": "UNKNOWN_STATE:",
     "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
     "lineHint": 64
-  },
-  {
-    "path": "electron-renderer/src/components/MeasurementTrendSection.tsx",
-    "rule": "R2-14",
-    "text": "⚠ 测量值/趋势服务降级,暂不可用(不展示任何推测数据)",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 122
   },
   {
     "path": "electron-renderer/src/components/MeasurementTrendSection.tsx",
@@ -1086,13 +708,6 @@
   },
   {
     "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-05",
-    "text": "calculation_match 仅表示计算一致,不代表业务事实。",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 113
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
     "rule": "R2-08",
     "text": "FILE_CHANGED_BEFORE_COMMIT",
     "why": "【非客户面】比较运算的判别值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
@@ -1149,48 +764,6 @@
   },
   {
     "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-09",
-    "text": "calculation_match 仅表示计算一致,不代表业务事实。",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 113
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-14",
-    "text": "材料变化:;请按原请求编号核对或在对账后重新发起",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 48
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-14",
-    "text": "断言与最小报告",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 170
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-14",
-    "text": "幂等键冲突:;请使用原请求编号核对,或在对账完成后重新发起",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 44
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-14",
-    "text": "扫描服务降级",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 238
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-15",
-    "text": "运行编号:",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 77
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
     "rule": "R2-16",
     "text": "conflict",
     "why": "【非客户面】比较运算的判别值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
@@ -1202,55 +775,6 @@
     "text": "degraded",
     "why": "【非客户面】比较运算的判别值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 242
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-19",
-    "text": "entry.status",
-    "why": "【客户面】JSX 渲染位直出枚举：`:60` 的 `{entry.status}` 把服务端检查状态原文（`lib/enterprise-scan-api.ts:263` 以 string 原样解析）直出为「状态：…」；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 60
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-19",
-    "text": "object.type",
-    "why": "【客户面】JSX 渲染位直出枚举：`:155` 的 `{object.type}` 把本体对象类型原文（`lib/enterprise-scan-api.ts:69/306` string 原样透传）直出；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 155
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-19",
-    "text": "relation.type",
-    "why": "【客户面】JSX 渲染位直出枚举：`:163` 的 `{relation.type}` 把关系类型原文（`lib/enterprise-scan-api.ts:77/314` string 原样透传）直出；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 163
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-19",
-    "text": "source.evidence_status",
-    "why": "【客户面】JSX 渲染位直出枚举：`:89` 的 `{source.evidence_status}` 把证据状态原文（`lib/enterprise-scan-api.ts:45` string 原样透传）直出为「证据状态：…」；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 89
-  },
-  {
-    "path": "electron-renderer/src/components/ScanPanel.tsx",
-    "rule": "R2-19",
-    "text": "source.instance_state",
-    "why": "【客户面】JSX 渲染位直出枚举：`:90` 的 `{source.instance_state}` 把实例状态原文（`lib/enterprise-scan-api.ts:46` string 原样透传）直出为「实例状态：…」；渲染位直出枚举，待 T4 改成客户说法后删除本条",
-    "lineHint": 90
-  },
-  {
-    "path": "electron-renderer/src/components/StatusBar.tsx",
-    "rule": "R2-06",
-    "text": "⚠ LLM 未配置,诊断不可用——请在设置中配置",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 45
-  },
-  {
-    "path": "electron-renderer/src/components/StatusBar.tsx",
-    "rule": "R2-08",
-    "text": "⚠ LLM 未配置,诊断不可用——请在设置中配置",
-    "why": "【客户面】JSX 文本节点：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 45
   },
   {
     "path": "electron-renderer/src/components/WelcomeScreen.tsx",
@@ -1349,13 +873,6 @@
     "text": "root_cause_identified",
     "why": "【非客户面】类型声明：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 32
-  },
-  {
-    "path": "electron-renderer/src/hooks/sse-contract.ts",
-    "rule": "R2-14",
-    "text": "⚠ 模块 降级运行(结果可能不完整)",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 130
   },
   {
     "path": "electron-renderer/src/hooks/sse-contract.ts",
@@ -1569,20 +1086,6 @@
   },
   {
     "path": "electron-renderer/src/lib/auth-session.ts",
-    "rule": "R2-07",
-    "text": "HTTP",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 129
-  },
-  {
-    "path": "electron-renderer/src/lib/auth-session.ts",
-    "rule": "R2-08",
-    "text": "响应非 JSON:",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 123
-  },
-  {
-    "path": "electron-renderer/src/lib/auth-session.ts",
     "rule": "R2-08",
     "text": "AUTH_ERROR",
     "why": "【非客户面】常量初始化：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
@@ -1594,13 +1097,6 @@
     "text": "AUTH_FAILED",
     "why": "【非客户面】常量初始化：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 130
-  },
-  {
-    "path": "electron-renderer/src/lib/auth-session.ts",
-    "rule": "R2-08",
-    "text": "HTTP",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 129
   },
   {
     "path": "electron-renderer/src/lib/auth-session.ts",
@@ -1681,27 +1177,6 @@
   },
   {
     "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-07",
-    "text": "HTTP",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 123
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-07",
-    "text": "HTTP 错误形状未知",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 137
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-08",
-    "text": "响应非 JSON:",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 153
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
     "rule": "R2-08",
     "text": "CONFLICT",
     "why": "【非客户面】return：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
@@ -1720,20 +1195,6 @@
     "text": "GET",
     "why": "【非客户面】对象字面量值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 320
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-08",
-    "text": "HTTP",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 123
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-08",
-    "text": "HTTP 错误形状未知",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 137
   },
   {
     "path": "electron-renderer/src/lib/dsh-run-api.ts",
@@ -1776,20 +1237,6 @@
     "text": "VALIDATION_ERROR",
     "why": "【非客户面】对象字面量值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 109
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-15",
-    "text": "会话编号不能为空",
-    "why": "【客户面】调用 validationError() 的实参：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 218
-  },
-  {
-    "path": "electron-renderer/src/lib/dsh-run-api.ts",
-    "rule": "R2-15",
-    "text": "运行编号不能为空",
-    "why": "【客户面】调用 validationError() 的实参：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 196
   },
   {
     "path": "electron-renderer/src/lib/dsh-run-api.ts",
@@ -1877,31 +1324,10 @@
   },
   {
     "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-07",
-    "text": "HTTP 错误形状未知",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 436
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-08",
-    "text": "响应非 JSON:",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 413
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
     "rule": "R2-08",
     "text": "GET",
     "why": "【非客户面】对象字面量值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 451
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-08",
-    "text": "HTTP 错误形状未知",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 436
   },
   {
     "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
@@ -1916,27 +1342,6 @@
     "text": "VALIDATION_ERROR",
     "why": "【非客户面】对象字面量值：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 472
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-08",
-    "text": "value 不是合法 JSON 值",
-    "why": "【客户面】其它表达式位：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 248
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-09",
-    "text": "报告 schema_version 非法",
-    "why": "【客户面】其它表达式位：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 356
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-09",
-    "text": "清单 schema_version 非法",
-    "why": "【客户面】其它表达式位：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 384
   },
   {
     "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
@@ -1972,13 +1377,6 @@
     "text": "calculation_match",
     "why": "【非客户面】调用 nullableBool() 的实参：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 298
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-09",
-    "text": "check.values 应为数组",
-    "why": "【客户面】其它表达式位：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 276
   },
   {
     "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
@@ -2143,13 +1541,6 @@
   },
   {
     "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
-    "rule": "R2-15",
-    "text": "运行编号不能为空",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 501
-  },
-  {
-    "path": "electron-renderer/src/lib/enterprise-scan-api.ts",
     "rule": "R2-16",
     "text": "degraded",
     "why": "【非客户面】类型声明：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
@@ -2259,13 +1650,6 @@
     "text": "METRIC_TRENDS_SERVER_DEGRADED",
     "why": "【非客户面】类型声明：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 43
-  },
-  {
-    "path": "electron-renderer/src/lib/measurement-trends.ts",
-    "rule": "R2-12",
-    "text": "已知限制:本区只显示已落库的真实读数(不补数、不猜数)。当前口径 cost0-v1——上游导出不含营业成本,毛利率/净利率为公式产物,与客户账本可能不一致。",
-    "why": "【客户面】常量初始化：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 71
   },
   {
     "path": "electron-renderer/src/lib/measurement-trends.ts",
@@ -2396,30 +1780,9 @@
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
     "rule": "R2-05",
-    "text": "demote_signal 必填 sentinelId(目标哨兵)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 349
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-05",
     "text": "sentinelId",
     "why": "【复核】常量初始化：是否渲染无法静态定论；T4 定性后按泄漏修或销账",
     "lineHint": 254
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-05",
-    "text": "targetId 必填(诊断结论/逻辑/信号的 ID)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 303
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-05",
-    "text": "targetType 必须是:",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 299
   },
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
@@ -2431,23 +1794,9 @@
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
     "rule": "R2-09",
-    "text": "add_context 必填 contextCard(背景卡片)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 333
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-09",
     "text": "demote_signal",
     "why": "【非客户面】常量初始化：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 24
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-09",
-    "text": "demote_signal 必填 sentinelId(目标哨兵)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 349
   },
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
@@ -2473,30 +1822,9 @@
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
     "rule": "R2-09",
-    "text": "mark_error 必填 correctedContent(正确信息或补充说明)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 325
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-09",
-    "text": "mark_error 必填 errorType()",
-    "why": "【客户面】模板字符串字面段：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 321
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-09",
     "text": "rewrite_logic",
     "why": "【非客户面】常量初始化：不进入渲染；DEV DOC §5.4 全量收录故登记，T4 复核后销账",
     "lineHint": 24
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-09",
-    "text": "rewrite_logic 必填 originalVersion + rewrittenVersion(并列存储)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 341
   },
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
@@ -2511,13 +1839,6 @@
     "text": "synova.dev-identity",
     "why": "【客户面】常量初始化：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
     "lineHint": 54
-  },
-  {
-    "path": "electron-renderer/src/stores/ga-collab.ts",
-    "rule": "R2-14",
-    "text": "demote_signal 必填 sentinelId(目标哨兵)",
-    "why": "【客户面】对象字面量值：现状泄漏，T1 不改界面；T4/T6 改成客户说法后删本条",
-    "lineHint": 349
   },
   {
     "path": "electron-renderer/src/stores/ga-collab.ts",
