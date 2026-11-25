@@ -1,0 +1,9 @@
+writeset:
+  - .claude/claims/1500.yaml
+  - scripts/ingest-v0/**
+  - tests/ingest-v0/**
+done:
+  - verify: npx vitest run tests/ingest-v0 --pool=threads
+  - verify: node --check scripts/ingest-v0/extract.mjs
+  - verify: node scripts/ingest-v0/extract.mjs --source <目录|zip> --db "%TEMP%/ingest-v0/synova.db"
+note: V2 抽取层（#1500）：V1 supported 文件 → 规则抽取对象/关系/指标（每条 sourceRef）→ persistFacts + 指标 writer → synova_context_get count>0；三处改坏必红见 PR 回执。
