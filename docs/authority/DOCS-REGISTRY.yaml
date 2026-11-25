@@ -2224,3 +2224,15 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 T5a 任务卡，所属 B2（边栏可收起/恢复）：写集 LeftPanel/TitleBar/App/app-store/useKeyboard；**只做 B2，不做导航结构重排与视觉体系替换**（契约 v1.1 §3.2 冻结到 B1–B6 全验收）。核心 Done：可见收起/恢复控件（收起后仍可见）+ 一键两态 + 宽度过渡 + 状态保持 + 死项清零 + aria-expanded。含基线口径裁定：候选总数只作下界参考不再要求相等，减少须给原因。"
+  - id: DOC-1485-20
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T4c-B3测试同步-20261125.md
+    status: draft
+    owner: CTO
+    note: "#1481 T4c 任务卡，所属 B3：同步 tests/scan-ui/scan-wiring.test.ts:14 的过时断言（企业扫描→数据核对，T4b 已改产品文案，测试仍断言旧字面量 ⇒ main 红）。只改测试、不改产品代码；A2 要求改回旧文案必红（证明仍在守文案）。唯一该文件；git grep 实测仅此一处过时。"
+  - id: DOC-1485-21
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T5b-B2矮窗滚动-20261125.md
+    status: draft
+    owner: CTO
+    note: "#1481 T5b 任务卡，所属 B2（收尾）：minHeight=500 时左栏内容 503 > 面板 409.6、overflow:hidden 且不滚，本次分析入口被裁 17.2 DIP 且中心点命中状态栏。要求矮窗下左栏可滚动、入口完整可见且可点击、展开态零变化；只改 LeftPanel.tsx，若必须动 global.css 则停（CTO 裁定欠账，B2 已合时未含此条）。"
