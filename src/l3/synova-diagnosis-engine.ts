@@ -49,6 +49,17 @@ export interface DiagnosisScope {
   sentinelIds?: string[];
   /** 历史对比基准: 'last_quarter' | 'last_month' | 'baseline' */
   compareWith?: 'last_quarter' | 'last_month' | 'baseline';
+  /**
+   * #1431 阶段 2 · S2b：④a 观测周期（`YYYY-MM`），**由调用方显式携带**。
+   * 引擎/哨兵**不得**直取系统时钟派生；缺省 ⇒ 本轮不写 `metric_observations`
+   * （降级码 `S2_DEGRADED_NO_PERIOD`）；非法形态 ⇒ 不写（`S2_DEGRADED_BAD_PERIOD`）。
+   */
+  period?: string;
+  /**
+   * #1431 阶段 2 · S2b：④a 观测对象的业务键（② `Team` 对象的幂等键，非空字符串）。
+   * 缺省 ⇒ 本轮不写 ④a（`S2_DEGRADED_NO_OBJECT`），**不得回退写 `'*'`**。
+   */
+  objectKey?: string;
 }
 
 // ═══ 事件类型 (discriminated union) ═══
