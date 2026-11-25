@@ -1,0 +1,16 @@
+# .claude/claims/1481.yaml — UI 重做正本（含阻断批并入后的施工计划与文档）
+writeset:
+  - .claude/claims/1481.yaml
+  - docs/authority/DOCS-REGISTRY.yaml
+  - docs/synova/ui-redo/UI重做-DEV-DOC-20261124.md
+  - docs/synova/ui-redo/客户语言词典-v1.0.md
+  - docs/synova/ui-redo/DSH-UI借鉴清单-v1.1.md
+  - docs/synova/coordination/编码指令-UI重做-T1-20261124.md
+  - docs/synova/coordination/编码指令-UI重做-T2-20261124.md
+  - tests/user-visible/customer-language.test.ts
+  - tests/user-visible/customer-language.allowlist.json
+  - tests/user-visible/support/extract-visible-strings.ts
+done:
+  - verify: git log --oneline -1 21ae33d12
+  - verify: git status --porcelain -- electron-renderer/
+note: "#1481 UI 重做正本（含 #1480 现场阻断 B1–B6 并入）：模块锚＋P1 审计＋客户语言词典＋DSH 借鉴清单＋T1 基线（已交付 21ae33d12）＋T2 卡 v2。写集为 docs/ 与 tests/user-visible/；T2 起改 electron-renderer/src/styles/global.css。"

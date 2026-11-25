@@ -1,0 +1,6 @@
+# .claude/claims/1485.yaml — 已并入 #1481（正本），本文件仅保留自身追溯
+writeset:
+  - .claude/claims/1485.yaml
+done:
+  - verify: git log --oneline -1 21ae33d12
+note: "#1485 已关闭：创始人 2026-11-24 裁定 UI 重做以 #1481 为正本、阻断以 #1480 为正本；本 claim 的全部路径移交 #1481 claim，不再覆盖任何文档路径（避免 D328 与正本冲突）。"
