@@ -97,7 +97,7 @@ describe('CLI — 不足与参数错误', () => {
     const dir = path.join(FIXTURE_ROOT, 'no-period');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, '制度.txt'), '这是一份没有任何日期的制度文档。\n', 'utf8');
-    const result = await runExtract(['--source', dir, '--db', DB_PATH, '--out', path.join(FIXTURE_ROOT, 'no-period.json'), '--graph', 'itest-no-period']);
+    const result = await runExtract(['--source', dir, '--db', DB_PATH, '--out', path.join(FIXTURE_ROOT, 'no-period.json'), '--graph', 'itest-no-period'], { tempRoot: FIXTURE_ROOT });
     expect(result.exitCode).toBe(1);
     expect(result.report.status).toBe('insufficient');
     expect(result.report.error.code).toBe('E_INSUFFICIENT_INGEST');
@@ -124,7 +124,7 @@ describe('CLI — 成功路径（目录 → 落库 → C4）', () => {
       '--db', DB_PATH,
       '--out', reportPath,
       '--graph', 'itest-ok',
-    ]);
+    ], { tempRoot: FIXTURE_ROOT });
 
     expect(result.exitCode).toBe(0);
     expect(result.report.status).toBe('ok');

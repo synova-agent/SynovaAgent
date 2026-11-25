@@ -43,7 +43,7 @@ describe('CLI — ZIP 输入（C7 受控解压 + 抽取 + C4）', () => {
     fs.writeFileSync(zipPath, zipBytes);
 
     const reportPath = path.join(FIXTURE_ROOT, 'zip-report.json');
-    const result = await runExtract(['--source', zipPath, '--db', DB_PATH, '--out', reportPath, '--graph', 'itest-zip']);
+    const result = await runExtract(['--source', zipPath, '--db', DB_PATH, '--out', reportPath, '--graph', 'itest-zip'], { tempRoot: FIXTURE_ROOT });
 
     expect(result.exitCode).toBe(0);
     expect(result.report.sourceKind).toBe('zip');
