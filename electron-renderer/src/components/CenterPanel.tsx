@@ -18,6 +18,8 @@ import Composer from './Composer';
 import { useConversationStore, readLastSessionId, restoreMessages } from '../stores/conversation-store';
 import { useStreaming } from '../hooks/useStreaming';
 import { getApiBase } from '../lib/api';
+import { TechnicalDetails } from './TechnicalDetails';
+import { runtimeErrorMessage } from '../lib/words';
 
 /**
  * restoreLastSession — D591 会话恢复（spec §5.2-C 时序；铁律 47 契约）
@@ -148,7 +150,8 @@ const CenterPanel: React.FC = () => {
       {/* D527: 降级错误条（LLM 不可用/后端未就绪 → 用户可见，不静默不白屏，铁律 24/31） */}
       {phase === 'error' && errorMessage && (
         <div role="alert" style={{ padding: '8px 16px', background: 'rgba(239, 68, 68, 0.12)', color: 'var(--red, #ef4444)', fontSize: 12, borderBottom: '1px solid rgba(239, 68, 68, 0.3)' }}>
-          ⚠ {errorMessage}
+          ⚠ {runtimeErrorMessage(errorMessage)}
+          <TechnicalDetails items={[{ label: '原始错误', value: errorMessage }]} />
         </div>
       )}
 

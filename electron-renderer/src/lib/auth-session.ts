@@ -13,6 +13,7 @@
  *   @not-here 不落盘 token（无 localStorage/sessionStorage/indexedDB/文件写入）、不把 token 写进日志
  */
 import { getApiBase } from './api';
+import { CUSTOMER_TEXT } from './words';
 
 export type AuthMode = 'devmode' | 'token';
 
@@ -112,29 +113,29 @@ export async function login(email: string, password: string, options: AuthCallOp
       body: JSON.stringify({ email, password }),
     });
   } catch (error) {
-    const message = `网络异常：${messageOf(error)}`;
-    console.warn(`[auth-session] 登录失败：${message}`);
+    const message = CUSTOMER_TEXT.serviceUnavailable;
+    console.warn(`[auth-session] 登录失败：网络异常：${messageOf(error)}`);
     return { kind: 'degraded', httpStatus: null, code: 'NETWORK_ERROR', phase: 'auth', retryable: true, message };
   }
   let payload: unknown;
   try {
     payload = await response.json();
   } catch (error) {
-    const message = `响应非 JSON：${messageOf(error)}`;
-    console.warn(`[auth-session] 登录失败：${message}`);
+    const message = CUSTOMER_TEXT.dataUnrecognized;
+    console.warn(`[auth-session] 登录失败：响应非 JSON：${messageOf(error)}`);
     return { kind: 'degraded', httpStatus: response.status, code: 'INVALID_RESPONSE', phase: 'auth', retryable: true, message };
   }
   if (!response.ok) {
     const body = isRecord(payload) ? payload : {};
-    const message = typeof body.message === 'string' ? body.message : `HTTP ${response.status}`;
+    const message = typeof body.message === 'string' ? body.message : CUSTOMER_TEXT.serviceUnavailable;
     const code = typeof body.code === 'string' ? body.code : response.status === 401 ? 'AUTH_FAILED' : 'AUTH_ERROR';
     console.warn(`[auth-session] 登录被拒绝（HTTP ${response.status}）：${message}`);
     return { kind: 'error', httpStatus: response.status, code, phase: 'auth', retryable: false, message };
   }
   const value = isRecord(payload) && typeof payload.token === 'string' && payload.token.length > 0 ? payload.token : null;
   if (value === null) {
-    const message = '登录响应缺少 token';
-    console.warn(`[auth-session] 登录失败：${message}`);
+    const message = CUSTOMER_TEXT.dataFormatMismatch;
+    console.warn('[auth-session] 登录失败：登录响应缺少凭证字段');
     return { kind: 'degraded', httpStatus: response.status, code: 'INVALID_RESPONSE', phase: 'auth', retryable: true, message };
   }
   token = value;

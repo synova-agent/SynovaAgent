@@ -12,6 +12,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/app-store';
 import type { WorkspaceInfo, ConversationInfo } from '../stores/app-store';
+import { TechnicalDetails } from './TechnicalDetails';
+import { searchTypeLabel } from '../lib/words';
 
 interface SearchItem {
   id: string;
@@ -126,7 +128,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
             onKeyDown={handleKeyDown}
           />
-          <kbd className="cmd-palette-esc" onClick={onClose}>ESC</kbd>
+          <kbd className="cmd-palette-esc" onClick={onClose}>Esc</kbd>
         </div>
 
         <div className="cmd-palette-results">
@@ -147,7 +149,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                   <div className="cmd-palette-item-sub">{item.subtitle}</div>
                 )}
               </div>
-              <span className="cmd-palette-item-type">{item.type}</span>
+              <span className="cmd-palette-item-type">{searchTypeLabel(item.type)}</span>
             </button>
           ))}
         </div>
@@ -155,8 +157,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         <div className="cmd-palette-footer">
           <span>↑↓ 导航</span>
           <span>Enter 选择</span>
-          <span>ESC 关闭</span>
+          <span>Esc 关闭</span>
         </div>
+        <TechnicalDetails
+          items={items.length === 0
+            ? []
+            : [{ label: '结果原始类型', value: items.map((item) => `${item.title}:${item.type}`).join('；') }]}
+        />
       </div>
     </div>
   );

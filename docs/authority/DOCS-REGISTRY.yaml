@@ -2206,3 +2206,15 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 T4 任务卡，**所属阻断项 B3**（契约 v1.1 §3.2 机器判①要求标注）。写集：新建 lib/words/**（词典单一真源）＋ 8 个组件 ＋ 4 个 lib/*.ts 的 message 文案；不改 dsh-run-store.ts/contracts.ts（§3.3 例外归数据侧）、不改 interface。验收 A1 默认渲染禁词 grep（契约 §4.3 范围）、A2 T1 ratchet 绿且 allowlist 392→N 并给删除明细、A3 技术详情默认收起 DOM 断言、A4 真机点击＋双主题；顺带补 B1 欠的真实界面双主题对比度实测（不计入 B3 验收）。"
+  - id: DOC-1485-17
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T4b-B3剩余-20261125.md
+    status: draft
+    owner: CTO
+    note: "#1481 T4b 任务卡，所属 B3（剩余 39 位）：写集仅 5 个组件（RightPanel/LlmSetupCard/NotificationCenter/DshLoginPanel/LeftPanel），**不碰 lib/words（B5 拥有）与 DshRunPanel（B5 写集）**。验收 A1 禁词、A2 ratchet 文件数须仍 45 且 295→N、A3 R2-17 四类空态、A4 真机。含并行运行时规则（谁先到谁用、B5 优先）。"
+  - id: DOC-1485-18
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T3a-B5-20261125.md
+    status: draft
+    owner: CTO
+    note: "#1481 T3a 任务卡，所属 B5（空态包装）：只做骨架与文案，**不拼真值**（outcomeStatus/insufficient 仍 proposed）。四分支 insufficient_data/invalid_output/no_output/**unknown（暂无法判定，不得冒充成功）**；不渲染四要素占位。写集 DshRunPanel.tsx + lib/words/index.ts（本批独占）＋可新建 HypothesisEmptyState。验收 A1 不渲染假设卡、A2 四分支 DOM（含 unknown 改坏必红）、A3 ratchet、A4 真机优先占运行时。"
