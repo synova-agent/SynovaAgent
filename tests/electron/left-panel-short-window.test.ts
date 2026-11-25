@@ -86,8 +86,8 @@ function checkInnerNavHeightBound(source: string): string[] {
   if (decl === undefined) {
     problems.push('未找到 INNER_NAV_FITS_OUTER 声明（零对象 ⇒ 不是通过）');
   } else {
-    if (!/height:\s*'100%'/.test(decl)) {
-      problems.push("INNER_NAV_FITS_OUTER 缺 height:'100%'（内层不再继承外层高度）");
+    if (!/flex:\s*1\b/.test(decl)) {
+      problems.push('INNER_NAV_FITS_OUTER 缺 flex:1（内层不再占满外层高度）');
     }
     if (!/minHeight:\s*0/.test(decl)) {
       problems.push('INNER_NAV_FITS_OUTER 缺 minHeight:0（内容高于外层时仍有撑破风险）');
@@ -111,7 +111,7 @@ describe('T5b/B2 A1：左栏可滚动容器（结构断言）', () => {
     expect(checkScrollableContent(source, css)).toEqual([]);
   });
 
-  it('A1-height: 内层 nav 被限制在外层高度内（height:100% + minHeight:0）', () => {
+  it('A1-height: 内层 nav 被限制在外层高度内（flex:1 + minHeight:0）', () => {
     const source = read(LEFT_PANEL);
     expect(source.length, 'LeftPanel.tsx 读不到（零对象 ⇒ 不是通过）').toBeGreaterThan(0);
     expect(checkInnerNavHeightBound(source)).toEqual([]);

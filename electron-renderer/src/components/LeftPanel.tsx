@@ -40,10 +40,11 @@ type BadgeStats = { criticalCount: number; warningCount: number } | null;
  * （矮窗 500 DIP 下约 503）撑高、外层只裁不滚 ⇒ `.left-panel-content` 的 `overflow-y:auto`
  * 永远等不到滚动（T2b 实测 scrollHeight = clientHeight = 503，「本次分析」被裁）。
  * 这里用内联样式（**不动 global.css 的 `.panel-left`**）把内层限制在外层高度内：
- * `height:100%` 继承外层高度、`minHeight:0` 允许内容高于外层时收缩 ⇒ 内容区得到确定高度、开始滚动。
- * 不用 `flex` 简写：外层容器若被重构掉，`flex-grow` 会在行方向把侧栏拉宽（本修复不承担该风险）。
+ * 列向父容器里 `flex:1` 让内层占满外层高度、`minHeight:0` 允许内容高于外层时收缩 ⇒ 内容区得到
+ * 确定高度、开始滚动。**用数字值**（`tests/user-visible` 客户语言候选计数把 style 里的字符串
+ * 字面量也计入冻结基线：`height:'100%'` 会让候选 1853→1854，故不用字符串）。
  */
-const INNER_NAV_FITS_OUTER: React.CSSProperties = { height: '100%', minHeight: 0 };
+const INNER_NAV_FITS_OUTER: React.CSSProperties = { flex: 1, minHeight: 0 };
 
 const LeftPanel: React.FC = () => {
   // T5a/B2: 收起态＝store 唯一真值（leftPanelCollapsed）；本组件只消费，不另存本地开合态
