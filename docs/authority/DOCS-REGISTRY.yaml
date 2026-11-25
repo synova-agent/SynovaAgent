@@ -2194,3 +2194,9 @@ documents:
     status: draft
     owner: CTO
     note: "#1481 退役批：app/ 旧网页版（D96，34 文件：13 html/14 js/7 css）整体下线。创始人裁定「退役，安全地退役」。含 34 文件逐个证据表、7 处消费者同步摘除、3 份部署文档改写、P0-P5 六阶段顺序（先摘挂载后删文件，每步可单独回退）、A1-A6 验收（含路由全不可达、无残留引用按附十七口径、桌面端两条路径用户可见回归、退役后八项能力证明）。禁止目录级通配删除；/app/setup.html 的 410 契约保留（T2/T7/T8 依赖）。"
+  - id: DOC-1485-15
+    type: devdoc
+    path: docs/synova/product-lines/ui/UI-CONTRACT.md
+    status: draft
+    owner: CTO
+    note: "#1481/#1480 双线 UI 契约 v1 落库（contractBase 712b1e418）：只覆盖「企业分析会话/瓶颈假设」一个输出面。双署名——数据侧 L1/L2+L3 数据形状由数据侧 CTO 冻结；UI 侧补 §4.3 客户语言词典（22 行映射）。含 §3.1 阻断批核对结果：#1482 系 UI CTO 以重复票关闭（与 #1480 逐字相同），正本 #1480 仍 open，B1 已修（PR #1496/merge 9d35b2383）、B2-B6 未修 ⇒ components/** 禁改继续有效。"
