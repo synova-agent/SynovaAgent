@@ -1,7 +1,7 @@
 /**
  * hooks/useKeyboard.ts — 全局快捷键 (Phase 2.2)
  *
- * Ctrl+B  = 切换左栏
+ * Ctrl+B  = 切换左栏（T5a/B2：与 TitleBar 可见控件共用 app-store 的 toggleLeftPanel——唯一 action）
  * Ctrl+J  = 切换右栏
  * Ctrl+K  = 命令面板
  * Ctrl+F  = 搜索对话
@@ -11,6 +11,7 @@
 import { useEffect } from 'react';
 
 export interface KeyboardHandlers {
+  /** 左栏开合（T5a/B2：必须是 store 的 toggleLeftPanel 本体，不得在此另写一套翻转逻辑） */
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
   openCommandPalette?: () => void;

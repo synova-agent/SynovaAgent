@@ -51,6 +51,14 @@ writeset:
   - tests/dsh-ui/dsh-wiring.test.ts
   - tests/electron/notification-center.test.ts
   - tests/electron/right-panel-report-sentinel.test.ts
+  # T5a（B2 边栏可收起/恢复；2026-11-25）—— 写集 5 组件/hook/store ＋ 1 件新测试
+  - docs/synova/coordination/编码指令-UI重做-T5a-B2-20261125.md
+  - electron-renderer/src/components/TitleBar.tsx
+  - electron-renderer/src/components/ExpertAttribution.tsx
+  - electron-renderer/src/App.tsx
+  - electron-renderer/src/stores/app-store.ts
+  - electron-renderer/src/hooks/useKeyboard.ts
+  - tests/electron/sidebar-collapse.test.ts
 done:
   - verify: git log --oneline -1 21ae33d12
   - verify: bash scripts/doc-system/doc-registry-gate.sh

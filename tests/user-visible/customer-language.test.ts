@@ -45,10 +45,18 @@ const BASELINE_FILE_COUNT = 45;
  *   · 同批删除旧技术原文（HTTP/哨兵/循环/LLM 等 44 条 allowlist 债）
  * ⇒ 「候选总数只随文件数变」不成立：改一条客户文案会同时增/减候选。故本条基线**允许随客户说法变更重钉**，
  *   但必须在 PR 回执给出 旧值→新值 与逐项归因（T4 先例：1743 → 1825）。
+ * T5a/B2（#1481 / #1480-B2）再更新：1844 → 1853（+9，逐项实测，命令见下行；非扫描面变化，文件数仍 45）：
+ *   · App.tsx +8 —— 新增 reduced-motion 与 ≤200ms 过渡的判据面字面量：
+ *     `(prefers-reduced-motion: reduce)` ×1、`width 200ms ease` ×1、`undefined` ×2、`function` ×2、`change` ×2
+ *   · TitleBar.tsx +1 —— 新增两态开关文案「打开侧边栏」「收起侧边栏」与 `type="button"`（+3），
+ *     同批删除死项文案「快捷键」「⌨️」（−2）
+ *   · app-store.ts +1 —— 持久化键 `synova:left-panel-collapsed`
+ *   · ExpertAttribution.tsx −1 —— 删除死项文案「🔗 展开完整推理链」（铁律 37）
+ *   · 归因法：`extractVisibleStrings()` 逐文件多重集 diff（基线 worktree vs 本批 worktree），原始输出在 PR 回执
  * 生成命令：`npx vitest run tests/user-visible/customer-language.test.ts --pool=threads`（基线可见量用例的原始输出）。
  * 只允许因**有序删除 / 客户说法变更 / 扫描面新增文件**而更新；不得随手调小。
  */
-const BASELINE_CANDIDATE_COUNT = 1844;
+const BASELINE_CANDIDATE_COUNT = 1853;
 
 /** 允许"零候选"的文件白名单（必须给理由；新增条目须在 PR 回执说明）。 */
 const TEXT_FREE_FILES: Readonly<Record<string, string>> = {
