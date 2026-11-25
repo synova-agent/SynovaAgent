@@ -39,6 +39,18 @@ writeset:
   - electron-renderer/src/lib/enterprise-scan-api.ts
   - electron-renderer/src/lib/measurement-trends.ts
   - electron-renderer/src/stores/ga-collab.ts
+  # T4b（B3 剩余 39 位；2026-11-25）——写集 5 组件 ＋ 必要测试
+  - docs/synova/coordination/编码指令-UI重做-T4b-B3剩余-20261125.md
+  - electron-renderer/src/components/RightPanel.tsx
+  - electron-renderer/src/components/LlmSetupCard.tsx
+  - electron-renderer/src/components/NotificationCenter.tsx
+  - electron-renderer/src/components/DshLoginPanel.tsx
+  - electron-renderer/src/components/LeftPanel.tsx
+  - tests/user-visible/right-panel-empty-states.test.ts
+  - tests/dsh-ui/dsh-login-panel.test.ts
+  - tests/dsh-ui/dsh-wiring.test.ts
+  - tests/electron/notification-center.test.ts
+  - tests/electron/right-panel-report-sentinel.test.ts
 done:
   - verify: git log --oneline -1 21ae33d12
   - verify: bash scripts/doc-system/doc-registry-gate.sh

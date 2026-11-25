@@ -44,6 +44,9 @@ import {
 import { GaDetailSections, type GaInjectedRecord } from './ga-detail-sections';
 // #656 M4: 测量值＋趋势（loader 取数容器 + 纯展示组件；一页纸入口复用既有 report tab）
 import { MeasurementTrendContainer } from './MeasurementTrendContainer';
+// B3（#1481 T4b）：客户说法唯一真源 + 原值唯一出口（默认收起）
+import { CUSTOMER_TEXT, roleLabel, statusLabel } from '../lib/words';
+import { TechnicalDetails, type TechnicalDetailsItem } from './TechnicalDetails';
 
 // ═══ 视图解析 ═══
 
@@ -62,11 +65,54 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
   <section className="sb-section"><div className="sb-section-title">{title}</div>{children}</section>
 );
 
-const Empty: React.FC<{ text?: string }> = ({ text = '暂无数据' }) => (
-  <div className="empty-state" style={{ padding: '16px 8px' }}>
-    <div className="empty-state-text" style={{ fontSize: 11 }}>{text}</div>
-  </div>
-);
+/**
+ * 「数据不足」四类原因（R2-17 专项；判据源 =《词典》§4.2）。
+ *
+ * 🔴 为什么在这里而不在 `lib/words`：四类文案属词典 §4.2 已裁定的词，但 `lib/words/index.ts` 由 B5 批独占
+ * （T4b 写集不含该文件，见任务卡 §1）；为避免"缺词自创"，本表**逐字取词典 §4.2**，待 lib/words 上收后删除。
+ *
+ * @input  reason — 四类原因之一（判据由调用点按"数据源/是否跑过/区间/取数失败"给出）
+ * @output 一句话原因 ＋ 下一步（词典 §4.2 的"可点动作"在此为**文案**：当前没有对应动作的接线点，
+ *         不渲染死按钮——按钮需真实 handler，属后续批次）
+ * @degraded 无（纯查表）
+ * @error   不抛
+ * @not-here 不判断数据是否真的为空（判断归取数方）；不做跳转/重试接线
+ */
+export type EmptyReason = 'no_data_source' | 'never_run' | 'no_data_in_period' | 'fetch_failed';
+
+/** 词典 §4.2 四类原因原文（不得改写、不得合并成「暂无数据」） */
+export const EMPTY_REASON_VIEW: Readonly<Record<EmptyReason, { text: string; nextAction: string }>> = {
+  no_data_source: { text: '还没有接入企业数据', nextAction: '接入数据' },
+  never_run: { text: '还没有做过企业扫描', nextAction: '开始扫描' },
+  no_data_in_period: { text: '本期没有数据', nextAction: '换个期间' },
+  fetch_failed: { text: '暂时读不到数据', nextAction: '重试' },
+};
+
+export type EmptyStateProps = { reason: EmptyReason } | { text: string };
+
+/**
+ * 空态卡（纯展示，无 hook ⇒ renderToStaticMarkup 可断言）。
+ * `reason` 有值 ⇒ 渲染词典 §4.2 的「原因 ＋ 下一步」；`text` 有值 ⇒ 渲染调用点自带的完整句子
+ * （如「请从左栏选择一个客户」）。**没有"裸空态"默认值**：不传任何一种都不成立（类型层挡住）。
+ */
+export const EmptyState: React.FC<EmptyStateProps> = (props) => {
+  if ('reason' in props) {
+    const view = EMPTY_REASON_VIEW[props.reason];
+    return (
+      <div className="empty-state" data-empty-reason={props.reason} style={{ padding: '16px 8px' }}>
+        <div className="empty-state-text" style={{ fontSize: 11 }}>{view.text}</div>
+        <div className="empty-state-next" style={{ fontSize: 10, color: 'var(--dim)', marginTop: 4 }}>
+          下一步：{view.nextAction}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="empty-state" style={{ padding: '16px 8px' }}>
+      <div className="empty-state-text" style={{ fontSize: 11 }}>{props.text}</div>
+    </div>
+  );
+};
 
 /** GA 客户仪表盘 — 显示当前选中客户的数据 */
 const GADashboard: React.FC = () => {
@@ -77,7 +123,7 @@ const GADashboard: React.FC = () => {
   if (!client) {
     return (
       <>
-        <Section title="📊 GA 仪表盘"><Empty text="请从左栏选择一个客户" /></Section>
+        <Section title="📊 顾问仪表盘"><EmptyState text="请从左栏选择一个客户" /></Section>
       </>
     );
   }
@@ -122,7 +168,7 @@ const GADashboard: React.FC = () => {
               </div>
             </div>
           ))
-        ) : <Empty text="无活跃告警" />}
+        ) : <EmptyState text="无活跃告警" />}
       </Section>
     </>
   );
@@ -353,6 +399,8 @@ const DiagnosisReportTab: React.FC = () => {
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [degradedReason, setDegradedReason] = useState<string | null>(null);
+  // B3：主文案只给客户说法；状态码/异常原文只进「技术详情」（词典 §5.2）
+  const [degradedTechnical, setDegradedTechnical] = useState<TechnicalDetailsItem[]>([]);
 
   // D593: 恢复链——挂载时 currentReportId 为 null → 列表兜底取最近 reportId → setCurrentReportId
   // （localStorage 锚 synova:last-report-id 已由 app-store boot 读回；spec §5.2-E①）
@@ -372,6 +420,7 @@ const DiagnosisReportTab: React.FC = () => {
     (async () => {
       setLoading(true);
       setDegradedReason(null);
+      setDegradedTechnical([]);
       try {
         const res = await fetch(
           `${getApiBase()}/api/diagnosis/consult/${currentReportId}/report?format=markdown`,
@@ -379,7 +428,8 @@ const DiagnosisReportTab: React.FC = () => {
         if (!res.ok) {
           // D593: 404 文案诚实化——删除对服务重启的错误归因（持久层冷读后 404 = 该报告真不存在）
           if (!alive) return;
-          setDegradedReason(`报告不可用（HTTP ${res.status}）`);
+          setDegradedReason(CUSTOMER_TEXT.serviceUnavailable);
+          setDegradedTechnical([{ label: '状态码', value: String(res.status) }]);
           console.warn('[DiagnosisReportTab] 报告获取失败', res.status);
           return;
         }
@@ -387,7 +437,8 @@ const DiagnosisReportTab: React.FC = () => {
         if (alive) setMarkdown(text);
       } catch (err: unknown) {
         if (!alive) return;
-        setDegradedReason('报告服务不可达，请确认后端服务已启动');
+        setDegradedReason(CUSTOMER_TEXT.serviceUnavailable);
+        setDegradedTechnical([{ label: '异常', value: err instanceof Error ? err.message : String(err) }]);
         console.warn('[DiagnosisReportTab] 报告请求异常', err instanceof Error ? err.message : String(err));
       } finally {
         if (alive) setLoading(false);
@@ -396,13 +447,15 @@ const DiagnosisReportTab: React.FC = () => {
     return () => { alive = false; };
   }, [currentReportId]);
 
-  if (!currentReportId) return <Section title="📄 诊断报告"><Empty text="请先进行一次诊断" /></Section>;
+  // R2-17：没跑过 ≠ 没数据——「还没有做过企业扫描」（词典 §4.2 第 2 类）
+  if (!currentReportId) return <Section title="📄 诊断报告"><EmptyState reason="never_run" /></Section>;
   return (
     <Section title="📄 诊断报告">
       {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>加载报告...</div>}
       {degradedReason && (
         <div style={{ padding: '4px 8px', fontSize: 10, color: 'var(--orange)' }}>⚠ {degradedReason}</div>
       )}
+      <TechnicalDetails items={degradedTechnical} />
       {!loading && !degradedReason && markdown !== null && (
         <div className="report-markdown" style={{ fontSize: 11, lineHeight: 1.6 }}>
           <ReactMarkdown>{markdown}</ReactMarkdown>
@@ -495,7 +548,10 @@ const GAWorkspaceTabs: React.FC<{ tab: GAWorkspaceTab }> = ({ tab }) => {
               <div style={{ color: 'var(--green)', fontSize: 10 }}>✅ 已完成</div>
             </div>
           ))}
-          {executingSolutions.length === 0 && completedSolutions.length === 0 && <Empty text="无进行中的行动项" />}
+          {/* 词典 §5.7：失败 ≠ 空态——取不到时渲染 fetch_failed，不渲染"无进行中的行动项" */}
+          {executingSolutions.length === 0 && completedSolutions.length === 0 && (
+            <EmptyState reason={degraded ? 'fetch_failed' : 'no_data_in_period'} />
+          )}
         </Section>
       )}
 
@@ -504,7 +560,7 @@ const GAWorkspaceTabs: React.FC<{ tab: GAWorkspaceTab }> = ({ tab }) => {
       {tab === 'pattern' && (
         <>
           {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>加载中...</div>}
-          {degraded && <div style={{ padding: '4px 8px', fontSize: 10, color: 'var(--orange)' }}>⚠ 部分服务降级</div>}
+          {degraded && <div style={{ padding: '4px 8px', fontSize: 10, color: 'var(--orange)' }}>⚠ 部分内容未能更新（影响：落地方案）</div>}
 
           {showSolution && pendingSolutions.length > 0 ? (
             // 显示所有待审阅方案
@@ -592,7 +648,7 @@ const GAWorkspaceTabs: React.FC<{ tab: GAWorkspaceTab }> = ({ tab }) => {
                   </button>
                 </>
               ) : (
-                <Empty text="请先进行一次诊断" />
+                <EmptyState reason="never_run" />
               )}
             </Section>
           )}
@@ -644,9 +700,9 @@ export const SentinelDetailSections: React.FC<{
   degraded: boolean;
 }> = ({ reports, tickets, degraded }) => (
   <>
-    {degraded && <div className="cap-degraded-banner">⚠ 哨兵数据降级，部分数据可能不可用</div>}
+    {degraded && <div className="cap-degraded-banner">⚠ 预警数据暂时读不到，部分内容可能不完整</div>}
     <Section title="🧾 专家报告">
-      {reports.length === 0 ? <Empty text="暂无哨兵报告" /> : reports.map((r) => (
+      {reports.length === 0 ? <EmptyState text="暂无预警报告（本期尚未运行预警检查）" /> : reports.map((r) => (
         <div key={`${r.sentinelId}-${r.checkedAt}`} className="cap-detail-card" data-sentinel-report-item="item">
           <div className="cap-detail-title">
             {r.sentinelId}
@@ -658,13 +714,13 @@ export const SentinelDetailSections: React.FC<{
       ))}
     </Section>
     <Section title="🎫 工单">
-      {tickets.length === 0 ? <Empty text="暂无工单" /> : tickets.map((t) => (
+      {tickets.length === 0 ? <EmptyState text="暂无预警工单（本期尚未运行预警检查）" /> : tickets.map((t) => (
         <div key={t.id} className="cap-detail-card" data-sentinel-ticket-item="item">
           <div className="cap-detail-title" style={{ color: SEVERITY_COLOR[t.severity] || 'var(--text)' }}>
             <span className={`cap-detail-dot cap-dot-${t.severity}`} />{t.title}
           </div>
           <div style={{ fontSize: 10, color: 'var(--dim)' }}>
-            <span className={`cap-status cap-status-${t.status}`}>{t.status}</span>
+            <span className={`cap-status cap-status-${t.status}`}>{statusLabel(t.status)}</span>
             {' · '}{t.createdAt?.slice(0, 16).replace('T', ' ')}
           </div>
         </div>
@@ -690,8 +746,8 @@ const SentinelDetail: React.FC = () => {
   }, []);
 
   return (
-    <Section title="📊 哨兵数据">
-      {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>加载哨兵数据...</div>}
+    <Section title="📊 预警数据">
+      {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>正在读取预警数据…</div>}
       {!loading && data && (
         <SentinelDetailSections reports={data.reports} tickets={data.tickets} degraded={data.degraded} />
       )}
@@ -724,16 +780,16 @@ const ReachDetail: React.FC = () => {
 
   return (
     <Section title="主动触达 · 信号聚合">
-      {!loading && degraded && <div className="cap-degraded-banner">⚠ 信号服务降级，部分数据可能不可用</div>}
+      {!loading && degraded && <div className="cap-degraded-banner">⚠ 经营异动数据暂时读不到，部分内容可能不完整</div>}
       {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>加载信号...</div>}
-      {!loading && !degraded && data && data.signals.length === 0 && <Empty text="暂无聚合信号" />}
+      {!loading && !degraded && data && data.signals.length === 0 && <EmptyState text="暂无聚合信号" />}
       {!loading && data?.signals.map((sig) => (
         <div key={sig.id} className="cap-detail-card">
           <div className="cap-detail-title" style={{ color: SEVERITY_COLOR[sig.severity] || 'var(--text)' }}>
             <span className={`cap-detail-dot cap-dot-${sig.severity}`} />{sig.title}
           </div>
           {sig.entities.length > 0 && (
-            <div style={{ fontSize: 10, color: 'var(--dim)', margin: '2px 0' }}>实体: {sig.entities.join('、')}</div>
+            <div style={{ fontSize: 10, color: 'var(--dim)', margin: '2px 0' }}>业务对象：{sig.entities.join('、')}</div>
           )}
           {sig.recommendedExperts.length > 0 && (
             <div style={{ fontSize: 10, color: 'var(--accent2)', marginBottom: 4 }}>推荐专家: {sig.recommendedExperts.join(' · ')}</div>
@@ -787,10 +843,10 @@ const LoopsDetail: React.FC = () => {
   }, []);
 
   return (
-    <Section title="五循环状态">
-      {!loading && degraded && <div className="cap-degraded-banner">⚠ 降级：循环状态不可用</div>}
-      {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>加载循环...</div>}
-      {!loading && !degraded && data && data.loops.length === 0 && <Empty text="暂无循环" />}
+    <Section title="增长引擎健康度">
+      {!loading && degraded && <div className="cap-degraded-banner">⚠ 部分未能完成：增长引擎健康度暂时读不到</div>}
+      {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>正在读取增长引擎健康度…</div>}
+      {!loading && !degraded && data && data.loops.length === 0 && <EmptyState text="暂无增长引擎记录（本期尚未检查）" />}
       {!loading && data?.loops.map((loop) => (
         <div key={loop.loopId} className="cap-detail-card">
           <div className="cap-detail-title">
@@ -800,7 +856,7 @@ const LoopsDetail: React.FC = () => {
           </div>
           {loop.lastExecution && (
             <div style={{ fontSize: 10, color: 'var(--dim)' }}>
-              {loop.lastExecution.status} · {loop.lastExecution.startedAt?.slice(0, 16).replace('T', ' ')}
+              {statusLabel(loop.lastExecution.status)} · {loop.lastExecution.startedAt?.slice(0, 16).replace('T', ' ')}
               {typeof loop.lastExecution.durationMs === 'number' ? ` · ${(loop.lastExecution.durationMs / 1000).toFixed(1)}s` : ''}
             </div>
           )}
@@ -855,15 +911,15 @@ const ActionDetail: React.FC = () => {
 
   return (
     <Section title="Action 闭环 · 执行承诺">
-      {!loading && degraded && <div className="cap-degraded-banner">⚠ 行动项服务降级</div>}
+      {!loading && degraded && <div className="cap-degraded-banner">⚠ 行动项暂时读不到</div>}
       {loading && <div style={{ padding: 8, fontSize: 11, color: 'var(--dim)' }}>加载行动项...</div>}
-      {!loading && !degraded && data && data.actions.length === 0 && <Empty text="暂无行动项" />}
+      {!loading && !degraded && data && data.actions.length === 0 && <EmptyState text="暂无行动项" />}
       {!loading && data?.actions.map((a) => (
         <div key={a.id} className="cap-detail-card">
           <div className="cap-detail-title">{a.title}</div>
           <div style={{ fontSize: 10, margin: '2px 0' }}>
             <span className={`cap-status cap-status-${a.status}`}>{ACTION_STATUS_LABEL[a.status]}</span>
-            <span style={{ color: 'var(--dim)' }}> · {a.priority} 优先级</span>
+            <span style={{ color: 'var(--dim)' }}> · 优先级：{statusLabel(a.priority)}</span>
             {a.owner && <span style={{ color: 'var(--dim)' }}> · 负责人 {a.owner}</span>}
           </div>
           {a.description && <div style={{ fontSize: 10, color: 'var(--dim)' }}>{a.description}</div>}
@@ -959,10 +1015,10 @@ const GaDetail: React.FC = () => {
       setLastCalibrationId(res.calibrationId); // 回显 201 {calibrationId}（spec §5.1）
       setRefreshKey((k) => k + 1);             // 提交成功 → 列表刷新
     } else if (res === null) {
-      setCalibrationFormError(`校准提交失败（HTTP ${capture.status ?? '网络异常'}）— 稍后重试`);
+      setCalibrationFormError('修正提交失败，请稍后重试');
       console.warn('[GaDetail] 校准提交失败', capture.status ?? 'network');
     } else {
-      setCalibrationFormError('校准提交未成功（服务端返回异常）— 稍后重试');
+      setCalibrationFormError('修正提交失败，请稍后重试');
       console.warn('[GaDetail] 校准提交响应异常');
     }
   }, []);
@@ -998,10 +1054,10 @@ const GaDetail: React.FC = () => {
         ...history,
       ]);
     } else if (res === null) {
-      setSignalFormError(`信号注入失败（HTTP ${capture.status ?? '网络异常'}）— 稍后重试`);
+      setSignalFormError('补充经营异动失败，请稍后重试');
       console.warn('[GaDetail] 信号注入失败', capture.status ?? 'network');
     } else {
-      setSignalFormError('信号注入未成功（服务端返回异常）— 稍后重试');
+      setSignalFormError('补充经营异动失败，请稍后重试');
       console.warn('[GaDetail] 信号注入响应异常');
     }
   }, []);
@@ -1058,7 +1114,7 @@ const RightPanel: React.FC = () => {
     <aside className="panel-right open fade-in">
       <div className="right-panel-header">
         <span>📊</span><span>{selectedCap ? `产品独有能力 · ${capTitle}` : title}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--dim)' }}>{userRole}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--dim)' }}>{roleLabel(userRole)}</span>
       </div>
       <div className="right-panel-content">
         {selectedCap ? (
@@ -1075,22 +1131,22 @@ const RightPanel: React.FC = () => {
               />
             )}
             {view === 'ga_dashboard' && <GADashboard />}
-            {view === 'ga_admin' && <><Section title="📌 目标跟踪"><Empty /><Section title="🚨 关键告警"><Empty /></Section></Section></>}
+            {view === 'ga_admin' && <><Section title="📌 目标跟踪"><EmptyState reason="no_data_source" /><Section title="🚨 关键告警"><EmptyState reason="no_data_source" /></Section></Section></>}
             {view === 'ws_ga' && (
               <>
                 <div className="right-panel-tabs">
                   {(['action', 'sentinel', 'pattern', 'report'] as const).map((t) => (
                     <button key={t} className={`right-panel-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-                      {t === 'action' ? '行动跟踪' : t === 'sentinel' ? '哨兵数据' : t === 'pattern' ? '落地模式' : '诊断报告'}
+                      {t === 'action' ? '行动跟踪' : t === 'sentinel' ? '预警数据' : t === 'pattern' ? '落地模式' : '诊断报告'}
                     </button>
                   ))}
                 </div>
                 <GAWorkspaceTabs tab={tab} />
               </>
             )}
-            {view === 'ws_detail' && <><Section title="📌 目标跟踪"><Empty /><Section title="🚨 关键告警"><Empty /></Section></Section></>}
-            {view === 'readonly' && <Section title="📌 概览"><Empty /></Section>}
-            {(view === 'ws_readonly' || view === 'ws_detail') && <Section title="📌 概览"><Empty /></Section>}
+            {view === 'ws_detail' && <><Section title="📌 目标跟踪"><EmptyState reason="no_data_source" /><Section title="🚨 关键告警"><EmptyState reason="no_data_source" /></Section></Section></>}
+            {view === 'readonly' && <Section title="📌 概览"><EmptyState reason="no_data_source" /></Section>}
+            {(view === 'ws_readonly' || view === 'ws_detail') && <Section title="📌 概览"><EmptyState reason="no_data_source" /></Section>}
           </>
         )}
       </div>

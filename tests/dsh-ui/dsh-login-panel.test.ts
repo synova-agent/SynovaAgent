@@ -64,8 +64,8 @@ describe('#1429 B1 DshLoginPanel（受控、无 hook、渲染桥可渲染）', (
     expect(html).toContain('type="password"');
     expect(buttonTag(html, 'dsh-login-submit')).not.toBe('');
     expect(buttonTag(html, 'dsh-login-submit')).toContain('disabled');
-    // 令牌只存内存的提示对用户可见（不是隐含承诺）
-    expect(html).toContain('令牌只保存在本进程内存');
+    // 登录凭证只存本机的提示对用户可见（不是隐含承诺；B3/T4b 措辞取词典 §2.7-B＋P）
+    expect(html).toContain('登录凭证只保存在本机本次运行期间');
   });
 
   it('邮箱与密码都有值 ⇒ 提交可用；提交中 ⇒ 按钮 disabled 且显示「登录中…」', () => {
@@ -76,7 +76,7 @@ describe('#1429 B1 DshLoginPanel（受控、无 hook、渲染桥可渲染）', (
     expect(pending).toContain('登录中…');
   });
 
-  it('服务端失败：错误码（data-error-code）与服务端 message 原样可见', () => {
+  it('服务端失败：主文案是客户说法，原始码/状态码/服务端原文只进技术详情（data-error-code 仍在 DOM）', () => {
     const html = render({
       email: 'staff@example.com',
       password: 'wrong',
@@ -84,7 +84,11 @@ describe('#1429 B1 DshLoginPanel（受控、无 hook、渲染桥可渲染）', (
     });
     expect(html).toContain('data-error-code="AUTH_FAILED"');
     expect(html).toContain('data-http-status="401"');
-    expect(html).toContain('登录失败（AUTH_FAILED）');
+    // B3（T4b）：默认面不得再印服务端码；主文案是客户说法
+    expect(html).toContain('登录失败（原因见技术详情）');
+    expect(html).not.toContain('登录失败（AUTH_FAILED）');
+    // 原文不丢：进「技术详情」折叠层
+    expect(html).toContain('技术详情');
     expect(html).toContain('账户不存在或密码错误');
   });
 

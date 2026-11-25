@@ -418,11 +418,15 @@ describe('D602: 通知链路（spec §7 用例 6-11）', () => {
     expect(html).toContain('data-local-notification="l1"');
   });
 
-  it('用例 11c: NotifErrorBanner——"通知获取失败：{msg}"文案（铁律 31 消灭假空态）', async () => {
+  it('用例 11c: NotifErrorBanner——客户说法「暂时读不到通知」＋原文只进技术详情（铁律 31 消灭假空态）', async () => {
     stubWindow();
     const { notificationCenter } = await importTargets();
     const html = renderToStaticMarkup(notificationCenter.NotifErrorBanner({ error: '获取通知失败 (HTTP 500)' }));
-    expect(html).toContain('通知获取失败');
+    // B3（T4b）：主文案是客户说法，传输层原文不得上默认面
+    expect(html).toContain('暂时读不到通知');
+    expect(html).not.toContain('通知获取失败：');
+    // 原文不丢：进「技术详情」折叠层（默认收起，仍可断言在 DOM 上）
+    expect(html).toContain('技术详情');
     expect(html).toContain('获取通知失败 (HTTP 500)');
   });
 });
