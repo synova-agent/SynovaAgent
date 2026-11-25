@@ -6,7 +6,9 @@
  *
  * 契约（铁律 47）:
  *   @input   runId ＋ 事件类型 ＋ data
- *   @output  AgentEvent {seq, runId, type, at, data}；SSE 帧（event + data + id）
+ *   @output  AgentEvent {seq, runId, type, at, data}；SSE 帧（event + data + id）；
+ *            终态事件（run.completed/run.failed/run.cancelled）的 data 增两个**正交**状态位
+ *            `transportStatus`／`outcomeStatus`（#1502；**不新增事件类型**）
  *   @degraded 无：事件追加失败只可能来自内存/写入异常，由调用方抛 typed error
  */
 import { createHash } from 'node:crypto';
@@ -32,6 +34,32 @@ export type AgentEventType =
 
 /** 终态事件：SSE 收到任意一个即结束本次流。 */
 const TERMINAL_EVENT_TYPES: readonly AgentEventType[] = ['run.completed', 'run.failed', 'run.cancelled'];
+
+/**
+ * 终态事件的**传输状态位**：这一轮 run 的流怎样结束（#1502）。
+ *
+ * 与 `outcomeStatus` **正交**：传输结束 ≠ 业务成功。取值口径：
+ *   running      —— 运行中（只出现在 run 快照/首答；终态事件不会带它）
+ *   stream_ended —— 流正常收尾（含 refusal 这种「有答复但不可用」的收尾）
+ *   disconnected —— 超时/断连（RUN_TIMEOUT、SIDECAR_SESSION_LOST 等）
+ *   cancelled    —— 取消收尾（stopReason=cancelled 或 POST cancel）
+ */
+export type RunTransportStatus = 'running' | 'stream_ended' | 'disconnected' | 'cancelled';
+
+/**
+ * 终态事件的**业务结果位**：这一轮 run 的产出是否成立（#1502）。
+ *
+ * 判定表与优先级由 `session.ts` 的 `deriveRunStatuses` 单点钉死
+ * （failed > partial > insufficient_data > invalid_output > no_output > success；**禁止默认 success**）。
+ */
+export type RunOutcomeStatus =
+  | 'success'
+  | 'partial'
+  | 'failed'
+  | 'insufficient_data'
+  | 'invalid_output'
+  | 'no_output';
+
 
 /** 单条事件。seq 单调递增（同 runId 内），供 SSE `id:` 与断线重放定位。 */
 export interface AgentEvent {
