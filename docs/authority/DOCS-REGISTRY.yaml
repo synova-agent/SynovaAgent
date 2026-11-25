@@ -2200,3 +2200,9 @@ documents:
     status: draft
     owner: CTO
     note: "#1481/#1480 双线 UI 契约 v1 落库（contractBase 712b1e418）：只覆盖「企业分析会话/瓶颈假设」一个输出面。双署名——数据侧 L1/L2+L3 数据形状由数据侧 CTO 冻结；UI 侧补 §4.3 客户语言词典（22 行映射）。含 §3.1 阻断批核对结果：#1482 系 UI CTO 以重复票关闭（与 #1480 逐字相同），正本 #1480 仍 open，B1 已修（PR #1496/merge 9d35b2383）、B2-B6 未修 ⇒ components/** 禁改继续有效。"
+  - id: DOC-1485-16
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T4-B3-20261125.md
+    status: draft
+    owner: CTO
+    note: "#1481 T4 任务卡，**所属阻断项 B3**（契约 v1.1 §3.2 机器判①要求标注）。写集：新建 lib/words/**（词典单一真源）＋ 8 个组件 ＋ 4 个 lib/*.ts 的 message 文案；不改 dsh-run-store.ts/contracts.ts（§3.3 例外归数据侧）、不改 interface。验收 A1 默认渲染禁词 grep（契约 §4.3 范围）、A2 T1 ratchet 绿且 allowlist 392→N 并给删除明细、A3 技术详情默认收起 DOM 断言、A4 真机点击＋双主题；顺带补 B1 欠的真实界面双主题对比度实测（不计入 B3 验收）。"
