@@ -2179,6 +2179,12 @@ documents:
   - id: DOC-1485-12
     type: devdoc
     path: docs/synova/coordination/编码指令-UI重做-login退役-20261124.md
-    status: draft
+    status: frozen
     owner: CTO
     note: "#1481 独立小批：app/login.html 退役（审计 A 证实与 /api/auth/login 契约失配且密码框 disabled ⇒ 从未可用）。含文件删除：§4 要求逐个文件核消费者、禁止目录级通配删除；写集逐个明列（login.html/auth.js/server.ts/setup-guide-retired.test.ts/main.cjs 回落/部署文档）；验收含 404 机器判、无残留引用（排除历史文档）、主登录用户可见回归、构建未受影响。"
+  - id: DOC-1485-13
+    type: devdoc
+    path: docs/synova/coordination/编码指令-UI重做-T2b-20261124.md
+    status: draft
+    owner: CTO
+    note: "#1481 T2b 单任务卡（窗口最小尺寸，从 T2 拆出）：写集仅 electron/main.cjs 两参数；取值由 CTO 钉死 minWidth=240+400+320+40=1000、minHeight=48+400+28+24=500（用展开态令牌，非 T5 的 264/300）；验收含参数自检、拖到最小后三栏可用（中栏>=400、无横向滚动、关键按钮在视口内）、两条改坏必红。"
