@@ -1,0 +1,75 @@
+{
+  "schema": "syno-review-receipt/v1",
+  "pr": 1508,
+  "patch_fingerprint": "sha256:8b3354586c8675ab7ed2d36c8d762b76981609c35bd4988e8227b9e06416a693",
+  "author": "编码会话（feat/1431-s2b-period-wiring-v2，#1454 重切 · #1431 阶段 2 S2b；git author probe <probe@local>）",
+  "reviewer": "r1-reviewer@subagent",
+  "independence": "fresh-session",
+  "verdict": "PASS",
+  "base_reviewed": "4d2ea347a4dafd857f81237de2f77d50f6ad4dd4",
+  "head_reviewed": "86b822b21d34b0ad0a0b5cd33f8de2482fb45370",
+  "issued_at": "2026-11-25T21:30:01+08:00",
+  "tool": "r1-reviewer（零上下文只读复核：read/git diff/grep + Node24 复跑 tsc/vitest + sha256 指纹两次复算；未参与实现、未改任何产品代码/测试）",
+  "checks": [
+    {
+      "id": "1-冲突解法语义共存",
+      "cmd": "read src/l3/synova-diagnosis-engine-impl.ts:268-300；git diff 4d2ea347a:src/l3/synova-diagnosis-engine-impl.ts 86b822b21:src/l3/synova-diagnosis-engine-impl.ts；git diff 4d2ea347a:… 86b822b21:…（diagnosis-engine.ts / routes/diagnosis.ts）",
+      "result": "pass",
+      "evidence": "合并态代码：`let period = scope?.period; if (period === undefined) { try { period = resolveLatestMaterialPeriod(teamId); } catch { log.warn({degraded:true}) } }`，随后 `runSentinelForTeam(teamId, store, { period, objectKey: scope?.objectKey })`。判读：①请求显式 period 优先（未覆盖资料值）；②未带则回落 ② 资料（#1486 裁定 c 语义保留）；③objectKey 恒透传（与 period 来源无关）；④main 侧唯一改动是此块 + @authority 注释，逐行 diff 无其他 main 语义丢失。等价性核验：main 版在无 period 时传 undefined，此处传 {period:undefined}；sentinel-runner.ts:63 `needsObservationDb` 两态同假、`:64` 仍因 sink 未注入取库（与旧同），registry.ts:182 `withObservationRead` 遇非字符串 period 原样返回 context、registry.ts:239-246 记 S2_DEGRADED_NO_PERIOD —— 两态等价，未丢语义。路由侧只注入 period/objectKey，其余 scope 字段仍不传（与改动前等价）。"
+    },
+    {
+      "id": "2-tsc",
+      "cmd": "cd .synova-wt-1454-v2 && npx tsc --noEmit; echo $?",
+      "result": "pass",
+      "evidence": "TSC_EXIT=0，零错误输出（Node v24.16.0 / C:\\Program Files\\nodejs\\node.exe）。"
+    },
+    {
+      "id": "3-vitest-目标用例",
+      "cmd": "npx vitest run tests/l3/diagnosis-s2b-period.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 1 passed (1)｜Tests 5 passed (5)｜0 skipped｜exit 0。5 用例＝正例·真实入口（POST /api/diagnosis/consult 带 scope.period/objectKey ⇒ metric_observations 真落行、period=入参、object_id 可回查 Team 节点）、正例·非当期 2034-06（防时钟派生假绿）、反例1 缺 scope（0 行 + S2_DEGRADED_NO_PERIOD，旧链 metric_readings 仍 2 行）、反例2 缺 objectKey（0 行 + NO_OBJECT，object_id='*' 0 行）、反例3 period=2026-13（0 行 + BAD_PERIOD）。"
+    },
+    {
+      "id": "4-相关契约回归（#1486 与时钟棘轮）",
+      "cmd": "npx vitest run tests/contract/time-injection.test.ts tests/sentinel/ingest-period-passthrough.test.ts",
+      "result": "pass",
+      "evidence": "Test Files 2 passed (2)｜Tests 15 passed (15)｜exit 0（time-injection 10 + #1486 哨兵 period 透传/读路径 5）。说明合并后 main 侧 #1486 契约仍绿，注释改写后时钟棘轮（src/** 字面 new Date 计数）不再被触发。"
+    },
+    {
+      "id": "5-写集中文串与编码（无乱码）",
+      "cmd": "node fs.readFileSync(f,'utf8') 对 6 个写集文件统计 U+FFFD / 冲突标记 / CRLF",
+      "result": "pass",
+      "evidence": ".claude/claims/1431.yaml、memory/notes/implemented/1431-s2b-period-wiring.md、src/l3/synova-diagnosis-engine-impl.ts、src/l3/synova-diagnosis-engine.ts、src/routes/diagnosis.ts、tests/l3/diagnosis-s2b-period.test.ts —— 全部 U+FFFD=0、conflictMarkers=0、CRLF=0（LF），中文注释/字符串无乱码。"
+    },
+    {
+      "id": "6-写集边界（无越界改动）",
+      "cmd": "git -C <wt> diff --name-status 4d2ea347a..86b822b21；git -C <wt> show ceb34e4ab --stat；git -C <wt> diff --name-status 01ddcecaa..86b822b21",
+      "result": "pass",
+      "evidence": "merge-base..head 恰 6 文件（claims 1 + Note 1 + src 3 + tests 1），与任务给定的 6 个文件逐一相符；无 scripts/audit/**、无门禁脚本、无 renderer/store/adapters/迁移。合并提交 86b822b21 相对 01ddcecaa 对写集零改动：impl/engine/routes 三文件 blob 在 01ddcecaa 与 86b822b21 完全相同（aa49291d0/533601cbe/c1f83adf3）；合并带入的仅 main 自身 #1505/#1506 的 electron-renderer/docs/tests 等文件（非本 PR 写集，已由 main 拥有）。新增行 `as any`/`as never`/`as unknown as` 扫描 0 命中。"
+    },
+    {
+      "id": "7-指纹与合并态",
+      "cmd": "git -C <wt> -c core.quotepath=false diff --no-color -M --full-index --binary <mb>..<head> -- . ':(exclude)docs/synova/reviews/**' --output=<tmp>；Get-FileHash SHA256；重跑两次",
+      "result": "pass",
+      "evidence": "两次复算一致：SHA256=8B3354586C8675AB7ED2D36C8D762B76981609C35BD4988E8227B9E06416A693（42611 B）⇒ fp12=8b3354586c86，与预期 8b3354586c86 一致。合并态：git rev-list --count HEAD..gitea/main = 0；merge-base(gitea/main, HEAD)=4d2ea347a4dafd857f81237de2f77d50f6ad4dd4；工作树 clean。"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "where": "src/l3/synova-diagnosis-engine-impl.ts:271-289；tests/l3/diagnosis-s2b-period.test.ts",
+      "what": "回落分支（未带 scope.period ⇒ resolveLatestMaterialPeriod）在新用例中只被「资料为空」路径执行（反例1 ⇒ S2_DEGRADED_NO_PERIOD）；「资料有期间 ⇒ 该期间写 ④a」的端到端行为无新增断言，仅由本次静态读码确认（main 侧 #1486 亦无引擎级用例，属既有缺口）。非阻断，建议后续卡补一条『无 scope.period + ② 有 Team.period ⇒ 行 period=资料期间』。"
+    },
+    {
+      "severity": "info",
+      "where": "提交历史 4e3162a9d / ceb34e4ab / 86b822b21",
+      "what": "冲突解法实际落在 4e3162a9d（feat 提交即已含『请求优先→回落资料』）与 ceb34e4ab（@authority/注释措辞修正，代码零改动）；86b822b21 合并 main 时该文件取分支版（blob 与 01ddcecaa 相同）。已用 main 版 b6aa0c735 与合并版 aa49291d0 逐行比对，确认没有把 main 的 #1486 语义丢掉。"
+    },
+    {
+      "severity": "info",
+      "where": "复跑环境",
+      "what": "npx 走系统 Node v24.16.0（ABI137），未出现 #1503 回执记录的 node v22 假红；vitest 输出 Vite configLoader/`__dirname` 警告与本仓既有 config 有关，非本 PR 引入。"
+    }
+  ],
+  "reviewer_note": "零上下文独立只读复核：锚定 PR 1508 / base=merge-base(gitea/main, HEAD)=4d2ea347a / head=86b822b21。五条必核逐条给命令与原始输出；冲突解法经代码判读＋main 版逐行 diff＋哨兵 runner/registry 两态等价性核对，确认「请求 period 优先 → 未带回落资料 → objectKey 恒透传」三语义共存。指纹按指定算法两次复算一致且等于预期 8b3354586c86。未改任何产品代码/测试，未 merge。verdict=PASS 仅针对本 PR 写集与上述判据，不代表对产品方向或门禁标准的裁定。"
+}
