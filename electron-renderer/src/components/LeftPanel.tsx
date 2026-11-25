@@ -32,6 +32,19 @@ const CAP_ICON: Record<CapabilityId, LucideIcon> = {
 /** 角标计数类型：null = 未加载/降级 → 隐藏角标 */
 type BadgeStats = { criticalCount: number; warningCount: number } | null;
 
+/**
+ * T5b/B2（#1481）：内层 nav 高度约束——矮窗下左栏可滚动的唯一开关。
+ *
+ * App.tsx 外层已有一个 `.panel-left` 容器（`display:flex; flex-direction:column; overflow:hidden`），
+ * 本组件再渲染一个 `.panel-left`。global.css 的 `.panel-left{flex-shrink:0}` 会让内层按内容
+ * （矮窗 500 DIP 下约 503）撑高、外层只裁不滚 ⇒ `.left-panel-content` 的 `overflow-y:auto`
+ * 永远等不到滚动（T2b 实测 scrollHeight = clientHeight = 503，「本次分析」被裁）。
+ * 这里用内联样式（**不动 global.css 的 `.panel-left`**）把内层限制在外层高度内：
+ * `height:100%` 继承外层高度、`minHeight:0` 允许内容高于外层时收缩 ⇒ 内容区得到确定高度、开始滚动。
+ * 不用 `flex` 简写：外层容器若被重构掉，`flex-grow` 会在行方向把侧栏拉宽（本修复不承担该风险）。
+ */
+const INNER_NAV_FITS_OUTER: React.CSSProperties = { height: '100%', minHeight: 0 };
+
 const LeftPanel: React.FC = () => {
   // T5a/B2: 收起态＝store 唯一真值（leftPanelCollapsed）；本组件只消费，不另存本地开合态
   const leftPanelCollapsed = useAppStore((s) => s.leftPanelCollapsed);
@@ -169,7 +182,7 @@ const LeftPanel: React.FC = () => {
   const collapsedCaps: CapabilityId[] = ['reach', 'loops', 'action', 'ga'];
 
   return (
-    <nav className={`panel-left ${open ? 'open' : 'closed'}`}>
+    <nav className={`panel-left ${open ? 'open' : 'closed'}`} style={INNER_NAV_FITS_OUTER}>
       <div className="left-panel-header">
         {ICON_ITEMS.map((item) => {
           const Icon = item.icon;

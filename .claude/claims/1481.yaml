@@ -59,6 +59,9 @@ writeset:
   - electron-renderer/src/stores/app-store.ts
   - electron-renderer/src/hooks/useKeyboard.ts
   - tests/electron/sidebar-collapse.test.ts
+  # T5b（B2 矮窗下左栏可滚动；2026-11-25）—— 写集 1 组件（内联高度约束）＋ 1 件新测试
+  - docs/synova/coordination/编码指令-UI重做-T5b-B2矮窗滚动-20261125.md
+  - tests/electron/left-panel-short-window.test.ts
 done:
   - verify: git log --oneline -1 21ae33d12
   - verify: bash scripts/doc-system/doc-registry-gate.sh
