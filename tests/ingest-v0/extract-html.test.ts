@@ -116,6 +116,17 @@ describe('DOCX — ZIP + OOXML 段落/表格', () => {
     expect(facts.relations.some(relation => relation.businessKey === 'member_of_team/张测试@测试队')).toBe(true);
     expect(facts.metrics.some(metric => metric.metricId === 'sales.target' && metric.value === 12000)).toBe(true);
   });
+
+  it('OOXML 单条目声称解压后超上限 ⇒ corrupt（防内嵌压缩炸弹，C7）', () => {
+    const zip = buildZip([
+      { name: 'word/document.xml', data: Buffer.from('<w:document/>', 'utf8'), uncompressedSize: 60 * 1024 * 1024 },
+    ]);
+    const filePath = path.join(FIXTURE_ROOT, 'huge-entry.docx');
+    fs.writeFileSync(filePath, zip);
+    const document = extractDocx(filePath);
+    expect(document.corrupt).toBe(true);
+    expect(document.corruptReason).toContain('超过上限');
+  });
 });
 
 describe('PDF — 保守文本抽取', () => {

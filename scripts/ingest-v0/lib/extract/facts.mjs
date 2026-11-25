@@ -84,7 +84,7 @@ export function normalizePersonName(raw) {
  * @output 归一后的团队名或 `null`
  * @degraded 无：不合法 ⇒ null
  * @authority 判据只由本函数给出
- * @not_here 不做同义合并（「巅峰队」≠「巅峰战队」）
+ * @not_here 不做同义合并（「甲队」≠「甲战队」）
  * @error 无
  */
 export function normalizeTeamName(raw) {

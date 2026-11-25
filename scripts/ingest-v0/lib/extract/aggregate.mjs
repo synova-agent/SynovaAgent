@@ -63,7 +63,7 @@ export function aggregateFacts(results) {
     files: { total: results.length, withFacts: 0, withoutPeriod: 0, truncated: 0, corrupt: 0 },
     raw: { objects: 0, relations: 0, metrics: 0 },
     objects: { total: 0, byType: {}, duplicates: 0, missingPeriod: 0, missingSourceRef: 0, missingDefVersion: 0 },
-    relations: { total: 0, duplicates: 0, orphanEndpoints: 0 },
+    relations: { total: 0, duplicates: 0, missingSourceRef: 0, orphanEndpoints: 0 },
     metrics: { total: 0, duplicates: 0, conflicts: 0, missingPeriod: 0, missingSourceRef: 0, invalidValue: 0, orphanObject: 0 },
     skippedRows: 0,
     examples: [],
@@ -110,6 +110,11 @@ export function aggregateFacts(results) {
     }
 
     for (const relation of facts.relations) {
+      if (!hasSourceRef(relation.props?.sourceRef)) {
+        stats.relations.missingSourceRef += 1;
+        addExample({ kind: 'relation', file: doc?.displayPath ?? '', businessKey: relation.businessKey, reason: 'missing_source_ref' });
+        continue;
+      }
       const existing = relationsByKey.get(relation.businessKey);
       if (existing !== undefined) {
         stats.relations.duplicates += 1;

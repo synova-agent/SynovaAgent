@@ -179,6 +179,21 @@ describe('V2 规则层 — 缺期间/缺来源/去重（C2/C5/C8）', () => {
     expect(aggregated.stats.objects.missingSourceRef).toBe(1);
     expect(aggregated.objects.find(object => object.props.name === '无来源')).toBeUndefined();
   });
+
+  it('缺 sourceRef 的关系被丢弃并计数（C5）', () => {
+    const document = htmlDocument(SALES_TABLE_HTML);
+    const facts = extractFactsFromDocument(document);
+    facts.relations.push({
+      type: 'edge/member_of_team',
+      businessKey: 'member_of_team/张测试@测试队#no-source',
+      fromBusinessKey: 'person/张测试',
+      toBusinessKey: 'team/测试队',
+      props: {},
+    });
+    const aggregated = aggregateFacts([{ doc: document, facts }]);
+    expect(aggregated.stats.relations.missingSourceRef).toBe(1);
+    expect(aggregated.relations.find(relation => relation.businessKey === 'member_of_team/张测试@测试队#no-source')).toBeUndefined();
+  });
 });
 
 describe('V2 规则层 — C1 无模型证据（静态）', () => {

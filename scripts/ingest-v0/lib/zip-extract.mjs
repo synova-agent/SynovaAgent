@@ -68,6 +68,8 @@ export function safeEntryPath(entryName, targetDir) {
  * @error `IngestError(E_INPUT_UNREADABLE)` —— 打不开/读失败（原样上抛）
  */
 export function createZipReader(zipPath, options = {}) {
+  // 单条目解压上限：docx/pptx 内部 XML 与普通 ZIP 条目同样受 C7 单文件上限约束（防 OOXML 内嵌压缩炸弹）。
+  const maxEntryBytes = typeof options.maxEntryBytes === 'number' ? options.maxEntryBytes : ZIP_EXTRACT_LIMITS.maxFileBytes;
   const listed = readZipEntries(zipPath, options);
   if (!listed.ok) {
     return { ok: false, corrupt: true, corruptReason: listed.corruptReason, entries: [], readEntry() { throw new Error('corrupt zip'); }, close() {} };
@@ -110,6 +112,9 @@ export function createZipReader(zipPath, options = {}) {
     if (fd === undefined) throw new IngestError('E_INTERNAL', 'zip', 'ZIP 读取器已关闭');
     if (entry.encrypted) throw new IngestError('E_INTERNAL', 'zip', `条目加密，拒绝读取: ${entryName}`);
     if (entry.sizeUnknown) throw new IngestError('E_INTERNAL', 'zip', `条目大小未知（ZIP64 扩展），拒绝读取: ${entryName}`);
+    if (entry.uncompressedSize > maxEntryBytes) {
+      throw new IngestError('E_INTERNAL', 'zip', `条目解压后超过上限（${String(entry.uncompressedSize)} > ${String(maxEntryBytes)}）: ${entryName}`);
+    }
     if (entry.method !== 0 && entry.method !== 8) {
       throw new IngestError('E_INTERNAL', 'zip', `不支持的压缩方法 ${String(entry.method)}: ${entryName}`);
     }

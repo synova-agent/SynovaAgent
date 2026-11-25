@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { IngestError } from './errors.mjs';
+import { INGEST_DEF_VERSION } from './extract/facts.mjs';
 
 /** 产品模块路径（相对本文件；`../../..` = 仓库根）。 */
 const PRODUCT = {
@@ -147,7 +148,7 @@ export async function persistAndVerify(input) {
         period: metric.period,
         value: metric.value,
         unit: metric.unit,
-        defVersion: 'ingest-v0',
+        defVersion: INGEST_DEF_VERSION,
         runId: input.runId,
         sourceType: 'connector',
         sourceId: metric.sourceRef.file,
