@@ -9,6 +9,13 @@
 
 documents:
 
+  - id: DOC-1520-01
+    type: devdoc
+    path: docs/synova/coordination/编码指令-ingest-v0-V3-哨兵阈值评估-20261125.md
+    status: active
+    owner: CTO
+    note: "#1520 ingest v0 V3 首个销售哨兵（客户目标达成）DEV DOC v2.0（冻结）；关卡 A 四轮整改 10→4→2→0，结论可交付 coding（0 阻塞）；base ff5b94f53；sha256 9413F2FB1059E9EBF0C168C45DDD3811555B962C0D449006D53469BDB2B2B526；创始人 2026-11-26 四条裁定已落（只消费 sales.target/performance、thresholdSource=customer_target、写真实 sentinel_events、severity 复用枚举且永不 critical）。"
+
   - id: DOC-1456-01
     type: devdoc
     path: docs/synova/coordination/编码指令-1456-win-backend-spawn-20261123.md
