@@ -32,6 +32,20 @@ const CAP_ICON: Record<CapabilityId, LucideIcon> = {
 /** 角标计数类型：null = 未加载/降级 → 隐藏角标 */
 type BadgeStats = { criticalCount: number; warningCount: number } | null;
 
+/**
+ * T5b/B2（#1481）：内层 nav 高度约束——矮窗下左栏可滚动的唯一开关。
+ *
+ * App.tsx 外层已有一个 `.panel-left` 容器（`display:flex; flex-direction:column; overflow:hidden`），
+ * 本组件再渲染一个 `.panel-left`。global.css 的 `.panel-left{flex-shrink:0}` 会让内层按内容
+ * （矮窗 500 DIP 下约 503）撑高、外层只裁不滚 ⇒ `.left-panel-content` 的 `overflow-y:auto`
+ * 永远等不到滚动（T2b 实测 scrollHeight = clientHeight = 503，「本次分析」被裁）。
+ * 这里用内联样式（**不动 global.css 的 `.panel-left`**）把内层限制在外层高度内：
+ * 列向父容器里 `flex:1` 让内层占满外层高度、`minHeight:0` 允许内容高于外层时收缩 ⇒ 内容区得到
+ * 确定高度、开始滚动。**用数字值**（`tests/user-visible` 客户语言候选计数把 style 里的字符串
+ * 字面量也计入冻结基线：`height:'100%'` 会让候选 1853→1854，故不用字符串）。
+ */
+const INNER_NAV_FITS_OUTER: React.CSSProperties = { flex: 1, minHeight: 0 };
+
 const LeftPanel: React.FC = () => {
   // T5a/B2: 收起态＝store 唯一真值（leftPanelCollapsed）；本组件只消费，不另存本地开合态
   const leftPanelCollapsed = useAppStore((s) => s.leftPanelCollapsed);
@@ -169,7 +183,7 @@ const LeftPanel: React.FC = () => {
   const collapsedCaps: CapabilityId[] = ['reach', 'loops', 'action', 'ga'];
 
   return (
-    <nav className={`panel-left ${open ? 'open' : 'closed'}`}>
+    <nav className={`panel-left ${open ? 'open' : 'closed'}`} style={INNER_NAV_FITS_OUTER}>
       <div className="left-panel-header">
         {ICON_ITEMS.map((item) => {
           const Icon = item.icon;
