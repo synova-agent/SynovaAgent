@@ -14,7 +14,7 @@ documents:
     path: docs/synova/coordination/编码指令-ingest-v0-V3-哨兵阈值评估-20261125.md
     status: active
     owner: CTO
-    note: "#1520 ingest v0 V3 首个销售哨兵（客户目标达成）DEV DOC v2.0（冻结）；关卡 A 四轮整改 10→4→2→0，结论可交付 coding（0 阻塞）；base ff5b94f53；sha256 9413F2FB1059E9EBF0C168C45DDD3811555B962C0D449006D53469BDB2B2B526；创始人 2026-11-26 四条裁定已落（只消费 sales.target/performance、thresholdSource=customer_target、写真实 sentinel_events、severity 复用枚举且永不 critical）。"
+    note: "#1520 ingest v0 V3 首个销售哨兵（客户目标达成）DEV DOC v2.0＋§11 本体层 v2.11 对齐（冻结）；关卡 A 四轮整改 10→4→2→0，结论可交付 coding（0 阻塞）；base ff5b94f53；sha256 775528B3B7ACF10FE7C81DCB9F5861A3C07F20ED6BC527EA7600F99A25F16A30；创始人 2026-11-26 四条裁定已落（只消费 sales.target/performance、thresholdSource=customer_target、写真实 sentinel_events、severity 复用枚举且永不 critical）；§11 补 finding 目标态字段/报正向/缺失三态/分母与 state；阈值归属（②档三层 vs ④客户参数）登记为待裁冲突。"
 
   - id: DOC-1456-01
     type: devdoc
