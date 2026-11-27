@@ -1,0 +1,8 @@
+writeset:
+  - .claude/claims/1520.yaml
+  - docs/synova/coordination/编码指令-ingest-v0-V3-哨兵阈值评估-20261125.md
+  - docs/authority/DOCS-REGISTRY.yaml
+done:
+  - verify: "git show --stat HEAD -- docs/synova/coordination/编码指令-ingest-v0-V3-哨兵阈值评估-20261125.md"
+  - verify: "sha256sum docs/synova/coordination/编码指令-ingest-v0-V3-哨兵阈值评估-20261125.md"
+note: "#1520 CTO 立票＋冻结 V3 DEV DOC v2.0（关卡 A 可交付，0 阻塞；创始人四条裁定已落）。本 claim 只覆盖文档冻结与登记；代码施工写集＝DEV DOC §4.1 六文件，由 coding session 另行认领。"
