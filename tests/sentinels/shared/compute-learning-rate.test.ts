@@ -106,7 +106,8 @@ describe('computeLearningRate', () => {
         const r = computeLearningRate({ ...FINITE_BASELINE, [field]: value });
 
         expect(r.degraded, `${field}=${String(value)} ⇒ 必须降级`).toBe(true);
-        expect(r.warnings, '复用 checkFiniteInputs ⇒ 须逐条留痕非有限数').toEqual([
+        expect(r.warnings[0], 'warnings 文案须明确写「非有限输入」').toContain('非有限输入');
+        expect(r.warnings.slice(1), '复用 checkFiniteInputs ⇒ 逐字段留痕非有限数').toEqual([
           `非有限数: ${field}=${String(value)}`,
         ]);
         expect(r.learningRate).toBe(0);
@@ -122,10 +123,23 @@ describe('computeLearningRate', () => {
       const r = computeLearningRate({ unitCostT0: Number.NaN, unitCostT: Infinity, cumulativeOutput: -Infinity });
 
       expect(r.degraded).toBe(true);
-      expect(r.warnings).toHaveLength(3);
+      expect(r.warnings[0]).toContain('非有限输入');
+      expect(r.warnings).toHaveLength(4);
       expect(r.warnings).toContain('非有限数: unitCostT0=NaN');
       expect(r.warnings).toContain('非有限数: unitCostT=Infinity');
       expect(r.warnings).toContain('非有限数: cumulativeOutput=-Infinity');
+      expect(collectNonFiniteNumbers(r)).toEqual([]);
+    });
+
+    it('-Infinity 回归：cumulativeOutput=-Infinity 走「非有限输入」降级，而非旧的 <2 分支', () => {
+      const r = computeLearningRate({ ...FINITE_BASELINE, cumulativeOutput: Number.NEGATIVE_INFINITY });
+
+      expect(r.degraded).toBe(true);
+      expect(r.warnings[0]).toContain('非有限输入');
+      expect(r.warnings).toContain('非有限数: cumulativeOutput=-Infinity');
+      expect(r.warnings.some(w => w.includes('<2')), '不得落入旧的「累计产出<2」分支').toBe(false);
+      expect(r.learningRate).toBe(0);
+      expect(r.experienceElasticity).toBe(0);
       expect(collectNonFiniteNumbers(r)).toEqual([]);
     });
 
