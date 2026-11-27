@@ -20,10 +20,13 @@
  *   => experience_elasticity = 2^(-learning_rate) — 累计产出翻倍时的成本下降比例
  *
  * 降级条件:
+ *   - unitCostT0 / unitCostT / cumulativeOutput 非有限（NaN 或 ±Infinity）→ degraded:true + "非有限输入"（warnings 逐字段留痕）
  *   - cumulative_output < 2 → 无法取log → degraded:true + "累计产出<2"
  *   - unitCostT0 <= 0 或 unitCostT <= 0 → degraded:true + "成本数据无效"
  *   - learning_rate < 0 → 成本上升（非学习，可能是遗忘或通胀）→ degraded:true + 警告
  */
+
+import { checkFiniteInputs } from '../../../../../src/sentinel/assert-finite-inputs';
 
 export interface LearningRateInput {
   unitCostT0: number;
@@ -58,6 +61,24 @@ export function computeLearningRate(input: LearningRateInput): LearningRateResul
   const warnings: string[] = [];
   const { unitCostT0, unitCostT, cumulativeOutput } = input;
   const routine_rigidity = input.routine_rigidity ?? 0.5;
+
+  // 降级：非有限输入（NaN / ±Infinity）—— 复用共享助手；否则 `NaN < 2` 等比较恒为 false，
+  // 会继续进入公式并静默产出 NaN/Infinity 的脏结果。
+  const _inputIssues = checkFiniteInputs(input, ['unitCostT0', 'unitCostT', 'cumulativeOutput']);
+  if (_inputIssues.length > 0) {
+    return {
+      learningRate: 0, experienceElasticity: 0, routine_rigidity,
+      confidence: 'low', evidence: [],
+      economicInterpretation: {
+        learningRateInterpretation: 'negative',
+        costReductionForecast: '无法计算——输入数据无效',
+        organizationalImplication: '建议检查数据质量，确保累计产出和成本数据准确',
+      },
+      degraded: true,
+      // 首条明确写"非有限输入"；其后为 checkFiniteInputs 的逐字段明细（含"非有限数: x=NaN"）
+      warnings: ['非有限输入（NaN 或 ±Infinity），无法计算学习率', ..._inputIssues],
+    };
+  }
 
   // 降级：无效输入
   if (cumulativeOutput < 2) {
