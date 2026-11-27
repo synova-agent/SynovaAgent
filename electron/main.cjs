@@ -82,6 +82,8 @@ async function createWindow() {
   const serverUrl = electronConfig.serverUrl || 'http://localhost:18790';
   mainWindow = new BrowserWindow({
     width: 1280, height: 800,
+    // T2b(#1481): 最小值 = 展开态三栏 240+400+320 ＋ 余量 40 / 顶 48+内容 400+状态栏 28 ＋ 余量 24
+    minWidth: 1000, minHeight: 500,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
